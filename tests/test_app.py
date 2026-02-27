@@ -5,7 +5,8 @@ from snapmock.main_window import MainWindow
 
 def test_main_window_title(main_window: MainWindow) -> None:
     """Window title should be set correctly."""
-    assert main_window.windowTitle() == "SnapMock"
+    assert "SnapMock" in main_window.windowTitle()
+    assert "Untitled" in main_window.windowTitle()
 
 
 def test_main_window_default_size(main_window: MainWindow) -> None:

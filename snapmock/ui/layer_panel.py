@@ -95,3 +95,13 @@ class LayerPanel(QDockWidget):
         active = self._layer_manager.active_layer
         if active is not None:
             self._layer_manager.remove_layer(active.layer_id)
+
+    def set_manager(self, layer_manager: LayerManager) -> None:
+        """Replace the LayerManager (e.g. after opening a new project)."""
+        self._layer_manager = layer_manager
+        layer_manager.layer_added.connect(self._refresh)
+        layer_manager.layer_removed.connect(self._refresh_str)
+        layer_manager.layers_reordered.connect(self._refresh_void)
+        layer_manager.active_layer_changed.connect(self._refresh_str)
+        layer_manager.layer_renamed.connect(self._refresh_renamed)
+        self._refresh_void()

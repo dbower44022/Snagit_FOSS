@@ -28,18 +28,16 @@ snapmock/              # Main application package
     __init__.py        # Package root, exports __version__
     __main__.py        # Entry point for python -m snapmock
     app.py             # QApplication bootstrap
-    main_window.py     # MainWindow (QMainWindow subclass)
-    config/            # Constants, settings, keyboard shortcuts
-    core/              # Scene graph, layers, commands, selection, clipboard, rendering
+    main_window.py     # MainWindow — owns all subsystems, menus, shortcuts
+    config/            # Constants, settings (QSettings), keyboard shortcuts
+    core/              # Scene, view, layers, command stack, selection, clipboard, rendering
     items/             # SnapGraphicsItem subclasses (vector, text, raster, etc.)
-    tools/             # BaseTool subclasses and ToolManager
-    commands/          # Command objects for undo/redo
-    io/                # File I/O (project save/load, import/export)
-    ui/                # UI panels (toolbar, layer panel, property panel, etc.)
-    resources/         # Icons, stamps, themes
-tests/                 # Test suite
-    conftest.py        # Shared pytest-qt fixtures
-    test_app.py        # App/window tests
+    tools/             # BaseTool subclasses and ToolManager (15 tools)
+    commands/          # Command objects for undo/redo (all scene mutations)
+    io/                # File I/O — .smk project save/load, PNG/JPG/SVG/PDF export, image import
+    ui/                # UI panels — toolbar, layer panel, property panel, status bar, color picker
+    resources/         # Icons, stamps, themes (placeholder)
+tests/                 # Test suite (pytest + pytest-qt)
 ```
 
 ## Conventions
@@ -51,10 +49,14 @@ tests/                 # Test suite
 - **Type checker:** mypy (strict mode)
 - **Tests:** pytest + pytest-qt
 - **Imports:** sorted by ruff (isort-compatible)
+- **Qt camelCase overrides:** N802 suppressed project-wide via per-file-ignores
 
 ## Architecture
 
 - **All mutations via Commands** — tools push commands to CommandStack, never modify scene directly
 - **Signals flow up, calls flow down** — UI listens to manager signals, calls manager methods
-- **SnapScene owns** LayerManager + CommandStack; MainWindow owns SnapScene, SnapView, ToolManager
+- **SnapScene owns** LayerManager + CommandStack; MainWindow owns SnapScene, SnapView, ToolManager, ClipboardManager
 - **Layer z-values**: each layer gets z_base = index × 10,000; items offset within range
+- **Project format**: .smk files are ZIP archives containing manifest.json, layers.json, items.json
+- **Tool engine**: ToolManager registry with BaseTool ABC; single-key shortcuts activate tools
+- **Item hierarchy**: SnapGraphicsItem → VectorItem → concrete items (Rectangle, Ellipse, Line, Arrow, Freehand, Highlight, Callout, Blur, NumberedStep, Stamp, Text, RasterRegion)

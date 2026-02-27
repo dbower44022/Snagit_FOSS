@@ -48,3 +48,10 @@ class PropertyPanel(QDockWidget):
 
     def _on_selection_cleared(self) -> None:
         self._info_label.setText("No selection")
+
+    def set_selection(self, selection_manager: SelectionManager) -> None:
+        """Replace the SelectionManager (e.g. after opening a new project)."""
+        self._selection_manager = selection_manager
+        selection_manager.selection_changed.connect(self._on_selection_changed)
+        selection_manager.selection_cleared.connect(self._on_selection_cleared)
+        self._info_label.setText("No selection")
