@@ -2,16 +2,9 @@
 
 import sys
 
-from PyQt6.QtWidgets import QApplication, QMainWindow
+from PyQt6.QtWidgets import QApplication
 
-
-class MainWindow(QMainWindow):
-    """Primary application window."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.setWindowTitle("SnapMock")
-        self.resize(800, 600)
+from snapmock.main_window import MainWindow
 
 
 def main() -> None:
