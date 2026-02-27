@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QPoint, Qt, pyqtSignal
+import bisect
+
+from PyQt6.QtCore import QPoint, QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QMouseEvent, QPainter, QWheelEvent
 from PyQt6.QtWidgets import QGraphicsView
 
-from snapmock.config.constants import ZOOM_DEFAULT, ZOOM_MAX, ZOOM_MIN
+from snapmock.config.constants import ZOOM_DEFAULT, ZOOM_MAX, ZOOM_MIN, ZOOM_STEPS
 from snapmock.core.scene import SnapScene
 
 
@@ -17,9 +19,12 @@ class SnapView(QGraphicsView):
     -------
     zoom_changed(int)
         Emitted with the new zoom percentage after every zoom change.
+    cursor_moved(float, float)
+        Emitted with scene coordinates when the mouse moves over the viewport.
     """
 
     zoom_changed = pyqtSignal(int)
+    cursor_moved = pyqtSignal(float, float)
 
     def __init__(self, scene: SnapScene) -> None:
         super().__init__(scene)
@@ -35,6 +40,7 @@ class SnapView(QGraphicsView):
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
         self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.SmartViewportUpdate)
+        self.setMouseTracking(True)
 
     # --- zoom ---
 
@@ -52,11 +58,58 @@ class SnapView(QGraphicsView):
         self.scale(factor, factor)
         self.zoom_changed.emit(self._zoom_pct)
 
+    def set_zoom_centered(self, percent: int, scene_pos: QPoint | None = None) -> None:
+        """Set zoom level, keeping *scene_pos* centered under the cursor.
+
+        Falls back to viewport center if *scene_pos* is None.
+        """
+        percent = max(ZOOM_MIN, min(ZOOM_MAX, percent))
+        if percent == self._zoom_pct:
+            return
+        if scene_pos is not None:
+            self.setTransformationAnchor(QGraphicsView.ViewportAnchor.NoAnchor)
+            old_scene_pt = self.mapToScene(scene_pos)
+            factor = percent / self._zoom_pct
+            self._zoom_pct = percent
+            self.scale(factor, factor)
+            new_scene_pt = self.mapToScene(scene_pos)
+            delta = new_scene_pt - old_scene_pt
+            self.translate(delta.x(), delta.y())
+            self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        else:
+            factor = percent / self._zoom_pct
+            self._zoom_pct = percent
+            self.scale(factor, factor)
+        self.zoom_changed.emit(self._zoom_pct)
+
+    def _next_zoom_step(self) -> int:
+        """Return the next zoom step above the current zoom level."""
+        idx = bisect.bisect_right(ZOOM_STEPS, self._zoom_pct)
+        if idx < len(ZOOM_STEPS):
+            return ZOOM_STEPS[idx]
+        return ZOOM_STEPS[-1]
+
+    def _prev_zoom_step(self) -> int:
+        """Return the next zoom step below the current zoom level."""
+        idx = bisect.bisect_left(ZOOM_STEPS, self._zoom_pct) - 1
+        if idx >= 0:
+            return ZOOM_STEPS[idx]
+        return ZOOM_STEPS[0]
+
     def zoom_in(self) -> None:
-        self.set_zoom(int(self._zoom_pct * 1.25))
+        self.set_zoom(self._next_zoom_step())
 
     def zoom_out(self) -> None:
-        self.set_zoom(int(self._zoom_pct / 1.25))
+        self.set_zoom(self._prev_zoom_step())
+
+    def zoom_to_rect(self, rect: QRectF) -> None:
+        """Zoom and scroll so that *rect* (in scene coordinates) fills the viewport."""
+        if rect.isEmpty():
+            return
+        self.fitInView(rect, Qt.AspectRatioMode.KeepAspectRatio)
+        t = self.transform()
+        self._zoom_pct = max(ZOOM_MIN, min(ZOOM_MAX, int(t.m11() * 100)))
+        self.zoom_changed.emit(self._zoom_pct)
 
     def fit_in_view_all(self) -> None:
         """Fit the entire scene rect in the viewport."""
@@ -97,6 +150,10 @@ class SnapView(QGraphicsView):
     def mouseMoveEvent(self, event: QMouseEvent | None) -> None:
         if event is None:
             return
+        # Emit cursor position for status bar
+        scene_pos = self.mapToScene(event.position().toPoint())
+        self.cursor_moved.emit(scene_pos.x(), scene_pos.y())
+
         if self._panning:
             delta = event.position().toPoint() - self._pan_start
             self._pan_start = event.position().toPoint()

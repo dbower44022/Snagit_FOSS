@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PyQt6.QtWidgets import QToolBar, QToolButton
+from PyQt6.QtWidgets import QComboBox, QToolBar, QToolButton
+
+from snapmock.config.constants import ZOOM_STEPS
 
 if TYPE_CHECKING:
     from PyQt6.QtWidgets import QWidget
 
+    from snapmock.core.view import SnapView
     from snapmock.tools.tool_manager import ToolManager
 
 
@@ -44,3 +47,52 @@ class SnapToolBar(QToolBar):
     def _on_tool_changed(self, tool_id: str) -> None:
         for tid, btn in self._buttons.items():
             btn.setChecked(tid == tool_id)
+
+
+class ZoomDropdown(QComboBox):
+    """Zoom level dropdown that syncs with a SnapView."""
+
+    def __init__(self, view: SnapView, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._view = view
+        self._updating = False
+
+        self.setEditable(True)
+        self.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.setMaximumWidth(100)
+
+        for step in ZOOM_STEPS:
+            self.addItem(f"{step}%", step)
+
+        # Set initial value
+        self._sync_from_view(view.zoom_percent)
+
+        # Connect signals
+        view.zoom_changed.connect(self._sync_from_view)
+        self.currentIndexChanged.connect(self._on_index_changed)
+        self.lineEdit().returnPressed.connect(self._on_custom_entry)  # type: ignore[union-attr]
+
+    def _sync_from_view(self, percent: int) -> None:
+        self._updating = True
+        text = f"{percent}%"
+        idx = self.findText(text)
+        if idx >= 0:
+            self.setCurrentIndex(idx)
+        else:
+            self.setEditText(text)
+        self._updating = False
+
+    def _on_index_changed(self, index: int) -> None:
+        if self._updating or index < 0:
+            return
+        data = self.itemData(index)
+        if data is not None:
+            self._view.set_zoom(int(data))
+
+    def _on_custom_entry(self) -> None:
+        text = self.currentText().replace("%", "").strip()
+        try:
+            value = int(text)
+            self._view.set_zoom(value)
+        except ValueError:
+            pass

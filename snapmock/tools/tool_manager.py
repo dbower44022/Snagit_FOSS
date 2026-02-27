@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtGui import QMouseEvent
+from PyQt6.QtGui import QKeyEvent, QMouseEvent
 
 from snapmock.tools.base_tool import BaseTool
 
@@ -36,6 +36,7 @@ class ToolManager(QObject):
         self._selection_manager = selection_manager
         self._tools: dict[str, BaseTool] = {}
         self._active_tool: BaseTool | None = None
+        self._previous_tool_id: str | None = None
 
     # --- registration ---
 
@@ -68,10 +69,27 @@ class ToolManager(QObject):
         if tool is None:
             return
         if self._active_tool is not None:
+            self._active_tool.cancel()
             self._active_tool.deactivate()
         self._active_tool = tool
         tool.activate(self._scene, self._selection_manager)
         self.tool_changed.emit(tool_id)
+
+    def activate_temporary(self, tool_id: str) -> None:
+        """Temporarily switch to *tool_id*, remembering the current tool.
+
+        Used for Space-bar pan override.  Call :meth:`restore_previous` to
+        return to the original tool.
+        """
+        if self._active_tool is not None:
+            self._previous_tool_id = self._active_tool.tool_id
+        self.activate(tool_id)
+
+    def restore_previous(self) -> None:
+        """Restore the tool that was active before :meth:`activate_temporary`."""
+        if self._previous_tool_id is not None:
+            self.activate(self._previous_tool_id)
+            self._previous_tool_id = None
 
     # --- event delegation ---
 
@@ -93,4 +111,16 @@ class ToolManager(QObject):
     def handle_mouse_double_click(self, event: QMouseEvent) -> bool:
         if self._active_tool is not None:
             return self._active_tool.mouse_double_click(event)
+        return False
+
+    def handle_key_press(self, event: QKeyEvent) -> bool:
+        """Delegate key press to the active tool."""
+        if self._active_tool is not None:
+            return self._active_tool.key_press(event)
+        return False
+
+    def handle_key_release(self, event: QKeyEvent) -> bool:
+        """Delegate key release to the active tool."""
+        if self._active_tool is not None:
+            return self._active_tool.key_release(event)
         return False

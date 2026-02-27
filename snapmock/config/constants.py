@@ -37,3 +37,32 @@ DEFAULT_STROKE_COLOR = "#FF0000"
 DEFAULT_FILL_COLOR = "#00000000"
 DEFAULT_FONT_FAMILY = "Sans Serif"
 DEFAULT_FONT_SIZE = 14
+
+# Zoom step ladder (percentage values)
+ZOOM_STEPS = [
+    10,
+    15,
+    20,
+    25,
+    33,
+    50,
+    67,
+    75,
+    100,
+    125,
+    150,
+    200,
+    250,
+    300,
+    400,
+    500,
+    600,
+    800,
+    1200,
+    1600,
+    2400,
+    3200,
+]
+
+# Minimum pixels of mouse movement before a drag is recognised
+DRAG_THRESHOLD = 3

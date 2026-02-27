@@ -26,8 +26,14 @@ class ToolOptionsBar(QToolBar):
         self._on_tool_changed(tool_manager.active_tool_id)
 
     def _on_tool_changed(self, tool_id: str) -> None:
+        # Remove all existing widgets
+        self.clear()
+
         tool = self._tool_manager.tool(tool_id)
         if tool is not None:
-            self._label.setText(f"{tool.display_name} options")
+            self._label = QLabel(f"{tool.display_name} options")
+            self.addWidget(self._label)
+            tool.build_options_widgets(self)
         else:
-            self._label.setText("No tool selected")
+            self._label = QLabel("No tool selected")
+            self.addWidget(self._label)

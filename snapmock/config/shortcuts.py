@@ -49,4 +49,10 @@ SHORTCUTS: dict[str, str] = {
     "layer.new": "Ctrl+Shift+N",
     "layer.delete": "Ctrl+Shift+Delete",
     "layer.merge_down": "Ctrl+Shift+E",
+    # Additional edit shortcuts
+    "edit.paste_in_place": "Ctrl+Shift+V",
+    # Additional tools
+    "tool.pan": "",
+    "tool.zoom": "Z",
+    "tool.lasso_select": "Shift+M",
 }

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QAction, QCloseEvent, QKeySequence
+from PyQt6.QtGui import QAction, QCloseEvent, QKeyEvent, QKeySequence
 from PyQt6.QtWidgets import QFileDialog, QMainWindow, QMenu, QMenuBar, QMessageBox
 
 if TYPE_CHECKING:
@@ -35,14 +35,17 @@ from snapmock.tools.ellipse_tool import EllipseTool
 from snapmock.tools.eyedropper_tool import EyedropperTool
 from snapmock.tools.freehand_tool import FreehandTool
 from snapmock.tools.highlight_tool import HighlightTool
+from snapmock.tools.lasso_select_tool import LassoSelectTool
 from snapmock.tools.line_tool import LineTool
 from snapmock.tools.numbered_step_tool import NumberedStepTool
+from snapmock.tools.pan_tool import PanTool
 from snapmock.tools.raster_select_tool import RasterSelectTool
 from snapmock.tools.rectangle_tool import RectangleTool
 from snapmock.tools.select_tool import SelectTool
 from snapmock.tools.stamp_tool import StampTool
 from snapmock.tools.text_tool import TextTool
 from snapmock.tools.tool_manager import ToolManager
+from snapmock.tools.zoom_tool import ZoomTool
 from snapmock.ui.layer_panel import LayerPanel
 from snapmock.ui.property_panel import PropertyPanel
 from snapmock.ui.status_bar import SnapStatusBar
@@ -95,6 +98,9 @@ class MainWindow(QMainWindow):
         self._status_bar = SnapStatusBar(self._view)
         self.setStatusBar(self._status_bar)
 
+        # Wire cursor position tracking
+        self._view.cursor_moved.connect(self._status_bar.update_cursor_pos)
+
         # Menu bar
         self._recent_menu: QMenu | None = None
         self._setup_menus()
@@ -136,6 +142,9 @@ class MainWindow(QMainWindow):
         self._tool_manager.register(CropTool())
         self._tool_manager.register(RasterSelectTool())
         self._tool_manager.register(EyedropperTool())
+        self._tool_manager.register(PanTool())
+        self._tool_manager.register(ZoomTool())
+        self._tool_manager.register(LassoSelectTool())
 
     # ---- menus ----
 
@@ -148,6 +157,7 @@ class MainWindow(QMainWindow):
         self._setup_file_menu(menu_bar)
         self._setup_edit_menu(menu_bar)
         self._setup_view_menu(menu_bar)
+        self._setup_image_menu(menu_bar)
 
     def _setup_file_menu(self, menu_bar: QMenuBar) -> None:  # noqa: C901
         file_menu = menu_bar.addMenu("&File")
@@ -231,10 +241,22 @@ class MainWindow(QMainWindow):
             paste_action.setShortcut(QKeySequence(SHORTCUTS["edit.paste"]))
             paste_action.triggered.connect(self._edit_paste)
 
+        paste_in_place_action = edit_menu.addAction("Paste in &Place")
+        if paste_in_place_action is not None:
+            paste_in_place_action.setShortcut(QKeySequence(SHORTCUTS["edit.paste_in_place"]))
+            paste_in_place_action.triggered.connect(self._edit_paste_in_place)
+
         delete_action = edit_menu.addAction("&Delete")
         if delete_action is not None:
             delete_action.setShortcut(QKeySequence(SHORTCUTS["edit.delete"]))
             delete_action.triggered.connect(self._edit_delete)
+
+        edit_menu.addSeparator()
+
+        duplicate_action = edit_menu.addAction("D&uplicate")
+        if duplicate_action is not None:
+            duplicate_action.setShortcut(QKeySequence(SHORTCUTS["edit.duplicate"]))
+            duplicate_action.triggered.connect(self._edit_duplicate)
 
         edit_menu.addSeparator()
 
@@ -273,6 +295,19 @@ class MainWindow(QMainWindow):
             actual_action.setShortcut(QKeySequence(SHORTCUTS["view.actual_size"]))
             actual_action.triggered.connect(lambda: self._view.set_zoom(100))
 
+    def _setup_image_menu(self, menu_bar: QMenuBar) -> None:
+        image_menu = menu_bar.addMenu("&Image")
+        if image_menu is None:
+            return
+
+        resize_canvas_action = image_menu.addAction("Resize &Canvas...")
+        if resize_canvas_action is not None:
+            resize_canvas_action.triggered.connect(self._image_resize_canvas)
+
+        resize_image_action = image_menu.addAction("Resize &Image...")
+        if resize_image_action is not None:
+            resize_image_action.triggered.connect(self._image_resize_image)
+
     # ---- tool shortcuts ----
 
     def _setup_tool_shortcuts(self) -> None:
@@ -293,6 +328,9 @@ class MainWindow(QMainWindow):
             "tool.crop": "crop",
             "tool.raster_select": "raster_select",
             "tool.eyedropper": "eyedropper",
+            "tool.pan": "pan",
+            "tool.zoom": "zoom",
+            "tool.lasso_select": "lasso_select",
         }
         for shortcut_key, tool_id in tool_shortcut_map.items():
             key_seq = SHORTCUTS.get(shortcut_key, "")
@@ -426,16 +464,23 @@ class MainWindow(QMainWindow):
         self._edit_delete()
 
     def _edit_copy(self) -> None:
-        items = [
-            i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)
-        ]
+        items = [i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)]
         if items:
             self._clipboard.copy_items(items)
 
     def _edit_paste(self) -> None:
+        # Smart paste routing: internal items → system image → system text
         data = self._clipboard.paste_items()
-        if not data:
+        if data:
+            self._paste_internal_items(data, offset=True)
             return
+        # Try system clipboard image
+        sys_image = self._clipboard.paste_image_from_system()
+        if sys_image is not None:
+            self._paste_system_image(sys_image)
+            return
+
+    def _paste_internal_items(self, data: list[dict], *, offset: bool) -> None:  # type: ignore[type-arg]
         from snapmock.commands.add_item import AddItemCommand
         from snapmock.io.project_serializer import ITEM_REGISTRY
 
@@ -447,31 +492,97 @@ class MainWindow(QMainWindow):
             cls = ITEM_REGISTRY.get(item_type)
             if cls is not None:
                 item = cls.deserialize(item_data)
-                # Offset pasted items slightly so they don't overlap
-                item.setPos(item.pos().x() + 10, item.pos().y() + 10)
-                self._scene.command_stack.push(
-                    AddItemCommand(self._scene, item, layer.layer_id)
-                )
+                if offset:
+                    item.setPos(item.pos().x() + 10, item.pos().y() + 10)
+                self._scene.command_stack.push(AddItemCommand(self._scene, item, layer.layer_id))
+
+    def _paste_system_image(self, image: object) -> None:
+        from PyQt6.QtGui import QPixmap
+
+        from snapmock.commands.add_item import AddItemCommand
+        from snapmock.items.raster_region_item import RasterRegionItem
+
+        pixmap = QPixmap.fromImage(image)  # type: ignore[arg-type]
+        item = RasterRegionItem(pixmap=pixmap)
+        # Place at viewport center
+        view = self._view
+        viewport = view.viewport()
+        if viewport is None:
+            return
+        center = view.mapToScene(viewport.rect().center())
+        item.setPos(center.x() - pixmap.width() / 2, center.y() - pixmap.height() / 2)
+        layer = self._scene.layer_manager.active_layer
+        if layer is not None:
+            self._scene.command_stack.push(AddItemCommand(self._scene, item, layer.layer_id))
+
+    def _edit_paste_in_place(self) -> None:
+        """Paste items at their original positions (no offset)."""
+        data = self._clipboard.paste_items()
+        if data:
+            self._paste_internal_items(data, offset=False)
+            return
+        sys_image = self._clipboard.paste_image_from_system()
+        if sys_image is not None:
+            self._paste_system_image(sys_image)
 
     def _edit_delete(self) -> None:
-        items = [
-            i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)
-        ]
+        items = [i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)]
         if not items:
             return
         from snapmock.commands.remove_item import RemoveItemCommand
 
         for item in items:
-            self._scene.command_stack.push(
-                RemoveItemCommand(self._scene, item)
-            )
+            self._scene.command_stack.push(RemoveItemCommand(self._scene, item))
         self._selection_manager.deselect_all()
+
+    def _edit_duplicate(self) -> None:
+        """Clone selected items with +10,+10 offset."""
+        items = [i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)]
+        if not items:
+            return
+        from snapmock.commands.add_item import AddItemCommand
+
+        layer = self._scene.layer_manager.active_layer
+        if layer is None:
+            return
+        clones: list[QGraphicsItem] = []
+        for item in items:
+            clone = item.clone()
+            clone.setPos(clone.pos().x() + 10, clone.pos().y() + 10)
+            self._scene.command_stack.push(AddItemCommand(self._scene, clone, layer.layer_id))
+            clones.append(clone)
+        self._selection_manager.select_items(clones)
 
     def _edit_select_all(self) -> None:
         all_items: list[QGraphicsItem] = [
             i for i in self._scene.items() if isinstance(i, SnapGraphicsItem)
         ]
         self._selection_manager.select_items(all_items)
+
+    # ---- image operations ----
+
+    def _image_resize_canvas(self) -> None:
+        from snapmock.commands.raster_commands import ResizeCanvasCommand
+        from snapmock.ui.resize_canvas_dialog import ResizeCanvasDialog
+
+        dlg = ResizeCanvasDialog(self._scene.canvas_size, self)
+        if dlg.exec():
+            cmd = ResizeCanvasCommand(
+                self._scene,
+                dlg.new_size(),
+                dlg.anchor(),
+                dlg.fill_color(),
+            )
+            self._scene.command_stack.push(cmd)
+
+    def _image_resize_image(self) -> None:
+        from snapmock.commands.raster_commands import ResizeImageCommand
+        from snapmock.ui.resize_image_dialog import ResizeImageDialog
+
+        dlg = ResizeImageDialog(self._scene.canvas_size, self)
+        if dlg.exec():
+            cmd = ResizeImageCommand(self._scene, dlg.new_size())
+            self._scene.command_stack.push(cmd)
 
     # ---- recent files ----
 
@@ -530,6 +641,48 @@ class MainWindow(QMainWindow):
         dirty = "*" if self._scene.command_stack.is_dirty else ""
         name = self._current_file.name if self._current_file else "Untitled"
         self.setWindowTitle(f"{dirty}{name} — {APP_NAME}")
+
+    # ---- key event routing ----
+
+    def _space_held(self) -> bool:
+        """Whether Space is currently held for temporary pan."""
+        return self._tool_manager._previous_tool_id is not None  # noqa: SLF001
+
+    def keyPressEvent(self, event: QKeyEvent | None) -> None:
+        if event is None:
+            super().keyPressEvent(event)
+            return
+        # Space-bar temporary pan override
+        if event.key() == Qt.Key.Key_Space and not event.isAutoRepeat() and not self._space_held():
+            active = self._tool_manager.active_tool
+            if active is None or not active.is_active_operation:
+                self._tool_manager.activate_temporary("pan")
+                event.accept()
+                return
+
+        # Delegate to active tool
+        if self._tool_manager.handle_key_press(event):
+            event.accept()
+            return
+
+        super().keyPressEvent(event)
+
+    def keyReleaseEvent(self, event: QKeyEvent | None) -> None:
+        if event is None:
+            super().keyReleaseEvent(event)
+            return
+        # Space-bar release → restore previous tool
+        if event.key() == Qt.Key.Key_Space and not event.isAutoRepeat() and self._space_held():
+            self._tool_manager.restore_previous()
+            event.accept()
+            return
+
+        # Delegate to active tool
+        if self._tool_manager.handle_key_release(event):
+            event.accept()
+            return
+
+        super().keyReleaseEvent(event)
 
     def closeEvent(self, event: QCloseEvent | None) -> None:
         """Save window geometry and state on close."""

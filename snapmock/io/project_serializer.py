@@ -51,14 +51,16 @@ def save_project(scene: SnapScene, path: Path) -> None:
     items_data: list[dict[str, Any]] = []
 
     for layer in scene.layer_manager.layers:
-        layers_data.append({
-            "layer_id": layer.layer_id,
-            "name": layer.name,
-            "visible": layer.visible,
-            "locked": layer.locked,
-            "opacity": layer.opacity,
-            "item_ids": layer.item_ids,
-        })
+        layers_data.append(
+            {
+                "layer_id": layer.layer_id,
+                "name": layer.name,
+                "visible": layer.visible,
+                "locked": layer.locked,
+                "opacity": layer.opacity,
+                "item_ids": layer.item_ids,
+            }
+        )
 
     # Serialize all items from the scene
     for qitem in scene.items():
