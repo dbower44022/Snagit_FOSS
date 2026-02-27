@@ -10,8 +10,11 @@ from snapmock.core.selection_manager import SelectionManager
 from snapmock.core.view import SnapView
 from snapmock.tools.arrow_tool import ArrowTool
 from snapmock.tools.ellipse_tool import EllipseTool
+from snapmock.tools.freehand_tool import FreehandTool
+from snapmock.tools.line_tool import LineTool
 from snapmock.tools.rectangle_tool import RectangleTool
 from snapmock.tools.select_tool import SelectTool
+from snapmock.tools.text_tool import TextTool
 from snapmock.tools.tool_manager import ToolManager
 
 
@@ -42,6 +45,9 @@ class MainWindow(QMainWindow):
         self._tool_manager.register(RectangleTool())
         self._tool_manager.register(EllipseTool())
         self._tool_manager.register(ArrowTool())
+        self._tool_manager.register(LineTool())
+        self._tool_manager.register(TextTool())
+        self._tool_manager.register(FreehandTool())
 
     @property
     def scene(self) -> SnapScene:
