@@ -10,11 +10,19 @@ from snapmock.core.scene import SnapScene
 from snapmock.core.selection_manager import SelectionManager
 from snapmock.core.view import SnapView
 from snapmock.tools.arrow_tool import ArrowTool
+from snapmock.tools.blur_tool import BlurTool
+from snapmock.tools.callout_tool import CalloutTool
+from snapmock.tools.crop_tool import CropTool
 from snapmock.tools.ellipse_tool import EllipseTool
+from snapmock.tools.eyedropper_tool import EyedropperTool
 from snapmock.tools.freehand_tool import FreehandTool
+from snapmock.tools.highlight_tool import HighlightTool
 from snapmock.tools.line_tool import LineTool
+from snapmock.tools.numbered_step_tool import NumberedStepTool
+from snapmock.tools.raster_select_tool import RasterSelectTool
 from snapmock.tools.rectangle_tool import RectangleTool
 from snapmock.tools.select_tool import SelectTool
+from snapmock.tools.stamp_tool import StampTool
 from snapmock.tools.text_tool import TextTool
 from snapmock.tools.tool_manager import ToolManager
 from snapmock.ui.layer_panel import LayerPanel
@@ -75,6 +83,14 @@ class MainWindow(QMainWindow):
         self._tool_manager.register(LineTool())
         self._tool_manager.register(TextTool())
         self._tool_manager.register(FreehandTool())
+        self._tool_manager.register(BlurTool())
+        self._tool_manager.register(HighlightTool())
+        self._tool_manager.register(CalloutTool())
+        self._tool_manager.register(NumberedStepTool())
+        self._tool_manager.register(StampTool())
+        self._tool_manager.register(CropTool())
+        self._tool_manager.register(RasterSelectTool())
+        self._tool_manager.register(EyedropperTool())
 
     def _setup_menus(self) -> None:
         """Create menu bar actions."""
