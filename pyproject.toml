@@ -1,11 +1,13 @@
 [project]
-name = "snagit-foss"
+name = "snapmock"
 version = "0.1.0"
-description = "Open-source multi-platform desktop screen capture application"
+description = "Open-source multi-platform screenshot annotation & UI mockup tool"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "PyQt6",
+    "Pillow",
+    "numpy",
 ]
 
 [dependency-groups]

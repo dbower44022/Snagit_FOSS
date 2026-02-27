@@ -10,7 +10,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("Snagit FOSS")
+        self.setWindowTitle("SnapMock")
         self.resize(800, 600)
 
 

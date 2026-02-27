@@ -1,11 +1,11 @@
 """Tests for the main application window."""
 
-from snagit_foss.app import MainWindow
+from snapmock.app import MainWindow
 
 
 def test_main_window_title(main_window: MainWindow) -> None:
     """Window title should be set correctly."""
-    assert main_window.windowTitle() == "Snagit FOSS"
+    assert main_window.windowTitle() == "SnapMock"
 
 
 def test_main_window_default_size(main_window: MainWindow) -> None:
