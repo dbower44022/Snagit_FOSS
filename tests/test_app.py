@@ -10,8 +10,8 @@ def test_main_window_title(main_window: MainWindow) -> None:
 
 def test_main_window_default_size(main_window: MainWindow) -> None:
     """Window should have the expected default size."""
-    assert main_window.width() == 800
-    assert main_window.height() == 600
+    assert main_window.width() == 1200
+    assert main_window.height() == 800
 
 
 def test_main_window_has_scene(main_window: MainWindow) -> None:
