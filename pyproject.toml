@@ -1,0 +1,31 @@
+[project]
+name = "snagit-foss"
+version = "0.1.0"
+description = "Open-source multi-platform desktop screen capture application"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "PyQt6",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-qt",
+    "ruff",
+    "mypy",
+]
+
+[tool.ruff]
+line-length = 99
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
