@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import bisect
+from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QPoint, QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QMouseEvent, QPainter, QWheelEvent
@@ -10,6 +11,9 @@ from PyQt6.QtWidgets import QGraphicsView
 
 from snapmock.config.constants import ZOOM_DEFAULT, ZOOM_MAX, ZOOM_MIN, ZOOM_STEPS
 from snapmock.core.scene import SnapScene
+
+if TYPE_CHECKING:
+    from snapmock.tools.tool_manager import ToolManager
 
 
 class SnapView(QGraphicsView):
@@ -31,6 +35,7 @@ class SnapView(QGraphicsView):
         self._zoom_pct: int = ZOOM_DEFAULT
         self._panning: bool = False
         self._pan_start: QPoint = QPoint()
+        self._tool_manager: ToolManager | None = None
 
         # Rendering quality
         self.setRenderHints(
@@ -41,6 +46,10 @@ class SnapView(QGraphicsView):
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
         self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.SmartViewportUpdate)
         self.setMouseTracking(True)
+
+    def set_tool_manager(self, tool_manager: ToolManager) -> None:
+        """Set the tool manager for mouse event delegation."""
+        self._tool_manager = tool_manager
 
     # --- zoom ---
 
@@ -134,18 +143,23 @@ class SnapView(QGraphicsView):
         else:
             super().wheelEvent(event)
 
-    # --- middle-mouse pan ---
+    # --- mouse event routing ---
 
     def mousePressEvent(self, event: QMouseEvent | None) -> None:
         if event is None:
             return
+        # Middle-mouse pan
         if event.button() == Qt.MouseButton.MiddleButton:
             self._panning = True
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
             self._pan_start = event.position().toPoint()
             event.accept()
-        else:
-            super().mousePressEvent(event)
+            return
+        # Delegate to tool manager
+        if self._tool_manager is not None and self._tool_manager.handle_mouse_press(event):
+            event.accept()
+            return
+        super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent | None) -> None:
         if event is None:
@@ -154,6 +168,7 @@ class SnapView(QGraphicsView):
         scene_pos = self.mapToScene(event.position().toPoint())
         self.cursor_moved.emit(scene_pos.x(), scene_pos.y())
 
+        # Middle-mouse pan
         if self._panning:
             delta = event.position().toPoint() - self._pan_start
             self._pan_start = event.position().toPoint()
@@ -164,15 +179,33 @@ class SnapView(QGraphicsView):
             if v_bar is not None:
                 v_bar.setValue(v_bar.value() - delta.y())
             event.accept()
-        else:
-            super().mouseMoveEvent(event)
+            return
+        # Delegate to tool manager
+        if self._tool_manager is not None and self._tool_manager.handle_mouse_move(event):
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent | None) -> None:
         if event is None:
             return
+        # Middle-mouse pan
         if event.button() == Qt.MouseButton.MiddleButton and self._panning:
             self._panning = False
             self.unsetCursor()
             event.accept()
-        else:
-            super().mouseReleaseEvent(event)
+            return
+        # Delegate to tool manager
+        if self._tool_manager is not None and self._tool_manager.handle_mouse_release(event):
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent | None) -> None:
+        if event is None:
+            return
+        # Delegate to tool manager
+        if self._tool_manager is not None and self._tool_manager.handle_mouse_double_click(event):
+            event.accept()
+            return
+        super().mouseDoubleClickEvent(event)

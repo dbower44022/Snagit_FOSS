@@ -76,6 +76,9 @@ class MainWindow(QMainWindow):
         self._tool_manager = ToolManager(self._scene, self._selection_manager, parent=self)
         self._clipboard = ClipboardManager(self._scene, parent=self)
 
+        # Wire tool manager to view for mouse event delegation
+        self._view.set_tool_manager(self._tool_manager)
+
         self.setCentralWidget(self._view)
 
         # Register tools
@@ -350,12 +353,18 @@ class MainWindow(QMainWindow):
         """Create a new empty project."""
         if not self._confirm_discard():
             return
+        # Deactivate current tool while old scene is still alive
+        prev_tool_id = self._tool_manager.active_tool_id or "select"
+        if self._tool_manager.active_tool is not None:
+            self._tool_manager.active_tool.cancel()
+            self._tool_manager.active_tool.deactivate()
         old_scene = self._scene
         self._scene = SnapScene(parent=self)
         self._view.setScene(self._scene)
         self._selection_manager = SelectionManager(self._scene, parent=self)
         self._tool_manager._scene = self._scene  # noqa: SLF001
         self._tool_manager._selection_manager = self._selection_manager  # noqa: SLF001
+        self._tool_manager.activate(prev_tool_id)
         self._clipboard = ClipboardManager(self._scene, parent=self)
         self._layer_panel.set_manager(self._scene.layer_manager)
         self._property_panel.set_selection(self._selection_manager)
@@ -377,17 +386,25 @@ class MainWindow(QMainWindow):
 
     def _open_project(self, path: Path) -> None:
         """Load a project from *path* and replace the current scene."""
+        # Deactivate current tool while old scene is still alive
+        prev_tool_id = self._tool_manager.active_tool_id or "select"
+        if self._tool_manager.active_tool is not None:
+            self._tool_manager.active_tool.cancel()
+            self._tool_manager.active_tool.deactivate()
         old_scene = self._scene
         try:
             self._scene = load_project(path)
         except Exception as e:  # noqa: BLE001
             QMessageBox.critical(self, "Open Error", f"Could not open project:\n{e}")
+            # Re-activate tool on old scene since load failed
+            self._tool_manager.activate(prev_tool_id)
             return
         self._scene.setParent(self)
         self._view.setScene(self._scene)
         self._selection_manager = SelectionManager(self._scene, parent=self)
         self._tool_manager._scene = self._scene  # noqa: SLF001
         self._tool_manager._selection_manager = self._selection_manager  # noqa: SLF001
+        self._tool_manager.activate(prev_tool_id)
         self._clipboard = ClipboardManager(self._scene, parent=self)
         self._layer_panel.set_manager(self._scene.layer_manager)
         self._property_panel.set_selection(self._selection_manager)
