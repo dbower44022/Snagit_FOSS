@@ -85,8 +85,11 @@ class CommandStack(QObject):
             top = self._commands[self._index - 1]
             if top.merge_id != 0 and top.merge_id == command.merge_id:
                 if top.merge_with(command):
-                    top.undo()
-                    top.redo()
+                    # merge_with already updated top's state (e.g. combined
+                    # delta).  Apply only the *new* command's effect — the
+                    # top command's prior effect is already reflected in the
+                    # scene.
+                    command.redo()
                     self._emit_signals()
                     return
 

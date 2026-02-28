@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from PyQt6 import sip
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QGraphicsItem
 
@@ -53,6 +54,10 @@ class SelectionManager(QObject):
 
     def toggle(self, item: QGraphicsItem) -> None:
         """Toggle selection state of *item*."""
+        if sip.isdeleted(item):
+            self._selected = [i for i in self._selected if not sip.isdeleted(i)]
+            self.selection_changed.emit(self._selected)
+            return
         if item in self._selected:
             self._selected.remove(item)
             item.setSelected(False)
@@ -78,5 +83,6 @@ class SelectionManager(QObject):
 
     def _deselect_all_internal(self) -> None:
         for item in self._selected:
-            item.setSelected(False)
+            if not sip.isdeleted(item):
+                item.setSelected(False)
         self._selected.clear()
