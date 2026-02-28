@@ -16,6 +16,7 @@ dev = [
     "pytest-qt",
     "ruff",
     "mypy",
+    "python-docx>=1.2.0",
 ]
 
 [build-system]
