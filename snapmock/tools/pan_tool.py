@@ -32,6 +32,10 @@ class PanTool(BaseTool):
     def is_active_operation(self) -> bool:
         return self._panning
 
+    @property
+    def status_hint(self) -> str:
+        return "Click and drag to pan | Middle-mouse also pans"
+
     def mouse_press(self, event: QMouseEvent) -> bool:
         if event.button() != Qt.MouseButton.LeftButton:
             return False

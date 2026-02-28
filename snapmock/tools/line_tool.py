@@ -30,6 +30,10 @@ class LineTool(BaseTool):
     def cursor(self) -> Qt.CursorShape:
         return Qt.CursorShape.CrossCursor
 
+    @property
+    def status_hint(self) -> str:
+        return "Click and drag to draw line | Shift: constrain angle"
+
     def mouse_press(self, event: QMouseEvent) -> bool:
         if self._scene is None or event.button() != Qt.MouseButton.LeftButton:
             return False

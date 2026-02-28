@@ -31,6 +31,15 @@ class LineItem(VectorItem):
         self._line = QLineF(value)
         self.update()
 
+    def scale_geometry(self, sx: float, sy: float) -> None:
+        super().scale_geometry(sx, sy)
+        self._line = QLineF(
+            self._line.x1() * sx,
+            self._line.y1() * sy,
+            self._line.x2() * sx,
+            self._line.y2() * sy,
+        )
+
     def boundingRect(self) -> QRectF:
         half = self._stroke_width / 2 + 2
         return (

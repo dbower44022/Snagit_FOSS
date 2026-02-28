@@ -2,18 +2,24 @@
 
 from __future__ import annotations
 
+import math
 from enum import Enum, auto
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
-from PyQt6.QtGui import QBrush, QColor, QKeyEvent, QMouseEvent, QPen
-from PyQt6.QtWidgets import QGraphicsRectItem, QLabel, QToolBar
+from PyQt6.QtGui import QBrush, QColor, QKeyEvent, QMouseEvent, QPen, QTransform
+from PyQt6.QtWidgets import QGraphicsRectItem, QLabel, QToolBar, QToolTip
 
 from snapmock.commands.move_items import MoveItemsCommand
 from snapmock.config.constants import DRAG_THRESHOLD
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.tools.base_tool import BaseTool
-from snapmock.ui.transform_handles import TransformHandles
+from snapmock.ui.transform_handles import (
+    CORNER_HANDLES,
+    EDGE_HANDLES,
+    HandlePosition,
+    TransformHandles,
+)
 
 if TYPE_CHECKING:
     from snapmock.core.scene import SnapScene
@@ -44,6 +50,14 @@ class SelectTool(BaseTool):
 
         # Transform handles
         self._handles: TransformHandles | None = None
+
+        # Handle-drag state
+        self._handle_pos: HandlePosition | None = None
+        self._handle_origin_rect: QRectF = QRectF()
+        self._handle_anchor: QPointF = QPointF()
+        self._handle_item_originals: list[
+            tuple[SnapGraphicsItem, QPointF, QTransform]
+        ] = []
 
         # Selection info label
         self._info_label: QLabel | None = None
@@ -156,6 +170,19 @@ class SelectTool(BaseTool):
             if handle is not None:
                 self._state = _State.HANDLE_DRAG
                 self._drag_start = scene_pos
+                self._handle_pos = handle
+                self._handle_origin_rect = QRectF(self._handles.current_rect)
+                self._handle_anchor = self._handles.anchor_for_handle(handle)
+                # Save original pos/transform for each selected item
+                items = [
+                    i
+                    for i in self._selection_manager.items
+                    if isinstance(i, SnapGraphicsItem)
+                ]
+                self._handle_item_originals = [
+                    (item, QPointF(item.pos()), QTransform(item.transform()))
+                    for item in items
+                ]
                 return True
 
         # Check for item under cursor
@@ -199,8 +226,7 @@ class SelectTool(BaseTool):
         elif self._state == _State.RUBBER_BAND:
             return self._handle_rubber_band_move(scene_pos)
         elif self._state == _State.HANDLE_DRAG:
-            # Handle resize drag is a placeholder for future implementation
-            return True
+            return self._handle_transform_move(scene_pos, event)
         return False
 
     def mouse_release(self, event: QMouseEvent) -> bool:
@@ -216,8 +242,7 @@ class SelectTool(BaseTool):
         elif self._state == _State.RUBBER_BAND:
             return self._handle_rubber_band_release(scene_pos, event)
         elif self._state == _State.HANDLE_DRAG:
-            self._state = _State.IDLE
-            return True
+            return self._handle_transform_release()
 
         self._state = _State.IDLE
         return True
@@ -228,13 +253,30 @@ class SelectTool(BaseTool):
         scene_pos = self._scene_pos(event)
         if scene_pos is None:
             return False
-        # Double-click on an item could open property editing
-        # For now, just select the item under cursor
+
         item = self._item_at(scene_pos)
         if item is not None:
+            from snapmock.items.callout_item import CalloutItem
+            from snapmock.items.text_item import TextItem
+
             self._selection_manager.select(item)
+            # Double-click on text/callout: switch to text tool
+            if isinstance(item, (TextItem, CalloutItem)):
+                view = self._view
+                if view is not None:
+                    parent = view.parentWidget()
+                    if parent is not None and hasattr(parent, "tool_manager"):
+                        parent.tool_manager.activate("text")
             return True
-        return False
+
+        # Double-click on empty canvas: toggle fit/100%
+        view = self._view
+        if view is not None:
+            if view.zoom_percent == 100:
+                view.fit_in_view_all()
+            else:
+                view.set_zoom(100)
+        return True
 
     # --- drag movement ---
 
@@ -258,6 +300,20 @@ class SelectTool(BaseTool):
         else:
             self._constrain_axis = None
 
+        # Snap to grid if visible
+        view = self._view
+        if view is not None and view._grid_visible:  # noqa: SLF001
+            grid = view._grid_size  # noqa: SLF001
+            # Snap the new total movement to grid
+            new_total_x = self._drag_total.x() + raw_delta.x()
+            new_total_y = self._drag_total.y() + raw_delta.y()
+            snapped_x = round(new_total_x / grid) * grid
+            snapped_y = round(new_total_y / grid) * grid
+            raw_delta = QPointF(
+                snapped_x - self._drag_total.x(),
+                snapped_y - self._drag_total.y(),
+            )
+
         for item in self._drag_items:
             item.moveBy(raw_delta.x(), raw_delta.y())
         self._drag_start = scene_pos
@@ -266,6 +322,17 @@ class SelectTool(BaseTool):
             self._drag_total.y() + raw_delta.y(),
         )
         self._update_handles()
+
+        # Move delta tooltip
+        if view is not None:
+            vp = view.viewport()
+            if vp is not None:
+                global_pos = vp.mapToGlobal(view.mapFromScene(scene_pos))
+                dx = self._drag_total.x()
+                dy = self._drag_total.y()
+                QToolTip.showText(
+                    global_pos, f"\u0394X: {dx:+.0f}  \u0394Y: {dy:+.0f}"
+                )
         return True
 
     def _handle_drag_release(self) -> bool:
@@ -353,6 +420,210 @@ class SelectTool(BaseTool):
         self._update_handles()
         return True
 
+    # --- handle transform ---
+
+    def _handle_transform_move(
+        self, scene_pos: QPointF, event: QMouseEvent
+    ) -> bool:
+        if self._handle_pos is None or not self._handle_item_originals:
+            return True
+
+        shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+        alt = bool(event.modifiers() & Qt.KeyboardModifier.AltModifier)
+        ctrl = bool(event.modifiers() & Qt.KeyboardModifier.ControlModifier)
+
+        if self._handle_pos == HandlePosition.ROTATE:
+            self._apply_rotation(scene_pos, shift)
+        elif self._handle_pos in CORNER_HANDLES:
+            self._apply_corner_resize(scene_pos, shift, alt)
+        elif self._handle_pos in EDGE_HANDLES:
+            self._apply_edge_resize(scene_pos, ctrl)
+
+        self._update_handles()
+        return True
+
+    def _apply_rotation(self, cursor: QPointF, snap: bool) -> None:
+        """Rotate all selected items around the selection center."""
+        center = self._handle_origin_rect.center()
+        angle = math.degrees(
+            math.atan2(cursor.y() - center.y(), cursor.x() - center.x())
+        ) - math.degrees(
+            math.atan2(
+                self._drag_start.y() - center.y(),
+                self._drag_start.x() - center.x(),
+            )
+        )
+        if snap:
+            angle = round(angle / 15.0) * 15.0
+
+        for item, orig_pos, orig_xform in self._handle_item_originals:
+            # Rotate position around center
+            offset = orig_pos - center
+            rad = math.radians(angle)
+            cos_a, sin_a = math.cos(rad), math.sin(rad)
+            new_offset = QPointF(
+                offset.x() * cos_a - offset.y() * sin_a,
+                offset.x() * sin_a + offset.y() * cos_a,
+            )
+            item.setPos(center + new_offset)
+            # Apply rotation transform
+            xform = QTransform(orig_xform)
+            xform.rotate(angle)
+            item.setTransform(xform)
+
+        # Tooltip
+        view = self._view
+        if view is not None:
+            vp = view.viewport()
+            if vp is not None:
+                global_pos = vp.mapToGlobal(
+                    view.mapFromScene(cursor)
+                )
+                QToolTip.showText(global_pos, f"{angle:+.1f}°")
+
+    def _apply_corner_resize(
+        self, cursor: QPointF, proportional: bool, from_center: bool
+    ) -> None:
+        """Resize from a corner handle."""
+        anchor = (
+            self._handle_origin_rect.center()
+            if from_center
+            else self._handle_anchor
+        )
+        orig_rect = self._handle_origin_rect
+
+        # Compute scale factors relative to anchor
+        orig_w = abs(self._drag_start.x() - anchor.x())
+        orig_h = abs(self._drag_start.y() - anchor.y())
+        new_w = abs(cursor.x() - anchor.x())
+        new_h = abs(cursor.y() - anchor.y())
+
+        sx = new_w / max(orig_w, 1.0)
+        sy = new_h / max(orig_h, 1.0)
+
+        if proportional:
+            s = min(sx, sy)
+            sx = sy = s
+
+        # Clamp minimum
+        sx = max(sx, 0.01)
+        sy = max(sy, 0.01)
+
+        for item, orig_pos, orig_xform in self._handle_item_originals:
+            offset = orig_pos - anchor
+            item.setPos(anchor + QPointF(offset.x() * sx, offset.y() * sy))
+            xform = QTransform(orig_xform)
+            xform.scale(sx, sy)
+            item.setTransform(xform)
+
+        # Tooltip
+        new_rect_w = orig_rect.width() * sx
+        new_rect_h = orig_rect.height() * sy
+        view = self._view
+        if view is not None:
+            vp = view.viewport()
+            if vp is not None:
+                global_pos = vp.mapToGlobal(view.mapFromScene(cursor))
+                QToolTip.showText(
+                    global_pos,
+                    f"{new_rect_w:.0f} × {new_rect_h:.0f}",
+                )
+
+    def _apply_edge_resize(self, cursor: QPointF, skew: bool) -> None:
+        """Resize from an edge midpoint handle. Ctrl = shear."""
+        anchor = self._handle_anchor
+        orig_rect = self._handle_origin_rect
+
+        if skew:
+            self._apply_skew(cursor)
+            return
+
+        hp = self._handle_pos
+        sx = 1.0
+        sy = 1.0
+        if hp in (HandlePosition.MIDDLE_LEFT, HandlePosition.MIDDLE_RIGHT):
+            orig_w = abs(self._drag_start.x() - anchor.x())
+            new_w = abs(cursor.x() - anchor.x())
+            sx = max(new_w / max(orig_w, 1.0), 0.01)
+        elif hp in (HandlePosition.TOP_CENTER, HandlePosition.BOTTOM_CENTER):
+            orig_h = abs(self._drag_start.y() - anchor.y())
+            new_h = abs(cursor.y() - anchor.y())
+            sy = max(new_h / max(orig_h, 1.0), 0.01)
+
+        for item, orig_pos, orig_xform in self._handle_item_originals:
+            offset = orig_pos - anchor
+            item.setPos(anchor + QPointF(offset.x() * sx, offset.y() * sy))
+            xform = QTransform(orig_xform)
+            xform.scale(sx, sy)
+            item.setTransform(xform)
+
+        new_w = orig_rect.width() * sx
+        new_h = orig_rect.height() * sy
+        view = self._view
+        if view is not None:
+            vp = view.viewport()
+            if vp is not None:
+                global_pos = vp.mapToGlobal(view.mapFromScene(cursor))
+                QToolTip.showText(
+                    global_pos, f"{new_w:.0f} × {new_h:.0f}"
+                )
+
+    def _apply_skew(self, cursor: QPointF) -> None:
+        """Apply shear when Ctrl+edge drag."""
+        hp = self._handle_pos
+        delta = cursor - self._drag_start
+        rect = self._handle_origin_rect
+
+        shear_x = 0.0
+        shear_y = 0.0
+        if hp in (HandlePosition.TOP_CENTER, HandlePosition.BOTTOM_CENTER):
+            shear_x = delta.x() / max(rect.height(), 1.0)
+        elif hp in (HandlePosition.MIDDLE_LEFT, HandlePosition.MIDDLE_RIGHT):
+            shear_y = delta.y() / max(rect.width(), 1.0)
+
+        center = rect.center()
+        for item, orig_pos, orig_xform in self._handle_item_originals:
+            offset = orig_pos - center
+            new_x = offset.x() + offset.y() * shear_x
+            new_y = offset.y() + offset.x() * shear_y
+            item.setPos(center + QPointF(new_x, new_y))
+            xform = QTransform(orig_xform)
+            xform.shear(shear_x, shear_y)
+            item.setTransform(xform)
+
+    def _handle_transform_release(self) -> bool:
+        """Commit transform as undoable command(s)."""
+        from snapmock.commands.macro_command import MacroCommand
+        from snapmock.commands.transform_item import TransformItemCommand
+
+        commands = []
+        for item, orig_pos, orig_xform in self._handle_item_originals:
+            new_pos = QPointF(item.pos())
+            new_xform = QTransform(item.transform())
+            if new_pos != orig_pos or new_xform != orig_xform:
+                # Revert to original so command redo applies change
+                item.setPos(orig_pos)
+                item.setTransform(orig_xform)
+                commands.append(
+                    TransformItemCommand(
+                        item, orig_pos, new_pos, orig_xform, new_xform
+                    )
+                )
+
+        if commands and self._scene is not None:
+            if len(commands) == 1:
+                self._scene.command_stack.push(commands[0])
+            else:
+                self._scene.command_stack.push(
+                    MacroCommand(commands, "Transform items")
+                )
+
+        self._state = _State.IDLE
+        self._handle_pos = None
+        self._handle_item_originals = []
+        self._update_handles()
+        return True
+
     # --- key events ---
 
     def key_press(self, event: QKeyEvent) -> bool:
@@ -381,7 +652,9 @@ class SelectTool(BaseTool):
                 cmd = MoveItemsCommand(items, delta)
                 self._scene.command_stack.push(cmd)
                 self._update_handles()
-            return True
+                return True
+            # No items selected — let the event fall through for viewport pan
+            return False
 
         # Delete / Backspace
         if key in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
@@ -408,6 +681,77 @@ class SelectTool(BaseTool):
         for item in deletable:
             self._scene.command_stack.push(RemoveItemCommand(self._scene, item))
         self._selection_manager.deselect_all()
+
+    @property
+    def status_hint(self) -> str:
+        if self._state == _State.DRAGGING:
+            return "Shift: constrain axis | Release to place"
+        if self._state == _State.RUBBER_BAND:
+            return "Shift: add to selection | Ctrl: toggle selection"
+        if self._state == _State.HANDLE_DRAG:
+            if self._handle_pos == HandlePosition.ROTATE:
+                return "Shift: snap to 15° increments"
+            return "Shift: proportional | Alt: from center | Ctrl+edge: skew"
+        return "Click to select | Drag to move | Shift+click: add | Right-click: menu"
+
+    # --- context menu ---
+
+    def context_menu(self, event: object) -> bool:
+        from PyQt6.QtGui import QContextMenuEvent
+        from PyQt6.QtWidgets import QMenu
+
+        if not isinstance(event, QContextMenuEvent):
+            return False
+        if self._scene is None or self._selection_manager is None:
+            return False
+
+        view = self._view
+        if view is None:
+            return False
+
+        scene_pos = view.mapToScene(event.pos())
+
+        # If right-click on an unselected item, select it first
+        item = self._item_at(scene_pos)
+        if item is not None and item not in self._selection_manager.items:
+            self._selection_manager.select(item)
+
+        menu = QMenu()
+        has_sel = not self._selection_manager.is_empty
+
+        cut_action = menu.addAction("Cut")
+        if cut_action is not None:
+            cut_action.setEnabled(has_sel)
+        copy_action = menu.addAction("Copy")
+        if copy_action is not None:
+            copy_action.setEnabled(has_sel)
+        menu.addAction("Paste")
+        menu.addSeparator()
+        delete_action = menu.addAction("Delete")
+        if delete_action is not None:
+            delete_action.setEnabled(has_sel)
+        duplicate_action = menu.addAction("Duplicate")
+        if duplicate_action is not None:
+            duplicate_action.setEnabled(has_sel)
+
+        chosen = menu.exec(event.globalPos())
+        if chosen is None:
+            return True
+
+        parent = view.parentWidget()
+        text = chosen.text()
+        if text == "Cut" and parent and hasattr(parent, "_edit_cut"):
+            parent._edit_cut()  # noqa: SLF001
+        elif text == "Copy" and parent and hasattr(parent, "_edit_copy"):
+            parent._edit_copy()  # noqa: SLF001
+        elif text == "Paste" and parent and hasattr(parent, "_edit_paste"):
+            parent._edit_paste()  # noqa: SLF001
+        elif text == "Delete" and parent and hasattr(parent, "_edit_delete"):
+            parent._edit_delete()  # noqa: SLF001
+        elif text == "Duplicate" and parent and hasattr(parent, "_edit_duplicate"):
+            parent._edit_duplicate()  # noqa: SLF001
+
+        return True
 
     # --- tool options ---
 

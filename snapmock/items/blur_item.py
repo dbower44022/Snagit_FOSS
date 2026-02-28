@@ -42,6 +42,15 @@ class BlurItem(SnapGraphicsItem):
         self._blur_radius = max(1.0, value)
         self.update()
 
+    def scale_geometry(self, sx: float, sy: float) -> None:
+        self._rect = QRectF(
+            self._rect.x() * sx,
+            self._rect.y() * sy,
+            self._rect.width() * sx,
+            self._rect.height() * sy,
+        )
+        self._blur_radius *= (sx + sy) / 2.0
+
     def boundingRect(self) -> QRectF:
         return self._rect
 

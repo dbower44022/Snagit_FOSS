@@ -6,7 +6,7 @@ import bisect
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QMimeData, QPoint, QPointF, QRectF, Qt, pyqtSignal
+from PyQt6.QtCore import QMimeData, QPoint, QPointF, QRectF, Qt, QTimeLine, pyqtSignal
 from PyQt6.QtGui import (
     QColor,
     QDragEnterEvent,
@@ -84,6 +84,18 @@ class SnapView(QGraphicsView):
         self._h_ruler: QWidget | None = None
         self._v_ruler: QWidget | None = None
         self._ruler_corner: QWidget | None = None
+
+        # Auto edge scroll
+        from PyQt6.QtCore import QTimer
+
+        self._auto_scroll_timer = QTimer(self)
+        self._auto_scroll_timer.setInterval(16)
+        self._auto_scroll_timer.timeout.connect(self._do_auto_scroll)
+        self._auto_scroll_dx: int = 0
+        self._auto_scroll_dy: int = 0
+
+        # Zoom animation
+        self._zoom_timeline: QTimeLine | None = None
 
         # Rendering quality
         self.setRenderHints(
@@ -255,10 +267,10 @@ class SnapView(QGraphicsView):
         return ZOOM_STEPS[0]
 
     def zoom_in(self) -> None:
-        self.set_zoom(self._next_zoom_step())
+        self.animate_zoom_to(self._next_zoom_step())
 
     def zoom_out(self) -> None:
-        self.set_zoom(self._prev_zoom_step())
+        self.animate_zoom_to(self._prev_zoom_step())
 
     def zoom_to_rect(self, rect: QRectF) -> None:
         """Zoom and scroll so that *rect* (in scene coordinates) fills the viewport."""
@@ -280,6 +292,73 @@ class SnapView(QGraphicsView):
         t = self.transform()
         self._zoom_pct = max(ZOOM_MIN, min(ZOOM_MAX, int(t.m11() * 100)))
         self.zoom_changed.emit(self._zoom_pct)
+
+    # --- auto edge scroll ---
+
+    def _check_auto_scroll(self, viewport_pos: QPoint) -> None:
+        """Start/stop auto-scroll based on cursor proximity to viewport edges."""
+        vp = self.viewport()
+        if vp is None:
+            self._stop_auto_scroll()
+            return
+        edge = 20
+        vp_rect = vp.rect()
+        dx = dy = 0
+        dist_left = viewport_pos.x() - vp_rect.left()
+        dist_right = vp_rect.right() - viewport_pos.x()
+        dist_top = viewport_pos.y() - vp_rect.top()
+        dist_bottom = vp_rect.bottom() - viewport_pos.y()
+
+        if dist_left < edge:
+            dx = -max(2, int(15 * (1.0 - dist_left / edge)))
+        elif dist_right < edge:
+            dx = max(2, int(15 * (1.0 - dist_right / edge)))
+        if dist_top < edge:
+            dy = -max(2, int(15 * (1.0 - dist_top / edge)))
+        elif dist_bottom < edge:
+            dy = max(2, int(15 * (1.0 - dist_bottom / edge)))
+
+        if dx != 0 or dy != 0:
+            self._auto_scroll_dx = dx
+            self._auto_scroll_dy = dy
+            if not self._auto_scroll_timer.isActive():
+                self._auto_scroll_timer.start()
+        else:
+            self._stop_auto_scroll()
+
+    def _stop_auto_scroll(self) -> None:
+        self._auto_scroll_timer.stop()
+        self._auto_scroll_dx = 0
+        self._auto_scroll_dy = 0
+
+    def _do_auto_scroll(self) -> None:
+        h_bar = self.horizontalScrollBar()
+        v_bar = self.verticalScrollBar()
+        if h_bar is not None and self._auto_scroll_dx != 0:
+            h_bar.setValue(h_bar.value() + self._auto_scroll_dx)
+        if v_bar is not None and self._auto_scroll_dy != 0:
+            v_bar.setValue(v_bar.value() + self._auto_scroll_dy)
+
+    # --- animated zoom ---
+
+    def animate_zoom_to(self, target_pct: int, center: QPoint | None = None) -> None:
+        """Smoothly animate zoom to *target_pct*."""
+        target_pct = max(ZOOM_MIN, min(ZOOM_MAX, target_pct))
+        if target_pct == self._zoom_pct:
+            return
+        # Cancel any running animation
+        if self._zoom_timeline is not None:
+            self._zoom_timeline.stop()
+        start_pct = self._zoom_pct
+        self._zoom_timeline = QTimeLine(150)
+        self._zoom_timeline.setFrameRange(start_pct, target_pct)
+        from PyQt6.QtCore import QEasingCurve
+
+        self._zoom_timeline.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self._zoom_timeline.frameChanged.connect(
+            lambda pct: self.set_zoom_centered(pct, center)
+        )
+        self._zoom_timeline.start()
 
     # --- drawBackground ---
 
@@ -478,6 +557,14 @@ class SnapView(QGraphicsView):
         scene_pos = self.mapToScene(event.position().toPoint())
         self.cursor_moved.emit(scene_pos.x(), scene_pos.y())
 
+        # Auto edge scroll during active tool operations
+        if (
+            self._tool_manager is not None
+            and self._tool_manager.active_tool is not None
+            and self._tool_manager.active_tool.is_active_operation
+        ):
+            self._check_auto_scroll(event.position().toPoint())
+
         # Middle-mouse pan
         if self._panning:
             delta = event.position().toPoint() - self._pan_start
@@ -499,6 +586,7 @@ class SnapView(QGraphicsView):
     def mouseReleaseEvent(self, event: QMouseEvent | None) -> None:  # noqa: N802
         if event is None:
             return
+        self._stop_auto_scroll()
         # Middle-mouse pan
         if event.button() == Qt.MouseButton.MiddleButton and self._panning:
             self._panning = False
@@ -519,6 +607,38 @@ class SnapView(QGraphicsView):
             event.accept()
             return
         super().mouseDoubleClickEvent(event)
+
+    # --- focus loss ---
+
+    def focusOutEvent(self, event: object) -> None:  # noqa: N802
+        """Release temporary pan and cancel active tool on focus loss."""
+        if self._panning:
+            self._panning = False
+            self._apply_tool_cursor()
+        if self._tool_manager is not None:
+            # Restore space-bar temporary pan if active
+            if self._tool_manager._previous_tool_id is not None:  # noqa: SLF001
+                self._tool_manager.restore_previous()
+            # Cancel active tool operation
+            active = self._tool_manager.active_tool
+            if active is not None and active.is_active_operation:
+                active.cancel()
+        self._stop_auto_scroll()
+        super().focusOutEvent(event)  # type: ignore[arg-type]
+
+    # --- context menu ---
+
+    def contextMenuEvent(self, event: object) -> None:  # noqa: N802
+        from PyQt6.QtGui import QContextMenuEvent
+
+        if isinstance(event, QContextMenuEvent):
+            if (
+                self._tool_manager is not None
+                and self._tool_manager.handle_context_menu(event)
+            ):
+                event.accept()
+                return
+        super().contextMenuEvent(event)  # type: ignore[arg-type]
 
     # --- drag and drop ---
 

@@ -66,6 +66,10 @@ class CropTool(BaseTool):
     def is_active_operation(self) -> bool:
         return self._state in (_CropState.DRAWING, _CropState.MOVING, _CropState.RESIZING)
 
+    @property
+    def status_hint(self) -> str:
+        return "Drag to define crop area | Enter to apply | Escape to cancel"
+
     def activate(self, scene: SnapScene, selection_manager: SelectionManager) -> None:
         super().activate(scene, selection_manager)
         self._overlay = CropOverlay(scene)

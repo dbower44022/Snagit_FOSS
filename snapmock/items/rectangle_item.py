@@ -42,6 +42,16 @@ class RectangleItem(VectorItem):
         self._corner_radius = max(0.0, value)
         self.update()
 
+    def scale_geometry(self, sx: float, sy: float) -> None:
+        super().scale_geometry(sx, sy)
+        self._rect = QRectF(
+            self._rect.x() * sx,
+            self._rect.y() * sy,
+            self._rect.width() * sx,
+            self._rect.height() * sy,
+        )
+        self._corner_radius *= (sx + sy) / 2.0
+
     # --- QGraphicsItem overrides ---
 
     def boundingRect(self) -> QRectF:

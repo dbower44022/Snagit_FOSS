@@ -25,6 +25,10 @@ class TextTool(BaseTool):
     def cursor(self) -> Qt.CursorShape:
         return Qt.CursorShape.IBeamCursor
 
+    @property
+    def status_hint(self) -> str:
+        return "Click to place text | Drag to set text box width"
+
     def mouse_press(self, event: QMouseEvent) -> bool:
         if self._scene is None or event.button() != Qt.MouseButton.LeftButton:
             return False

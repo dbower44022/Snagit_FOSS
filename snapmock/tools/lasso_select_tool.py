@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum, auto
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QPointF, Qt
+from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainterPath, QPen
 from PyQt6.QtWidgets import QComboBox, QLabel, QToolBar
 
@@ -59,6 +59,16 @@ class LassoSelectTool(BaseTool):
     @property
     def is_active_operation(self) -> bool:
         return self._state in (_LassoState.DRAWING, _LassoState.MOVING)
+
+    @property
+    def has_active_selection(self) -> bool:
+        return self._state == _LassoState.ACTIVE and self._overlay is not None
+
+    @property
+    def selection_rect(self) -> QRectF:
+        if self._overlay is not None:
+            return self._overlay.selection_rect
+        return QRectF()
 
     def activate(self, scene: SnapScene, selection_manager: SelectionManager) -> None:
         super().activate(scene, selection_manager)
@@ -218,6 +228,9 @@ class LassoSelectTool(BaseTool):
             return True
 
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            if self._state == _LassoState.ACTIVE:
+                self._commit_as_item()
+                return True
             if self._state == _LassoState.DRAWING and self._mode == _LassoMode.POLYGONAL:
                 self._finalize_selection()
                 return True
@@ -235,6 +248,70 @@ class LassoSelectTool(BaseTool):
 
         return False
 
+    # --- commit to item ---
+
+    def _commit_as_item(self) -> None:
+        """Commit the current lasso selection as a masked RasterRegionItem."""
+        if self._scene is None or self._overlay is None:
+            return
+        from PyQt6.QtGui import QImage, QPixmap
+
+        from snapmock.commands.add_item import AddItemCommand
+        from snapmock.core.render_engine import RenderEngine
+        from snapmock.items.raster_region_item import RasterRegionItem
+
+        rect = self._overlay.selection_rect
+        if rect.isEmpty():
+            return
+
+        # Render the bounding region
+        engine = RenderEngine(self._scene)
+        image = engine.render_region(rect)
+
+        # Apply freeform path as alpha mask
+        sel_path = self._overlay._selection_path  # noqa: SLF001
+        if sel_path is not None:
+            from PyQt6.QtGui import QPainter
+
+            masked = QImage(
+                image.size(), QImage.Format.Format_ARGB32_Premultiplied
+            )
+            masked.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(masked)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            # Translate path to local coords
+            local_path = QPainterPath(sel_path)
+            local_path.translate(-rect.topLeft())
+            painter.setClipPath(local_path)
+            painter.drawImage(0, 0, image)
+            painter.end()
+            image = masked
+
+        pixmap = QPixmap.fromImage(image)
+        item = RasterRegionItem(pixmap=pixmap)
+        item.setPos(rect.topLeft())
+
+        layer = self._scene.layer_manager.active_layer
+        if layer is not None:
+            cmd = AddItemCommand(self._scene, item, layer.layer_id)
+            self._scene.command_stack.push(cmd)
+
+        self.cancel()
+
+    @property
+    def status_hint(self) -> str:
+        if self._state == _LassoState.IDLE:
+            if self._mode == _LassoMode.FREEFORM:
+                return "Click and drag to draw freeform selection"
+            return "Click to add vertices, double-click or Enter to close"
+        if self._state == _LassoState.DRAWING:
+            if self._mode == _LassoMode.FREEFORM:
+                return "Release to close selection path"
+            return "Click to add vertex | Enter/double-click to close | Backspace to undo"
+        if self._state == _LassoState.ACTIVE:
+            return "Enter: commit as item | Ctrl+C: copy | Drag to move"
+        return ""
+
     # --- tool options ---
 
     def build_options_widgets(self, toolbar: QToolBar) -> None:
@@ -243,6 +320,20 @@ class LassoSelectTool(BaseTool):
         combo.addItems(["Freeform", "Polygonal"])
         combo.currentTextChanged.connect(self._on_mode_changed)
         toolbar.addWidget(combo)
+
+        toolbar.addSeparator()
+        from PyQt6.QtWidgets import QCheckBox, QSpinBox
+
+        toolbar.addWidget(QLabel("Feather:"))
+        feather = QSpinBox()
+        feather.setRange(0, 20)
+        feather.setValue(0)
+        feather.setSuffix("px")
+        toolbar.addWidget(feather)
+
+        antialias = QCheckBox("Anti-alias")
+        antialias.setChecked(True)
+        toolbar.addWidget(antialias)
 
     def _on_mode_changed(self, text: str) -> None:
         if text == "Freeform":

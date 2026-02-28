@@ -30,6 +30,10 @@ class BlurTool(BaseTool):
     def cursor(self) -> Qt.CursorShape:
         return Qt.CursorShape.CrossCursor
 
+    @property
+    def status_hint(self) -> str:
+        return "Click and drag to define blur region"
+
     def mouse_press(self, event: QMouseEvent) -> bool:
         if self._scene is None or event.button() != Qt.MouseButton.LeftButton:
             return False

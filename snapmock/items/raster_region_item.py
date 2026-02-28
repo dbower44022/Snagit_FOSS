@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from PyQt6.QtCore import QRectF
+from PyQt6.QtCore import QRectF, Qt
 from PyQt6.QtGui import QPainter, QPixmap
 
 from snapmock.items.base_item import SnapGraphicsItem
@@ -30,6 +30,14 @@ class RasterRegionItem(SnapGraphicsItem):
         self.prepareGeometryChange()
         self._pixmap = QPixmap(value)
         self.update()
+
+    def scale_geometry(self, sx: float, sy: float) -> None:
+        new_w = max(1, int(self._pixmap.width() * sx))
+        new_h = max(1, int(self._pixmap.height() * sy))
+        self.prepareGeometryChange()
+        self._pixmap = self._pixmap.scaled(
+            new_w, new_h, transformMode=Qt.TransformationMode.SmoothTransformation
+        )
 
     def boundingRect(self) -> QRectF:
         return QRectF(0, 0, self._pixmap.width(), self._pixmap.height())

@@ -35,6 +35,10 @@ class EyedropperTool(BaseTool):
     def picked_color(self) -> QColor:
         return QColor(self._picked_color)
 
+    @property
+    def status_hint(self) -> str:
+        return "Click to sample color"
+
     def mouse_press(self, event: QMouseEvent) -> bool:
         if self._scene is None or event.button() != Qt.MouseButton.LeftButton:
             return False

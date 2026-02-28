@@ -91,6 +91,10 @@ class VectorItem(SnapGraphicsItem):
         self._stroke_width = data.get("stroke_width", DEFAULT_STROKE_WIDTH)
         self._fill_color = QColor(data.get("fill_color", DEFAULT_FILL_COLOR))
 
+    def scale_geometry(self, sx: float, sy: float) -> None:
+        self.prepareGeometryChange()
+        self._stroke_width *= (sx + sy) / 2.0
+
     # --- still abstract ---
 
     def boundingRect(self) -> QRectF:

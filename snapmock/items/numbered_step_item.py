@@ -36,6 +36,12 @@ class NumberedStepItem(SnapGraphicsItem):
         self._number = value
         self.update()
 
+    def scale_geometry(self, sx: float, sy: float) -> None:
+        self._radius *= (sx + sy) / 2.0
+        avg = (sx + sy) / 2.0
+        new_size = max(1, int(self._font.pointSize() * avg))
+        self._font.setPointSize(new_size)
+
     def boundingRect(self) -> QRectF:
         r = self._radius + 2
         return QRectF(-r, -r, r * 2, r * 2)

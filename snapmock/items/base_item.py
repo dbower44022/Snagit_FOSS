@@ -81,6 +81,14 @@ class SnapGraphicsItem(QGraphicsObject):
         new_item._item_id = uuid.uuid4().hex
         return new_item
 
+    # --- geometry scaling ---
+
+    def scale_geometry(self, sx: float, sy: float) -> None:
+        """Scale internal geometry by the given factors.
+
+        Subclasses override to scale rects, paths, radii, etc. Default is no-op.
+        """
+
     # --- type label for UI ---
 
     @property

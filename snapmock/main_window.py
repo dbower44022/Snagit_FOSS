@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QAction, QCloseEvent, QKeyEvent, QKeySequence
-from PyQt6.QtWidgets import QFileDialog, QMainWindow, QMenu, QMenuBar, QMessageBox
+from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QMenu, QMenuBar, QMessageBox
 
 if TYPE_CHECKING:
     from PyQt6.QtWidgets import QGraphicsItem
@@ -104,6 +104,9 @@ class MainWindow(QMainWindow):
         # Wire cursor position tracking
         self._view.cursor_moved.connect(self._status_bar.update_cursor_pos)
 
+        # Wire tool hint to status bar
+        self._tool_manager.tool_changed.connect(self._on_tool_changed_for_hint)
+
         # Menu bar
         self._recent_menu: QMenu | None = None
         self._setup_menus()
@@ -117,6 +120,9 @@ class MainWindow(QMainWindow):
 
         # Track dirty state for window title
         self._scene.command_stack.stack_changed.connect(self._update_title)
+
+        # Layer state → deselect/cancel on lock/hide/switch
+        self._connect_layer_signals()
 
         # Restore window geometry
         geo = self._settings.window_geometry()
@@ -220,7 +226,7 @@ class MainWindow(QMainWindow):
         undo_action = edit_menu.addAction("&Undo")
         if undo_action is not None:
             undo_action.setShortcut(QKeySequence(SHORTCUTS["edit.undo"]))
-            undo_action.triggered.connect(self._scene.command_stack.undo)
+            undo_action.triggered.connect(self._edit_undo)
 
         redo_action = edit_menu.addAction("&Redo")
         if redo_action is not None:
@@ -298,6 +304,13 @@ class MainWindow(QMainWindow):
             actual_action.setShortcut(QKeySequence(SHORTCUTS["view.actual_size"]))
             actual_action.triggered.connect(lambda: self._view.set_zoom(100))
 
+        zoom_sel_action = view_menu.addAction("Zoom to &Selection")
+        if zoom_sel_action is not None:
+            zoom_sel_action.setShortcut(
+                QKeySequence(SHORTCUTS["view.zoom_to_selection"])
+            )
+            zoom_sel_action.triggered.connect(self._view_zoom_to_selection)
+
         view_menu.addSeparator()
 
         self._grid_action = QAction("Show &Grid", self)
@@ -340,6 +353,58 @@ class MainWindow(QMainWindow):
     def _toggle_rulers(self, checked: bool) -> None:
         self._view.set_rulers_visible(checked)
         self._settings.set_rulers_visible(checked)
+
+    def _on_tool_changed_for_hint(self, _tool_id: str) -> None:
+        tool = self._tool_manager.active_tool
+        if tool is not None:
+            self._status_bar.set_hint(tool.status_hint)
+        else:
+            self._status_bar.set_hint("")
+
+    def _connect_layer_signals(self) -> None:
+        lm = self._scene.layer_manager
+        lm.layer_lock_changed.connect(self._on_layer_lock_changed)
+        lm.layer_visibility_changed.connect(self._on_layer_visibility_changed)
+        lm.active_layer_changed.connect(self._on_active_layer_changed)
+
+    def _on_layer_lock_changed(self, layer_id: str, locked: bool) -> None:
+        if locked:
+            self._deselect_items_on_layer(layer_id)
+
+    def _on_layer_visibility_changed(self, layer_id: str, visible: bool) -> None:
+        if not visible:
+            self._deselect_items_on_layer(layer_id)
+
+    def _on_active_layer_changed(self, _layer_id: str) -> None:
+        # Cancel active raster/lasso selection when layer changes
+        active = self._tool_manager.active_tool
+        if active is not None and active.is_active_operation:
+            if isinstance(active, (RasterSelectTool, LassoSelectTool)):
+                active.cancel()
+
+    def _deselect_items_on_layer(self, layer_id: str) -> None:
+        """Deselect any selected items on the given layer."""
+        affected = [
+            i
+            for i in self._selection_manager.items
+            if isinstance(i, SnapGraphicsItem) and i.layer_id == layer_id
+        ]
+        if affected:
+            for item in affected:
+                self._selection_manager.toggle(item)
+
+    def _view_zoom_to_selection(self) -> None:
+        """Zoom to fit the current selection in the viewport."""
+        items = [
+            i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)
+        ]
+        if not items:
+            return
+        rect = items[0].sceneBoundingRect()
+        for item in items[1:]:
+            rect = rect.united(item.sceneBoundingRect())
+        pad = 20
+        self._view.zoom_to_rect(rect.adjusted(-pad, -pad, pad, pad))
 
     # ---- tool shortcuts ----
 
@@ -506,26 +571,83 @@ class MainWindow(QMainWindow):
 
     # ---- edit operations ----
 
+    def _edit_undo(self) -> None:
+        """Undo — first cancel any active tool operation, then undo."""
+        active = self._tool_manager.active_tool
+        if active is not None and active.is_active_operation:
+            active.cancel()
+            return  # first Ctrl+Z cancels active operation
+        self._scene.command_stack.undo()
+
     def _edit_cut(self) -> None:
+        active = self._tool_manager.active_tool
+        if isinstance(active, (RasterSelectTool, LassoSelectTool)) and hasattr(
+            active, "has_active_selection"
+        ) and active.has_active_selection:
+            self._copy_raster_selection(active)
+            self._cut_raster_selection(active)
+            return
         self._edit_copy()
         self._edit_delete()
 
     def _edit_copy(self) -> None:
+        active = self._tool_manager.active_tool
+        if isinstance(active, (RasterSelectTool, LassoSelectTool)) and hasattr(
+            active, "has_active_selection"
+        ) and active.has_active_selection:
+            self._copy_raster_selection(active)
+            return
         items = [i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)]
         if items:
             self._clipboard.copy_items(items)
 
+    def _copy_raster_selection(self, tool: RasterSelectTool | LassoSelectTool) -> None:
+        """Copy pixels from a raster/lasso selection to the clipboard."""
+        from snapmock.core.render_engine import RenderEngine
+
+        rect = tool.selection_rect
+        if rect.isEmpty():
+            return
+        engine = RenderEngine(self._scene)
+        image = engine.render_region(rect)
+        self._clipboard.copy_raster_region(image, rect)
+
+    def _cut_raster_selection(self, tool: RasterSelectTool | LassoSelectTool) -> None:
+        """Cut pixels from a raster/lasso selection (erase after copy)."""
+        from PyQt6.QtGui import QImage
+
+        from snapmock.commands.raster_commands import RasterCutCommand
+
+        rect = tool.selection_rect
+        layer = self._scene.layer_manager.active_layer
+        if layer is not None and not rect.isEmpty():
+            cmd = RasterCutCommand(
+                self._scene, rect, QImage(), layer.layer_id
+            )
+            self._scene.command_stack.push(cmd)
+        tool.cancel()
+
     def _edit_paste(self) -> None:
-        # Smart paste routing: internal items → system image → system text
+        # Smart paste routing: internal items → internal raster → system image → system text
+        # 1. Internal vector items
         data = self._clipboard.paste_items()
         if data:
             self._paste_internal_items(data, offset=True)
             return
-        # Try system clipboard image
+        # 2. Internal raster data
+        raster, source_rect = self._clipboard.paste_raster()
+        if raster is not None:
+            self._paste_raster_image(raster, source_rect)
+            return
+        # 3. System clipboard image
         sys_image = self._clipboard.paste_image_from_system()
         if sys_image is not None:
             self._paste_system_image(sys_image)
             return
+        # 4. System clipboard text
+        clipboard = QApplication.clipboard()
+        if clipboard and clipboard.text():
+            self._paste_system_text(clipboard.text())
 
     def _paste_internal_items(self, data: list[dict], *, offset: bool) -> None:  # type: ignore[type-arg]
         from snapmock.commands.add_item import AddItemCommand
@@ -542,6 +664,61 @@ class MainWindow(QMainWindow):
                 if offset:
                     item.setPos(item.pos().x() + 10, item.pos().y() + 10)
                 self._scene.command_stack.push(AddItemCommand(self._scene, item, layer.layer_id))
+
+    def _paste_raster_image(
+        self, image: object, source_rect: object | None
+    ) -> None:
+        """Paste a raster image at its source position."""
+        from PyQt6.QtCore import QRectF
+        from PyQt6.QtGui import QImage, QPixmap
+
+        from snapmock.commands.add_item import AddItemCommand
+        from snapmock.items.raster_region_item import RasterRegionItem
+
+        if not isinstance(image, QImage):
+            return
+        pixmap = QPixmap.fromImage(image)
+        item = RasterRegionItem(pixmap=pixmap)
+        # Place at source position if available, else viewport center
+        if isinstance(source_rect, QRectF) and not source_rect.isEmpty():
+            item.setPos(source_rect.topLeft())
+        else:
+            view = self._view
+            viewport = view.viewport()
+            if viewport is not None:
+                center = view.mapToScene(viewport.rect().center())
+                item.setPos(
+                    center.x() - pixmap.width() / 2,
+                    center.y() - pixmap.height() / 2,
+                )
+        layer = self._scene.layer_manager.active_layer
+        if layer is not None:
+            self._scene.command_stack.push(
+                AddItemCommand(self._scene, item, layer.layer_id)
+            )
+            # Switch to select tool and select the new item
+            self._tool_manager.activate("select")
+            self._selection_manager.select(item)
+
+    def _paste_system_text(self, text: str) -> None:
+        """Paste system clipboard text as a TextItem."""
+        from snapmock.commands.add_item import AddItemCommand
+        from snapmock.items.text_item import TextItem
+
+        item = TextItem(text=text)
+        # Place at viewport center
+        view = self._view
+        viewport = view.viewport()
+        if viewport is not None:
+            center = view.mapToScene(viewport.rect().center())
+            item.setPos(center.x() - 100, center.y() - 20)
+        layer = self._scene.layer_manager.active_layer
+        if layer is not None:
+            self._scene.command_stack.push(
+                AddItemCommand(self._scene, item, layer.layer_id)
+            )
+            self._tool_manager.activate("select")
+            self._selection_manager.select(item)
 
     def _paste_system_image(self, image: object) -> None:
         from PyQt6.QtGui import QPixmap
@@ -567,6 +744,10 @@ class MainWindow(QMainWindow):
         data = self._clipboard.paste_items()
         if data:
             self._paste_internal_items(data, offset=False)
+            return
+        raster, source_rect = self._clipboard.paste_raster()
+        if raster is not None:
+            self._paste_raster_image(raster, source_rect)
             return
         sys_image = self._clipboard.paste_image_from_system()
         if sys_image is not None:
@@ -695,7 +876,7 @@ class MainWindow(QMainWindow):
         """Whether Space is currently held for temporary pan."""
         return self._tool_manager._previous_tool_id is not None  # noqa: SLF001
 
-    def keyPressEvent(self, event: QKeyEvent | None) -> None:
+    def keyPressEvent(self, event: QKeyEvent | None) -> None:  # noqa: N802
         if event is None:
             super().keyPressEvent(event)
             return
@@ -709,6 +890,29 @@ class MainWindow(QMainWindow):
 
         # Delegate to active tool
         if self._tool_manager.handle_key_press(event):
+            event.accept()
+            return
+
+        # Arrow key viewport pan when no selection
+        key = event.key()
+        if key in (
+            Qt.Key.Key_Left,
+            Qt.Key.Key_Right,
+            Qt.Key.Key_Up,
+            Qt.Key.Key_Down,
+        ):
+            shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+            step = 100 if shift else 20
+            h_bar = self._view.horizontalScrollBar()
+            v_bar = self._view.verticalScrollBar()
+            if key == Qt.Key.Key_Left and h_bar is not None:
+                h_bar.setValue(h_bar.value() - step)
+            elif key == Qt.Key.Key_Right and h_bar is not None:
+                h_bar.setValue(h_bar.value() + step)
+            elif key == Qt.Key.Key_Up and v_bar is not None:
+                v_bar.setValue(v_bar.value() - step)
+            elif key == Qt.Key.Key_Down and v_bar is not None:
+                v_bar.setValue(v_bar.value() + step)
             event.accept()
             return
 

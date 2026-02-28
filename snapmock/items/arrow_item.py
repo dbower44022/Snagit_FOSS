@@ -34,6 +34,15 @@ class ArrowItem(VectorItem):
         self._line = QLineF(value)
         self.update()
 
+    def scale_geometry(self, sx: float, sy: float) -> None:
+        super().scale_geometry(sx, sy)
+        self._line = QLineF(
+            self._line.x1() * sx,
+            self._line.y1() * sy,
+            self._line.x2() * sx,
+            self._line.y2() * sy,
+        )
+
     def _arrowhead_polygon(self) -> QPolygonF:
         """Compute a triangle polygon for the arrowhead at p2."""
         angle = math.atan2(

@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QKeyEvent, QMouseEvent
+from PyQt6.QtGui import QContextMenuEvent, QKeyEvent, QMouseEvent
 
 if TYPE_CHECKING:
     from PyQt6.QtWidgets import QToolBar
@@ -102,6 +102,19 @@ class BaseTool(ABC):
     def key_release(self, event: QKeyEvent) -> bool:
         """Handle a key release event. Return True if consumed."""
         return False
+
+    # --- context menu ---
+
+    def context_menu(self, event: QContextMenuEvent) -> bool:
+        """Handle a context menu event. Return True if consumed."""
+        return False
+
+    # --- status hint ---
+
+    @property
+    def status_hint(self) -> str:
+        """Contextual hint for the status bar."""
+        return ""
 
     # --- options bar ---
 

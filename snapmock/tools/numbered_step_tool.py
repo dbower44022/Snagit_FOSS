@@ -29,6 +29,10 @@ class NumberedStepTool(BaseTool):
     def cursor(self) -> Qt.CursorShape:
         return Qt.CursorShape.CrossCursor
 
+    @property
+    def status_hint(self) -> str:
+        return "Click to place numbered step"
+
     def activate(self, scene: object, selection_manager: object) -> None:
         super().activate(scene, selection_manager)  # type: ignore[arg-type]
         self._next_number = 1

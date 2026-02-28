@@ -33,6 +33,15 @@ class HighlightItem(VectorItem):
             self._path.lineTo(x, y)
         self.update()
 
+    def scale_geometry(self, sx: float, sy: float) -> None:
+        super().scale_geometry(sx, sy)
+        self._points = [(x * sx, y * sy) for x, y in self._points]
+        self._path = QPainterPath()
+        if self._points:
+            self._path.moveTo(self._points[0][0], self._points[0][1])
+            for x, y in self._points[1:]:
+                self._path.lineTo(x, y)
+
     def boundingRect(self) -> QRectF:
         half = self._stroke_width / 2 + 2
         return self._path.boundingRect().adjusted(-half, -half, half, half)

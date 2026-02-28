@@ -31,6 +31,15 @@ class EllipseItem(VectorItem):
         self._rect = QRectF(value)
         self.update()
 
+    def scale_geometry(self, sx: float, sy: float) -> None:
+        super().scale_geometry(sx, sy)
+        self._rect = QRectF(
+            self._rect.x() * sx,
+            self._rect.y() * sy,
+            self._rect.width() * sx,
+            self._rect.height() * sy,
+        )
+
     def boundingRect(self) -> QRectF:
         half = self._stroke_width / 2
         return self._rect.adjusted(-half, -half, half, half)

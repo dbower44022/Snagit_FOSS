@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import QKeyEvent, QMouseEvent
-from PyQt6.QtWidgets import QLabel, QToolBar
+from PyQt6.QtWidgets import QCheckBox, QLabel, QSpinBox, QToolBar
 
 from snapmock.config.constants import DRAG_THRESHOLD
 from snapmock.tools.base_tool import BaseTool
@@ -52,6 +52,10 @@ class RasterSelectTool(BaseTool):
     @property
     def is_active_operation(self) -> bool:
         return self._state in (_RasterState.DRAWING, _RasterState.MOVING, _RasterState.RESIZING)
+
+    @property
+    def has_active_selection(self) -> bool:
+        return self._state == _RasterState.ACTIVE and self._overlay is not None
 
     @property
     def selection_rect(self) -> QRectF:
@@ -142,17 +146,53 @@ class RasterSelectTool(BaseTool):
                 max(canvas.left(), min(canvas.right(), pos.x())),
                 max(canvas.top(), min(canvas.bottom(), pos.y())),
             )
-            rect = QRectF(self._start, clamped).normalized()
 
-            # Shift = square
             shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
-            if shift:
-                side = min(rect.width(), rect.height())
-                rect.setWidth(side)
-                rect.setHeight(side)
+            alt = bool(event.modifiers() & Qt.KeyboardModifier.AltModifier)
+
+            if alt:
+                # Alt: resize from center (start is center)
+                dx = abs(clamped.x() - self._start.x())
+                dy = abs(clamped.y() - self._start.y())
+                if shift:
+                    dx = dy = min(dx, dy)
+                rect = QRectF(
+                    self._start.x() - dx,
+                    self._start.y() - dy,
+                    dx * 2,
+                    dy * 2,
+                )
+            else:
+                rect = QRectF(self._start, clamped).normalized()
+                if shift:
+                    # Square constraint keeping anchor corner stable
+                    side = min(rect.width(), rect.height())
+                    if clamped.x() < self._start.x():
+                        rect.setLeft(self._start.x() - side)
+                    else:
+                        rect.setRight(self._start.x() + side)
+                    if clamped.y() < self._start.y():
+                        rect.setTop(self._start.y() - side)
+                    else:
+                        rect.setBottom(self._start.y() + side)
 
             overlay = self._ensure_overlay()
             overlay.set_selection_rect(rect)
+
+            # Dimensions tooltip
+            from PyQt6.QtWidgets import QToolTip
+
+            view = self._view
+            if view is not None:
+                vp = view.viewport()
+                if vp is not None:
+                    global_pos = vp.mapToGlobal(
+                        view.mapFromScene(clamped)
+                    )
+                    QToolTip.showText(
+                        global_pos,
+                        f"W: {rect.width():.0f}  H: {rect.height():.0f}",
+                    )
             return True
 
         if self._state == _RasterState.MOVING and self._overlay is not None:
@@ -263,8 +303,30 @@ class RasterSelectTool(BaseTool):
 
         self.cancel()
 
+    @property
+    def status_hint(self) -> str:
+        if self._state == _RasterState.IDLE:
+            return "Click and drag to draw a rectangular selection"
+        if self._state == _RasterState.DRAWING:
+            return "Shift: square | Alt: from center | Release to finish"
+        if self._state == _RasterState.ACTIVE:
+            return "Enter: commit as item | Ctrl+C: copy | Drag to move"
+        return ""
+
     # --- tool options ---
 
     def build_options_widgets(self, toolbar: QToolBar) -> None:
         self._info_label = QLabel("Draw a selection rectangle")
         toolbar.addWidget(self._info_label)
+
+        toolbar.addSeparator()
+        toolbar.addWidget(QLabel("Feather:"))
+        feather = QSpinBox()
+        feather.setRange(0, 20)
+        feather.setValue(0)
+        feather.setSuffix("px")
+        toolbar.addWidget(feather)
+
+        antialias = QCheckBox("Anti-alias")
+        antialias.setChecked(True)
+        toolbar.addWidget(antialias)

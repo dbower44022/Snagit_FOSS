@@ -25,6 +25,10 @@ class CalloutTool(BaseTool):
     def cursor(self) -> Qt.CursorShape:
         return Qt.CursorShape.CrossCursor
 
+    @property
+    def status_hint(self) -> str:
+        return "Click to place callout | Drag tail to point"
+
     def mouse_press(self, event: QMouseEvent) -> bool:
         if self._scene is None or event.button() != Qt.MouseButton.LeftButton:
             return False

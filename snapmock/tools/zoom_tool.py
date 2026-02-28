@@ -35,6 +35,10 @@ class ZoomTool(BaseTool):
     def is_active_operation(self) -> bool:
         return self._dragging
 
+    @property
+    def status_hint(self) -> str:
+        return "Click to zoom in | Alt+click to zoom out | Drag to zoom region"
+
     def _scene_pos(self, event: QMouseEvent) -> QPointF | None:
         view = self._view
         if view is not None:

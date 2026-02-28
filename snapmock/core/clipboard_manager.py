@@ -31,6 +31,8 @@ class ClipboardManager(QObject):
         super().__init__(parent)
         self._scene = scene
         self._internal_data: list[dict[str, Any]] = []
+        self._raster_data: QImage | None = None
+        self._raster_source_rect: QRectF | None = None
 
     @property
     def has_internal(self) -> bool:
@@ -97,6 +99,37 @@ class ClipboardManager(QObject):
             return image
         return None
 
+    # --- raster clipboard ---
+
+    @property
+    def has_raster(self) -> bool:
+        return self._raster_data is not None
+
+    def copy_raster_region(self, image: QImage, source_rect: QRectF) -> None:
+        """Store a raster region and put PNG on the system clipboard."""
+        self._raster_data = QImage(image)
+        self._raster_source_rect = QRectF(source_rect)
+        # Clear internal item data (raster takes priority)
+        self._internal_data.clear()
+
+        clipboard = QApplication.clipboard()
+        if clipboard is not None:
+            clipboard.setImage(image)
+        self.clipboard_changed.emit()
+
+    def paste_raster(self) -> tuple[QImage | None, QRectF | None]:
+        """Return stored raster data and its source rect."""
+        if self._raster_data is not None:
+            src = (
+                QRectF(self._raster_source_rect)
+                if self._raster_source_rect
+                else None
+            )
+            return QImage(self._raster_data), src
+        return None, None
+
     def clear(self) -> None:
         self._internal_data.clear()
+        self._raster_data = None
+        self._raster_source_rect = None
         self.clipboard_changed.emit()

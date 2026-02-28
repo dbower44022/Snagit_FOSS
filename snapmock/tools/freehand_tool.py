@@ -29,6 +29,10 @@ class FreehandTool(BaseTool):
     def cursor(self) -> Qt.CursorShape:
         return Qt.CursorShape.CrossCursor
 
+    @property
+    def status_hint(self) -> str:
+        return "Click and draw freehand path"
+
     def _scene_pos(self, event: QMouseEvent) -> QPointF:
         if self._scene is not None and self._scene.views():
             return self._scene.views()[0].mapToScene(event.pos())

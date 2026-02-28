@@ -29,6 +29,7 @@ SHORTCUTS: dict[str, str] = {
     "view.actual_size": "Ctrl+1",
     "view.toggle_grid": "Ctrl+'",
     "view.toggle_rulers": "Ctrl+R",
+    "view.zoom_to_selection": "Ctrl+Shift+0",
     # Tools
     "tool.select": "V",
     "tool.rectangle": "R",

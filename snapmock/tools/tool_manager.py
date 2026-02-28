@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtGui import QKeyEvent, QMouseEvent
+from PyQt6.QtGui import QContextMenuEvent, QKeyEvent, QMouseEvent
 
 from snapmock.tools.base_tool import BaseTool
 
@@ -123,4 +123,10 @@ class ToolManager(QObject):
         """Delegate key release to the active tool."""
         if self._active_tool is not None:
             return self._active_tool.key_release(event)
+        return False
+
+    def handle_context_menu(self, event: QContextMenuEvent) -> bool:
+        """Delegate context menu to the active tool."""
+        if self._active_tool is not None:
+            return self._active_tool.context_menu(event)
         return False
