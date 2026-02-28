@@ -298,6 +298,26 @@ class MainWindow(QMainWindow):
             actual_action.setShortcut(QKeySequence(SHORTCUTS["view.actual_size"]))
             actual_action.triggered.connect(lambda: self._view.set_zoom(100))
 
+        view_menu.addSeparator()
+
+        self._grid_action = QAction("Show &Grid", self)
+        self._grid_action.setCheckable(True)
+        self._grid_action.setShortcut(QKeySequence(SHORTCUTS["view.toggle_grid"]))
+        grid_vis = self._settings.grid_visible()
+        self._grid_action.setChecked(grid_vis)
+        self._view.set_grid_visible(grid_vis)
+        self._grid_action.toggled.connect(self._toggle_grid)
+        view_menu.addAction(self._grid_action)
+
+        self._rulers_action = QAction("Show &Rulers", self)
+        self._rulers_action.setCheckable(True)
+        self._rulers_action.setShortcut(QKeySequence(SHORTCUTS["view.toggle_rulers"]))
+        rulers_vis = self._settings.rulers_visible()
+        self._rulers_action.setChecked(rulers_vis)
+        self._view.set_rulers_visible(rulers_vis)
+        self._rulers_action.toggled.connect(self._toggle_rulers)
+        view_menu.addAction(self._rulers_action)
+
     def _setup_image_menu(self, menu_bar: QMenuBar) -> None:
         image_menu = menu_bar.addMenu("&Image")
         if image_menu is None:
@@ -310,6 +330,16 @@ class MainWindow(QMainWindow):
         resize_image_action = image_menu.addAction("Resize &Image...")
         if resize_image_action is not None:
             resize_image_action.triggered.connect(self._image_resize_image)
+
+    # ---- view toggles ----
+
+    def _toggle_grid(self, checked: bool) -> None:
+        self._view.set_grid_visible(checked)
+        self._settings.set_grid_visible(checked)
+
+    def _toggle_rulers(self, checked: bool) -> None:
+        self._view.set_rulers_visible(checked)
+        self._settings.set_rulers_visible(checked)
 
     # ---- tool shortcuts ----
 

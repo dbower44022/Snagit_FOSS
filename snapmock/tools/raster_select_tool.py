@@ -116,7 +116,7 @@ class RasterSelectTool(BaseTool):
         # Start new selection
         self._start = pos
         # Clip to canvas bounds
-        canvas = self._scene.sceneRect()
+        canvas = self._scene.canvas_rect
         if not canvas.contains(self._start):
             self._start = QPointF(
                 max(canvas.left(), min(canvas.right(), self._start.x())),
@@ -137,7 +137,7 @@ class RasterSelectTool(BaseTool):
 
         if self._state == _RasterState.DRAWING:
             # Clip to canvas
-            canvas = self._scene.sceneRect()
+            canvas = self._scene.canvas_rect
             clamped = QPointF(
                 max(canvas.left(), min(canvas.right(), pos.x())),
                 max(canvas.top(), min(canvas.bottom(), pos.y())),

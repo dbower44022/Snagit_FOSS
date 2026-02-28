@@ -117,7 +117,7 @@ class SelectionOverlay(QGraphicsItemGroup):
         return QRectF(self._selection_rect)
 
     def _update_visuals(self) -> None:
-        canvas = self._scene_ref.sceneRect()
+        canvas = self._scene_ref.canvas_rect
 
         # Build the selection path
         if self._selection_path is not None:

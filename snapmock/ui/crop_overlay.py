@@ -105,7 +105,7 @@ class CropOverlay(QGraphicsItemGroup):
     def update_crop_rect(self, rect: QRectF) -> None:
         """Update the crop rectangle and reposition all overlay elements."""
         self._crop_rect = QRectF(rect)
-        canvas = self._scene_ref.sceneRect()
+        canvas = self._scene_ref.canvas_rect
 
         # Dim overlay: full canvas minus crop rect
         path = QPainterPath()

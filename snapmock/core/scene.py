@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import QRectF, QSizeF, pyqtSignal
-from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QGraphicsScene
 
-from snapmock.config.constants import DEFAULT_CANVAS_HEIGHT, DEFAULT_CANVAS_WIDTH
+from snapmock.config.constants import (
+    DEFAULT_CANVAS_HEIGHT,
+    DEFAULT_CANVAS_WIDTH,
+    PASTEBOARD_MARGIN,
+)
 from snapmock.core.command_stack import CommandStack
 from snapmock.core.layer_manager import LayerManager
 
@@ -26,16 +29,11 @@ class SnapScene(QGraphicsScene):
         self,
         width: int = DEFAULT_CANVAS_WIDTH,
         height: int = DEFAULT_CANVAS_HEIGHT,
-        background: QColor | None = None,
         parent: object | None = None,
     ) -> None:
         super().__init__(parent)  # type: ignore[arg-type]
         self._canvas_size = QSizeF(width, height)
-        self.setSceneRect(QRectF(0, 0, width, height))
-
-        if background is None:
-            background = QColor("white")
-        self.setBackgroundBrush(background)
+        self._update_scene_rect()
 
         self._layer_manager = LayerManager(self)
         self._command_stack = CommandStack(self)
@@ -57,8 +55,20 @@ class SnapScene(QGraphicsScene):
     def canvas_size(self) -> QSizeF:
         return QSizeF(self._canvas_size)
 
+    @property
+    def canvas_rect(self) -> QRectF:
+        """Logical canvas bounds (0, 0, w, h) — use instead of sceneRect()."""
+        return QRectF(0, 0, self._canvas_size.width(), self._canvas_size.height())
+
     def set_canvas_size(self, size: QSizeF) -> None:
         """Resize the logical canvas."""
         self._canvas_size = QSizeF(size)
-        self.setSceneRect(QRectF(0, 0, size.width(), size.height()))
+        self._update_scene_rect()
         self.canvas_size_changed.emit(self._canvas_size)
+
+    def _update_scene_rect(self) -> None:
+        """Expand sceneRect beyond the canvas to provide a pasteboard margin."""
+        m = PASTEBOARD_MARGIN
+        w = self._canvas_size.width()
+        h = self._canvas_size.height()
+        self.setSceneRect(QRectF(-m, -m, w + 2 * m, h + 2 * m))

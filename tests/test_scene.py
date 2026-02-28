@@ -30,7 +30,7 @@ def test_scene_has_command_stack(scene: SnapScene) -> None:
 def test_scene_resize_canvas(scene: SnapScene) -> None:
     scene.set_canvas_size(QSizeF(1000, 500))
     assert scene.canvas_size == QSizeF(1000, 500)
-    assert scene.sceneRect().width() == 1000
+    assert scene.canvas_rect.width() == 1000
 
 
 def test_view_default_zoom(view: SnapView) -> None:
