@@ -194,12 +194,10 @@ def build_item_context_menu(parent: MainWindow) -> QMenu:
 
     menu.addSeparator()
 
-    # --- Properties stub ---
+    # --- Properties ---
     props_action = menu.addAction("Properties...")
     if props_action is not None:
-        props_action.triggered.connect(
-            lambda: QMessageBox.information(parent, "Properties", "Coming soon.")
-        )
+        props_action.triggered.connect(parent._show_item_properties)  # noqa: SLF001
 
     return menu
 
@@ -284,11 +282,12 @@ def build_layer_panel_context_menu(
 
     menu.addSeparator()
 
-    # --- Properties stub ---
+    # --- Properties ---
     props_action = menu.addAction("Layer Properties...")
     if props_action is not None:
+        lid = layer_id
         props_action.triggered.connect(
-            lambda: QMessageBox.information(parent, "Layer Properties", "Coming soon.")
+            lambda _checked=False, t=lid: parent._show_layer_properties(t)  # noqa: SLF001
         )
 
     return menu

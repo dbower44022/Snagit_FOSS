@@ -1295,9 +1295,44 @@ class MainWindow(QMainWindow):
             self._scene.command_stack.push(cmd)
 
     def _layer_properties(self) -> None:
-        QMessageBox.information(
-            self, "Layer Properties", "Layer properties dialog is coming soon."
-        )
+        lm = self._scene.layer_manager
+        active = lm.active_layer
+        if active is not None:
+            self._show_layer_properties(active.layer_id)
+
+    def _show_item_properties(self) -> None:
+        """Show the item properties dialog for the first selected item."""
+        items = self._selected_snap_items()
+        if not items:
+            return
+        item = items[0]
+
+        from snapmock.ui.item_properties_dialog import ItemPropertiesDialog
+
+        dlg = ItemPropertiesDialog(item, self._scene, self)
+        if dlg.exec() == ItemPropertiesDialog.DialogCode.Accepted:
+            from snapmock.commands.modify_property import ModifyPropertyCommand
+
+            for prop_name, (old_val, new_val) in dlg.get_changes().items():
+                cmd = ModifyPropertyCommand(item, prop_name, old_val, new_val)
+                self._scene.command_stack.push(cmd)
+
+    def _show_layer_properties(self, layer_id: str) -> None:
+        """Show the layer properties dialog for the given layer."""
+        lm = self._scene.layer_manager
+        layer = lm.layer_by_id(layer_id)
+        if layer is None:
+            return
+
+        from snapmock.ui.layer_properties_dialog import LayerPropertiesDialog
+
+        dlg = LayerPropertiesDialog(layer, self)
+        if dlg.exec() == LayerPropertiesDialog.DialogCode.Accepted:
+            from snapmock.commands.layer_commands import ChangeLayerPropertyCommand
+
+            for prop_name, (old_val, new_val) in dlg.get_changes().items():
+                cmd = ChangeLayerPropertyCommand(lm, layer_id, prop_name, old_val, new_val)
+                self._scene.command_stack.push(cmd)
 
     def _layer_move_up(self) -> None:
         lm = self._scene.layer_manager
