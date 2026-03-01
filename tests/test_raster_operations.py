@@ -35,9 +35,9 @@ def _make_mouse_event(
     )
 
 
-def _setup_scene_with_view_and_image() -> (
-    tuple[SnapScene, SnapView, SelectionManager, ToolManager]
-):
+def _setup_scene_with_view_and_image() -> tuple[
+    SnapScene, SnapView, SelectionManager, ToolManager
+]:
     """Create a scene with a view and import a test image."""
     scene = SnapScene(width=800, height=600)
     view = SnapView(scene)

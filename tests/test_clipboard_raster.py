@@ -73,9 +73,7 @@ def test_clipboard_clear_resets_raster(clipboard: ClipboardManager) -> None:
     assert not clipboard.has_internal
 
 
-def test_clipboard_raster_clears_internal(
-    scene: SnapScene, clipboard: ClipboardManager
-) -> None:
+def test_clipboard_raster_clears_internal(scene: SnapScene, clipboard: ClipboardManager) -> None:
     """Copying raster data should clear internal item data."""
     # First copy some items
     item = RectangleItem(rect=QRectF(0, 0, 50, 50))
@@ -112,9 +110,7 @@ def test_clipboard_changed_signal_on_raster_copy(
 # --- Paste priority (unit tests on ClipboardManager) ---
 
 
-def test_paste_items_priority_over_raster(
-    scene: SnapScene, clipboard: ClipboardManager
-) -> None:
+def test_paste_items_priority_over_raster(scene: SnapScene, clipboard: ClipboardManager) -> None:
     """Internal items should take priority over raster when both present.
 
     Actually, copy_raster_region clears internal items, so we can't have both.
