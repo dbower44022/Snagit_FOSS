@@ -35,6 +35,8 @@ class LayerPanel(QDockWidget):
 
         self._list = QListWidget()
         self._list.currentRowChanged.connect(self._on_row_changed)
+        self._list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._list.customContextMenuRequested.connect(self._on_context_menu)
         layout.addWidget(self._list)
 
         btn_layout = QHBoxLayout()
@@ -95,6 +97,33 @@ class LayerPanel(QDockWidget):
         active = self._layer_manager.active_layer
         if active is not None:
             self._layer_manager.remove_layer(active.layer_id)
+
+    def _on_context_menu(self, pos: object) -> None:
+        from PyQt6.QtCore import QPoint
+
+        if not isinstance(pos, QPoint):
+            return
+        list_item = self._list.itemAt(pos)
+        if list_item is None:
+            return
+        layer_id = list_item.data(Qt.ItemDataRole.UserRole)
+        if not isinstance(layer_id, str):
+            return
+        # Activate the right-clicked layer
+        self._layer_manager.set_active(layer_id)
+        # Find MainWindow ancestor
+        from snapmock.main_window import MainWindow
+
+        parent = self.parentWidget()
+        while parent is not None and not isinstance(parent, MainWindow):
+            parent = parent.parentWidget()
+        if parent is None:
+            return
+        from snapmock.ui.context_menus import build_layer_panel_context_menu
+
+        global_pos = self._list.mapToGlobal(pos)
+        menu = build_layer_panel_context_menu(parent, self._layer_manager, layer_id)
+        menu.exec(global_pos)
 
     def set_manager(self, layer_manager: LayerManager) -> None:
         """Replace the LayerManager (e.g. after opening a new project)."""

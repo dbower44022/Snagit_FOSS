@@ -22,6 +22,7 @@ class SnapGraphicsItem(QGraphicsObject):
         super().__init__(parent)
         self._item_id: str = uuid.uuid4().hex
         self._layer_id: str = ""
+        self._locked: bool = False
         self.setFlag(QGraphicsObject.GraphicsItemFlag.ItemIsSelectable, True)
         self.setFlag(QGraphicsObject.GraphicsItemFlag.ItemIsMovable, False)
         self.setFlag(QGraphicsObject.GraphicsItemFlag.ItemSendsGeometryChanges, True)
@@ -43,6 +44,14 @@ class SnapGraphicsItem(QGraphicsObject):
     @layer_id.setter
     def layer_id(self, value: str) -> None:
         self._layer_id = value
+
+    @property
+    def locked(self) -> bool:
+        return self._locked
+
+    @locked.setter
+    def locked(self, value: bool) -> None:
+        self._locked = value
 
     # --- required overrides ---
 

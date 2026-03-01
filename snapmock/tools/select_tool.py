@@ -55,9 +55,7 @@ class SelectTool(BaseTool):
         self._handle_pos: HandlePosition | None = None
         self._handle_origin_rect: QRectF = QRectF()
         self._handle_anchor: QPointF = QPointF()
-        self._handle_item_originals: list[
-            tuple[SnapGraphicsItem, QPointF, QTransform]
-        ] = []
+        self._handle_item_originals: list[tuple[SnapGraphicsItem, QPointF, QTransform]] = []
 
         # Selection info label
         self._info_label: QLabel | None = None
@@ -175,13 +173,10 @@ class SelectTool(BaseTool):
                 self._handle_anchor = self._handles.anchor_for_handle(handle)
                 # Save original pos/transform for each selected item
                 items = [
-                    i
-                    for i in self._selection_manager.items
-                    if isinstance(i, SnapGraphicsItem)
+                    i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)
                 ]
                 self._handle_item_originals = [
-                    (item, QPointF(item.pos()), QTransform(item.transform()))
-                    for item in items
+                    (item, QPointF(item.pos()), QTransform(item.transform())) for item in items
                 ]
                 return True
 
@@ -330,9 +325,7 @@ class SelectTool(BaseTool):
                 global_pos = vp.mapToGlobal(view.mapFromScene(scene_pos))
                 dx = self._drag_total.x()
                 dy = self._drag_total.y()
-                QToolTip.showText(
-                    global_pos, f"\u0394X: {dx:+.0f}  \u0394Y: {dy:+.0f}"
-                )
+                QToolTip.showText(global_pos, f"\u0394X: {dx:+.0f}  \u0394Y: {dy:+.0f}")
         return True
 
     def _handle_drag_release(self) -> bool:
@@ -422,9 +415,7 @@ class SelectTool(BaseTool):
 
     # --- handle transform ---
 
-    def _handle_transform_move(
-        self, scene_pos: QPointF, event: QMouseEvent
-    ) -> bool:
+    def _handle_transform_move(self, scene_pos: QPointF, event: QMouseEvent) -> bool:
         if self._handle_pos is None or not self._handle_item_originals:
             return True
 
@@ -476,20 +467,12 @@ class SelectTool(BaseTool):
         if view is not None:
             vp = view.viewport()
             if vp is not None:
-                global_pos = vp.mapToGlobal(
-                    view.mapFromScene(cursor)
-                )
+                global_pos = vp.mapToGlobal(view.mapFromScene(cursor))
                 QToolTip.showText(global_pos, f"{angle:+.1f}°")
 
-    def _apply_corner_resize(
-        self, cursor: QPointF, proportional: bool, from_center: bool
-    ) -> None:
+    def _apply_corner_resize(self, cursor: QPointF, proportional: bool, from_center: bool) -> None:
         """Resize from a corner handle."""
-        anchor = (
-            self._handle_origin_rect.center()
-            if from_center
-            else self._handle_anchor
-        )
+        anchor = self._handle_origin_rect.center() if from_center else self._handle_anchor
         orig_rect = self._handle_origin_rect
 
         # Compute scale factors relative to anchor
@@ -564,9 +547,7 @@ class SelectTool(BaseTool):
             vp = view.viewport()
             if vp is not None:
                 global_pos = vp.mapToGlobal(view.mapFromScene(cursor))
-                QToolTip.showText(
-                    global_pos, f"{new_w:.0f} × {new_h:.0f}"
-                )
+                QToolTip.showText(global_pos, f"{new_w:.0f} × {new_h:.0f}")
 
     def _apply_skew(self, cursor: QPointF) -> None:
         """Apply shear when Ctrl+edge drag."""
@@ -605,18 +586,14 @@ class SelectTool(BaseTool):
                 item.setPos(orig_pos)
                 item.setTransform(orig_xform)
                 commands.append(
-                    TransformItemCommand(
-                        item, orig_pos, new_pos, orig_xform, new_xform
-                    )
+                    TransformItemCommand(item, orig_pos, new_pos, orig_xform, new_xform)
                 )
 
         if commands and self._scene is not None:
             if len(commands) == 1:
                 self._scene.command_stack.push(commands[0])
             else:
-                self._scene.command_stack.push(
-                    MacroCommand(commands, "Transform items")
-                )
+                self._scene.command_stack.push(MacroCommand(commands, "Transform items"))
 
         self._state = _State.IDLE
         self._handle_pos = None
@@ -698,7 +675,6 @@ class SelectTool(BaseTool):
 
     def context_menu(self, event: object) -> bool:
         from PyQt6.QtGui import QContextMenuEvent
-        from PyQt6.QtWidgets import QMenu
 
         if not isinstance(event, QContextMenuEvent):
             return False
@@ -710,47 +686,23 @@ class SelectTool(BaseTool):
             return False
 
         scene_pos = view.mapToScene(event.pos())
+        parent = view.parentWidget()
+        if parent is None:
+            return False
 
         # If right-click on an unselected item, select it first
         item = self._item_at(scene_pos)
         if item is not None and item not in self._selection_manager.items:
             self._selection_manager.select(item)
 
-        menu = QMenu()
-        has_sel = not self._selection_manager.is_empty
+        from snapmock.ui.context_menus import build_canvas_context_menu, build_item_context_menu
 
-        cut_action = menu.addAction("Cut")
-        if cut_action is not None:
-            cut_action.setEnabled(has_sel)
-        copy_action = menu.addAction("Copy")
-        if copy_action is not None:
-            copy_action.setEnabled(has_sel)
-        menu.addAction("Paste")
-        menu.addSeparator()
-        delete_action = menu.addAction("Delete")
-        if delete_action is not None:
-            delete_action.setEnabled(has_sel)
-        duplicate_action = menu.addAction("Duplicate")
-        if duplicate_action is not None:
-            duplicate_action.setEnabled(has_sel)
+        if item is not None:
+            menu = build_item_context_menu(parent)  # type: ignore[arg-type]
+        else:
+            menu = build_canvas_context_menu(parent)  # type: ignore[arg-type]
 
-        chosen = menu.exec(event.globalPos())
-        if chosen is None:
-            return True
-
-        parent = view.parentWidget()
-        text = chosen.text()
-        if text == "Cut" and parent and hasattr(parent, "_edit_cut"):
-            parent._edit_cut()  # noqa: SLF001
-        elif text == "Copy" and parent and hasattr(parent, "_edit_copy"):
-            parent._edit_copy()  # noqa: SLF001
-        elif text == "Paste" and parent and hasattr(parent, "_edit_paste"):
-            parent._edit_paste()  # noqa: SLF001
-        elif text == "Delete" and parent and hasattr(parent, "_edit_delete"):
-            parent._edit_delete()  # noqa: SLF001
-        elif text == "Duplicate" and parent and hasattr(parent, "_edit_duplicate"):
-            parent._edit_duplicate()  # noqa: SLF001
-
+        menu.exec(event.globalPos())
         return True
 
     # --- tool options ---

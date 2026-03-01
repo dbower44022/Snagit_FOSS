@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QAction, QCloseEvent, QKeyEvent, QKeySequence
+from PyQt6.QtCore import Qt, QTimer, QUrl
+from PyQt6.QtGui import QAction, QCloseEvent, QDesktopServices, QKeyEvent, QKeySequence
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QMenu, QMenuBar, QMessageBox
 
 if TYPE_CHECKING:
@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 from snapmock.config.constants import (
     APP_NAME,
+    APP_VERSION,
     AUTOSAVE_INTERVAL_MS,
     PROJECT_EXTENSION,
 )
@@ -109,8 +110,24 @@ class MainWindow(QMainWindow):
 
         # Menu bar
         self._recent_menu: QMenu | None = None
+        # Arrange action references (populated in _setup_arrange_menu)
+        self._bring_front_action: QAction | None = None
+        self._bring_forward_action: QAction | None = None
+        self._send_backward_action: QAction | None = None
+        self._send_to_back_action: QAction | None = None
+        self._align_menu: QMenu | None = None
+        self._distribute_menu: QMenu | None = None
+        self._align_canvas_action: QAction | None = None
+        # Layer action references (populated in _setup_layer_menu)
+        self._layer_move_up_action: QAction | None = None
+        self._layer_move_down_action: QAction | None = None
+        self._layer_move_top_action: QAction | None = None
+        self._layer_move_bottom_action: QAction | None = None
+        self._layer_delete_action: QAction | None = None
+        self._layer_merge_down_action: QAction | None = None
+        # Tools menu action map
+        self._tool_actions: dict[str, QAction] = {}
         self._setup_menus()
-        self._setup_tool_shortcuts()
 
         # Autosave timer
         self._autosave_timer = QTimer(self)
@@ -123,6 +140,8 @@ class MainWindow(QMainWindow):
 
         # Layer state → deselect/cancel on lock/hide/switch
         self._connect_layer_signals()
+        self._connect_menu_state_signals()
+        self._update_menu_states()
 
         # Restore window geometry
         geo = self._settings.window_geometry()
@@ -167,6 +186,10 @@ class MainWindow(QMainWindow):
         self._setup_edit_menu(menu_bar)
         self._setup_view_menu(menu_bar)
         self._setup_image_menu(menu_bar)
+        self._setup_layer_menu(menu_bar)
+        self._setup_arrange_menu(menu_bar)
+        self._setup_tools_menu(menu_bar)
+        self._setup_help_menu(menu_bar)
 
     def _setup_file_menu(self, menu_bar: QMenuBar) -> None:  # noqa: C901
         file_menu = menu_bar.addMenu("&File")
@@ -199,6 +222,7 @@ class MainWindow(QMainWindow):
 
         import_action = file_menu.addAction("&Import Image...")
         if import_action is not None:
+            import_action.setShortcut(QKeySequence(SHORTCUTS["file.import_image"]))
             import_action.triggered.connect(self._file_import_image)
 
         export_action = file_menu.addAction("&Export...")
@@ -206,10 +230,29 @@ class MainWindow(QMainWindow):
             export_action.setShortcut(QKeySequence(SHORTCUTS["file.export"]))
             export_action.triggered.connect(self._file_export)
 
+        export_png_action = file_menu.addAction("Export Quick &PNG")
+        if export_png_action is not None:
+            export_png_action.setShortcut(QKeySequence(SHORTCUTS["file.export_quick_png"]))
+            export_png_action.triggered.connect(self._file_export_quick_png)
+
+        file_menu.addSeparator()
+
+        print_action = file_menu.addAction("&Print...")
+        if print_action is not None:
+            print_action.setShortcut(QKeySequence(SHORTCUTS["file.print"]))
+            print_action.triggered.connect(self._file_print)
+
         file_menu.addSeparator()
 
         self._recent_menu = file_menu.addMenu("Recent Files")
         self._update_recent_files_menu()
+
+        file_menu.addSeparator()
+
+        prefs_action = file_menu.addAction("Pre&ferences...")
+        if prefs_action is not None:
+            prefs_action.setShortcut(QKeySequence(SHORTCUTS["file.preferences"]))
+            prefs_action.triggered.connect(self._file_preferences)
 
         file_menu.addSeparator()
 
@@ -274,6 +317,11 @@ class MainWindow(QMainWindow):
             select_all_action.setShortcut(QKeySequence(SHORTCUTS["edit.select_all"]))
             select_all_action.triggered.connect(self._edit_select_all)
 
+        select_all_layers_action = edit_menu.addAction("Select All La&yers")
+        if select_all_layers_action is not None:
+            select_all_layers_action.setShortcut(QKeySequence(SHORTCUTS["edit.select_all_layers"]))
+            select_all_layers_action.triggered.connect(self._edit_select_all_layers)
+
         deselect_action = edit_menu.addAction("D&eselect")
         if deselect_action is not None:
             deselect_action.setShortcut(QKeySequence(SHORTCUTS["edit.deselect"]))
@@ -306,9 +354,7 @@ class MainWindow(QMainWindow):
 
         zoom_sel_action = view_menu.addAction("Zoom to &Selection")
         if zoom_sel_action is not None:
-            zoom_sel_action.setShortcut(
-                QKeySequence(SHORTCUTS["view.zoom_to_selection"])
-            )
+            zoom_sel_action.setShortcut(QKeySequence(SHORTCUTS["view.zoom_to_selection"]))
             zoom_sel_action.triggered.connect(self._view_zoom_to_selection)
 
         view_menu.addSeparator()
@@ -331,6 +377,36 @@ class MainWindow(QMainWindow):
         self._rulers_action.toggled.connect(self._toggle_rulers)
         view_menu.addAction(self._rulers_action)
 
+        self._snap_grid_action = QAction("&Snap to Grid", self)
+        self._snap_grid_action.setCheckable(True)
+        self._snap_grid_action.setShortcut(QKeySequence(SHORTCUTS["view.snap_to_grid"]))
+        self._snap_grid_action.setChecked(self._settings.snap_to_grid())
+        self._snap_grid_action.toggled.connect(self._toggle_snap_to_grid)
+        view_menu.addAction(self._snap_grid_action)
+
+        view_menu.addSeparator()
+
+        # Panel visibility toggles
+        toolbar_toggle = self._toolbar.toggleViewAction()
+        if toolbar_toggle is not None:
+            toolbar_toggle.setText("Show Tool&bar")
+            view_menu.addAction(toolbar_toggle)
+
+        options_toggle = self._tool_options.toggleViewAction()
+        if options_toggle is not None:
+            options_toggle.setText("Show &Options Bar")
+            view_menu.addAction(options_toggle)
+
+        layer_toggle = self._layer_panel.toggleViewAction()
+        if layer_toggle is not None:
+            layer_toggle.setText("Show &Layers Panel")
+            view_menu.addAction(layer_toggle)
+
+        property_toggle = self._property_panel.toggleViewAction()
+        if property_toggle is not None:
+            property_toggle.setText("Show &Properties Panel")
+            view_menu.addAction(property_toggle)
+
     def _setup_image_menu(self, menu_bar: QMenuBar) -> None:
         image_menu = menu_bar.addMenu("&Image")
         if image_menu is None:
@@ -344,6 +420,265 @@ class MainWindow(QMainWindow):
         if resize_image_action is not None:
             resize_image_action.triggered.connect(self._image_resize_image)
 
+        crop_canvas_action = image_menu.addAction("Crop to C&anvas")
+        if crop_canvas_action is not None:
+            crop_canvas_action.setShortcut(QKeySequence(SHORTCUTS["image.crop_to_canvas"]))
+            crop_canvas_action.triggered.connect(self._image_crop_to_canvas)
+
+        image_menu.addSeparator()
+
+        rotate_cw_action = image_menu.addAction("Rotate 90° C&W")
+        if rotate_cw_action is not None:
+            rotate_cw_action.triggered.connect(self._image_rotate_cw)
+
+        rotate_ccw_action = image_menu.addAction("Rotate 90° CC&W")
+        if rotate_ccw_action is not None:
+            rotate_ccw_action.triggered.connect(self._image_rotate_ccw)
+
+        image_menu.addSeparator()
+
+        flip_h_action = image_menu.addAction("Flip &Horizontal")
+        if flip_h_action is not None:
+            flip_h_action.triggered.connect(self._image_flip_h)
+
+        flip_v_action = image_menu.addAction("Flip &Vertical")
+        if flip_v_action is not None:
+            flip_v_action.triggered.connect(self._image_flip_v)
+
+        image_menu.addSeparator()
+
+        auto_trim_action = image_menu.addAction("Auto-&Trim")
+        if auto_trim_action is not None:
+            auto_trim_action.triggered.connect(self._image_auto_trim)
+
+    # ---- new menus ----
+
+    def _setup_layer_menu(self, menu_bar: QMenuBar) -> None:  # noqa: C901
+        layer_menu = menu_bar.addMenu("&Layer")
+        if layer_menu is None:
+            return
+
+        new_layer_action = layer_menu.addAction("&New Layer")
+        if new_layer_action is not None:
+            new_layer_action.setShortcut(QKeySequence(SHORTCUTS["layer.new"]))
+            new_layer_action.triggered.connect(self._layer_new)
+
+        dup_layer_action = layer_menu.addAction("&Duplicate Layer")
+        if dup_layer_action is not None:
+            dup_layer_action.triggered.connect(self._layer_duplicate)
+
+        self._layer_delete_action = QAction("De&lete Layer", self)
+        self._layer_delete_action.setShortcut(QKeySequence(SHORTCUTS["layer.delete"]))
+        self._layer_delete_action.triggered.connect(self._layer_delete)
+        layer_menu.addAction(self._layer_delete_action)
+
+        layer_menu.addSeparator()
+
+        self._layer_merge_down_action = QAction("&Merge Down", self)
+        self._layer_merge_down_action.setShortcut(QKeySequence(SHORTCUTS["layer.merge_down"]))
+        self._layer_merge_down_action.triggered.connect(self._layer_merge_down)
+        layer_menu.addAction(self._layer_merge_down_action)
+
+        merge_visible_action = layer_menu.addAction("Merge &Visible")
+        if merge_visible_action is not None:
+            merge_visible_action.triggered.connect(self._layer_merge_visible)
+
+        flatten_action = layer_menu.addAction("&Flatten All")
+        if flatten_action is not None:
+            flatten_action.setShortcut(QKeySequence(SHORTCUTS["layer.flatten"]))
+            flatten_action.triggered.connect(self._layer_flatten)
+
+        layer_menu.addSeparator()
+
+        rename_action = layer_menu.addAction("&Rename Layer")
+        if rename_action is not None:
+            rename_action.setShortcut(QKeySequence(SHORTCUTS["layer.rename"]))
+            rename_action.triggered.connect(self._layer_rename)
+
+        props_action = layer_menu.addAction("Layer &Properties...")
+        if props_action is not None:
+            props_action.triggered.connect(self._layer_properties)
+
+        layer_menu.addSeparator()
+
+        self._layer_move_up_action = QAction("Move &Up", self)
+        self._layer_move_up_action.setShortcut(QKeySequence(SHORTCUTS["layer.move_up"]))
+        self._layer_move_up_action.triggered.connect(self._layer_move_up)
+        layer_menu.addAction(self._layer_move_up_action)
+
+        self._layer_move_down_action = QAction("Move &Down", self)
+        self._layer_move_down_action.setShortcut(QKeySequence(SHORTCUTS["layer.move_down"]))
+        self._layer_move_down_action.triggered.connect(self._layer_move_down)
+        layer_menu.addAction(self._layer_move_down_action)
+
+        self._layer_move_top_action = QAction("Move to &Top", self)
+        self._layer_move_top_action.setShortcut(QKeySequence(SHORTCUTS["layer.move_to_top"]))
+        self._layer_move_top_action.triggered.connect(self._layer_move_to_top)
+        layer_menu.addAction(self._layer_move_top_action)
+
+        self._layer_move_bottom_action = QAction("Move to &Bottom", self)
+        self._layer_move_bottom_action.setShortcut(QKeySequence(SHORTCUTS["layer.move_to_bottom"]))
+        self._layer_move_bottom_action.triggered.connect(self._layer_move_to_bottom)
+        layer_menu.addAction(self._layer_move_bottom_action)
+
+    def _setup_arrange_menu(self, menu_bar: QMenuBar) -> None:
+        arrange_menu = menu_bar.addMenu("&Arrange")
+        if arrange_menu is None:
+            return
+
+        self._bring_front_action = QAction("Bring to &Front", self)
+        self._bring_front_action.setShortcut(QKeySequence(SHORTCUTS["arrange.bring_to_front"]))
+        self._bring_front_action.triggered.connect(self._arrange_bring_to_front)
+        arrange_menu.addAction(self._bring_front_action)
+
+        self._bring_forward_action = QAction("Bring For&ward", self)
+        self._bring_forward_action.setShortcut(QKeySequence(SHORTCUTS["arrange.bring_forward"]))
+        self._bring_forward_action.triggered.connect(self._arrange_bring_forward)
+        arrange_menu.addAction(self._bring_forward_action)
+
+        self._send_backward_action = QAction("Send &Backward", self)
+        self._send_backward_action.setShortcut(QKeySequence(SHORTCUTS["arrange.send_backward"]))
+        self._send_backward_action.triggered.connect(self._arrange_send_backward)
+        arrange_menu.addAction(self._send_backward_action)
+
+        self._send_to_back_action = QAction("Send to Bac&k", self)
+        self._send_to_back_action.setShortcut(QKeySequence(SHORTCUTS["arrange.send_to_back"]))
+        self._send_to_back_action.triggered.connect(self._arrange_send_to_back)
+        arrange_menu.addAction(self._send_to_back_action)
+
+        arrange_menu.addSeparator()
+
+        # Align submenu
+        self._align_menu = arrange_menu.addMenu("Ali&gn")
+        if self._align_menu is not None:
+            for label, alignment in [
+                ("Align &Left", "left"),
+                ("Align Center &Horizontal", "center_h"),
+                ("Align &Right", "right"),
+                ("Align &Top", "top"),
+                ("Align &Middle Vertical", "middle_v"),
+                ("Align &Bottom", "bottom"),
+            ]:
+                action = self._align_menu.addAction(label)
+                if action is not None:
+                    action.triggered.connect(
+                        lambda _checked=False, a=alignment: self._arrange_align(a)
+                    )
+
+        # Distribute submenu
+        self._distribute_menu = arrange_menu.addMenu("&Distribute")
+        if self._distribute_menu is not None:
+            dist_h = self._distribute_menu.addAction("Distribute &Horizontally")
+            if dist_h is not None:
+                dist_h.triggered.connect(
+                    lambda _checked=False: self._arrange_distribute("horizontal")
+                )
+            dist_v = self._distribute_menu.addAction("Distribute &Vertically")
+            if dist_v is not None:
+                dist_v.triggered.connect(
+                    lambda _checked=False: self._arrange_distribute("vertical")
+                )
+
+        arrange_menu.addSeparator()
+
+        self._align_canvas_action = QAction("Align to Canvas &Center", self)
+        self._align_canvas_action.triggered.connect(self._arrange_align_canvas_center)
+        arrange_menu.addAction(self._align_canvas_action)
+
+    def _setup_tools_menu(self, menu_bar: QMenuBar) -> None:
+        tools_menu = menu_bar.addMenu("&Tools")
+        if tools_menu is None:
+            return
+
+        # Tool groups for separator placement
+        tool_groups: list[list[tuple[str, str]]] = [
+            # Selection tools
+            [("tool.select", "select"), ("tool.lasso_select", "lasso_select")],
+            # Shape tools
+            [
+                ("tool.rectangle", "rectangle"),
+                ("tool.ellipse", "ellipse"),
+                ("tool.line", "line"),
+                ("tool.arrow", "arrow"),
+                ("tool.freehand", "freehand"),
+            ],
+            # Text & annotation
+            [
+                ("tool.text", "text"),
+                ("tool.callout", "callout"),
+                ("tool.numbered_step", "numbered_step"),
+                ("tool.stamp", "stamp"),
+            ],
+            # Effects
+            [("tool.highlight", "highlight"), ("tool.blur", "blur")],
+            # Region tools
+            [
+                ("tool.crop", "crop"),
+                ("tool.raster_select", "raster_select"),
+                ("tool.eyedropper", "eyedropper"),
+            ],
+            # Navigation
+            [("tool.pan", "pan"), ("tool.zoom", "zoom")],
+        ]
+
+        first_group = True
+        for group in tool_groups:
+            if not first_group:
+                tools_menu.addSeparator()
+            first_group = False
+            for shortcut_key, tool_id in group:
+                tool = self._tool_manager.tool(tool_id)
+                if tool is None:
+                    continue
+                key_seq = SHORTCUTS.get(shortcut_key, "")
+                action = QAction(tool.display_name, self)
+                action.setCheckable(True)
+                if key_seq:
+                    action.setShortcut(QKeySequence(key_seq))
+                action.triggered.connect(
+                    lambda _checked=False, tid=tool_id: self._tool_manager.activate(tid)
+                )
+                tools_menu.addAction(action)
+                self._tool_actions[tool_id] = action
+
+        # Wire tool_changed signal to update checkmarks
+        self._tool_manager.tool_changed.connect(self._update_tools_menu_check)
+        # Set initial checkmark
+        self._update_tools_menu_check(self._tool_manager.active_tool_id)
+
+    def _setup_help_menu(self, menu_bar: QMenuBar) -> None:
+        help_menu = menu_bar.addMenu("&Help")
+        if help_menu is None:
+            return
+
+        welcome_action = help_menu.addAction("&Welcome")
+        if welcome_action is not None:
+            welcome_action.triggered.connect(self._help_welcome)
+
+        docs_action = help_menu.addAction("&Documentation")
+        if docs_action is not None:
+            docs_action.triggered.connect(self._help_docs)
+
+        shortcuts_action = help_menu.addAction("&Keyboard Shortcuts")
+        if shortcuts_action is not None:
+            shortcuts_action.triggered.connect(self._help_shortcuts)
+
+        help_menu.addSeparator()
+
+        bug_action = help_menu.addAction("Report a &Bug")
+        if bug_action is not None:
+            bug_action.triggered.connect(self._help_report_bug)
+
+        updates_action = help_menu.addAction("Check for &Updates")
+        if updates_action is not None:
+            updates_action.triggered.connect(self._help_check_updates)
+
+        help_menu.addSeparator()
+
+        about_action = help_menu.addAction("&About SnapMock")
+        if about_action is not None:
+            about_action.triggered.connect(self._help_about)
+
     # ---- view toggles ----
 
     def _toggle_grid(self, checked: bool) -> None:
@@ -354,6 +689,9 @@ class MainWindow(QMainWindow):
         self._view.set_rulers_visible(checked)
         self._settings.set_rulers_visible(checked)
 
+    def _toggle_snap_to_grid(self, checked: bool) -> None:
+        self._settings.set_snap_to_grid(checked)
+
     def _on_tool_changed_for_hint(self, _tool_id: str) -> None:
         tool = self._tool_manager.active_tool
         if tool is not None:
@@ -361,11 +699,75 @@ class MainWindow(QMainWindow):
         else:
             self._status_bar.set_hint("")
 
+    def _update_tools_menu_check(self, tool_id: str) -> None:
+        """Update checkmarks in the Tools menu to reflect the active tool."""
+        for tid, action in self._tool_actions.items():
+            action.setChecked(tid == tool_id)
+
+    # ---- signals ----
+
     def _connect_layer_signals(self) -> None:
         lm = self._scene.layer_manager
         lm.layer_lock_changed.connect(self._on_layer_lock_changed)
         lm.layer_visibility_changed.connect(self._on_layer_visibility_changed)
         lm.active_layer_changed.connect(self._on_active_layer_changed)
+
+    def _connect_menu_state_signals(self) -> None:
+        """Wire selection/layer signals to menu state updates."""
+        self._selection_manager.selection_changed.connect(
+            lambda _items: self._update_menu_states()
+        )
+        self._selection_manager.selection_cleared.connect(self._update_menu_states)
+        lm = self._scene.layer_manager
+        lm.active_layer_changed.connect(lambda _lid: self._update_menu_states())
+        lm.layers_reordered.connect(self._update_menu_states)
+        lm.layer_added.connect(lambda _l: self._update_menu_states())
+        lm.layer_removed.connect(lambda _lid: self._update_menu_states())
+
+    def _update_menu_states(self) -> None:
+        """Enable/disable arrange and layer actions based on current state."""
+        sel_count = self._selection_manager.count
+        has_selection = sel_count > 0
+        multi_selection = sel_count >= 2
+        triple_selection = sel_count >= 3
+
+        # Arrange z-order actions need at least 1 selected item
+        for action in (
+            self._bring_front_action,
+            self._bring_forward_action,
+            self._send_backward_action,
+            self._send_to_back_action,
+            self._align_canvas_action,
+        ):
+            if action is not None:
+                action.setEnabled(has_selection)
+
+        # Align needs 2+, distribute needs 3+
+        if self._align_menu is not None:
+            self._align_menu.setEnabled(multi_selection)
+        if self._distribute_menu is not None:
+            self._distribute_menu.setEnabled(triple_selection)
+
+        # Layer reorder actions based on active layer position
+        lm = self._scene.layer_manager
+        active = lm.active_layer
+        if active is not None:
+            idx = lm.index_of(active.layer_id)
+            count = lm.count
+            can_up = idx < count - 1
+            can_down = idx > 0
+            for action in (self._layer_move_up_action, self._layer_move_top_action):
+                if action is not None:
+                    action.setEnabled(can_up)
+            for action in (self._layer_move_down_action, self._layer_move_bottom_action):
+                if action is not None:
+                    action.setEnabled(can_down)
+            # Can't delete the last layer
+            if self._layer_delete_action is not None:
+                self._layer_delete_action.setEnabled(count > 1)
+            # Merge down requires a layer below
+            if self._layer_merge_down_action is not None:
+                self._layer_merge_down_action.setEnabled(idx > 0)
 
     def _on_layer_lock_changed(self, layer_id: str, locked: bool) -> None:
         if locked:
@@ -395,9 +797,7 @@ class MainWindow(QMainWindow):
 
     def _view_zoom_to_selection(self) -> None:
         """Zoom to fit the current selection in the viewport."""
-        items = [
-            i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)
-        ]
+        items = [i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)]
         if not items:
             return
         rect = items[0].sceneBoundingRect()
@@ -405,42 +805,6 @@ class MainWindow(QMainWindow):
             rect = rect.united(item.sceneBoundingRect())
         pad = 20
         self._view.zoom_to_rect(rect.adjusted(-pad, -pad, pad, pad))
-
-    # ---- tool shortcuts ----
-
-    def _setup_tool_shortcuts(self) -> None:
-        """Bind single-key shortcuts from SHORTCUTS to activate tools."""
-        tool_shortcut_map = {
-            "tool.select": "select",
-            "tool.rectangle": "rectangle",
-            "tool.ellipse": "ellipse",
-            "tool.line": "line",
-            "tool.arrow": "arrow",
-            "tool.freehand": "freehand",
-            "tool.text": "text",
-            "tool.callout": "callout",
-            "tool.highlight": "highlight",
-            "tool.blur": "blur",
-            "tool.numbered_step": "numbered_step",
-            "tool.stamp": "stamp",
-            "tool.crop": "crop",
-            "tool.raster_select": "raster_select",
-            "tool.eyedropper": "eyedropper",
-            "tool.pan": "pan",
-            "tool.zoom": "zoom",
-            "tool.lasso_select": "lasso_select",
-        }
-        for shortcut_key, tool_id in tool_shortcut_map.items():
-            key_seq = SHORTCUTS.get(shortcut_key, "")
-            if not key_seq:
-                continue
-            action = QAction(self)
-            action.setShortcut(QKeySequence(key_seq))
-            # Capture tool_id by default arg
-            action.triggered.connect(
-                lambda _checked=False, tid=tool_id: self._tool_manager.activate(tid)
-            )
-            self.addAction(action)
 
     # ---- file operations ----
 
@@ -464,8 +828,11 @@ class MainWindow(QMainWindow):
         self._layer_panel.set_manager(self._scene.layer_manager)
         self._property_panel.set_selection(self._selection_manager)
         self._scene.command_stack.stack_changed.connect(self._update_title)
+        self._connect_layer_signals()
+        self._connect_menu_state_signals()
         self._current_file = None
         self._update_title()
+        self._update_menu_states()
         old_scene.deleteLater()
 
     def _file_open(self) -> None:
@@ -504,9 +871,12 @@ class MainWindow(QMainWindow):
         self._layer_panel.set_manager(self._scene.layer_manager)
         self._property_panel.set_selection(self._selection_manager)
         self._scene.command_stack.stack_changed.connect(self._update_title)
+        self._connect_layer_signals()
+        self._connect_menu_state_signals()
         self._current_file = path
         self._add_recent_file(path)
         self._update_title()
+        self._update_menu_states()
         old_scene.deleteLater()
 
     def _file_save(self) -> None:
@@ -569,6 +939,23 @@ class MainWindow(QMainWindow):
         elif suffix == ".pdf" or "PDF" in selected_filter:
             export_pdf(self._scene, path)
 
+    def _file_export_quick_png(self) -> None:
+        """Quick-export the scene as PNG next to the current file."""
+        if self._current_file is not None:
+            path = self._current_file.with_suffix(".png")
+        else:
+            path_str, _ = QFileDialog.getSaveFileName(self, "Export PNG", "", "PNG Image (*.png)")
+            if not path_str:
+                return
+            path = Path(path_str)
+        export_png(self._scene, path)
+
+    def _file_print(self) -> None:
+        QMessageBox.information(self, "Print", "Print support is coming soon.")
+
+    def _file_preferences(self) -> None:
+        QMessageBox.information(self, "Preferences", "Preferences dialog is coming soon.")
+
     # ---- edit operations ----
 
     def _edit_undo(self) -> None:
@@ -581,9 +968,11 @@ class MainWindow(QMainWindow):
 
     def _edit_cut(self) -> None:
         active = self._tool_manager.active_tool
-        if isinstance(active, (RasterSelectTool, LassoSelectTool)) and hasattr(
-            active, "has_active_selection"
-        ) and active.has_active_selection:
+        if (
+            isinstance(active, (RasterSelectTool, LassoSelectTool))
+            and hasattr(active, "has_active_selection")
+            and active.has_active_selection
+        ):
             self._copy_raster_selection(active)
             self._cut_raster_selection(active)
             return
@@ -592,9 +981,11 @@ class MainWindow(QMainWindow):
 
     def _edit_copy(self) -> None:
         active = self._tool_manager.active_tool
-        if isinstance(active, (RasterSelectTool, LassoSelectTool)) and hasattr(
-            active, "has_active_selection"
-        ) and active.has_active_selection:
+        if (
+            isinstance(active, (RasterSelectTool, LassoSelectTool))
+            and hasattr(active, "has_active_selection")
+            and active.has_active_selection
+        ):
             self._copy_raster_selection(active)
             return
         items = [i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)]
@@ -621,9 +1012,7 @@ class MainWindow(QMainWindow):
         rect = tool.selection_rect
         layer = self._scene.layer_manager.active_layer
         if layer is not None and not rect.isEmpty():
-            cmd = RasterCutCommand(
-                self._scene, rect, QImage(), layer.layer_id
-            )
+            cmd = RasterCutCommand(self._scene, rect, QImage(), layer.layer_id)
             self._scene.command_stack.push(cmd)
         tool.cancel()
 
@@ -665,9 +1054,7 @@ class MainWindow(QMainWindow):
                     item.setPos(item.pos().x() + 10, item.pos().y() + 10)
                 self._scene.command_stack.push(AddItemCommand(self._scene, item, layer.layer_id))
 
-    def _paste_raster_image(
-        self, image: object, source_rect: object | None
-    ) -> None:
+    def _paste_raster_image(self, image: object, source_rect: object | None) -> None:
         """Paste a raster image at its source position."""
         from PyQt6.QtCore import QRectF
         from PyQt6.QtGui import QImage, QPixmap
@@ -693,9 +1080,7 @@ class MainWindow(QMainWindow):
                 )
         layer = self._scene.layer_manager.active_layer
         if layer is not None:
-            self._scene.command_stack.push(
-                AddItemCommand(self._scene, item, layer.layer_id)
-            )
+            self._scene.command_stack.push(AddItemCommand(self._scene, item, layer.layer_id))
             # Switch to select tool and select the new item
             self._tool_manager.activate("select")
             self._selection_manager.select(item)
@@ -714,9 +1099,7 @@ class MainWindow(QMainWindow):
             item.setPos(center.x() - 100, center.y() - 20)
         layer = self._scene.layer_manager.active_layer
         if layer is not None:
-            self._scene.command_stack.push(
-                AddItemCommand(self._scene, item, layer.layer_id)
-            )
+            self._scene.command_stack.push(AddItemCommand(self._scene, item, layer.layer_id))
             self._tool_manager.activate("select")
             self._selection_manager.select(item)
 
@@ -787,6 +1170,13 @@ class MainWindow(QMainWindow):
         ]
         self._selection_manager.select_items(all_items)
 
+    def _edit_select_all_layers(self) -> None:
+        """Select all items across all layers."""
+        all_items: list[QGraphicsItem] = [
+            i for i in self._scene.items() if isinstance(i, SnapGraphicsItem)
+        ]
+        self._selection_manager.select_items(all_items)
+
     # ---- image operations ----
 
     def _image_resize_canvas(self) -> None:
@@ -811,6 +1201,302 @@ class MainWindow(QMainWindow):
         if dlg.exec():
             cmd = ResizeImageCommand(self._scene, dlg.new_size())
             self._scene.command_stack.push(cmd)
+
+    def _image_crop_to_canvas(self) -> None:
+        """Remove items outside the canvas bounds."""
+        from snapmock.commands.remove_item import RemoveItemCommand
+
+        for scene_item in list(self._scene.items()):
+            if isinstance(scene_item, SnapGraphicsItem):
+                if not scene_item.sceneBoundingRect().intersects(self._scene.canvas_rect):
+                    self._scene.command_stack.push(RemoveItemCommand(self._scene, scene_item))
+
+    def _image_rotate_cw(self) -> None:
+        from snapmock.commands.canvas_transform_commands import RotateCanvasCommand
+
+        cmd = RotateCanvasCommand(self._scene, clockwise=True)
+        self._scene.command_stack.push(cmd)
+
+    def _image_rotate_ccw(self) -> None:
+        from snapmock.commands.canvas_transform_commands import RotateCanvasCommand
+
+        cmd = RotateCanvasCommand(self._scene, clockwise=False)
+        self._scene.command_stack.push(cmd)
+
+    def _image_flip_h(self) -> None:
+        from snapmock.commands.canvas_transform_commands import FlipCanvasCommand
+
+        cmd = FlipCanvasCommand(self._scene, horizontal=True)
+        self._scene.command_stack.push(cmd)
+
+    def _image_flip_v(self) -> None:
+        from snapmock.commands.canvas_transform_commands import FlipCanvasCommand
+
+        cmd = FlipCanvasCommand(self._scene, horizontal=False)
+        self._scene.command_stack.push(cmd)
+
+    def _image_auto_trim(self) -> None:
+        QMessageBox.information(self, "Auto-Trim", "Auto-trim is coming soon.")
+
+    # ---- layer operations ----
+
+    def _layer_new(self) -> None:
+        from snapmock.commands.layer_commands import AddLayerCommand
+
+        lm = self._scene.layer_manager
+        name = f"Layer {lm.count + 1}"
+        cmd = AddLayerCommand(lm, name)
+        self._scene.command_stack.push(cmd)
+
+    def _layer_duplicate(self) -> None:
+        lm = self._scene.layer_manager
+        active = lm.active_layer
+        if active is None:
+            return
+        from snapmock.commands.layer_commands import AddLayerCommand
+
+        idx = lm.index_of(active.layer_id) + 1
+        cmd = AddLayerCommand(lm, f"{active.name} copy", idx)
+        self._scene.command_stack.push(cmd)
+
+    def _layer_delete(self) -> None:
+        lm = self._scene.layer_manager
+        active = lm.active_layer
+        if active is None or lm.count <= 1:
+            return
+        from snapmock.commands.layer_commands import RemoveLayerCommand
+
+        cmd = RemoveLayerCommand(lm, active.layer_id)
+        self._scene.command_stack.push(cmd)
+
+    def _layer_merge_down(self) -> None:
+        QMessageBox.information(self, "Merge Down", "Merge down is coming soon.")
+
+    def _layer_merge_visible(self) -> None:
+        QMessageBox.information(self, "Merge Visible", "Merge visible is coming soon.")
+
+    def _layer_flatten(self) -> None:
+        QMessageBox.information(self, "Flatten All", "Flatten all is coming soon.")
+
+    def _layer_rename(self) -> None:
+        from PyQt6.QtWidgets import QInputDialog
+
+        lm = self._scene.layer_manager
+        active = lm.active_layer
+        if active is None:
+            return
+        new_name, ok = QInputDialog.getText(self, "Rename Layer", "New name:", text=active.name)
+        if ok and new_name:
+            from snapmock.commands.layer_commands import ChangeLayerPropertyCommand
+
+            cmd = ChangeLayerPropertyCommand(lm, active.layer_id, "name", active.name, new_name)
+            self._scene.command_stack.push(cmd)
+
+    def _layer_properties(self) -> None:
+        QMessageBox.information(
+            self, "Layer Properties", "Layer properties dialog is coming soon."
+        )
+
+    def _layer_move_up(self) -> None:
+        lm = self._scene.layer_manager
+        active = lm.active_layer
+        if active is None:
+            return
+        idx = lm.index_of(active.layer_id)
+        if idx < lm.count - 1:
+            from snapmock.commands.layer_commands import ReorderLayerCommand
+
+            cmd = ReorderLayerCommand(lm, active.layer_id, idx + 1)
+            self._scene.command_stack.push(cmd)
+
+    def _layer_move_down(self) -> None:
+        lm = self._scene.layer_manager
+        active = lm.active_layer
+        if active is None:
+            return
+        idx = lm.index_of(active.layer_id)
+        if idx > 0:
+            from snapmock.commands.layer_commands import ReorderLayerCommand
+
+            cmd = ReorderLayerCommand(lm, active.layer_id, idx - 1)
+            self._scene.command_stack.push(cmd)
+
+    def _layer_move_to_top(self) -> None:
+        lm = self._scene.layer_manager
+        active = lm.active_layer
+        if active is None:
+            return
+        idx = lm.index_of(active.layer_id)
+        if idx < lm.count - 1:
+            from snapmock.commands.layer_commands import ReorderLayerCommand
+
+            cmd = ReorderLayerCommand(lm, active.layer_id, lm.count - 1)
+            self._scene.command_stack.push(cmd)
+
+    def _layer_move_to_bottom(self) -> None:
+        lm = self._scene.layer_manager
+        active = lm.active_layer
+        if active is None:
+            return
+        idx = lm.index_of(active.layer_id)
+        if idx > 0:
+            from snapmock.commands.layer_commands import ReorderLayerCommand
+
+            cmd = ReorderLayerCommand(lm, active.layer_id, 0)
+            self._scene.command_stack.push(cmd)
+
+    # ---- context menu helpers ----
+
+    def _move_items_to_layer(self, target_layer_id: str) -> None:
+        """Move selected items to the specified layer."""
+        items = self._selected_snap_items()
+        if not items:
+            return
+        from snapmock.commands.move_item_layer import MoveItemToLayerCommand
+
+        cmd = MoveItemToLayerCommand(self._scene, items, target_layer_id)
+        self._scene.command_stack.push(cmd)
+
+    def _toggle_item_lock(self) -> None:
+        """Toggle the locked flag on all selected items."""
+        items = self._selected_snap_items()
+        if not items:
+            return
+        # Use the first item's state to determine the toggle direction
+        new_locked = not items[0].locked
+        for item in items:
+            item.locked = new_locked
+
+    def _layer_new_relative(self, reference_layer_id: str, *, above: bool) -> None:
+        """Add a new layer above or below the referenced layer."""
+        from snapmock.commands.layer_commands import AddLayerCommand
+
+        lm = self._scene.layer_manager
+        idx = lm.index_of(reference_layer_id)
+        if idx < 0:
+            return
+        insert_idx = idx + 1 if above else idx
+        name = f"Layer {lm.count + 1}"
+        cmd = AddLayerCommand(lm, name, insert_idx)
+        self._scene.command_stack.push(cmd)
+
+    def _toggle_layer_lock(self, layer_id: str) -> None:
+        """Toggle lock on a layer via undoable command."""
+        from snapmock.commands.layer_commands import ChangeLayerPropertyCommand
+
+        lm = self._scene.layer_manager
+        layer = lm.layer_by_id(layer_id)
+        if layer is None:
+            return
+        cmd = ChangeLayerPropertyCommand(lm, layer_id, "locked", layer.locked, not layer.locked)
+        self._scene.command_stack.push(cmd)
+
+    def _toggle_layer_visibility(self, layer_id: str) -> None:
+        """Toggle visibility on a layer via undoable command."""
+        from snapmock.commands.layer_commands import ChangeLayerPropertyCommand
+
+        lm = self._scene.layer_manager
+        layer = lm.layer_by_id(layer_id)
+        if layer is None:
+            return
+        cmd = ChangeLayerPropertyCommand(lm, layer_id, "visible", layer.visible, not layer.visible)
+        self._scene.command_stack.push(cmd)
+
+    # ---- arrange operations ----
+
+    def _selected_snap_items(self) -> list[SnapGraphicsItem]:
+        return [i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)]
+
+    def _arrange_bring_to_front(self) -> None:
+        items = self._selected_snap_items()
+        if not items:
+            return
+        from snapmock.commands.arrange_commands import ChangeZOrderCommand
+
+        cmd = ChangeZOrderCommand(self._scene, items, "front")
+        self._scene.command_stack.push(cmd)
+
+    def _arrange_bring_forward(self) -> None:
+        items = self._selected_snap_items()
+        if not items:
+            return
+        from snapmock.commands.arrange_commands import ChangeZOrderCommand
+
+        cmd = ChangeZOrderCommand(self._scene, items, "forward")
+        self._scene.command_stack.push(cmd)
+
+    def _arrange_send_backward(self) -> None:
+        items = self._selected_snap_items()
+        if not items:
+            return
+        from snapmock.commands.arrange_commands import ChangeZOrderCommand
+
+        cmd = ChangeZOrderCommand(self._scene, items, "backward")
+        self._scene.command_stack.push(cmd)
+
+    def _arrange_send_to_back(self) -> None:
+        items = self._selected_snap_items()
+        if not items:
+            return
+        from snapmock.commands.arrange_commands import ChangeZOrderCommand
+
+        cmd = ChangeZOrderCommand(self._scene, items, "back")
+        self._scene.command_stack.push(cmd)
+
+    def _arrange_align(self, alignment: str) -> None:
+        items = self._selected_snap_items()
+        if len(items) < 2:
+            return
+        from snapmock.commands.arrange_commands import AlignItemsCommand
+
+        cmd = AlignItemsCommand(items, alignment)
+        self._scene.command_stack.push(cmd)
+
+    def _arrange_distribute(self, direction: str) -> None:
+        items = self._selected_snap_items()
+        if len(items) < 3:
+            return
+        from snapmock.commands.arrange_commands import DistributeItemsCommand
+
+        cmd = DistributeItemsCommand(items, direction)
+        self._scene.command_stack.push(cmd)
+
+    def _arrange_align_canvas_center(self) -> None:
+        items = self._selected_snap_items()
+        if not items:
+            return
+        from snapmock.commands.arrange_commands import AlignToCanvasCommand
+
+        cmd = AlignToCanvasCommand(self._scene, items)
+        self._scene.command_stack.push(cmd)
+
+    # ---- help operations ----
+
+    def _help_welcome(self) -> None:
+        QMessageBox.information(self, "Welcome", "Welcome dialog is coming soon.")
+
+    def _help_docs(self) -> None:
+        QDesktopServices.openUrl(QUrl("https://snapmock.org/docs"))
+
+    def _help_shortcuts(self) -> None:
+        QMessageBox.information(
+            self, "Keyboard Shortcuts", "Keyboard shortcuts reference is coming soon."
+        )
+
+    def _help_report_bug(self) -> None:
+        QDesktopServices.openUrl(QUrl("https://github.com/snapmock/snapmock/issues"))
+
+    def _help_check_updates(self) -> None:
+        QMessageBox.information(self, "Check for Updates", "Update checking is coming soon.")
+
+    def _help_about(self) -> None:
+        QMessageBox.about(
+            self,
+            f"About {APP_NAME}",
+            f"<h3>{APP_NAME} v{APP_VERSION}</h3>"
+            "<p>An open-source multi-platform screenshot annotation &amp; UI mockup tool.</p>"
+            "<p>Built with Python and PyQt6.</p>",
+        )
 
     # ---- recent files ----
 
