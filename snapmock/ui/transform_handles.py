@@ -128,9 +128,7 @@ class TransformHandles(QGraphicsItemGroup):
         self.addToGroup(self._rotate_line)
 
         self._border = QGraphicsRectItem()
-        self._border.setPen(
-            QPen(QColor(0, 120, 215), 1, Qt.PenStyle.DashLine)
-        )
+        self._border.setPen(QPen(QColor(0, 120, 215), 1, Qt.PenStyle.DashLine))
         self._border.setBrush(Qt.GlobalColor.transparent)
         self._border.setZValue(999996)
         self.addToGroup(self._border)
@@ -168,9 +166,7 @@ class TransformHandles(QGraphicsItemGroup):
         # Rotate handle above top-center
         rotate_pos = QPointF(cx, rect.top() - ROTATE_HANDLE_OFFSET)
         self._rotate_handle.setPos(rotate_pos)
-        self._rotate_line.setLine(
-            cx, rect.top(), cx, rect.top() - ROTATE_HANDLE_OFFSET
-        )
+        self._rotate_line.setLine(cx, rect.top(), cx, rect.top() - ROTATE_HANDLE_OFFSET)
 
     def handle_at(self, scene_pos: QPointF) -> HandlePosition | None:
         """Return which handle (if any) is at *scene_pos*."""

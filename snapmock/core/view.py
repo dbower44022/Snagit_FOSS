@@ -355,9 +355,7 @@ class SnapView(QGraphicsView):
         from PyQt6.QtCore import QEasingCurve
 
         self._zoom_timeline.setEasingCurve(QEasingCurve.Type.OutCubic)
-        self._zoom_timeline.frameChanged.connect(
-            lambda pct: self.set_zoom_centered(pct, center)
-        )
+        self._zoom_timeline.frameChanged.connect(lambda pct: self.set_zoom_centered(pct, center))
         self._zoom_timeline.start()
 
     # --- drawBackground ---
@@ -632,10 +630,7 @@ class SnapView(QGraphicsView):
         from PyQt6.QtGui import QContextMenuEvent
 
         if isinstance(event, QContextMenuEvent):
-            if (
-                self._tool_manager is not None
-                and self._tool_manager.handle_context_menu(event)
-            ):
+            if self._tool_manager is not None and self._tool_manager.handle_context_menu(event):
                 event.accept()
                 return
         super().contextMenuEvent(event)  # type: ignore[arg-type]

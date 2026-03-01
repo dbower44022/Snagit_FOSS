@@ -186,9 +186,7 @@ class RasterSelectTool(BaseTool):
             if view is not None:
                 vp = view.viewport()
                 if vp is not None:
-                    global_pos = vp.mapToGlobal(
-                        view.mapFromScene(clamped)
-                    )
+                    global_pos = vp.mapToGlobal(view.mapFromScene(clamped))
                     QToolTip.showText(
                         global_pos,
                         f"W: {rect.width():.0f}  H: {rect.height():.0f}",

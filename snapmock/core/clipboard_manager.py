@@ -120,11 +120,7 @@ class ClipboardManager(QObject):
     def paste_raster(self) -> tuple[QImage | None, QRectF | None]:
         """Return stored raster data and its source rect."""
         if self._raster_data is not None:
-            src = (
-                QRectF(self._raster_source_rect)
-                if self._raster_source_rect
-                else None
-            )
+            src = QRectF(self._raster_source_rect) if self._raster_source_rect else None
             return QImage(self._raster_data), src
         return None, None
 

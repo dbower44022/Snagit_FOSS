@@ -156,20 +156,24 @@ class RulerWidget(QWidget):
         if horizontal:
             cx = self._scene_to_widget(self._cursor_scene_pos.x(), True)
             if 0 <= cx <= length:
-                tri = QPolygonF([
-                    QPointF(cx - 4, RULER_SIZE),
-                    QPointF(cx + 4, RULER_SIZE),
-                    QPointF(cx, RULER_SIZE - 6),
-                ])
+                tri = QPolygonF(
+                    [
+                        QPointF(cx - 4, RULER_SIZE),
+                        QPointF(cx + 4, RULER_SIZE),
+                        QPointF(cx, RULER_SIZE - 6),
+                    ]
+                )
                 painter.drawPolygon(tri)
         else:
             cy = self._scene_to_widget(self._cursor_scene_pos.y(), False)
             if 0 <= cy <= length:
-                tri = QPolygonF([
-                    QPointF(RULER_SIZE, cy - 4),
-                    QPointF(RULER_SIZE, cy + 4),
-                    QPointF(RULER_SIZE - 6, cy),
-                ])
+                tri = QPolygonF(
+                    [
+                        QPointF(RULER_SIZE, cy - 4),
+                        QPointF(RULER_SIZE, cy + 4),
+                        QPointF(RULER_SIZE - 6, cy),
+                    ]
+                )
                 painter.drawPolygon(tri)
 
         painter.end()

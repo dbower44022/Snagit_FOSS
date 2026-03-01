@@ -273,9 +273,7 @@ class LassoSelectTool(BaseTool):
         if sel_path is not None:
             from PyQt6.QtGui import QPainter
 
-            masked = QImage(
-                image.size(), QImage.Format.Format_ARGB32_Premultiplied
-            )
+            masked = QImage(image.size(), QImage.Format.Format_ARGB32_Premultiplied)
             masked.fill(Qt.GlobalColor.transparent)
             painter = QPainter(masked)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)

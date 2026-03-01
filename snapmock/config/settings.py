@@ -75,6 +75,12 @@ class AppSettings:
     def set_rulers_visible(self, visible: bool) -> None:
         self._qs.setValue("view/rulersVisible", visible)
 
+    def snap_to_grid(self) -> bool:
+        return bool(self._qs.value("view/snapToGrid", False))
+
+    def set_snap_to_grid(self, enabled: bool) -> None:
+        self._qs.setValue("view/snapToGrid", enabled)
+
     # --- autosave ---
 
     def autosave_enabled(self) -> bool:

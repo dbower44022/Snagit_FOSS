@@ -181,9 +181,7 @@ class ResizeImageCommand(BaseCommand):
         self._item_snapshots: list[tuple[SnapGraphicsItem, QPointF, dict[str, Any]]] = []
         for gitem in scene.items():
             if isinstance(gitem, SnapGraphicsItem):
-                self._item_snapshots.append(
-                    (gitem, QPointF(gitem.pos()), gitem.serialize())
-                )
+                self._item_snapshots.append((gitem, QPointF(gitem.pos()), gitem.serialize()))
 
     def redo(self) -> None:
         sx = self._new_size.width() / max(self._old_size.width(), 1)

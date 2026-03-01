@@ -11,6 +11,10 @@ SHORTCUTS: dict[str, str] = {
     "file.save": "Ctrl+S",
     "file.save_as": "Ctrl+Shift+S",
     "file.export": "Ctrl+E",
+    "file.import_image": "Ctrl+I",
+    "file.export_quick_png": "Ctrl+Shift+E",
+    "file.print": "Ctrl+P",
+    "file.preferences": "Ctrl+,",
     # Edit
     "edit.undo": "Ctrl+Z",
     "edit.redo": "Ctrl+Shift+Z",
@@ -30,6 +34,24 @@ SHORTCUTS: dict[str, str] = {
     "view.toggle_grid": "Ctrl+'",
     "view.toggle_rulers": "Ctrl+R",
     "view.zoom_to_selection": "Ctrl+Shift+0",
+    "view.snap_to_grid": "Ctrl+Shift+'",
+    # Image
+    "image.crop_to_canvas": "Ctrl+Shift+C",
+    # Layers
+    "layer.new": "Ctrl+Shift+N",
+    "layer.delete": "Ctrl+Shift+Delete",
+    "layer.merge_down": "Ctrl+Shift+M",
+    "layer.flatten": "Ctrl+Shift+F",
+    "layer.rename": "F2",
+    "layer.move_up": "Ctrl+]",
+    "layer.move_down": "Ctrl+[",
+    "layer.move_to_top": "Ctrl+Shift+]",
+    "layer.move_to_bottom": "Ctrl+Shift+[",
+    # Arrange
+    "arrange.bring_to_front": "Ctrl+Shift+Up",
+    "arrange.bring_forward": "Ctrl+Up",
+    "arrange.send_backward": "Ctrl+Down",
+    "arrange.send_to_back": "Ctrl+Shift+Down",
     # Tools
     "tool.select": "V",
     "tool.rectangle": "R",
@@ -46,14 +68,9 @@ SHORTCUTS: dict[str, str] = {
     "tool.crop": "X",
     "tool.raster_select": "M",
     "tool.eyedropper": "I",
-    # Layers
-    "layer.new": "Ctrl+Shift+N",
-    "layer.delete": "Ctrl+Shift+Delete",
-    "layer.merge_down": "Ctrl+Shift+E",
-    # Additional edit shortcuts
-    "edit.paste_in_place": "Ctrl+Shift+V",
-    # Additional tools
     "tool.pan": "",
     "tool.zoom": "Z",
     "tool.lasso_select": "Shift+M",
+    # Additional edit shortcuts
+    "edit.paste_in_place": "Ctrl+Shift+V",
 }
