@@ -53,6 +53,40 @@ class SnapGraphicsItem(QGraphicsObject):
     def locked(self, value: bool) -> None:
         self._locked = value
 
+    # --- position / transform property shims ---
+
+    @property
+    def pos_x(self) -> float:
+        return self.pos().x()
+
+    @pos_x.setter
+    def pos_x(self, value: float) -> None:
+        self.setPos(value, self.pos().y())
+
+    @property
+    def pos_y(self) -> float:
+        return self.pos().y()
+
+    @pos_y.setter
+    def pos_y(self, value: float) -> None:
+        self.setPos(self.pos().x(), value)
+
+    @property
+    def rotation_deg(self) -> float:
+        return self.rotation()
+
+    @rotation_deg.setter
+    def rotation_deg(self, value: float) -> None:
+        self.setRotation(value)
+
+    @property
+    def opacity_pct(self) -> float:
+        return self.opacity() * 100.0
+
+    @opacity_pct.setter
+    def opacity_pct(self, value: float) -> None:
+        self.setOpacity(max(0.0, min(100.0, value)) / 100.0)
+
     # --- required overrides ---
 
     @abstractmethod

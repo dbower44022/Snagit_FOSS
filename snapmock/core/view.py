@@ -377,8 +377,8 @@ class SnapView(QGraphicsView):
         shadow_rect = canvas.translated(CANVAS_SHADOW_OFFSET, CANVAS_SHADOW_OFFSET)
         painter.fillRect(shadow_rect, QColor(CANVAS_SHADOW_COLOR))
 
-        # 3. Canvas background (white)
-        painter.fillRect(canvas, QColor("white"))
+        # 3. Canvas background
+        painter.fillRect(canvas, snap.background_color)
 
         # 4. Canvas border (1px)
         painter.setPen(QPen(QColor(180, 180, 180), 0))

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import QRectF, QSizeF, pyqtSignal
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QGraphicsScene
 
 from snapmock.config.constants import (
@@ -24,6 +25,7 @@ class SnapScene(QGraphicsScene):
     """
 
     canvas_size_changed = pyqtSignal(QSizeF)
+    background_changed = pyqtSignal()
 
     def __init__(
         self,
@@ -33,6 +35,7 @@ class SnapScene(QGraphicsScene):
     ) -> None:
         super().__init__(parent)  # type: ignore[arg-type]
         self._canvas_size = QSizeF(width, height)
+        self._background_color: QColor = QColor("white")
         self._update_scene_rect()
 
         self._layer_manager = LayerManager(self)
@@ -50,6 +53,16 @@ class SnapScene(QGraphicsScene):
     @property
     def command_stack(self) -> CommandStack:
         return self._command_stack
+
+    @property
+    def background_color(self) -> QColor:
+        return QColor(self._background_color)
+
+    def set_background_color(self, color: QColor) -> None:
+        """Set the canvas background color."""
+        self._background_color = QColor(color)
+        self.background_changed.emit()
+        self.update()
 
     @property
     def canvas_size(self) -> QSizeF:

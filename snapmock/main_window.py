@@ -96,7 +96,7 @@ class MainWindow(QMainWindow):
         self._layer_panel = LayerPanel(self._scene.layer_manager, self)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._layer_panel)
 
-        self._property_panel = PropertyPanel(self._selection_manager, self)
+        self._property_panel = PropertyPanel(self._selection_manager, self._scene, self)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._property_panel)
 
         self._status_bar = SnapStatusBar(self._view)
@@ -826,6 +826,7 @@ class MainWindow(QMainWindow):
         self._tool_manager.activate(prev_tool_id)
         self._clipboard = ClipboardManager(self._scene, parent=self)
         self._layer_panel.set_manager(self._scene.layer_manager)
+        self._property_panel.set_scene(self._scene)
         self._property_panel.set_selection(self._selection_manager)
         self._scene.command_stack.stack_changed.connect(self._update_title)
         self._connect_layer_signals()
@@ -869,6 +870,7 @@ class MainWindow(QMainWindow):
         self._tool_manager.activate(prev_tool_id)
         self._clipboard = ClipboardManager(self._scene, parent=self)
         self._layer_panel.set_manager(self._scene.layer_manager)
+        self._property_panel.set_scene(self._scene)
         self._property_panel.set_selection(self._selection_manager)
         self._scene.command_stack.stack_changed.connect(self._update_title)
         self._connect_layer_signals()
