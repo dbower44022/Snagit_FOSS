@@ -16,6 +16,7 @@ from snapmock.config.constants import (
     APP_NAME,
     APP_VERSION,
     PROJECT_EXTENSION,
+    SNAGIT_EXTENSION,
 )
 from snapmock.config.settings import AppSettings
 from snapmock.config.shortcuts import SHORTCUTS
@@ -26,6 +27,8 @@ from snapmock.core.view import SnapView
 from snapmock.io.exporter import export_jpg, export_pdf, export_png, export_svg
 from snapmock.io.importer import import_image
 from snapmock.io.project_serializer import load_project, save_project
+from snapmock.io.snagit_reader import load_snagx
+from snapmock.io.snagit_writer import save_snagx
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.tools.arrow_tool import ArrowTool
 from snapmock.tools.blur_tool import BlurTool
@@ -836,11 +839,17 @@ class MainWindow(QMainWindow):
         old_scene.deleteLater()
 
     def _file_open(self) -> None:
-        """Open an existing .smk project."""
+        """Open an existing .smk or .snagx project."""
         if not self._confirm_discard():
             return
         path_str, _ = QFileDialog.getOpenFileName(
-            self, "Open Project", "", f"SnapMock Projects (*{PROJECT_EXTENSION});;All Files (*)"
+            self,
+            "Open Project",
+            "",
+            f"All Supported (*{PROJECT_EXTENSION} *{SNAGIT_EXTENSION})"
+            f";;SnapMock Projects (*{PROJECT_EXTENSION})"
+            f";;Snagit Files (*{SNAGIT_EXTENSION})"
+            ";;All Files (*)",
         )
         if not path_str:
             return
@@ -855,7 +864,10 @@ class MainWindow(QMainWindow):
             self._tool_manager.active_tool.deactivate()
         old_scene = self._scene
         try:
-            self._scene = load_project(path)
+            if path.suffix.lower() == SNAGIT_EXTENSION:
+                self._scene = load_snagx(path)
+            else:
+                self._scene = load_project(path)
         except Exception as e:  # noqa: BLE001
             QMessageBox.critical(self, "Open Error", f"Could not open project:\n{e}")
             # Re-activate tool on old scene since load failed
@@ -889,19 +901,35 @@ class MainWindow(QMainWindow):
 
     def _file_save_as(self) -> None:
         """Save the current project to a new path."""
-        path_str, _ = QFileDialog.getSaveFileName(
-            self, "Save Project", "", f"SnapMock Projects (*{PROJECT_EXTENSION})"
+        path_str, selected_filter = QFileDialog.getSaveFileName(
+            self,
+            "Save Project",
+            "",
+            f"SnapMock Projects (*{PROJECT_EXTENSION})"
+            f";;Snagit Files (*{SNAGIT_EXTENSION})",
         )
         if not path_str:
             return
         path = Path(path_str)
-        if path.suffix != PROJECT_EXTENSION:
+        if SNAGIT_EXTENSION in selected_filter or path.suffix.lower() == SNAGIT_EXTENSION:
+            if path.suffix.lower() != SNAGIT_EXTENSION:
+                path = path.with_suffix(SNAGIT_EXTENSION)
+        elif path.suffix.lower() != PROJECT_EXTENSION:
             path = path.with_suffix(PROJECT_EXTENSION)
         self._save_to(path)
 
     def _save_to(self, path: Path) -> None:
         try:
-            save_project(self._scene, path)
+            if path.suffix.lower() == SNAGIT_EXTENSION:
+                warnings = save_snagx(self._scene, path)
+                if warnings:
+                    QMessageBox.warning(
+                        self,
+                        "Snagit Export Warnings",
+                        "Some items could not be saved:\n\n" + "\n".join(warnings),
+                    )
+            else:
+                save_project(self._scene, path)
         except Exception as e:  # noqa: BLE001
             QMessageBox.critical(self, "Save Error", f"Could not save project:\n{e}")
             return
