@@ -1,14 +1,16 @@
 """Tests for PropertyPanel, property shims, ScaleGeometryCommand, and background_color."""
 
 from PyQt6.QtCore import QRectF
-from PyQt6.QtGui import QColor, QPixmap
+from PyQt6.QtGui import QColor, QFont, QFontInfo, QPixmap
 from pytestqt.qtbot import QtBot
 
 from snapmock.commands.scale_geometry_command import ScaleGeometryCommand
 from snapmock.core.scene import SnapScene
 from snapmock.core.selection_manager import SelectionManager
+from snapmock.items.callout_item import CalloutItem
 from snapmock.items.raster_region_item import RasterRegionItem
 from snapmock.items.rectangle_item import RectangleItem
+from snapmock.items.text_item import TextItem
 from snapmock.ui.property_panel import PropertyPanel
 
 
@@ -200,3 +202,127 @@ def test_opacity_pct_clamps() -> None:
     assert item.opacity_pct == 100.0
     item.opacity_pct = -10.0
     assert item.opacity_pct == 0.0
+
+
+def _add_text(scene: SnapScene) -> TextItem:
+    layer = scene.layer_manager.active_layer
+    assert layer is not None
+    item = TextItem(text="Hello")
+    item.layer_id = layer.layer_id
+    layer.item_ids.append(item.item_id)
+    scene.addItem(item)
+    return item
+
+
+def _add_callout(scene: SnapScene) -> CalloutItem:
+    layer = scene.layer_manager.active_layer
+    assert layer is not None
+    item = CalloutItem(text="Note")
+    item.layer_id = layer.layer_id
+    layer.item_ids.append(item.item_id)
+    scene.addItem(item)
+    return item
+
+
+# --- Text section visibility ---
+
+
+def test_text_section_visible_for_text_item(qtbot: QtBot) -> None:
+    panel, scene, sm = _make_panel(qtbot)
+    item = _add_text(scene)
+    sm.select(item)
+    assert panel._text_section.isVisible()
+
+
+def test_text_section_hidden_for_rectangle_item(qtbot: QtBot) -> None:
+    panel, scene, sm = _make_panel(qtbot)
+    item = _add_rect(scene)
+    sm.select(item)
+    assert not panel._text_section.isVisible()
+
+
+def test_text_section_visible_for_callout_item(qtbot: QtBot) -> None:
+    panel, scene, sm = _make_panel(qtbot)
+    item = _add_callout(scene)
+    sm.select(item)
+    assert panel._text_section.isVisible()
+
+
+# --- Text section reflects item state ---
+
+
+def test_font_combo_reflects_text_item_font(qtbot: QtBot) -> None:
+    panel, scene, sm = _make_panel(qtbot)
+    item = _add_text(scene)
+    sm.select(item)
+    # QFontComboBox resolves generic families (e.g. "Sans Serif") to actual
+    # system fonts, so compare against the resolved family via QFontInfo.
+    resolved_family = QFontInfo(item.font).family()
+    assert panel._font_combo.currentFont().family() == resolved_family
+
+
+def test_font_size_reflects_text_item(qtbot: QtBot) -> None:
+    panel, scene, sm = _make_panel(qtbot)
+    item = _add_text(scene)
+    f = QFont(item.font)
+    f.setPointSize(24)
+    item.font = f
+    sm.select(item)
+    assert panel._font_size_spin.value() == 24
+
+
+def test_bold_italic_underline_reflect_font_state(qtbot: QtBot) -> None:
+    panel, scene, sm = _make_panel(qtbot)
+    item = _add_text(scene)
+    f = QFont(item.font)
+    f.setBold(True)
+    f.setItalic(True)
+    f.setUnderline(True)
+    item.font = f
+    sm.select(item)
+    assert panel._bold_check.isChecked()
+    assert panel._italic_check.isChecked()
+    assert panel._underline_check.isChecked()
+
+
+# --- CalloutItem font/text_color property roundtrip ---
+
+
+def test_callout_font_property_roundtrip() -> None:
+    scene = SnapScene()
+    item = CalloutItem()
+    scene.addItem(item)
+    f = QFont("Monospace", 20)
+    f.setBold(True)
+    item.font = f
+    result = item.font
+    assert result.family() == f.family()
+    assert result.pointSize() == 20
+    assert result.bold()
+
+
+def test_callout_text_color_property_roundtrip() -> None:
+    scene = SnapScene()
+    item = CalloutItem()
+    scene.addItem(item)
+    item.text_color = QColor("#FF0000")
+    assert item.text_color == QColor("#FF0000")
+
+
+# --- CalloutItem serialization includes font/text_color ---
+
+
+def test_callout_serialization_includes_font_and_text_color() -> None:
+    item = CalloutItem(text="Test")
+    f = QFont("Helvetica", 16)
+    item.font = f
+    item.text_color = QColor("#00FF00")
+    data = item.serialize()
+    assert data["font_family"] == f.family()
+    assert data["font_size"] == 16
+    assert "text_color" in data
+
+    restored = CalloutItem.deserialize(data)
+    assert restored.font.family() == f.family()
+    assert restored.font.pointSize() == 16
+    assert restored.text_color == QColor("#00FF00")

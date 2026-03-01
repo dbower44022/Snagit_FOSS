@@ -5,12 +5,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDockWidget,
     QDoubleSpinBox,
+    QFontComboBox,
     QHBoxLayout,
     QLabel,
     QScrollArea,
@@ -24,6 +25,8 @@ from snapmock.commands.modify_property import ModifyPropertyCommand
 from snapmock.commands.move_item_layer import MoveItemToLayerCommand
 from snapmock.commands.scale_geometry_command import ScaleGeometryCommand
 from snapmock.items.base_item import SnapGraphicsItem
+from snapmock.items.callout_item import CalloutItem
+from snapmock.items.text_item import TextItem
 from snapmock.items.vector_item import VectorItem
 from snapmock.ui.collapsible_section import CollapsibleSection
 from snapmock.ui.color_picker import ColorPicker
@@ -117,6 +120,34 @@ class PropertyPanel(QDockWidget):
 
         self._main_layout.addWidget(self._appearance_section)
 
+        # --- Text section ---
+        self._text_section = CollapsibleSection("Text")
+
+        self._font_combo = QFontComboBox()
+        self._text_section.add_row("Font:", self._font_combo)
+
+        self._font_size_spin = QSpinBox()
+        self._font_size_spin.setRange(1, 200)
+        self._font_size_spin.setSuffix(" pt")
+        self._font_size_spin.setKeyboardTracking(False)
+        self._text_section.add_row("Size:", self._font_size_spin)
+
+        style_container = QWidget()
+        style_layout = QHBoxLayout(style_container)
+        style_layout.setContentsMargins(0, 0, 0, 0)
+        self._bold_check = QCheckBox("Bold")
+        self._italic_check = QCheckBox("Italic")
+        self._underline_check = QCheckBox("Underline")
+        style_layout.addWidget(self._bold_check)
+        style_layout.addWidget(self._italic_check)
+        style_layout.addWidget(self._underline_check)
+        self._text_section.add_row("Style:", style_container)
+
+        self._text_color_picker = ColorPicker(QColor("black"))
+        self._text_section.add_row("Color:", self._text_color_picker)
+
+        self._main_layout.addWidget(self._text_section)
+
         # --- Item Info section ---
         self._info_section = CollapsibleSection("Item Info")
         self._type_label = QLabel("")
@@ -157,6 +188,12 @@ class PropertyPanel(QDockWidget):
         self._layer_combo.currentIndexChanged.connect(self._on_layer_changed)
         self._locked_check.toggled.connect(self._on_locked_changed)
         self._bg_color_picker.color_changed.connect(self._on_bg_color_changed)
+        self._font_combo.currentFontChanged.connect(self._on_font_family_changed)
+        self._font_size_spin.valueChanged.connect(self._on_font_size_changed)
+        self._bold_check.toggled.connect(self._on_bold_changed)
+        self._italic_check.toggled.connect(self._on_italic_changed)
+        self._underline_check.toggled.connect(self._on_underline_changed)
+        self._text_color_picker.color_changed.connect(self._on_text_color_changed)
 
         # Connect selection signals
         self._connect_selection_signals()
@@ -205,10 +242,12 @@ class PropertyPanel(QDockWidget):
             item = self._first_selected_item()
             has_selection = item is not None
             is_vector = isinstance(item, VectorItem)
+            has_text = isinstance(item, (TextItem, CalloutItem))
 
             # Section visibility
             self._transform_section.setVisible(has_selection)
             self._appearance_section.setVisible(has_selection and is_vector)
+            self._text_section.setVisible(has_selection and has_text)
             self._info_section.setVisible(has_selection)
             self._canvas_section.setVisible(not has_selection)
 
@@ -231,6 +270,17 @@ class PropertyPanel(QDockWidget):
                     self._no_fill_check.setChecked(item.fill_color.alpha() == 0)
                     self._opacity_slider.setValue(int(item.opacity_pct))
                     self._opacity_spin.setValue(int(item.opacity_pct))
+
+                # Text (TextItem / CalloutItem)
+                if has_text:
+                    assert isinstance(item, (TextItem, CalloutItem))
+                    f = item.font
+                    self._font_combo.setCurrentFont(f)
+                    self._font_size_spin.setValue(f.pointSize())
+                    self._bold_check.setChecked(f.bold())
+                    self._italic_check.setChecked(f.italic())
+                    self._underline_check.setChecked(f.underline())
+                    self._text_color_picker.color = item.text_color
 
                 # Item Info
                 self._type_label.setText(item.type_name)
@@ -420,6 +470,76 @@ class PropertyPanel(QDockWidget):
         if item is None:
             return
         cmd = ModifyPropertyCommand(item, "locked", item.locked, checked)
+        self._scene.command_stack.push(cmd)
+
+    def _text_item(self) -> TextItem | CalloutItem | None:
+        item = self._first_selected_item()
+        if isinstance(item, (TextItem, CalloutItem)):
+            return item
+        return None
+
+    def _push_font_change(self, item: TextItem | CalloutItem, new_font: QFont) -> None:
+        old_font = item.font
+        cmd = ModifyPropertyCommand(item, "font", old_font, new_font)
+        self._scene.command_stack.push(cmd)
+
+    def _on_font_family_changed(self, font: QFont) -> None:
+        if self._updating:
+            return
+        item = self._text_item()
+        if item is None:
+            return
+        new_font = QFont(item.font)
+        new_font.setFamily(font.family())
+        self._push_font_change(item, new_font)
+
+    def _on_font_size_changed(self, value: int) -> None:
+        if self._updating:
+            return
+        item = self._text_item()
+        if item is None:
+            return
+        new_font = QFont(item.font)
+        new_font.setPointSize(value)
+        self._push_font_change(item, new_font)
+
+    def _on_bold_changed(self, checked: bool) -> None:
+        if self._updating:
+            return
+        item = self._text_item()
+        if item is None:
+            return
+        new_font = QFont(item.font)
+        new_font.setBold(checked)
+        self._push_font_change(item, new_font)
+
+    def _on_italic_changed(self, checked: bool) -> None:
+        if self._updating:
+            return
+        item = self._text_item()
+        if item is None:
+            return
+        new_font = QFont(item.font)
+        new_font.setItalic(checked)
+        self._push_font_change(item, new_font)
+
+    def _on_underline_changed(self, checked: bool) -> None:
+        if self._updating:
+            return
+        item = self._text_item()
+        if item is None:
+            return
+        new_font = QFont(item.font)
+        new_font.setUnderline(checked)
+        self._push_font_change(item, new_font)
+
+    def _on_text_color_changed(self, color: QColor) -> None:
+        if self._updating:
+            return
+        item = self._text_item()
+        if item is None:
+            return
+        cmd = ModifyPropertyCommand(item, "text_color", item.text_color, color)
         self._scene.command_stack.push(cmd)
 
     def _on_bg_color_changed(self, color: QColor) -> None:

@@ -40,6 +40,25 @@ class CalloutItem(SnapGraphicsItem):
         self.update()
 
     @property
+    def font(self) -> QFont:
+        return QFont(self._font)
+
+    @font.setter
+    def font(self, value: QFont) -> None:
+        self.prepareGeometryChange()
+        self._font = QFont(value)
+        self.update()
+
+    @property
+    def text_color(self) -> QColor:
+        return QColor(self._text_color)
+
+    @text_color.setter
+    def text_color(self, value: QColor) -> None:
+        self._text_color = QColor(value)
+        self.update()
+
+    @property
     def tail_tip(self) -> QPointF:
         return QPointF(self._tail_tip)
 
@@ -108,6 +127,9 @@ class CalloutItem(SnapGraphicsItem):
             "tail_tip": [self._tail_tip.x(), self._tail_tip.y()],
             "bg_color": self._bg_color.name(QColor.NameFormat.HexArgb),
             "border_color": self._border_color.name(QColor.NameFormat.HexArgb),
+            "font_family": self._font.family(),
+            "font_size": self._font.pointSize(),
+            "text_color": self._text_color.name(QColor.NameFormat.HexArgb),
         }
 
     @classmethod
@@ -127,4 +149,11 @@ class CalloutItem(SnapGraphicsItem):
             item._bg_color = QColor(data["bg_color"])
         if "border_color" in data:
             item._border_color = QColor(data["border_color"])
+        if "font_family" in data or "font_size" in data:
+            item._font = QFont(
+                data.get("font_family", DEFAULT_FONT_FAMILY),
+                data.get("font_size", DEFAULT_FONT_SIZE),
+            )
+        if "text_color" in data:
+            item._text_color = QColor(data["text_color"])
         return item
