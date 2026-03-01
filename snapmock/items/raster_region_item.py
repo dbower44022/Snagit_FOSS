@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import base64
 from typing import Any
 
-from PyQt6.QtCore import QRectF, Qt
-from PyQt6.QtGui import QPainter, QPixmap
+from PyQt6.QtCore import QBuffer, QIODevice, QRectF, Qt
+from PyQt6.QtGui import QImage, QPainter, QPixmap
 
 from snapmock.items.base_item import SnapGraphicsItem
 
@@ -48,6 +49,12 @@ class RasterRegionItem(SnapGraphicsItem):
         painter.drawPixmap(0, 0, self._pixmap)
 
     def serialize(self) -> dict[str, Any]:
+        image_b64 = ""
+        if not self._pixmap.isNull():
+            buf = QBuffer()
+            buf.open(QIODevice.OpenModeFlag.WriteOnly)
+            self._pixmap.save(buf, "PNG")
+            image_b64 = base64.b64encode(buf.data().data()).decode("ascii")
         return {
             "type": "RasterRegionItem",
             "item_id": self.item_id,
@@ -55,13 +62,22 @@ class RasterRegionItem(SnapGraphicsItem):
             "pos": [self.pos().x(), self.pos().y()],
             "width": self._pixmap.width(),
             "height": self._pixmap.height(),
+            "image_data": image_b64,
         }
 
     @classmethod
     def deserialize(cls, data: dict[str, Any]) -> RasterRegionItem:
-        w = data.get("width", 100)
-        h = data.get("height", 100)
-        item = cls(pixmap=QPixmap(w, h))
+        image_b64 = data.get("image_data", "")
+        if image_b64:
+            img_bytes = base64.b64decode(image_b64)
+            img = QImage()
+            img.loadFromData(img_bytes)
+            pixmap = QPixmap.fromImage(img)
+        else:
+            w = data.get("width", 100)
+            h = data.get("height", 100)
+            pixmap = QPixmap(w, h)
+        item = cls(pixmap=pixmap)
         pos = data.get("pos", [0, 0])
         item.setPos(pos[0], pos[1])
         item.item_id = data.get("item_id", item.item_id)
