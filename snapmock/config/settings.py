@@ -88,3 +88,10 @@ class AppSettings:
 
     def set_autosave_enabled(self, enabled: bool) -> None:
         self._qs.setValue("autosave/enabled", enabled)
+
+    def autosave_interval_minutes(self) -> int:
+        val = self._qs.value("autosave/interval", 2)
+        return int(val)
+
+    def set_autosave_interval_minutes(self, minutes: int) -> None:
+        self._qs.setValue("autosave/interval", minutes)

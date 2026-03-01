@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 from snapmock.config.constants import (
     APP_NAME,
     APP_VERSION,
-    AUTOSAVE_INTERVAL_MS,
     PROJECT_EXTENSION,
 )
 from snapmock.config.settings import AppSettings
@@ -133,7 +132,7 @@ class MainWindow(QMainWindow):
         self._autosave_timer = QTimer(self)
         self._autosave_timer.timeout.connect(self._autosave)
         if self._settings.autosave_enabled():
-            self._autosave_timer.start(AUTOSAVE_INTERVAL_MS)
+            self._autosave_timer.start(self._settings.autosave_interval_minutes() * 60_000)
 
         # Track dirty state for window title
         self._scene.command_stack.stack_changed.connect(self._update_title)
@@ -956,7 +955,64 @@ class MainWindow(QMainWindow):
         QMessageBox.information(self, "Print", "Print support is coming soon.")
 
     def _file_preferences(self) -> None:
-        QMessageBox.information(self, "Preferences", "Preferences dialog is coming soon.")
+        from snapmock.ui.preferences_dialog import PreferencesDialog
+
+        dlg = PreferencesDialog(self._settings, self)
+        if dlg.exec() == PreferencesDialog.DialogCode.Accepted:
+            self._apply_preference_changes(dlg.get_changes())
+
+    def _apply_preference_changes(
+        self, changes: dict[str, tuple[object, object]]
+    ) -> None:
+        """Write changed preferences to settings and sync live UI state."""
+        if not changes:
+            return
+
+        def _int(val: object) -> int:
+            return val if isinstance(val, int) else int(str(val))
+
+        if "grid_visible" in changes:
+            visible = bool(changes["grid_visible"][1])
+            self._settings.set_grid_visible(visible)
+            self._grid_action.blockSignals(True)
+            self._grid_action.setChecked(visible)
+            self._grid_action.blockSignals(False)
+            self._view.set_grid_visible(visible)
+
+        if "grid_size" in changes:
+            size = _int(changes["grid_size"][1])
+            self._settings.set_grid_size(size)
+            self._view.set_grid_size(size)
+
+        if "rulers_visible" in changes:
+            visible = bool(changes["rulers_visible"][1])
+            self._settings.set_rulers_visible(visible)
+            self._rulers_action.blockSignals(True)
+            self._rulers_action.setChecked(visible)
+            self._rulers_action.blockSignals(False)
+            self._view.set_rulers_visible(visible)
+
+        if "snap_to_grid" in changes:
+            enabled = bool(changes["snap_to_grid"][1])
+            self._settings.set_snap_to_grid(enabled)
+            self._snap_grid_action.blockSignals(True)
+            self._snap_grid_action.setChecked(enabled)
+            self._snap_grid_action.blockSignals(False)
+
+        if "autosave_interval" in changes:
+            minutes = _int(changes["autosave_interval"][1])
+            self._settings.set_autosave_interval_minutes(minutes)
+
+        if "autosave_enabled" in changes:
+            enabled = bool(changes["autosave_enabled"][1])
+            self._settings.set_autosave_enabled(enabled)
+
+        # Restart or stop autosave timer based on current settings
+        if "autosave_enabled" in changes or "autosave_interval" in changes:
+            self._autosave_timer.stop()
+            if self._settings.autosave_enabled():
+                ms = self._settings.autosave_interval_minutes() * 60_000
+                self._autosave_timer.start(ms)
 
     # ---- edit operations ----
 
