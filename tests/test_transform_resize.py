@@ -81,7 +81,8 @@ def test_text_scale_geometry() -> None:
     item = TextItem(text="Hello")
     original_size = item._font.pointSize()  # noqa: SLF001
     item.scale_geometry(2.0, 2.0)
-    assert item._font.pointSize() == max(1, int(original_size * 2.0))  # noqa: SLF001
+    # Font size should NOT change — text reflows at the same size
+    assert item._font.pointSize() == original_size  # noqa: SLF001
     assert item._width == pytest.approx(400.0)  # noqa: SLF001
 
 

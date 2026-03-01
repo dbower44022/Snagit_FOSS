@@ -56,11 +56,19 @@ class TextItem(SnapGraphicsItem):
         self._color = QColor(value)
         self.update()
 
+    @property
+    def text_width(self) -> float:
+        return self._width
+
+    @text_width.setter
+    def text_width(self, value: float) -> None:
+        self.prepareGeometryChange()
+        self._width = max(20.0, value)
+        self.update()
+
     def scale_geometry(self, sx: float, sy: float) -> None:
-        avg = (sx + sy) / 2.0
-        new_size = max(1, int(self._font.pointSize() * avg))
-        self._font.setPointSize(new_size)
-        self._width *= sx
+        self.prepareGeometryChange()
+        self._width = max(20.0, self._width * sx)
 
     def boundingRect(self) -> QRectF:
         from PyQt6.QtGui import QFontMetricsF

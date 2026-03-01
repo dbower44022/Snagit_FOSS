@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 from enum import Enum, auto
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import QBrush, QColor, QKeyEvent, QMouseEvent, QPen, QTransform
@@ -13,6 +13,8 @@ from PyQt6.QtWidgets import QGraphicsRectItem, QLabel, QToolBar, QToolTip
 from snapmock.commands.move_items import MoveItemsCommand
 from snapmock.config.constants import DRAG_THRESHOLD
 from snapmock.items.base_item import SnapGraphicsItem
+from snapmock.items.callout_item import CalloutItem
+from snapmock.items.text_item import TextItem
 from snapmock.tools.base_tool import BaseTool
 from snapmock.ui.transform_handles import (
     CORNER_HANDLES,
@@ -56,6 +58,8 @@ class SelectTool(BaseTool):
         self._handle_origin_rect: QRectF = QRectF()
         self._handle_anchor: QPointF = QPointF()
         self._handle_item_originals: list[tuple[SnapGraphicsItem, QPointF, QTransform]] = []
+        # Original geometry for text items (keyed by id(item))
+        self._text_originals: dict[int, dict[str, Any]] = {}
 
         # Selection info label
         self._info_label: QLabel | None = None
@@ -178,6 +182,20 @@ class SelectTool(BaseTool):
                 self._handle_item_originals = [
                     (item, QPointF(item.pos()), QTransform(item.transform())) for item in items
                 ]
+                # Save original geometry for text items so resize reflows text
+                self._text_originals = {}
+                for it in items:
+                    if isinstance(it, TextItem):
+                        self._text_originals[id(it)] = {
+                            "width": it._width,
+                            "font_size": it._font.pointSize(),
+                        }
+                    elif isinstance(it, CalloutItem):
+                        self._text_originals[id(it)] = {
+                            "rect": QRectF(it._rect),
+                            "tail": QPointF(it._tail_tip),
+                            "font_size": it._font.pointSize(),
+                        }
                 return True
 
         # Check for item under cursor
@@ -428,7 +446,7 @@ class SelectTool(BaseTool):
         elif self._handle_pos in CORNER_HANDLES:
             self._apply_corner_resize(scene_pos, shift, alt)
         elif self._handle_pos in EDGE_HANDLES:
-            self._apply_edge_resize(scene_pos, ctrl)
+            self._apply_edge_resize(scene_pos, ctrl, shift)
 
         self._update_handles()
         return True
@@ -495,9 +513,12 @@ class SelectTool(BaseTool):
         for item, orig_pos, orig_xform in self._handle_item_originals:
             offset = orig_pos - anchor
             item.setPos(anchor + QPointF(offset.x() * sx, offset.y() * sy))
-            xform = QTransform(orig_xform)
-            xform.scale(sx, sy)
-            item.setTransform(xform)
+            if id(item) in self._text_originals:
+                self._apply_text_resize(item, sx, sy, orig_xform, scale_font=proportional)
+            else:
+                xform = QTransform(orig_xform)
+                xform.scale(sx, sy)
+                item.setTransform(xform)
 
         # Tooltip
         new_rect_w = orig_rect.width() * sx
@@ -512,7 +533,9 @@ class SelectTool(BaseTool):
                     f"{new_rect_w:.0f} × {new_rect_h:.0f}",
                 )
 
-    def _apply_edge_resize(self, cursor: QPointF, skew: bool) -> None:
+    def _apply_edge_resize(
+        self, cursor: QPointF, skew: bool, shift: bool = False
+    ) -> None:
         """Resize from an edge midpoint handle. Ctrl = shear."""
         anchor = self._handle_anchor
         orig_rect = self._handle_origin_rect
@@ -536,9 +559,12 @@ class SelectTool(BaseTool):
         for item, orig_pos, orig_xform in self._handle_item_originals:
             offset = orig_pos - anchor
             item.setPos(anchor + QPointF(offset.x() * sx, offset.y() * sy))
-            xform = QTransform(orig_xform)
-            xform.scale(sx, sy)
-            item.setTransform(xform)
+            if id(item) in self._text_originals:
+                self._apply_text_resize(item, sx, sy, orig_xform, scale_font=shift)
+            else:
+                xform = QTransform(orig_xform)
+                xform.scale(sx, sy)
+                item.setTransform(xform)
 
         new_w = orig_rect.width() * sx
         new_h = orig_rect.height() * sy
@@ -572,17 +598,90 @@ class SelectTool(BaseTool):
             xform.shear(shear_x, shear_y)
             item.setTransform(xform)
 
+    def _apply_text_resize(
+        self,
+        item: SnapGraphicsItem,
+        sx: float,
+        sy: float,
+        orig_xform: QTransform,
+        *,
+        scale_font: bool = False,
+    ) -> None:
+        """Resize a text item.
+
+        scale_font=False (default): reflow — change box width, keep font size.
+        scale_font=True (Shift held): scale — apply visual transform so text
+        scales proportionally; font size is updated on release.
+        """
+        orig = self._text_originals.get(id(item))
+        if orig is None:
+            return
+
+        if scale_font:
+            # Scale mode: reset geometry to original, apply visual transform
+            item.prepareGeometryChange()
+            if isinstance(item, TextItem):
+                item._width = orig["width"]  # noqa: SLF001
+            elif isinstance(item, CalloutItem):
+                item._rect = QRectF(orig["rect"])  # noqa: SLF001
+                item._tail_tip = QPointF(orig["tail"])  # noqa: SLF001
+            xform = QTransform(orig_xform)
+            xform.scale(sx, sy)
+            item.setTransform(xform)
+        else:
+            # Reflow mode: change geometry, keep original transform
+            item.prepareGeometryChange()
+            if isinstance(item, TextItem):
+                item._width = max(20.0, orig["width"] * sx)  # noqa: SLF001
+            elif isinstance(item, CalloutItem):
+                orig_rect: QRectF = orig["rect"]
+                orig_tail: QPointF = orig["tail"]
+                item._rect = QRectF(  # noqa: SLF001
+                    orig_rect.x() * sx,
+                    orig_rect.y() * sy,
+                    orig_rect.width() * sx,
+                    orig_rect.height() * sy,
+                )
+                item._tail_tip = QPointF(  # noqa: SLF001
+                    orig_tail.x() * sx, orig_tail.y() * sy
+                )
+            item.setTransform(orig_xform)
+
     def _handle_transform_release(self) -> bool:
         """Commit transform as undoable command(s)."""
         from snapmock.commands.macro_command import MacroCommand
         from snapmock.commands.transform_item import TransformItemCommand
 
-        commands = []
+        commands: list[Any] = []
         for item, orig_pos, orig_xform in self._handle_item_originals:
             new_pos = QPointF(item.pos())
             new_xform = QTransform(item.transform())
-            if new_pos != orig_pos or new_xform != orig_xform:
-                # Revert to original so command redo applies change
+
+            orig = self._text_originals.get(id(item))
+            if orig is not None:
+                # Determine mode: if transform changed → scale mode, else reflow
+                scale_mode = new_xform != orig_xform
+                sub: list[Any] = []
+
+                if scale_mode:
+                    # Shift was held: convert visual scale to font + geometry change
+                    sub.extend(
+                        self._commit_text_scale(
+                            item, orig, orig_pos, new_pos, orig_xform, new_xform
+                        )
+                    )
+                else:
+                    # Normal resize: commit the geometry (width/rect) change
+                    sub.extend(
+                        self._commit_text_reflow(
+                            item, orig, orig_pos, new_pos, orig_xform
+                        )
+                    )
+
+                if sub:
+                    commands.extend(sub)
+            elif new_pos != orig_pos or new_xform != orig_xform:
+                # Non-text items: standard visual transform
                 item.setPos(orig_pos)
                 item.setTransform(orig_xform)
                 commands.append(
@@ -593,13 +692,154 @@ class SelectTool(BaseTool):
             if len(commands) == 1:
                 self._scene.command_stack.push(commands[0])
             else:
-                self._scene.command_stack.push(MacroCommand(commands, "Transform items"))
+                self._scene.command_stack.push(MacroCommand(commands, "Resize items"))
 
         self._state = _State.IDLE
         self._handle_pos = None
         self._handle_item_originals = []
+        self._text_originals = {}
         self._update_handles()
         return True
+
+    def _commit_text_reflow(
+        self,
+        item: SnapGraphicsItem,
+        orig: dict[str, Any],
+        orig_pos: QPointF,
+        new_pos: QPointF,
+        orig_xform: QTransform,
+    ) -> list[Any]:
+        """Commit a reflow resize: width/rect changed, font unchanged."""
+        from snapmock.commands.modify_property import ModifyPropertyCommand
+        from snapmock.commands.transform_item import TransformItemCommand
+
+        sub: list[Any] = []
+        if isinstance(item, TextItem):
+            new_width = item._width  # noqa: SLF001
+            old_width: float = orig["width"]
+            item.setPos(orig_pos)
+            item.prepareGeometryChange()
+            item._width = old_width  # noqa: SLF001
+            if new_pos != orig_pos:
+                sub.append(
+                    TransformItemCommand(item, orig_pos, new_pos, orig_xform, orig_xform)
+                )
+            if new_width != old_width:
+                sub.append(ModifyPropertyCommand(item, "text_width", old_width, new_width))
+        elif isinstance(item, CalloutItem):
+            new_rect = QRectF(item._rect)  # noqa: SLF001
+            new_tail = QPointF(item._tail_tip)  # noqa: SLF001
+            old_rect: QRectF = orig["rect"]
+            old_tail: QPointF = orig["tail"]
+            item.setPos(orig_pos)
+            item.box_rect = QRectF(old_rect)
+            item.tail_tip = QPointF(old_tail)
+            if new_pos != orig_pos:
+                sub.append(
+                    TransformItemCommand(item, orig_pos, new_pos, orig_xform, orig_xform)
+                )
+            if new_rect != old_rect:
+                sub.append(
+                    ModifyPropertyCommand(
+                        item, "box_rect", QRectF(old_rect), QRectF(new_rect)
+                    )
+                )
+            if new_tail != old_tail:
+                sub.append(
+                    ModifyPropertyCommand(
+                        item, "tail_tip", QPointF(old_tail), QPointF(new_tail)
+                    )
+                )
+        return sub
+
+    def _commit_text_scale(
+        self,
+        item: SnapGraphicsItem,
+        orig: dict[str, Any],
+        orig_pos: QPointF,
+        new_pos: QPointF,
+        orig_xform: QTransform,
+        new_xform: QTransform,
+    ) -> list[Any]:
+        """Commit a scale resize: convert visual transform to font + geometry change."""
+        from PyQt6.QtGui import QFont
+
+        from snapmock.commands.modify_property import ModifyPropertyCommand
+        from snapmock.commands.transform_item import TransformItemCommand
+
+        # Extract relative scale factors from the transform
+        inv, ok = orig_xform.inverted()
+        if ok:
+            relative = inv * new_xform
+            sx = relative.m11()
+            sy = relative.m22()
+        else:
+            sx = sy = 1.0
+
+        old_font_size: int = orig["font_size"]
+        avg = (abs(sx) + abs(sy)) / 2.0
+        new_font_size = max(1, int(old_font_size * avg))
+
+        sub: list[Any] = []
+
+        # Revert item to original state (remove visual transform)
+        item.setPos(orig_pos)
+        item.setTransform(orig_xform)
+
+        if isinstance(item, TextItem):
+            old_width: float = orig["width"]
+            new_width = max(20.0, old_width * abs(sx))
+            item.prepareGeometryChange()
+            item._width = old_width  # noqa: SLF001
+            item._font.setPointSize(old_font_size)  # noqa: SLF001
+            if new_pos != orig_pos:
+                sub.append(
+                    TransformItemCommand(item, orig_pos, new_pos, orig_xform, orig_xform)
+                )
+            if new_width != old_width:
+                sub.append(ModifyPropertyCommand(item, "text_width", old_width, new_width))
+            if new_font_size != old_font_size:
+                old_font = QFont(item._font)  # noqa: SLF001
+                new_font = QFont(item._font)  # noqa: SLF001
+                new_font.setPointSize(new_font_size)
+                sub.append(ModifyPropertyCommand(item, "font", old_font, new_font))
+
+        elif isinstance(item, CalloutItem):
+            old_rect: QRectF = orig["rect"]
+            old_tail: QPointF = orig["tail"]
+            new_rect = QRectF(
+                old_rect.x() * abs(sx),
+                old_rect.y() * abs(sy),
+                old_rect.width() * abs(sx),
+                old_rect.height() * abs(sy),
+            )
+            new_tail = QPointF(old_tail.x() * abs(sx), old_tail.y() * abs(sy))
+            item.box_rect = QRectF(old_rect)
+            item.tail_tip = QPointF(old_tail)
+            item._font.setPointSize(old_font_size)  # noqa: SLF001
+            if new_pos != orig_pos:
+                sub.append(
+                    TransformItemCommand(item, orig_pos, new_pos, orig_xform, orig_xform)
+                )
+            if new_rect != old_rect:
+                sub.append(
+                    ModifyPropertyCommand(
+                        item, "box_rect", QRectF(old_rect), QRectF(new_rect)
+                    )
+                )
+            if new_tail != old_tail:
+                sub.append(
+                    ModifyPropertyCommand(
+                        item, "tail_tip", QPointF(old_tail), QPointF(new_tail)
+                    )
+                )
+            if new_font_size != old_font_size:
+                old_font = QFont(item._font)  # noqa: SLF001
+                new_font = QFont(item._font)  # noqa: SLF001
+                new_font.setPointSize(new_font_size)
+                sub.append(ModifyPropertyCommand(item, "font", old_font, new_font))
+
+        return sub
 
     # --- key events ---
 
@@ -668,6 +908,8 @@ class SelectTool(BaseTool):
         if self._state == _State.HANDLE_DRAG:
             if self._handle_pos == HandlePosition.ROTATE:
                 return "Shift: snap to 15° increments"
+            if self._text_originals:
+                return "Shift: scale text | Alt: from center"
             return "Shift: proportional | Alt: from center | Ctrl+edge: skew"
         return "Click to select | Drag to move | Shift+click: add | Right-click: menu"
 

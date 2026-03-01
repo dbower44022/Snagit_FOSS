@@ -68,6 +68,16 @@ class CalloutItem(SnapGraphicsItem):
         self._tail_tip = QPointF(value)
         self.update()
 
+    @property
+    def box_rect(self) -> QRectF:
+        return QRectF(self._rect)
+
+    @box_rect.setter
+    def box_rect(self, value: QRectF) -> None:
+        self.prepareGeometryChange()
+        self._rect = QRectF(value)
+        self.update()
+
     def scale_geometry(self, sx: float, sy: float) -> None:
         self._rect = QRectF(
             self._rect.x() * sx,
@@ -76,9 +86,6 @@ class CalloutItem(SnapGraphicsItem):
             self._rect.height() * sy,
         )
         self._tail_tip = QPointF(self._tail_tip.x() * sx, self._tail_tip.y() * sy)
-        avg = (sx + sy) / 2.0
-        new_size = max(1, int(self._font.pointSize() * avg))
-        self._font.setPointSize(new_size)
 
     def boundingRect(self) -> QRectF:
         r = self._rect.united(QRectF(self._tail_tip, self._tail_tip))
