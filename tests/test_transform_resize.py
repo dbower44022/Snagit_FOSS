@@ -79,11 +79,24 @@ def test_highlight_scale_geometry() -> None:
 
 def test_text_scale_geometry() -> None:
     item = TextItem(text="Hello")
-    original_size = item._font.pointSize()  # noqa: SLF001
+    original_size = item.text_document.defaultFont().pointSize()
     item.scale_geometry(2.0, 2.0)
     # Font size should NOT change — text reflows at the same size
-    assert item._font.pointSize() == original_size  # noqa: SLF001
+    assert item.text_document.defaultFont().pointSize() == original_size
     assert item._width == pytest.approx(400.0)  # noqa: SLF001
+
+
+def test_text_scale_geometry_frame_properties() -> None:
+    item = TextItem(text="Hello")
+    item._padding = 10.0  # noqa: SLF001
+    item._border_width = 2.0  # noqa: SLF001
+    item._border_radius = 6.0  # noqa: SLF001
+    item._height = 100.0  # noqa: SLF001
+    item.scale_geometry(2.0, 2.0)
+    assert item._padding == pytest.approx(20.0)  # noqa: SLF001
+    assert item._border_width == pytest.approx(4.0)  # noqa: SLF001
+    assert item._border_radius == pytest.approx(12.0)  # noqa: SLF001
+    assert item._height == pytest.approx(200.0)  # noqa: SLF001
 
 
 def test_callout_scale_geometry() -> None:
@@ -92,6 +105,17 @@ def test_callout_scale_geometry() -> None:
     assert item._rect.width() == pytest.approx(300)  # noqa: SLF001
     assert item._tail_tip.x() == pytest.approx(150)  # noqa: SLF001
     assert item._tail_tip.y() == pytest.approx(180)  # noqa: SLF001
+
+
+def test_callout_scale_geometry_frame_properties() -> None:
+    item = CalloutItem(rect=QRectF(0, 0, 150, 60), tail_tip=QPointF(75, 90))
+    item._border_width = 2.0  # noqa: SLF001
+    item._border_radius = 4.0  # noqa: SLF001
+    item._padding = 4.0  # noqa: SLF001
+    item.scale_geometry(2.0, 2.0)
+    assert item._border_width == pytest.approx(4.0)  # noqa: SLF001
+    assert item._border_radius == pytest.approx(8.0)  # noqa: SLF001
+    assert item._padding == pytest.approx(8.0)  # noqa: SLF001
 
 
 def test_blur_scale_geometry() -> None:

@@ -188,13 +188,13 @@ class SelectTool(BaseTool):
                     if isinstance(it, TextItem):
                         self._text_originals[id(it)] = {
                             "width": it._width,
-                            "font_size": it._font.pointSize(),
+                            "font_size": it.text_document.defaultFont().pointSize(),
                         }
                     elif isinstance(it, CalloutItem):
                         self._text_originals[id(it)] = {
                             "rect": QRectF(it._rect),
                             "tail": QPointF(it._tail_tip),
-                            "font_size": it._font.pointSize(),
+                            "font_size": it.text_document.defaultFont().pointSize(),
                         }
                 return True
 
@@ -791,7 +791,9 @@ class SelectTool(BaseTool):
             new_width = max(20.0, old_width * abs(sx))
             item.prepareGeometryChange()
             item._width = old_width  # noqa: SLF001
-            item._font.setPointSize(old_font_size)  # noqa: SLF001
+            doc_font = item.text_document.defaultFont()
+            doc_font.setPointSize(old_font_size)
+            item.text_document.setDefaultFont(doc_font)
             if new_pos != orig_pos:
                 sub.append(
                     TransformItemCommand(item, orig_pos, new_pos, orig_xform, orig_xform)
@@ -799,8 +801,8 @@ class SelectTool(BaseTool):
             if new_width != old_width:
                 sub.append(ModifyPropertyCommand(item, "text_width", old_width, new_width))
             if new_font_size != old_font_size:
-                old_font = QFont(item._font)  # noqa: SLF001
-                new_font = QFont(item._font)  # noqa: SLF001
+                old_font = QFont(item.text_document.defaultFont())
+                new_font = QFont(item.text_document.defaultFont())
                 new_font.setPointSize(new_font_size)
                 sub.append(ModifyPropertyCommand(item, "font", old_font, new_font))
 
@@ -816,7 +818,9 @@ class SelectTool(BaseTool):
             new_tail = QPointF(old_tail.x() * abs(sx), old_tail.y() * abs(sy))
             item.box_rect = QRectF(old_rect)
             item.tail_tip = QPointF(old_tail)
-            item._font.setPointSize(old_font_size)  # noqa: SLF001
+            doc_font = item.text_document.defaultFont()
+            doc_font.setPointSize(old_font_size)
+            item.text_document.setDefaultFont(doc_font)
             if new_pos != orig_pos:
                 sub.append(
                     TransformItemCommand(item, orig_pos, new_pos, orig_xform, orig_xform)
@@ -834,8 +838,8 @@ class SelectTool(BaseTool):
                     )
                 )
             if new_font_size != old_font_size:
-                old_font = QFont(item._font)  # noqa: SLF001
-                new_font = QFont(item._font)  # noqa: SLF001
+                old_font = QFont(item.text_document.defaultFont())
+                new_font = QFont(item.text_document.defaultFont())
                 new_font.setPointSize(new_font_size)
                 sub.append(ModifyPropertyCommand(item, "font", old_font, new_font))
 

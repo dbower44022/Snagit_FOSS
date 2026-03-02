@@ -246,12 +246,12 @@ class ResizeImageCommand(BaseCommand):
             target._points = source._points  # noqa: SLF001
             target._path = source._path  # noqa: SLF001
         elif isinstance(target, TextItem) and isinstance(source, TextItem):
-            target._font = source._font  # noqa: SLF001
+            target.font = source.font
             target._width = source._width  # noqa: SLF001
         elif isinstance(target, CalloutItem) and isinstance(source, CalloutItem):
             target._rect = source._rect  # noqa: SLF001
             target._tail_tip = source._tail_tip  # noqa: SLF001
-            target._font = source._font  # noqa: SLF001
+            target.font = source.font
         elif isinstance(target, BlurItem) and isinstance(source, BlurItem):
             target._rect = source._rect  # noqa: SLF001
             target._blur_radius = source._blur_radius  # noqa: SLF001

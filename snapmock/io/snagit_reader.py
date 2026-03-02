@@ -12,6 +12,7 @@ from typing import Any
 from PyQt6.QtCore import QLineF, QPointF, QRectF
 from PyQt6.QtGui import QColor, QFont, QImage, QPixmap
 
+from snapmock.config.constants import VerticalAlign
 from snapmock.core.scene import SnapScene
 from snapmock.io.rtf_utils import extract_font_from_rtf, extract_text_from_rtf
 from snapmock.items.arrow_item import ArrowItem
@@ -242,10 +243,20 @@ def _convert_callout(obj: dict[str, Any]) -> CalloutItem:
         tail_tip=tail_tip,
     )
     item.setPos(x, y)
-    item._font = QFont(font_family, font_size)
-    item._text_color = text_color
+    item.font = QFont(font_family, font_size)
+    item.text_color = text_color
     item._bg_color = QColor(obj.get("BackgroundColor", "#FFFFFFFF"))
     item._border_color = QColor(obj.get("ForegroundColor", "#FFFC4242"))
+    item._border_width = float(obj.get("StrokeWidth", 2))
+    item._padding = float(obj.get("ToolPadding", 4))
+    valign_map = {
+        "Top": VerticalAlign.TOP,
+        "Center": VerticalAlign.CENTER,
+        "Bottom": VerticalAlign.BOTTOM,
+    }
+    item._vertical_align = valign_map.get(
+        obj.get("ToolVerticalAlign", "Center"), VerticalAlign.CENTER
+    )
     return item
 
 
@@ -266,9 +277,25 @@ def _convert_text(obj: dict[str, Any]) -> TextItem:
         font_family, font_size, text_color = extract_font_from_rtf(rtf)
 
     item = TextItem(text=text, pos_x=x, pos_y=y)
-    item._font = QFont(font_family, font_size)
-    item._color = text_color
+    item.font = QFont(font_family, font_size)
+    item.text_color = text_color
     item._width = max(w, 20.0)
+
+    # Frame properties from Snagit data
+    item._bg_color = QColor(obj.get("BackgroundColor", "#00000000"))
+    item._border_color = QColor(obj.get("ForegroundColor", "#00000000"))
+    item._border_width = float(obj.get("StrokeWidth", 0))
+    item._padding = float(obj.get("ToolPadding", 4))
+
+    # Vertical alignment
+    valign_map = {
+        "Top": VerticalAlign.TOP,
+        "Center": VerticalAlign.CENTER,
+        "Bottom": VerticalAlign.BOTTOM,
+    }
+    va_key = obj.get("ToolVerticalAlign", "Top")
+    item._vertical_align = valign_map.get(va_key, VerticalAlign.TOP)
+
     return item
 
 

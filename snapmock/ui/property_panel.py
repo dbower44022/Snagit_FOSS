@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QFont
+from PyQt6.QtGui import QColor, QFont, QTextCharFormat
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 from snapmock.commands.modify_property import ModifyPropertyCommand
 from snapmock.commands.move_item_layer import MoveItemToLayerCommand
 from snapmock.commands.scale_geometry_command import ScaleGeometryCommand
+from snapmock.config.constants import VerticalAlign
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.callout_item import CalloutItem
 from snapmock.items.text_item import TextItem
@@ -148,6 +149,53 @@ class PropertyPanel(QDockWidget):
 
         self._main_layout.addWidget(self._text_section)
 
+        # --- Text Box section (TextItem only) ---
+        self._text_box_section = CollapsibleSection("Text Box")
+
+        self._text_bg_color_picker = ColorPicker(QColor("transparent"))
+        self._no_bg_check = QCheckBox("No background")
+        text_bg_container = QWidget()
+        text_bg_layout = QHBoxLayout(text_bg_container)
+        text_bg_layout.setContentsMargins(0, 0, 0, 0)
+        text_bg_layout.addWidget(self._text_bg_color_picker)
+        text_bg_layout.addWidget(self._no_bg_check)
+        self._text_box_section.add_row("Background:", text_bg_container)
+
+        self._text_border_color_picker = ColorPicker(QColor("transparent"))
+        self._text_box_section.add_row("Border:", self._text_border_color_picker)
+
+        self._text_border_w_spin = QDoubleSpinBox()
+        self._text_border_w_spin.setRange(0.0, 20.0)
+        self._text_border_w_spin.setDecimals(1)
+        self._text_border_w_spin.setSuffix(" px")
+        self._text_border_w_spin.setKeyboardTracking(False)
+        self._text_box_section.add_row("Border width:", self._text_border_w_spin)
+
+        self._text_corner_radius_spin = QDoubleSpinBox()
+        self._text_corner_radius_spin.setRange(0.0, 50.0)
+        self._text_corner_radius_spin.setDecimals(1)
+        self._text_corner_radius_spin.setSuffix(" px")
+        self._text_corner_radius_spin.setKeyboardTracking(False)
+        self._text_box_section.add_row("Corner radius:", self._text_corner_radius_spin)
+
+        self._text_padding_spin = QDoubleSpinBox()
+        self._text_padding_spin.setRange(0.0, 50.0)
+        self._text_padding_spin.setDecimals(1)
+        self._text_padding_spin.setSuffix(" px")
+        self._text_padding_spin.setKeyboardTracking(False)
+        self._text_box_section.add_row("Padding:", self._text_padding_spin)
+
+        self._text_valign_combo = QComboBox()
+        self._text_valign_combo.addItem("Top", VerticalAlign.TOP)
+        self._text_valign_combo.addItem("Center", VerticalAlign.CENTER)
+        self._text_valign_combo.addItem("Bottom", VerticalAlign.BOTTOM)
+        self._text_box_section.add_row("Vertical align:", self._text_valign_combo)
+
+        self._text_auto_size_check = QCheckBox("Auto-size height")
+        self._text_box_section.add_row("", self._text_auto_size_check)
+
+        self._main_layout.addWidget(self._text_box_section)
+
         # --- Item Info section ---
         self._info_section = CollapsibleSection("Item Info")
         self._type_label = QLabel("")
@@ -194,6 +242,14 @@ class PropertyPanel(QDockWidget):
         self._italic_check.toggled.connect(self._on_italic_changed)
         self._underline_check.toggled.connect(self._on_underline_changed)
         self._text_color_picker.color_changed.connect(self._on_text_color_changed)
+        self._text_bg_color_picker.color_changed.connect(self._on_text_bg_color_changed)
+        self._no_bg_check.toggled.connect(self._on_no_bg_toggled)
+        self._text_border_color_picker.color_changed.connect(self._on_text_border_color_changed)
+        self._text_border_w_spin.valueChanged.connect(self._on_text_border_w_changed)
+        self._text_corner_radius_spin.valueChanged.connect(self._on_text_corner_radius_changed)
+        self._text_padding_spin.valueChanged.connect(self._on_text_padding_changed)
+        self._text_valign_combo.currentIndexChanged.connect(self._on_text_valign_changed)
+        self._text_auto_size_check.toggled.connect(self._on_text_auto_size_changed)
 
         # Connect selection signals
         self._connect_selection_signals()
@@ -243,11 +299,13 @@ class PropertyPanel(QDockWidget):
             has_selection = item is not None
             is_vector = isinstance(item, VectorItem)
             has_text = isinstance(item, (TextItem, CalloutItem))
+            is_text_item = isinstance(item, TextItem)
 
             # Section visibility
             self._transform_section.setVisible(has_selection)
             self._appearance_section.setVisible(has_selection and is_vector)
             self._text_section.setVisible(has_selection and has_text)
+            self._text_box_section.setVisible(has_selection and has_text)
             self._info_section.setVisible(has_selection)
             self._canvas_section.setVisible(not has_selection)
 
@@ -281,6 +339,26 @@ class PropertyPanel(QDockWidget):
                     self._italic_check.setChecked(f.italic())
                     self._underline_check.setChecked(f.underline())
                     self._text_color_picker.color = item.text_color
+
+                # Text Box (TextItem and CalloutItem)
+                if has_text:
+                    assert isinstance(item, (TextItem, CalloutItem))
+                    self._text_bg_color_picker.color = item.bg_color
+                    self._no_bg_check.setChecked(item.bg_color.alpha() == 0)
+                    self._text_border_color_picker.color = item.border_color
+                    self._text_border_w_spin.setValue(item.border_width)
+                    self._text_corner_radius_spin.setValue(item.border_radius)
+                    self._text_padding_spin.setValue(item.padding)
+                    # Set valign combo
+                    for i in range(self._text_valign_combo.count()):
+                        if self._text_valign_combo.itemData(i) == item.vertical_align:
+                            self._text_valign_combo.setCurrentIndex(i)
+                            break
+                    # Auto-size only applies to TextItem
+                    self._text_auto_size_check.setVisible(is_text_item)
+                    if is_text_item:
+                        assert isinstance(item, TextItem)
+                        self._text_auto_size_check.setChecked(item.auto_size)
 
                 # Item Info
                 self._type_label.setText(item.type_name)
@@ -478,6 +556,17 @@ class PropertyPanel(QDockWidget):
             return item
         return None
 
+    def _get_active_editor(self) -> QWidget | None:
+        """Return the active _RichTextEditor if a text item is being edited."""
+        parent = self.parent()
+        if parent is not None and hasattr(parent, "tool_manager"):
+            text_tool = parent.tool_manager.tool("text")
+            if text_tool is not None and hasattr(text_tool, "active_editor"):
+                editor = text_tool.active_editor
+                if isinstance(editor, QWidget):
+                    return editor
+        return None
+
     def _push_font_change(self, item: TextItem | CalloutItem, new_font: QFont) -> None:
         old_font = item.font
         cmd = ModifyPropertyCommand(item, "font", old_font, new_font)
@@ -489,6 +578,14 @@ class PropertyPanel(QDockWidget):
         item = self._text_item()
         if item is None:
             return
+        # Edit-mode: apply to cursor selection
+        if item.is_editing:
+            editor = self._get_active_editor()
+            if editor is not None and hasattr(editor, "textCursor"):
+                fmt = QTextCharFormat()
+                fmt.setFontFamilies([font.family()])
+                editor.textCursor().mergeCharFormat(fmt)
+                return
         new_font = QFont(item.font)
         new_font.setFamily(font.family())
         self._push_font_change(item, new_font)
@@ -499,6 +596,14 @@ class PropertyPanel(QDockWidget):
         item = self._text_item()
         if item is None:
             return
+        # Edit-mode: apply to cursor selection
+        if item.is_editing:
+            editor = self._get_active_editor()
+            if editor is not None and hasattr(editor, "textCursor"):
+                fmt = QTextCharFormat()
+                fmt.setFontPointSize(float(value))
+                editor.textCursor().mergeCharFormat(fmt)
+                return
         new_font = QFont(item.font)
         new_font.setPointSize(value)
         self._push_font_change(item, new_font)
@@ -509,6 +614,14 @@ class PropertyPanel(QDockWidget):
         item = self._text_item()
         if item is None:
             return
+        # Edit-mode: apply to cursor selection
+        if item.is_editing:
+            editor = self._get_active_editor()
+            if editor is not None and hasattr(editor, "textCursor"):
+                fmt = QTextCharFormat()
+                fmt.setFontWeight(QFont.Weight.Bold if checked else QFont.Weight.Normal)
+                editor.textCursor().mergeCharFormat(fmt)
+                return
         new_font = QFont(item.font)
         new_font.setBold(checked)
         self._push_font_change(item, new_font)
@@ -519,6 +632,14 @@ class PropertyPanel(QDockWidget):
         item = self._text_item()
         if item is None:
             return
+        # Edit-mode: apply to cursor selection
+        if item.is_editing:
+            editor = self._get_active_editor()
+            if editor is not None and hasattr(editor, "textCursor"):
+                fmt = QTextCharFormat()
+                fmt.setFontItalic(checked)
+                editor.textCursor().mergeCharFormat(fmt)
+                return
         new_font = QFont(item.font)
         new_font.setItalic(checked)
         self._push_font_change(item, new_font)
@@ -529,6 +650,14 @@ class PropertyPanel(QDockWidget):
         item = self._text_item()
         if item is None:
             return
+        # Edit-mode: apply to cursor selection
+        if item.is_editing:
+            editor = self._get_active_editor()
+            if editor is not None and hasattr(editor, "textCursor"):
+                fmt = QTextCharFormat()
+                fmt.setFontUnderline(checked)
+                editor.textCursor().mergeCharFormat(fmt)
+                return
         new_font = QFont(item.font)
         new_font.setUnderline(checked)
         self._push_font_change(item, new_font)
@@ -539,7 +668,100 @@ class PropertyPanel(QDockWidget):
         item = self._text_item()
         if item is None:
             return
+        # Edit-mode: apply to cursor selection
+        if item.is_editing:
+            editor = self._get_active_editor()
+            if editor is not None and hasattr(editor, "textCursor"):
+                fmt = QTextCharFormat()
+                fmt.setForeground(color)
+                editor.textCursor().mergeCharFormat(fmt)
+                return
         cmd = ModifyPropertyCommand(item, "text_color", item.text_color, color)
+        self._scene.command_stack.push(cmd)
+
+    def _on_text_bg_color_changed(self, color: QColor) -> None:
+        if self._updating:
+            return
+        item = self._first_selected_item()
+        if not isinstance(item, (TextItem, CalloutItem)):
+            return
+        cmd = ModifyPropertyCommand(item, "bg_color", item.bg_color, color)
+        self._scene.command_stack.push(cmd)
+
+    def _on_no_bg_toggled(self, checked: bool) -> None:
+        if self._updating:
+            return
+        item = self._first_selected_item()
+        if not isinstance(item, (TextItem, CalloutItem)):
+            return
+        old_color = item.bg_color
+        if checked:
+            new_color = QColor(old_color)
+            new_color.setAlpha(0)
+        else:
+            new_color = QColor(old_color)
+            if new_color.alpha() == 0:
+                new_color.setAlpha(255)
+        cmd = ModifyPropertyCommand(item, "bg_color", old_color, new_color)
+        self._scene.command_stack.push(cmd)
+
+    def _on_text_border_color_changed(self, color: QColor) -> None:
+        if self._updating:
+            return
+        item = self._first_selected_item()
+        if not isinstance(item, (TextItem, CalloutItem)):
+            return
+        cmd = ModifyPropertyCommand(item, "border_color", item.border_color, color)
+        self._scene.command_stack.push(cmd)
+
+    def _on_text_border_w_changed(self, value: float) -> None:
+        if self._updating:
+            return
+        item = self._first_selected_item()
+        if not isinstance(item, (TextItem, CalloutItem)):
+            return
+        cmd = ModifyPropertyCommand(item, "border_width", item.border_width, value)
+        self._scene.command_stack.push(cmd)
+
+    def _on_text_corner_radius_changed(self, value: float) -> None:
+        if self._updating:
+            return
+        item = self._first_selected_item()
+        if not isinstance(item, (TextItem, CalloutItem)):
+            return
+        cmd = ModifyPropertyCommand(item, "border_radius", item.border_radius, value)
+        self._scene.command_stack.push(cmd)
+
+    def _on_text_padding_changed(self, value: float) -> None:
+        if self._updating:
+            return
+        item = self._first_selected_item()
+        if not isinstance(item, (TextItem, CalloutItem)):
+            return
+        cmd = ModifyPropertyCommand(item, "padding", item.padding, value)
+        self._scene.command_stack.push(cmd)
+
+    def _on_text_valign_changed(self, index: int) -> None:
+        if self._updating or index < 0:
+            return
+        item = self._first_selected_item()
+        if not isinstance(item, (TextItem, CalloutItem)):
+            return
+        new_align = self._text_valign_combo.itemData(index)
+        if not isinstance(new_align, VerticalAlign):
+            return
+        cmd = ModifyPropertyCommand(
+            item, "vertical_align", item.vertical_align, new_align
+        )
+        self._scene.command_stack.push(cmd)
+
+    def _on_text_auto_size_changed(self, checked: bool) -> None:
+        if self._updating:
+            return
+        item = self._first_selected_item()
+        if not isinstance(item, TextItem):
+            return
+        cmd = ModifyPropertyCommand(item, "auto_size", item.auto_size, checked)
         self._scene.command_stack.push(cmd)
 
     def _on_bg_color_changed(self, color: QColor) -> None:

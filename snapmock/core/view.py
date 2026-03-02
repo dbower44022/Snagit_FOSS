@@ -332,6 +332,11 @@ class SnapView(QGraphicsView):
         self._auto_scroll_dy = 0
 
     def _do_auto_scroll(self) -> None:
+        # Stop if cursor has left the viewport (e.g. moved to ruler or toolbar)
+        vp = self.viewport()
+        if vp is not None and not vp.underMouse():
+            self._stop_auto_scroll()
+            return
         h_bar = self.horizontalScrollBar()
         v_bar = self.verticalScrollBar()
         if h_bar is not None and self._auto_scroll_dx != 0:
@@ -513,6 +518,11 @@ class SnapView(QGraphicsView):
         if self._v_ruler is not None:
             self._v_ruler.update()
 
+    def leaveEvent(self, event: object) -> None:  # noqa: N802
+        """Stop auto-scroll when the mouse leaves the viewport."""
+        self._stop_auto_scroll()
+        super().leaveEvent(event)  # type: ignore[arg-type]
+
     # --- wheel event (Ctrl+scroll for zoom) ---
 
     def wheelEvent(self, event: QWheelEvent | None) -> None:  # noqa: N802
@@ -555,11 +565,12 @@ class SnapView(QGraphicsView):
         scene_pos = self.mapToScene(event.position().toPoint())
         self.cursor_moved.emit(scene_pos.x(), scene_pos.y())
 
-        # Auto edge scroll during active tool operations
+        # Auto edge scroll during active drag operations (mouse button held)
         if (
             self._tool_manager is not None
             and self._tool_manager.active_tool is not None
             and self._tool_manager.active_tool.is_active_operation
+            and event.buttons() != Qt.MouseButton.NoButton
         ):
             self._check_auto_scroll(event.position().toPoint())
 
@@ -610,10 +621,21 @@ class SnapView(QGraphicsView):
 
     def focusOutEvent(self, event: object) -> None:  # noqa: N802
         """Release temporary pan and cancel active tool on focus loss."""
+        # Don't cancel if focus moved to a child of our viewport (e.g. inline text editor)
+        from PyQt6.QtWidgets import QApplication
+
+        focus_widget = QApplication.focusWidget()
+        vp = self.viewport()
+        focus_to_child = (
+            focus_widget is not None
+            and vp is not None
+            and vp.isAncestorOf(focus_widget)
+        )
+
         if self._panning:
             self._panning = False
             self._apply_tool_cursor()
-        if self._tool_manager is not None:
+        if self._tool_manager is not None and not focus_to_child:
             # Restore space-bar temporary pan if active
             if self._tool_manager._previous_tool_id is not None:  # noqa: SLF001
                 self._tool_manager.restore_previous()

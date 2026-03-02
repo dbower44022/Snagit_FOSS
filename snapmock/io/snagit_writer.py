@@ -353,10 +353,10 @@ def _item_to_callout(item: CalloutItem) -> dict[str, Any]:
     tail_y = tip.y() + pos.y()
 
     rtf = text_to_rtf_base64(
-        item._text,
-        item._font.family(),
-        item._font.pointSize(),
-        item._text_color,
+        item.text,
+        item.font.family(),
+        item.font.pointSize(),
+        item.text_color,
     )
 
     return {
@@ -383,15 +383,17 @@ def _item_to_callout(item: CalloutItem) -> dict[str, Any]:
         "ShadowDirectionX": 0,
         "ShadowDirectionY": 4,
         "ShadowOpacity": 50,
-        "StrokeWidth": 3,
+        "StrokeWidth": int(item._border_width),
         "TailStyle": "Triangle",
         "TextOutlineColor": "#FFFFFFFF",
         "TextOutlineWidth": 0,
         "TextSelectionColor": "#FF000000",
         "ToolHorizontalAlign": "Center",
         "ToolMode": "Callout",
-        "ToolPadding": 4,
-        "ToolVerticalAlign": "Center",
+        "ToolPadding": int(item._padding),
+        "ToolVerticalAlign": {"top": "Top", "center": "Center", "bottom": "Bottom"}.get(
+            item._vertical_align.value, "Center"
+        ),
     }
 
 
@@ -405,21 +407,25 @@ def _item_to_text(item: TextItem) -> dict[str, Any]:
     y2 = y1 + br.height()
 
     rtf = text_to_rtf_base64(
-        item._text,
-        item._font.family(),
-        item._font.pointSize(),
-        item._color,
+        item.text,
+        item.font.family(),
+        item.font.pointSize(),
+        item.text_color,
     )
+
+    # Map vertical align to Snagit string
+    valign_map = {"top": "Top", "center": "Center", "bottom": "Bottom"}
+    valign_str = valign_map.get(item._vertical_align.value, "Top")
 
     return {
         "Antialiasing": 1,
-        "BackgroundColor": "#00000000",
+        "BackgroundColor": item._bg_color.name(QColor.NameFormat.HexArgb),
         "CalloutShape": "CTBalloon6",
         "CalloutStyle": "Plain",
         "DashType": "Solid",
         "DropShadowEnabled": False,
         "FitToWidth": False,
-        "ForegroundColor": "#00000000",
+        "ForegroundColor": item._border_color.name(QColor.NameFormat.HexArgb),
         "ObjectID": _new_guid_bare(),
         "Opacity": int(item.opacity() * 100),
         "Placeholder": False,
@@ -433,15 +439,15 @@ def _item_to_text(item: TextItem) -> dict[str, Any]:
         "ShadowDirectionX": 0,
         "ShadowDirectionY": 4,
         "ShadowOpacity": 50,
-        "StrokeWidth": 0,
+        "StrokeWidth": int(item._border_width),
         "TailStyle": "None",
         "TextOutlineColor": "#FFFFFFFF",
         "TextOutlineWidth": 0,
         "TextSelectionColor": "#FF000000",
         "ToolHorizontalAlign": "Left",
         "ToolMode": "Text",
-        "ToolPadding": 5,
-        "ToolVerticalAlign": "Center",
+        "ToolPadding": int(item._padding),
+        "ToolVerticalAlign": valign_str,
     }
 
 

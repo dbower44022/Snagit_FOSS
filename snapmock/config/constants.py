@@ -1,5 +1,7 @@
 """Application-wide constants."""
 
+from enum import Enum
+
 APP_NAME = "SnapMock"
 APP_VERSION = "0.1.0"
 ORG_NAME = "SnapMock"
@@ -39,6 +41,21 @@ DEFAULT_STROKE_COLOR = "#FF0000"
 DEFAULT_FILL_COLOR = "#00000000"
 DEFAULT_FONT_FAMILY = "Sans Serif"
 DEFAULT_FONT_SIZE = 14
+
+# Text box frame defaults
+DEFAULT_TEXT_BG_COLOR = "#00000000"  # transparent
+DEFAULT_TEXT_BORDER_COLOR = "#00000000"  # transparent
+DEFAULT_TEXT_BORDER_WIDTH = 0.0
+DEFAULT_TEXT_BORDER_RADIUS = 0.0
+DEFAULT_TEXT_PADDING = 4.0
+DEFAULT_TEXT_WIDTH = 200.0
+MIN_DRAG_TEXT_BOX = 10.0  # min px to count as drag-to-create
+
+
+class VerticalAlign(Enum):
+    TOP = "top"
+    CENTER = "center"
+    BOTTOM = "bottom"
 
 # Zoom step ladder (percentage values)
 ZOOM_STEPS = [
