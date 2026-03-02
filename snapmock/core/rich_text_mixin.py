@@ -3,7 +3,16 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import QRectF, Qt
-from PyQt6.QtGui import QColor, QFont, QPainter, QTextCharFormat, QTextDocument
+from PyQt6.QtGui import (
+    QColor,
+    QFont,
+    QPainter,
+    QTextBlockFormat,
+    QTextCharFormat,
+    QTextCursor,
+    QTextDocument,
+    QTextListFormat,
+)
 
 
 class RichTextMixin:
@@ -124,3 +133,108 @@ class RichTextMixin:
             fmt = QTextCharFormat()
             fmt.setForeground(value)
             cursor.mergeCharFormat(fmt)
+
+    # --- paragraph-level formatting ---
+
+    def get_block_format(self, cursor: QTextCursor | None = None) -> QTextBlockFormat:
+        """Return the QTextBlockFormat for the block at *cursor* (or first block)."""
+        if cursor is None:
+            root = self._document.rootFrame()
+            if root is None:
+                return QTextBlockFormat()
+            cursor = root.firstCursorPosition()
+        return cursor.blockFormat()
+
+    def set_block_format(
+        self, fmt: QTextBlockFormat, cursor: QTextCursor | None = None
+    ) -> None:
+        """Merge *fmt* into all blocks touched by *cursor* (or the entire document)."""
+        if cursor is None:
+            root = self._document.rootFrame()
+            if root is None:
+                return
+            cursor = root.firstCursorPosition()
+            cursor.movePosition(
+                QTextCursor.MoveOperation.End, QTextCursor.MoveMode.KeepAnchor
+            )
+        cursor.mergeBlockFormat(fmt)
+
+    def set_alignment(
+        self,
+        alignment: Qt.AlignmentFlag,
+        cursor: QTextCursor | None = None,
+    ) -> None:
+        """Set paragraph alignment for blocks touched by *cursor*."""
+        fmt = QTextBlockFormat()
+        fmt.setAlignment(alignment)
+        self.set_block_format(fmt, cursor)
+
+    def set_line_height(
+        self,
+        height: float,
+        height_type: int = QTextBlockFormat.LineHeightTypes.ProportionalHeight.value,
+        cursor: QTextCursor | None = None,
+    ) -> None:
+        """Set line spacing for blocks touched by *cursor*.
+
+        *height_type* defaults to ``ProportionalHeight`` (percentage, e.g. 150 = 1.5x).
+        """
+        fmt = QTextBlockFormat()
+        fmt.setLineHeight(height, height_type)
+        self.set_block_format(fmt, cursor)
+
+    def set_text_indent(
+        self, indent: float, cursor: QTextCursor | None = None
+    ) -> None:
+        """Set first-line text indent (in pixels) for blocks touched by *cursor*."""
+        fmt = QTextBlockFormat()
+        fmt.setTextIndent(indent)
+        self.set_block_format(fmt, cursor)
+
+    def set_indent(self, level: int, cursor: QTextCursor | None = None) -> None:
+        """Set block indent level for blocks touched by *cursor*."""
+        fmt = QTextBlockFormat()
+        fmt.setIndent(level)
+        self.set_block_format(fmt, cursor)
+
+    def set_space_before(
+        self, spacing: float, cursor: QTextCursor | None = None
+    ) -> None:
+        """Set space above paragraph (in pixels)."""
+        fmt = QTextBlockFormat()
+        fmt.setTopMargin(spacing)
+        self.set_block_format(fmt, cursor)
+
+    def set_space_after(
+        self, spacing: float, cursor: QTextCursor | None = None
+    ) -> None:
+        """Set space below paragraph (in pixels)."""
+        fmt = QTextBlockFormat()
+        fmt.setBottomMargin(spacing)
+        self.set_block_format(fmt, cursor)
+
+    def toggle_list(
+        self,
+        style: QTextListFormat.Style,
+        cursor: QTextCursor | None = None,
+    ) -> None:
+        """Toggle a list style on the blocks at *cursor*.
+
+        If the current block is already in a list with the given *style*,
+        remove it from the list.  Otherwise create or change to that style.
+        """
+        if cursor is None:
+            root = self._document.rootFrame()
+            if root is None:
+                return
+            cursor = root.firstCursorPosition()
+        current_list = cursor.currentList()
+        if current_list is not None and current_list.format().style() == style:
+            # Remove from list — reset indent and clear list format
+            fmt = QTextBlockFormat()
+            fmt.setIndent(0)
+            cursor.setBlockFormat(fmt)
+        else:
+            list_fmt = QTextListFormat()
+            list_fmt.setStyle(style)
+            cursor.createList(list_fmt)

@@ -16,15 +16,25 @@ from PyQt6.QtGui import (
     QTextCursor,
     QTextDocument,
 )
-from PyQt6.QtWidgets import QGraphicsRectItem, QTextEdit
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QDoubleSpinBox,
+    QFontComboBox,
+    QGraphicsRectItem,
+    QLabel,
+    QTextEdit,
+    QToolBar,
+    QToolButton,
+)
 
 from snapmock.commands.add_item import AddItemCommand
 from snapmock.commands.remove_item import RemoveItemCommand
 from snapmock.commands.text_edit_command import TextEditCommand
-from snapmock.config.constants import MIN_DRAG_TEXT_BOX
+from snapmock.config.constants import DEFAULT_TEXT_WIDTH, MIN_DRAG_TEXT_BOX
 from snapmock.items.callout_item import CalloutItem
 from snapmock.items.text_item import TextItem
 from snapmock.tools.base_tool import BaseTool
+from snapmock.ui.find_replace_bar import FindReplaceBar
 
 if TYPE_CHECKING:
     from snapmock.core.scene import SnapScene
@@ -38,6 +48,8 @@ class _RichTextEditor(QTextEdit):
     """QTextEdit subclass that intercepts formatting shortcuts during editing."""
 
     editing_finished = pyqtSignal()
+    find_requested = pyqtSignal()
+    replace_requested = pyqtSignal()
 
     def keyPressEvent(self, event: QKeyEvent | None) -> None:
         if event is None:
@@ -74,6 +86,16 @@ class _RichTextEditor(QTextEdit):
             if key == Qt.Key.Key_J:
                 self._set_alignment(Qt.AlignmentFlag.AlignJustify)
                 return
+            if key == Qt.Key.Key_V:
+                # Plain-text paste (strip formatting)
+                self._paste_plain()
+                return
+            if key == Qt.Key.Key_F:
+                self.find_requested.emit()
+                return
+            if key == Qt.Key.Key_H:
+                self.replace_requested.emit()
+                return
 
         if ctrl and shift:
             if key == Qt.Key.Key_X:
@@ -85,6 +107,17 @@ class _RichTextEditor(QTextEdit):
             if key == Qt.Key.Key_Comma:
                 self._change_font_size(-1)
                 return
+            if key == Qt.Key.Key_Equal:
+                self._toggle_superscript()
+                return
+            if key == Qt.Key.Key_V:
+                # Rich-text paste (preserve formatting)
+                self._paste_rich()
+                return
+
+        if ctrl and not shift and key == Qt.Key.Key_Equal:
+            self._toggle_subscript()
+            return
 
         if key == Qt.Key.Key_Tab:
             self.textCursor().insertText("    ")
@@ -129,6 +162,56 @@ class _RichTextEditor(QTextEdit):
         fmt.setFontPointSize(float(new_size))
         self.textCursor().mergeCharFormat(fmt)
 
+    def _toggle_superscript(self) -> None:
+        fmt = QTextCharFormat()
+        cur = self.textCursor().charFormat()
+        if cur.verticalAlignment() == QTextCharFormat.VerticalAlignment.AlignSuperScript:
+            fmt.setVerticalAlignment(QTextCharFormat.VerticalAlignment.AlignNormal)
+        else:
+            fmt.setVerticalAlignment(QTextCharFormat.VerticalAlignment.AlignSuperScript)
+        self.textCursor().mergeCharFormat(fmt)
+
+    def _toggle_subscript(self) -> None:
+        fmt = QTextCharFormat()
+        cur = self.textCursor().charFormat()
+        if cur.verticalAlignment() == QTextCharFormat.VerticalAlignment.AlignSubScript:
+            fmt.setVerticalAlignment(QTextCharFormat.VerticalAlignment.AlignNormal)
+        else:
+            fmt.setVerticalAlignment(QTextCharFormat.VerticalAlignment.AlignSubScript)
+        self.textCursor().mergeCharFormat(fmt)
+
+    def _paste_plain(self) -> None:
+        """Paste clipboard content as plain text, using current cursor format."""
+        from PyQt6.QtWidgets import QApplication as QApp
+
+        clipboard = QApp.clipboard()
+        if clipboard is None:
+            return
+        text = clipboard.text()
+        if text:
+            self.textCursor().insertText(text)
+
+    def _paste_rich(self) -> None:
+        """Paste clipboard content preserving rich-text formatting."""
+        from PyQt6.QtWidgets import QApplication as QApp
+
+        clipboard = QApp.clipboard()
+        if clipboard is None:
+            return
+        mime = clipboard.mimeData()
+        if mime is None:
+            return
+        if mime.hasHtml():
+            html = mime.html()
+            # Sanitize: strip scripts and iframes
+            import re
+
+            html = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE)
+            html = re.sub(r"<iframe[^>]*>.*?</iframe>", "", html, flags=re.DOTALL | re.IGNORECASE)
+            self.textCursor().insertHtml(html)
+        elif mime.hasText():
+            self.textCursor().insertText(mime.text())
+
 
 class TextTool(BaseTool):
     """Click to place text, drag to define a text box, or click existing text to edit."""
@@ -137,6 +220,7 @@ class TextTool(BaseTool):
         super().__init__()
         self._editing_item: _TextLike | None = None
         self._editor: _RichTextEditor | None = None
+        self._find_bar: FindReplaceBar | None = None
         self._old_html: str = ""
         # Drag-to-create state
         self._drag_start: QPointF | None = None
@@ -177,6 +261,116 @@ class TextTool(BaseTool):
     def is_active_operation(self) -> bool:
         """True when dragging or editing."""
         return self._is_dragging or self._editing_item is not None
+
+    def build_options_widgets(self, toolbar: QToolBar) -> None:
+        # Font family
+        self._opt_font = QFontComboBox()
+        self._opt_font.setMaximumWidth(160)
+        self._opt_font.currentFontChanged.connect(self._on_opt_font_changed)
+        toolbar.addWidget(self._opt_font)
+
+        toolbar.addSeparator()
+
+        # Font size
+        self._opt_size = QComboBox()
+        self._opt_size.setEditable(True)
+        self._opt_size.setMaximumWidth(70)
+        for s in ("8", "9", "10", "11", "12", "14", "18", "24", "30", "36", "48", "60", "72"):
+            self._opt_size.addItem(s)
+        self._opt_size.setCurrentText("14")
+        self._opt_size.currentTextChanged.connect(self._on_opt_size_changed)
+        toolbar.addWidget(self._opt_size)
+
+        toolbar.addSeparator()
+
+        # Bold / Italic / Underline
+        self._opt_bold = QToolButton()
+        self._opt_bold.setText("B")
+        self._opt_bold.setCheckable(True)
+        self._opt_bold.setToolTip("Bold (Ctrl+B)")
+        self._opt_bold.toggled.connect(self._on_opt_bold)
+        toolbar.addWidget(self._opt_bold)
+
+        self._opt_italic = QToolButton()
+        self._opt_italic.setText("I")
+        self._opt_italic.setCheckable(True)
+        self._opt_italic.setToolTip("Italic (Ctrl+I)")
+        self._opt_italic.toggled.connect(self._on_opt_italic)
+        toolbar.addWidget(self._opt_italic)
+
+        self._opt_underline = QToolButton()
+        self._opt_underline.setText("U")
+        self._opt_underline.setCheckable(True)
+        self._opt_underline.setToolTip("Underline (Ctrl+U)")
+        self._opt_underline.toggled.connect(self._on_opt_underline)
+        toolbar.addWidget(self._opt_underline)
+
+        toolbar.addSeparator()
+
+        # Alignment
+        for align, label, tip in (
+            (Qt.AlignmentFlag.AlignLeft, "L", "Left (Ctrl+L)"),
+            (Qt.AlignmentFlag.AlignCenter, "C", "Center (Ctrl+E)"),
+            (Qt.AlignmentFlag.AlignRight, "R", "Right (Ctrl+R)"),
+            (Qt.AlignmentFlag.AlignJustify, "J", "Justify (Ctrl+J)"),
+        ):
+            btn = QToolButton()
+            btn.setText(label)
+            btn.setCheckable(True)
+            btn.setToolTip(tip)
+            btn.clicked.connect(lambda checked, a=align: self._on_opt_align(a))
+            toolbar.addWidget(btn)
+
+        toolbar.addSeparator()
+
+        # Border width
+        toolbar.addWidget(QLabel(" Border:"))
+        self._opt_border_w = QDoubleSpinBox()
+        self._opt_border_w.setRange(0.0, 20.0)
+        self._opt_border_w.setDecimals(1)
+        self._opt_border_w.setSuffix(" px")
+        self._opt_border_w.setMaximumWidth(80)
+        toolbar.addWidget(self._opt_border_w)
+
+    def _on_opt_font_changed(self, font: QFont) -> None:
+        if self._editor is not None:
+            fmt = QTextCharFormat()
+            fmt.setFontFamilies([font.family()])
+            self._editor.textCursor().mergeCharFormat(fmt)
+
+    def _on_opt_size_changed(self, text: str) -> None:
+        try:
+            size = float(text)
+        except ValueError:
+            return
+        if size < 1:
+            return
+        if self._editor is not None:
+            fmt = QTextCharFormat()
+            fmt.setFontPointSize(size)
+            self._editor.textCursor().mergeCharFormat(fmt)
+
+    def _on_opt_bold(self, checked: bool) -> None:
+        if self._editor is not None:
+            fmt = QTextCharFormat()
+            fmt.setFontWeight(QFont.Weight.Bold if checked else QFont.Weight.Normal)
+            self._editor.textCursor().mergeCharFormat(fmt)
+
+    def _on_opt_italic(self, checked: bool) -> None:
+        if self._editor is not None:
+            fmt = QTextCharFormat()
+            fmt.setFontItalic(checked)
+            self._editor.textCursor().mergeCharFormat(fmt)
+
+    def _on_opt_underline(self, checked: bool) -> None:
+        if self._editor is not None:
+            fmt = QTextCharFormat()
+            fmt.setFontUnderline(checked)
+            self._editor.textCursor().mergeCharFormat(fmt)
+
+    def _on_opt_align(self, alignment: Qt.AlignmentFlag) -> None:
+        if self._editor is not None:
+            self._editor.setAlignment(alignment)
 
     def activate(self, scene: SnapScene, selection_manager: SelectionManager) -> None:
         super().activate(scene, selection_manager)
@@ -275,12 +469,14 @@ class TextTool(BaseTool):
             and abs(scene_pos.x() - self._drag_start.x()) >= MIN_DRAG_TEXT_BOX
             and abs(scene_pos.y() - self._drag_start.y()) >= MIN_DRAG_TEXT_BOX
         ):
-            # Drag-to-create: fixed-size text box
+            # Drag-to-create: set drawn dimensions as minimums, auto-size enabled
             rect = QRectF(self._drag_start, scene_pos).normalized()
             item = TextItem(text="", pos_x=rect.x(), pos_y=rect.y())
             item._width = rect.width()
-            item._height = rect.height()
-            item._auto_size = False
+            item._auto_size = True
+            item._auto_width = True
+            item._min_width = rect.width()
+            item._min_height = rect.height()
             layer = self._scene.layer_manager.active_layer
             if layer is not None:
                 cmd = AddItemCommand(self._scene, item, layer.layer_id)
@@ -289,7 +485,8 @@ class TextTool(BaseTool):
         else:
             # Simple click: place new text item with auto-size
             click_pos = self._drag_start
-            item = TextItem(text="Text", pos_x=click_pos.x(), pos_y=click_pos.y())
+            item = TextItem(text="", pos_x=click_pos.x(), pos_y=click_pos.y())
+            item._min_width = DEFAULT_TEXT_WIDTH
             layer = self._scene.layer_manager.active_layer
             if layer is not None:
                 cmd = AddItemCommand(self._scene, item, layer.layer_id)
@@ -358,6 +555,10 @@ class TextTool(BaseTool):
         # Share the item's document — edits go directly to the item
         editor.setDocument(item.text_document)
 
+        # Disable word wrapping in the editor during edit mode (auto_width)
+        if isinstance(item, TextItem) and item.auto_width:
+            editor.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
+
         # Enable document undo for per-keystroke Ctrl+Z during editing
         item.text_document.setUndoRedoEnabled(True)
         item.text_document.clearUndoRedoStacks()
@@ -383,6 +584,8 @@ class TextTool(BaseTool):
         editor.setTextCursor(cursor)
 
         editor.editing_finished.connect(self._finish_editing)
+        editor.find_requested.connect(self._show_find)
+        editor.replace_requested.connect(self._show_find_replace)
         editor.show()
         editor.setFocus()
 
@@ -416,11 +619,22 @@ class TextTool(BaseTool):
         item = self._editing_item
         if item is None:
             return
-        if isinstance(item, TextItem) and item.auto_size:
-            item.prepareGeometryChange()
-            item._height = None
-            item.update()
-            self._reposition_editor()
+        if isinstance(item, TextItem):
+            changed = False
+            if item.auto_size:
+                item._height = None
+                changed = True
+            if item.auto_width:
+                # Recalculate width from document ideal width
+                item._document.setTextWidth(-1)
+                ideal = item._document.idealWidth() + 2 * item._padding
+                new_width = max(ideal, item._min_width)
+                item._width = new_width
+                changed = True
+            if changed:
+                item.prepareGeometryChange()
+                item.update()
+                self._reposition_editor()
 
     def _finish_editing(self) -> None:
         """Commit the edited text and remove the editor overlay."""
@@ -435,6 +649,14 @@ class TextTool(BaseTool):
             item.text_document.contentsChanged.disconnect(self._on_document_changed)
         except (TypeError, RuntimeError):
             pass
+
+        # Close find bar if open
+        if self._find_bar is not None:
+            self._find_bar.detach()
+            self._find_bar.hide()
+            self._find_bar.setParent(None)
+            self._find_bar.deleteLater()
+            self._find_bar = None
 
         # Detach editor from the item's document BEFORE destroying it
         # to prevent Qt from deleting the item's document
@@ -458,6 +680,10 @@ class TextTool(BaseTool):
         item.setOpacity(1.0)
         item.is_editing = False
 
+        # Lock in the current dimensions — auto_width is only active during editing
+        if isinstance(item, TextItem) and item.auto_width:
+            item._auto_width = False
+
         if self._scene is not None:
             # If text is empty, remove the item
             if not item.plain_text().strip():
@@ -472,3 +698,54 @@ class TextTool(BaseTool):
 
         self._editing_item = None
         self._old_html = ""
+
+    def _show_find(self) -> None:
+        """Open the inline find bar."""
+        if self._editor is None or self._editing_item is None:
+            return
+        bar = self._ensure_find_bar()
+        bar.show_find()
+
+    def _show_find_replace(self) -> None:
+        """Open the inline find+replace bar."""
+        if self._editor is None or self._editing_item is None:
+            return
+        bar = self._ensure_find_bar()
+        bar.show_find_replace()
+
+    def _ensure_find_bar(self) -> FindReplaceBar:
+        """Create the find bar if it doesn't exist, attach to current document."""
+        if self._find_bar is None:
+            viewport = self._editor.parent() if self._editor else None
+            self._find_bar = FindReplaceBar(viewport)  # type: ignore[arg-type]
+            self._find_bar.closed.connect(self._on_find_bar_closed)
+            self._find_bar.replace_all_requested.connect(self._on_replace_all)
+        if self._editing_item is not None:
+            self._find_bar.attach(self._editing_item.text_document)
+        # Position at the top of the editor
+        if self._editor is not None:
+            self._find_bar.setGeometry(
+                self._editor.x(),
+                self._editor.y() - 30,
+                self._editor.width(),
+                28,
+            )
+        return self._find_bar
+
+    def _on_find_bar_closed(self) -> None:
+        """Return focus to the editor when the find bar is closed."""
+        if self._editor is not None:
+            self._editor.setFocus()
+
+    def _on_replace_all(self, old_html: str, new_html: str) -> None:
+        """Push a TextEditCommand for a Replace All operation."""
+        if self._scene is None or self._editing_item is None:
+            return
+        if old_html != new_html:
+            cmd = TextEditCommand(
+                self._editing_item,
+                old_html,
+                new_html,
+                is_clipboard_op=True,  # Prevents merge — treat like a batch op
+            )
+            self._scene.command_stack.push(cmd)

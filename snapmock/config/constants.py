@@ -47,15 +47,48 @@ DEFAULT_TEXT_BG_COLOR = "#00000000"  # transparent
 DEFAULT_TEXT_BORDER_COLOR = "#00000000"  # transparent
 DEFAULT_TEXT_BORDER_WIDTH = 0.0
 DEFAULT_TEXT_BORDER_RADIUS = 0.0
-DEFAULT_TEXT_PADDING = 4.0
+DEFAULT_TEXT_PADDING = 8.0
 DEFAULT_TEXT_WIDTH = 200.0
 MIN_DRAG_TEXT_BOX = 10.0  # min px to count as drag-to-create
+MIN_TEXT_BOX_WIDTH = 20.0
+MIN_TEXT_BOX_HEIGHT = 16.0
 
 
 class VerticalAlign(Enum):
     TOP = "top"
     CENTER = "center"
     BOTTOM = "bottom"
+
+
+class BubbleShape(Enum):
+    ROUNDED_RECT = "rounded_rect"
+    RECT = "rect"
+    ELLIPSE = "ellipse"
+    CLOUD = "cloud"
+    STARBURST = "starburst"
+    PILL = "pill"
+
+
+class TailStyle(Enum):
+    STRAIGHT = "straight"
+    CURVED = "curved"
+    ELBOW = "elbow"
+
+
+class TailBaseEdge(Enum):
+    AUTO = "auto"
+    TOP = "top"
+    RIGHT = "right"
+    BOTTOM = "bottom"
+    LEFT = "left"
+
+
+class BorderStyle(Enum):
+    SOLID = "solid"
+    DASHED = "dashed"
+    DOTTED = "dotted"
+    DASHDOT = "dashdot"
+    DASHDOTDOT = "dashdotdot"
 
 # Zoom step ladder (percentage values)
 ZOOM_STEPS = [
