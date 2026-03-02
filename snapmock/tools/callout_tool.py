@@ -251,7 +251,7 @@ class CalloutTool(BaseTool):
             tm = main_window.tool_manager
             # Select the item first
             if self._selection_manager is not None:
-                self._selection_manager.set_selection([item])
+                self._selection_manager.select_items([item])
             tm.activate_tool("text")
 
     @staticmethod
