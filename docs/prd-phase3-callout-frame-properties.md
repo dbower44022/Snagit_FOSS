@@ -304,8 +304,131 @@ if (... and self._tool_manager.active_tool.is_active_operation
 
 ---
 
+### 8. Tool Defaults Mode in PropertyPanel
+
+**Problem:** When the text or callout tool was active with no item selected, the PropertyPanel showed only the Canvas section. Users had no way to pre-configure text properties (font, colors, border, padding, etc.) before creating new items — they had to create the item first, then modify its properties.
+
+**Solution:** The PropertyPanel now detects when the active tool is "text" or "callout" with no selection and enters a "tool-defaults mode," displaying the Text and Text Box sections populated with the tool's creation defaults. Changes made in this mode are stored on the tool instance and applied to every subsequent item created.
+
+#### BaseTool: Creation Defaults (`snapmock/tools/base_tool.py`)
+
+Added a `_creation_defaults: dict[str, Any]` field to `BaseTool.__init__` and a read-only `creation_defaults` property that returns the mutable dict. This allows PropertyPanel to read/write default values without needing a new class or data structure.
+
+#### TextTool: Defaults + Apply (`snapmock/tools/text_tool.py`)
+
+**`__init__`:** Initializes `_creation_defaults` with TextItem's constructor defaults:
+| Key | Default | Source |
+|-----|---------|--------|
+| `font_family` | `DEFAULT_FONT_FAMILY` | constants.py |
+| `font_size` | `DEFAULT_FONT_SIZE` | constants.py |
+| `bold` | `False` | |
+| `italic` | `False` | |
+| `underline` | `False` | |
+| `text_color` | `QColor(black)` | |
+| `bg_color` | `QColor(DEFAULT_TEXT_BG_COLOR)` | transparent |
+| `border_color` | `QColor(DEFAULT_TEXT_BORDER_COLOR)` | transparent |
+| `border_width` | `DEFAULT_TEXT_BORDER_WIDTH` | 0.0 |
+| `border_radius` | `DEFAULT_TEXT_BORDER_RADIUS` | 0.0 |
+| `padding` | `DEFAULT_TEXT_PADDING` | 8.0 |
+| `vertical_align` | `VerticalAlign.TOP` | |
+| `auto_size` | `True` | |
+
+**`_apply_creation_defaults(item)`:** Reads the dict and sets all properties on the item via property setters (font, text_color, bg_color, border_color, border_width, border_radius, padding, vertical_align, auto_size).
+
+**`mouse_release`:** Calls `_apply_creation_defaults(item)` in both the drag-to-create and click-to-create paths, after constructing the `TextItem` but before `AddItemCommand`.
+
+**`_start_editing`:** Now calls `self._selection_manager.select_items([item])` so the newly created item is in the selection, allowing PropertyPanel to show and modify its live properties during editing.
+
+#### CalloutTool: Defaults + Apply (`snapmock/tools/callout_tool.py`)
+
+Same pattern as TextTool with callout-specific defaults:
+| Key | Default | Rationale |
+|-----|---------|-----------|
+| `bg_color` | `QColor("#FFFFCC")` | Callout yellow |
+| `border_color` | `QColor("#333333")` | Visible border |
+| `border_width` | `2.0` | Callout default |
+| `border_radius` | `12.0` | Rounded bubble |
+| `padding` | `10.0` | Callout default |
+
+No `auto_size` key — callout dimensions are controlled by `_rect`.
+
+**`_apply_creation_defaults(item)`** and **`mouse_release`** follow the same pattern as TextTool.
+
+#### PropertyPanel: Tool-Defaults Mode (`snapmock/ui/property_panel.py`)
+
+**New fields:**
+- `_tool_manager: ToolManager | None` — set via `set_tool_manager()`
+- `_active_tool_id: str` — updated on `tool_changed` signal
+
+**`set_tool_manager(tm)`:** Connects `tm.tool_changed` to `_on_tool_changed`.
+
+**`_on_tool_changed(tool_id)`:** Stores the tool_id and calls `_refresh_from_selection()`.
+
+**`_refresh_from_selection` changes:**
+```python
+in_tool_defaults = (
+    not has_selection and self._active_tool_id in ("text", "callout")
+)
+```
+When `in_tool_defaults` is True:
+- Text and Text Box sections are shown; Transform, Appearance, Info, and Canvas sections are hidden
+- `_populate_from_tool_defaults()` fills widgets from the active tool's `creation_defaults` dict
+- Auto-size checkbox is hidden for callout tool (matches behavior when a CalloutItem is selected)
+
+**Handler early-return paths:** All 14 text/text-box change handlers have an early-return path that writes to the `creation_defaults` dict (no command stack) when in tool-defaults mode:
+- `_on_font_family_changed`, `_on_font_size_changed`, `_on_bold_changed`, `_on_italic_changed`, `_on_underline_changed`, `_on_text_color_changed`
+- `_on_text_bg_color_changed`, `_on_no_bg_toggled`, `_on_text_border_color_changed`, `_on_text_border_w_changed`, `_on_text_corner_radius_changed`, `_on_text_padding_changed`, `_on_text_valign_changed`, `_on_text_auto_size_changed`
+
+**Helper methods:**
+- `_in_tool_defaults_mode()` — returns True if no selection and text/callout tool active
+- `_active_tool_defaults()` — returns the active tool's `creation_defaults` dict
+- `_populate_from_tool_defaults()` — populates all Text + Text Box widgets from the defaults dict
+
+#### MainWindow Wiring (`snapmock/main_window.py`)
+
+Added one line after PropertyPanel creation:
+```python
+self._property_panel.set_tool_manager(self._tool_manager)
+```
+
+#### Design Decisions
+
+1. **Defaults stored on tool instances** — matches existing pattern where tools own their options. Defaults persist for the tool's lifetime (session), reset when the application restarts.
+
+2. **No undo/redo for defaults** — changing defaults is a UI preference, not a document mutation. Handlers write directly to the dict without touching the command stack.
+
+3. **Auto-size checkbox hidden for callout tool** — same logic as when a CalloutItem is selected, since callout dimensions come from `_rect`.
+
+4. **Dict-based storage** — simple, no new classes needed. PropertyPanel reads/writes the same dict the tool reads during item creation.
+
+5. **Item selected on edit start** — `_start_editing()` now calls `select_items([item])` so the PropertyPanel transitions from tool-defaults mode to live-item mode as soon as editing begins. This ensures property changes during the initial create-edit session affect the actual item.
+
+---
+
+## Files Modified
+
+| File | Type | Summary |
+|------|------|---------|
+| `snapmock/items/callout_item.py` | Modified | Added frame properties, property accessors, refactored paint/boundingRect/scale_geometry, updated serialize/deserialize |
+| `snapmock/ui/property_panel.py` | Modified | Widened Text Box section for CalloutItem, hidden auto-size checkbox for callouts, added tool-defaults mode with 14 handler early-return paths |
+| `snapmock/io/snagit_writer.py` | Modified | Use actual callout property values instead of hardcoded constants |
+| `snapmock/io/snagit_reader.py` | Modified | Read callout frame properties from Snagit JSON |
+| `snapmock/core/view.py` | Modified | Three bug fixes: focusOutEvent, auto-scroll stop, auto-scroll trigger |
+| `snapmock/tools/base_tool.py` | Modified | Added `_creation_defaults` dict and `creation_defaults` property |
+| `snapmock/tools/text_tool.py` | Modified | Initialized creation defaults, added `_apply_creation_defaults()`, select item on edit start |
+| `snapmock/tools/callout_tool.py` | Modified | Initialized creation defaults, added `_apply_creation_defaults()` |
+| `snapmock/main_window.py` | Modified | Wired PropertyPanel to ToolManager via `set_tool_manager()` |
+| `tests/test_rich_text.py` | Modified | 10 new callout frame property tests |
+| `tests/test_transform_resize.py` | Modified | 1 new callout scale_geometry test |
+
+---
+
 ## Verification
 
-- **307 tests pass** (`uv run pytest`)
+- **371 tests pass** (`uv run pytest`)
 - **Lint clean** (`uv run ruff check .`)
 - Manual testing confirmed: PropertyPanel controls work for callouts, .smk round-trip preserves properties, backward-compatible loading works, text editing no longer interrupted by focus/scroll issues
+- Manual testing confirmed: activate text tool with nothing selected → PropertyPanel shows Text + Text Box sections with defaults → change properties → create text item → item has modified properties
+- Manual testing confirmed: same for callout tool → shows callout defaults (yellow bg, visible border) → modify → create callout → properties match
+- Manual testing confirmed: select an existing item → panel shows item properties (not tool defaults) → deselect → panel returns to tool defaults
+- Manual testing confirmed: property changes during initial create-edit session affect the active item
