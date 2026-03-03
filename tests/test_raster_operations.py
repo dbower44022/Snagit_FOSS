@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QPoint, QPointF, QRectF, Qt
+from PyQt6.QtCore import QPoint, QPointF, Qt
 from PyQt6.QtGui import QMouseEvent, QPixmap
 from PyQt6.QtWidgets import QApplication
 

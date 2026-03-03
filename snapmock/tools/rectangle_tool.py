@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
-from PyQt6.QtGui import QMouseEvent
+from PyQt6.QtGui import QColor, QMouseEvent
 
 from snapmock.commands.add_item import AddItemCommand
+from snapmock.config.constants import (
+    DEFAULT_FILL_COLOR,
+    DEFAULT_STROKE_COLOR,
+    DEFAULT_STROKE_WIDTH,
+)
 from snapmock.items.rectangle_item import RectangleItem
 from snapmock.tools.base_tool import BaseTool
 
@@ -17,6 +22,12 @@ class RectangleTool(BaseTool):
         super().__init__()
         self._start: QPointF = QPointF()
         self._item: RectangleItem | None = None
+        self._creation_defaults = {
+            "stroke_color": QColor(DEFAULT_STROKE_COLOR),
+            "fill_color": QColor(DEFAULT_FILL_COLOR),
+            "stroke_width": DEFAULT_STROKE_WIDTH,
+            "opacity_pct": 100.0,
+        }
 
     @property
     def tool_id(self) -> str:
@@ -41,6 +52,10 @@ class RectangleTool(BaseTool):
             self._scene.views()[0].mapToScene(event.pos()) if self._scene.views() else QPointF()
         )
         self._item = RectangleItem(rect=QRectF(0, 0, 0, 0))
+        self._item.stroke_color = self._creation_defaults["stroke_color"]
+        self._item.fill_color = self._creation_defaults["fill_color"]
+        self._item.stroke_width = self._creation_defaults["stroke_width"]
+        self._item.setOpacity(self._creation_defaults["opacity_pct"] / 100.0)
         self._item.setPos(self._start)
         self._scene.addItem(self._item)
         return True
@@ -61,11 +76,15 @@ class RectangleTool(BaseTool):
             return False
         # Remove the preview item
         self._scene.removeItem(self._item)
+        created_item = self._item
+        self._item = None
         # Only create if it has meaningful size
-        if self._item.rect.width() > 2 and self._item.rect.height() > 2:
+        if created_item.rect.width() > 2 and created_item.rect.height() > 2:
             layer = self._scene.layer_manager.active_layer
             if layer is not None:
-                cmd = AddItemCommand(self._scene, self._item, layer.layer_id)
+                cmd = AddItemCommand(self._scene, created_item, layer.layer_id)
                 self._scene.command_stack.push(cmd)
-        self._item = None
+                if self._selection_manager is not None:
+                    self._selection_manager.select(created_item)
+                self._switch_to_select()
         return True

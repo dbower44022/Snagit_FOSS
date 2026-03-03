@@ -60,10 +60,14 @@ class BlurTool(BaseTool):
         if self._item is None or self._scene is None:
             return False
         self._scene.removeItem(self._item)
-        if self._item.rect.width() > 2 and self._item.rect.height() > 2:
+        created_item = self._item
+        self._item = None
+        if created_item.rect.width() > 2 and created_item.rect.height() > 2:
             layer = self._scene.layer_manager.active_layer
             if layer is not None:
-                cmd = AddItemCommand(self._scene, self._item, layer.layer_id)
+                cmd = AddItemCommand(self._scene, created_item, layer.layer_id)
                 self._scene.command_stack.push(cmd)
-        self._item = None
+                if self._selection_manager is not None:
+                    self._selection_manager.select(created_item)
+                self._switch_to_select()
         return True

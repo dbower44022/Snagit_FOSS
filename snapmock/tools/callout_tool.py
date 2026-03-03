@@ -291,7 +291,7 @@ class CalloutTool(BaseTool):
             # Select the item first
             if self._selection_manager is not None:
                 self._selection_manager.select_items([item])
-            tm.activate_tool("text")
+            tm.activate("text")
 
     @staticmethod
     def _constrain_angle(origin: QPointF, target: QPointF) -> QPointF:

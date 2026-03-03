@@ -102,6 +102,19 @@ class MainWindow(QMainWindow):
         self._property_panel.set_tool_manager(self._tool_manager)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._property_panel)
 
+        # Style the dock splitter so it's easier to grab
+        self.setStyleSheet(
+            "QMainWindow::separator {"
+            "  width: 6px;"
+            "  height: 6px;"
+            "  background: #c0c0c0;"
+            "  border: 1px solid #a0a0a0;"
+            "}"
+            "QMainWindow::separator:hover {"
+            "  background: #a0a0a0;"
+            "}"
+        )
+
         self._status_bar = SnapStatusBar(self._view)
         self.setStatusBar(self._status_bar)
 
@@ -153,6 +166,14 @@ class MainWindow(QMainWindow):
         state = self._settings.window_state()
         if state is not None:
             self.restoreState(state)
+
+        # Size the layer panel: auto-fit to the number of layers (capped at 10 rows).
+        layer_h = self._layer_panel.preferred_height()
+        self.resizeDocks(
+            [self._layer_panel],
+            [layer_h],
+            Qt.Orientation.Vertical,
+        )
 
         self._update_title()
 

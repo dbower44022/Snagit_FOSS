@@ -40,6 +40,9 @@ if TYPE_CHECKING:
     from snapmock.tools.tool_manager import ToolManager
 
 
+_VECTOR_TOOL_IDS = {"rectangle", "ellipse", "line", "arrow", "freehand", "highlight"}
+
+
 class PropertyPanel(QDockWidget):
     """Dockable panel showing properties of the selected item(s)."""
 
@@ -102,13 +105,7 @@ class PropertyPanel(QDockWidget):
         self._appearance_section.add_row("Width:", stroke_w_container)
 
         self._fill_color_picker = ColorPicker(QColor("transparent"))
-        self._no_fill_check = QCheckBox("No fill")
-        fill_container = QWidget()
-        fill_layout = QHBoxLayout(fill_container)
-        fill_layout.setContentsMargins(0, 0, 0, 0)
-        fill_layout.addWidget(self._fill_color_picker)
-        fill_layout.addWidget(self._no_fill_check)
-        self._appearance_section.add_row("Fill:", fill_container)
+        self._appearance_section.add_row("Fill:", self._fill_color_picker)
 
         opacity_container = QWidget()
         opacity_layout = QHBoxLayout(opacity_container)
@@ -156,13 +153,7 @@ class PropertyPanel(QDockWidget):
         self._text_box_section = CollapsibleSection("Text Box")
 
         self._text_bg_color_picker = ColorPicker(QColor("transparent"))
-        self._no_bg_check = QCheckBox("No background")
-        text_bg_container = QWidget()
-        text_bg_layout = QHBoxLayout(text_bg_container)
-        text_bg_layout.setContentsMargins(0, 0, 0, 0)
-        text_bg_layout.addWidget(self._text_bg_color_picker)
-        text_bg_layout.addWidget(self._no_bg_check)
-        self._text_box_section.add_row("Background:", text_bg_container)
+        self._text_box_section.add_row("Background:", self._text_bg_color_picker)
 
         self._text_border_color_picker = ColorPicker(QColor("transparent"))
         self._text_box_section.add_row("Border:", self._text_border_color_picker)
@@ -233,7 +224,6 @@ class PropertyPanel(QDockWidget):
         self._stroke_w_slider.valueChanged.connect(self._on_stroke_w_slider_changed)
         self._stroke_w_spin.valueChanged.connect(self._on_stroke_w_spin_changed)
         self._fill_color_picker.color_changed.connect(self._on_fill_color_changed)
-        self._no_fill_check.toggled.connect(self._on_no_fill_toggled)
         self._opacity_slider.valueChanged.connect(self._on_opacity_slider_changed)
         self._opacity_spin.valueChanged.connect(self._on_opacity_spin_changed)
         self._layer_combo.currentIndexChanged.connect(self._on_layer_changed)
@@ -246,7 +236,6 @@ class PropertyPanel(QDockWidget):
         self._underline_check.toggled.connect(self._on_underline_changed)
         self._text_color_picker.color_changed.connect(self._on_text_color_changed)
         self._text_bg_color_picker.color_changed.connect(self._on_text_bg_color_changed)
-        self._no_bg_check.toggled.connect(self._on_no_bg_toggled)
         self._text_border_color_picker.color_changed.connect(self._on_text_border_color_changed)
         self._text_border_w_spin.valueChanged.connect(self._on_text_border_w_changed)
         self._text_corner_radius_spin.valueChanged.connect(self._on_text_corner_radius_changed)
@@ -305,19 +294,24 @@ class PropertyPanel(QDockWidget):
             is_text_item = isinstance(item, TextItem)
 
             # Check for tool-defaults mode: no selection + text/callout tool active
-            in_tool_defaults = (
-                not has_selection and self._active_tool_id in ("text", "callout")
-            )
+            in_tool_defaults = not has_selection and self._active_tool_id in ("text", "callout")
+            in_vector_defaults = not has_selection and self._active_tool_id in _VECTOR_TOOL_IDS
 
             # Section visibility
             self._transform_section.setVisible(has_selection)
-            self._appearance_section.setVisible(has_selection and is_vector)
+            self._appearance_section.setVisible(
+                (has_selection and is_vector) or in_vector_defaults
+            )
             self._text_section.setVisible((has_selection and has_text) or in_tool_defaults)
             self._text_box_section.setVisible((has_selection and has_text) or in_tool_defaults)
             self._info_section.setVisible(has_selection)
-            self._canvas_section.setVisible(not has_selection and not in_tool_defaults)
+            self._canvas_section.setVisible(
+                not has_selection and not in_tool_defaults and not in_vector_defaults
+            )
 
-            if in_tool_defaults:
+            if in_vector_defaults:
+                self._populate_appearance_from_tool_defaults()
+            elif in_tool_defaults:
                 self._populate_from_tool_defaults()
             elif item is not None:
                 # Transform
@@ -335,7 +329,6 @@ class PropertyPanel(QDockWidget):
                     self._stroke_w_slider.setValue(int(item.stroke_width))
                     self._stroke_w_spin.setValue(item.stroke_width)
                     self._fill_color_picker.color = item.fill_color
-                    self._no_fill_check.setChecked(item.fill_color.alpha() == 0)
                     self._opacity_slider.setValue(int(item.opacity_pct))
                     self._opacity_spin.setValue(int(item.opacity_pct))
 
@@ -354,7 +347,6 @@ class PropertyPanel(QDockWidget):
                 if has_text:
                     assert isinstance(item, (TextItem, CalloutItem))
                     self._text_bg_color_picker.color = item.bg_color
-                    self._no_bg_check.setChecked(item.bg_color.alpha() == 0)
                     self._text_border_color_picker.color = item.border_color
                     self._text_border_w_spin.setValue(item.border_width)
                     self._text_corner_radius_spin.setValue(item.border_radius)
@@ -385,10 +377,11 @@ class PropertyPanel(QDockWidget):
 
     def _in_tool_defaults_mode(self) -> bool:
         """Return True if showing tool defaults (no selection + text/callout tool)."""
-        return (
-            self._first_selected_item() is None
-            and self._active_tool_id in ("text", "callout")
-        )
+        return self._first_selected_item() is None and self._active_tool_id in ("text", "callout")
+
+    def _in_vector_defaults_mode(self) -> bool:
+        """Return True if showing vector tool defaults (no selection + vector tool)."""
+        return self._first_selected_item() is None and self._active_tool_id in _VECTOR_TOOL_IDS
 
     def _active_tool_defaults(self) -> dict[str, object] | None:
         """Return the creation_defaults dict for the active tool, or None."""
@@ -419,7 +412,6 @@ class PropertyPanel(QDockWidget):
         bg = d.get("bg_color")
         bg_color = QColor(bg) if isinstance(bg, QColor) else QColor("#00000000")
         self._text_bg_color_picker.color = bg_color
-        self._no_bg_check.setChecked(bg_color.alpha() == 0)
 
         bc = d.get("border_color")
         self._text_border_color_picker.color = (
@@ -441,6 +433,24 @@ class PropertyPanel(QDockWidget):
         self._text_auto_size_check.setVisible(is_text_tool)
         if is_text_tool:
             self._text_auto_size_check.setChecked(bool(d.get("auto_size", True)))
+
+    def _populate_appearance_from_tool_defaults(self) -> None:
+        """Fill Appearance widgets from the active vector tool's creation_defaults."""
+        d = self._active_tool_defaults()
+        if d is None:
+            return
+        sc = d.get("stroke_color")
+        self._stroke_color_picker.color = QColor(sc) if isinstance(sc, QColor) else QColor("black")
+        sw = float(d.get("stroke_width", 2.0))
+        self._stroke_w_slider.setValue(int(sw))
+        self._stroke_w_spin.setValue(sw)
+        fc = d.get("fill_color")
+        self._fill_color_picker.color = (
+            QColor(fc) if isinstance(fc, QColor) else QColor("transparent")
+        )
+        op = int(d.get("opacity_pct", 100))
+        self._opacity_slider.setValue(op)
+        self._opacity_spin.setValue(op)
 
     def _rebuild_layer_combo(self, *_args: object) -> None:
         was_updating = self._updating
@@ -518,6 +528,11 @@ class PropertyPanel(QDockWidget):
     def _on_stroke_color_changed(self, color: QColor) -> None:
         if self._updating:
             return
+        if self._in_vector_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                d["stroke_color"] = QColor(color)
+            return
         item = self._first_selected_item()
         if not isinstance(item, VectorItem):
             return
@@ -530,6 +545,11 @@ class PropertyPanel(QDockWidget):
         self._updating = True
         self._stroke_w_spin.setValue(float(value))
         self._updating = False
+        if self._in_vector_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                d["stroke_width"] = float(value)
+            return
         item = self._first_selected_item()
         if not isinstance(item, VectorItem):
             return
@@ -542,6 +562,11 @@ class PropertyPanel(QDockWidget):
         self._updating = True
         self._stroke_w_slider.setValue(int(value))
         self._updating = False
+        if self._in_vector_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                d["stroke_width"] = value
+            return
         item = self._first_selected_item()
         if not isinstance(item, VectorItem):
             return
@@ -551,27 +576,15 @@ class PropertyPanel(QDockWidget):
     def _on_fill_color_changed(self, color: QColor) -> None:
         if self._updating:
             return
+        if self._in_vector_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                d["fill_color"] = QColor(color)
+            return
         item = self._first_selected_item()
         if not isinstance(item, VectorItem):
             return
         cmd = ModifyPropertyCommand(item, "fill_color", item.fill_color, color)
-        self._scene.command_stack.push(cmd)
-
-    def _on_no_fill_toggled(self, checked: bool) -> None:
-        if self._updating:
-            return
-        item = self._first_selected_item()
-        if not isinstance(item, VectorItem):
-            return
-        old_color = item.fill_color
-        if checked:
-            new_color = QColor(old_color)
-            new_color.setAlpha(0)
-        else:
-            new_color = QColor(old_color)
-            if new_color.alpha() == 0:
-                new_color.setAlpha(255)
-        cmd = ModifyPropertyCommand(item, "fill_color", old_color, new_color)
         self._scene.command_stack.push(cmd)
 
     def _on_opacity_slider_changed(self, value: int) -> None:
@@ -580,6 +593,11 @@ class PropertyPanel(QDockWidget):
         self._updating = True
         self._opacity_spin.setValue(value)
         self._updating = False
+        if self._in_vector_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                d["opacity_pct"] = float(value)
+            return
         item = self._first_selected_item()
         if item is None:
             return
@@ -592,6 +610,11 @@ class PropertyPanel(QDockWidget):
         self._updating = True
         self._opacity_slider.setValue(value)
         self._updating = False
+        if self._in_vector_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                d["opacity_pct"] = float(value)
+            return
         item = self._first_selected_item()
         if item is None:
             return
@@ -792,34 +815,6 @@ class PropertyPanel(QDockWidget):
         cmd = ModifyPropertyCommand(item, "bg_color", item.bg_color, color)
         self._scene.command_stack.push(cmd)
 
-    def _on_no_bg_toggled(self, checked: bool) -> None:
-        if self._updating:
-            return
-        if self._in_tool_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                old = d.get("bg_color", QColor("#00000000"))
-                new_color = QColor(old) if isinstance(old, QColor) else QColor(old)
-                if checked:
-                    new_color.setAlpha(0)
-                elif new_color.alpha() == 0:
-                    new_color.setAlpha(255)
-                d["bg_color"] = new_color
-            return
-        item = self._first_selected_item()
-        if not isinstance(item, (TextItem, CalloutItem)):
-            return
-        old_color = item.bg_color
-        if checked:
-            new_color = QColor(old_color)
-            new_color.setAlpha(0)
-        else:
-            new_color = QColor(old_color)
-            if new_color.alpha() == 0:
-                new_color.setAlpha(255)
-        cmd = ModifyPropertyCommand(item, "bg_color", old_color, new_color)
-        self._scene.command_stack.push(cmd)
-
     def _on_text_border_color_changed(self, color: QColor) -> None:
         if self._updating:
             return
@@ -891,9 +886,7 @@ class PropertyPanel(QDockWidget):
         new_align = self._text_valign_combo.itemData(index)
         if not isinstance(new_align, VerticalAlign):
             return
-        cmd = ModifyPropertyCommand(
-            item, "vertical_align", item.vertical_align, new_align
-        )
+        cmd = ModifyPropertyCommand(item, "vertical_align", item.vertical_align, new_align)
         self._scene.command_stack.push(cmd)
 
     def _on_text_auto_size_changed(self, checked: bool) -> None:

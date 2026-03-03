@@ -125,6 +125,16 @@ class LayerPanel(QDockWidget):
         menu = build_layer_panel_context_menu(parent, self._layer_manager, layer_id)
         menu.exec(global_pos)
 
+    def preferred_height(self, max_rows: int = 10) -> int:
+        """Return the ideal panel height to fit the current layers (capped at *max_rows*)."""
+        row_count = min(self._list.count(), max_rows)
+        row_count = max(row_count, 1)  # at least 1 row
+        row_h = self._list.sizeHintForRow(0) if self._list.count() > 0 else 22
+        # list height + button row + title bar + margins
+        list_h = row_count * row_h + 2 * self._list.frameWidth()
+        # Account for the button bar (~35px) and layout margins/spacing (~20px)
+        return list_h + 55
+
     def set_manager(self, layer_manager: LayerManager) -> None:
         """Replace the LayerManager (e.g. after opening a new project)."""
         self._layer_manager = layer_manager
