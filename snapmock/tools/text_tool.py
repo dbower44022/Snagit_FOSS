@@ -592,6 +592,10 @@ class TextTool(BaseTool):
         self._old_html = item.html()
         item.is_editing = True
 
+        # Ensure the item is selected so PropertyPanel can show/edit its properties
+        if self._selection_manager is not None:
+            self._selection_manager.select_items([item])
+
         # Hide the item's painted text by making it invisible during editing
         item.setOpacity(0.0)
 
