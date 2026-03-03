@@ -131,9 +131,7 @@ def save_snagx(scene: SnapScene, path: Path) -> list[str]:
 # ---- item dispatch ----
 
 
-def _item_to_snagit(
-    item: SnapGraphicsItem, warnings: list[str]
-) -> dict[str, Any] | None:
+def _item_to_snagit(item: SnapGraphicsItem, warnings: list[str]) -> dict[str, Any] | None:
     """Convert a SnapMock item to a Snagit CaptureObject dict."""
     # If we have round-trip data, update positions and return it
     raw: dict[str, Any] | None = getattr(item, "_snagit_data", None)
@@ -340,6 +338,18 @@ def _item_to_highlight_rect(item: RectangleItem) -> dict[str, Any]:
     }
 
 
+def _get_halign_str(item: TextItem | CalloutItem) -> str:
+    """Return the Snagit ToolHorizontalAlign string for a text-bearing item."""
+    block_fmt = item.get_block_format()
+    align = block_fmt.alignment() & Qt.AlignmentFlag.AlignHorizontal_Mask
+    return {
+        Qt.AlignmentFlag.AlignLeft: "Left",
+        Qt.AlignmentFlag.AlignHCenter: "Center",
+        Qt.AlignmentFlag.AlignRight: "Right",
+        Qt.AlignmentFlag.AlignJustify: "Justify",
+    }.get(align, "Left")
+
+
 def _item_to_callout(item: CalloutItem) -> dict[str, Any]:
     pos = item.pos()
     r = item._rect
@@ -388,7 +398,7 @@ def _item_to_callout(item: CalloutItem) -> dict[str, Any]:
         "TextOutlineColor": "#FFFFFFFF",
         "TextOutlineWidth": 0,
         "TextSelectionColor": "#FF000000",
-        "ToolHorizontalAlign": "Center",
+        "ToolHorizontalAlign": _get_halign_str(item),
         "ToolMode": "Callout",
         "ToolPadding": int(item._padding),
         "ToolVerticalAlign": {"top": "Top", "center": "Center", "bottom": "Bottom"}.get(
@@ -444,7 +454,7 @@ def _item_to_text(item: TextItem) -> dict[str, Any]:
         "TextOutlineColor": "#FFFFFFFF",
         "TextOutlineWidth": 0,
         "TextSelectionColor": "#FF000000",
-        "ToolHorizontalAlign": "Left",
+        "ToolHorizontalAlign": _get_halign_str(item),
         "ToolMode": "Text",
         "ToolPadding": int(item._padding),
         "ToolVerticalAlign": valign_str,
@@ -506,9 +516,7 @@ def _pixmap_to_png_bytes(item: RasterRegionItem) -> bytes:
     return data
 
 
-def _make_thumbnail(
-    bg_item: RasterRegionItem | None, canvas_w: int, canvas_h: int
-) -> bytes:
+def _make_thumbnail(bg_item: RasterRegionItem | None, canvas_w: int, canvas_h: int) -> bytes:
     """Create a thumbnail PNG (max *_THUMB_WIDTH* px wide)."""
     if bg_item is None:
         return b""

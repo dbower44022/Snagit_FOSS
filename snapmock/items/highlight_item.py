@@ -54,11 +54,13 @@ class HighlightItem(VectorItem):
     def paint(self, painter: QPainter | None, option: Any, widget: Any = None) -> None:
         if painter is None:
             return
+        self._apply_flip(painter)
         pen = QPen(self._stroke_color, self._stroke_width)
         pen.setCapStyle(pen.capStyle().RoundCap)
         pen.setJoinStyle(pen.joinStyle().RoundJoin)
         painter.setPen(pen)
         painter.drawPath(self._path)
+        self._end_flip(painter)
 
     def serialize(self) -> dict[str, Any]:
         data = self._base_data()

@@ -78,6 +78,8 @@ class VectorItem(SnapGraphicsItem):
             "stroke_color": self._stroke_color.name(QColor.NameFormat.HexArgb),
             "stroke_width": self._stroke_width,
             "fill_color": self._fill_color.name(QColor.NameFormat.HexArgb),
+            "flip_horizontal": self._flip_horizontal,
+            "flip_vertical": self._flip_vertical,
         }
 
     def _apply_base_data(self, data: dict[str, Any]) -> None:
@@ -90,6 +92,8 @@ class VectorItem(SnapGraphicsItem):
         self._stroke_color = QColor(data.get("stroke_color", DEFAULT_STROKE_COLOR))
         self._stroke_width = data.get("stroke_width", DEFAULT_STROKE_WIDTH)
         self._fill_color = QColor(data.get("fill_color", DEFAULT_FILL_COLOR))
+        self._flip_horizontal = data.get("flip_horizontal", False)
+        self._flip_vertical = data.get("flip_vertical", False)
 
     def scale_geometry(self, sx: float, sy: float) -> None:
         self.prepareGeometryChange()

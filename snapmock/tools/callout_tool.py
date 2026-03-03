@@ -56,6 +56,7 @@ class CalloutTool(BaseTool):
             "border_radius": 12.0,
             "padding": 10.0,
             "vertical_align": VerticalAlign.TOP,
+            "horizontal_align": Qt.AlignmentFlag.AlignLeft,
         }
 
     @property
@@ -208,9 +209,7 @@ class CalloutTool(BaseTool):
             bubble_cy = scene_pos.y()
             bw = max(_DEFAULT_BUBBLE_W, dx * 0.8)
             bh = max(60.0, dy * 0.5)
-            bubble_rect = QRectF(
-                bubble_cx - bw / 2, bubble_cy - bh / 2, bw, bh
-            )
+            bubble_rect = QRectF(bubble_cx - bw / 2, bubble_cy - bh / 2, bw, bh)
             item = CalloutItem(text="", rect=bubble_rect, tail_tip=tail_tip)
         else:
             # Click-to-create: default bubble 80px above-right of click
@@ -276,6 +275,9 @@ class CalloutTool(BaseTool):
         item.border_radius = d.get("border_radius", 12.0)
         item.padding = d.get("padding", 10.0)
         item.vertical_align = d.get("vertical_align", VerticalAlign.TOP)
+        ha = d.get("horizontal_align", Qt.AlignmentFlag.AlignLeft)
+        if isinstance(ha, Qt.AlignmentFlag):
+            item.set_alignment(ha)
 
     def _enter_text_editing(self, item: CalloutItem) -> None:
         """Switch to text tool and start editing the newly created callout."""

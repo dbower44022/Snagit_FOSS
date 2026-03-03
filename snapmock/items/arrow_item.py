@@ -82,10 +82,12 @@ class ArrowItem(VectorItem):
     def paint(self, painter: QPainter | None, option: Any, widget: Any = None) -> None:
         if painter is None:
             return
+        self._apply_flip(painter)
         painter.setPen(self.pen())
         painter.drawLine(self._line)
         painter.setBrush(QBrush(self._stroke_color))
         painter.drawPolygon(self._arrowhead_polygon())
+        self._end_flip(painter)
 
     def serialize(self) -> dict[str, Any]:
         data = self._base_data()

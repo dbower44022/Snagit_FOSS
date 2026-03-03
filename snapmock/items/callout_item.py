@@ -497,6 +497,7 @@ class CalloutItem(RichTextMixin, SnapGraphicsItem):
     def paint(self, painter: QPainter | None, option: Any, widget: Any = None) -> None:
         if painter is None:
             return
+        self._apply_flip(painter)
 
         pen = QPen(self._border_color, self._border_width)
         pen.setStyle(_BORDER_STYLE_MAP.get(self._border_style, Qt.PenStyle.SolidLine))
@@ -546,6 +547,7 @@ class CalloutItem(RichTextMixin, SnapGraphicsItem):
 
         text_rect = QRectF(er.x() + p, y_offset, content_w, doc_h)
         self.draw_document(painter, text_rect)
+        self._end_flip(painter)
 
     def serialize(self) -> dict[str, Any]:
         font = self._document.defaultFont()
@@ -575,6 +577,8 @@ class CalloutItem(RichTextMixin, SnapGraphicsItem):
             "font_family": font.family(),
             "font_size": font.pointSize(),
             "text_color": self._get_text_color().name(QColor.NameFormat.HexArgb),
+            "flip_horizontal": self._flip_horizontal,
+            "flip_vertical": self._flip_vertical,
         }
         if self._tail_control_point is not None:
             data["tail_control_point"] = [
@@ -643,6 +647,8 @@ class CalloutItem(RichTextMixin, SnapGraphicsItem):
         tcp = data.get("tail_control_point")
         if tcp is not None:
             item._tail_control_point = QPointF(tcp[0], tcp[1])
+        item._flip_horizontal = data.get("flip_horizontal", False)
+        item._flip_vertical = data.get("flip_vertical", False)
 
         # Rich text
         if "html" in data:

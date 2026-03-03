@@ -52,9 +52,11 @@ class EllipseItem(VectorItem):
     def paint(self, painter: QPainter | None, option: Any, widget: Any = None) -> None:
         if painter is None:
             return
+        self._apply_flip(painter)
         painter.setPen(self.pen())
         painter.setBrush(QBrush(self._fill_color))
         painter.drawEllipse(self._rect)
+        self._end_flip(painter)
 
     def serialize(self) -> dict[str, Any]:
         data = self._base_data()

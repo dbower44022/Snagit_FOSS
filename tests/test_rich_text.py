@@ -1047,9 +1047,7 @@ def test_move_tail_command_redo() -> None:
     new_tip = QPointF(200, 200)
     item.tail_tip = old_tip
 
-    cmd = MoveTailCommand(
-        item, old_tip, new_tip, 0.5, 0.7, "auto", "bottom"
-    )
+    cmd = MoveTailCommand(item, old_tip, new_tip, 0.5, 0.7, "auto", "bottom")
     cmd.redo()
     assert item.tail_tip.x() == 200.0
     assert item.tail_base_position == 0.7
@@ -1064,9 +1062,7 @@ def test_move_tail_command_undo() -> None:
     new_tip = QPointF(200, 200)
     item.tail_tip = old_tip
 
-    cmd = MoveTailCommand(
-        item, old_tip, new_tip, 0.5, 0.7, "auto", "bottom"
-    )
+    cmd = MoveTailCommand(item, old_tip, new_tip, 0.5, 0.7, "auto", "bottom")
     cmd.redo()
     cmd.undo()
     assert item.tail_tip.x() == 100.0
@@ -1076,12 +1072,8 @@ def test_move_tail_command_undo() -> None:
 
 def test_move_tail_command_merge() -> None:
     item = CalloutItem(text="Test")
-    cmd1 = MoveTailCommand(
-        item, QPointF(100, 160), QPointF(110, 165), 0.5, 0.5, "auto", "auto"
-    )
-    cmd2 = MoveTailCommand(
-        item, QPointF(110, 165), QPointF(120, 170), 0.5, 0.6, "auto", "auto"
-    )
+    cmd1 = MoveTailCommand(item, QPointF(100, 160), QPointF(110, 165), 0.5, 0.5, "auto", "auto")
+    cmd2 = MoveTailCommand(item, QPointF(110, 165), QPointF(120, 170), 0.5, 0.6, "auto", "auto")
     assert cmd1.merge_with(cmd2)
     # After merge, undo goes back to original
     cmd1.undo()
@@ -1181,12 +1173,8 @@ def test_text_border_style_backward_compat() -> None:
 def test_move_tail_command_no_merge_different_items() -> None:
     item1 = CalloutItem(text="A")
     item2 = CalloutItem(text="B")
-    cmd1 = MoveTailCommand(
-        item1, QPointF(0, 0), QPointF(1, 1), 0.5, 0.5, "auto", "auto"
-    )
-    cmd2 = MoveTailCommand(
-        item2, QPointF(0, 0), QPointF(1, 1), 0.5, 0.5, "auto", "auto"
-    )
+    cmd1 = MoveTailCommand(item1, QPointF(0, 0), QPointF(1, 1), 0.5, 0.5, "auto", "auto")
+    cmd2 = MoveTailCommand(item2, QPointF(0, 0), QPointF(1, 1), 0.5, 0.5, "auto", "auto")
     assert not cmd1.merge_with(cmd2)
 
 

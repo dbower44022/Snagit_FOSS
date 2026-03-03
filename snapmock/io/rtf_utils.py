@@ -73,10 +73,14 @@ def text_to_rtf_base64(
     rtf = (
         "{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1033"
         "{\\fonttbl{\\f0\\fswiss\\fprq2\\fcharset0 " + font_family + ";}}\n"
-        "{\\colortbl ;\\red" + str(color.red()) + "\\green" + str(color.green())
-        + "\\blue" + str(color.blue()) + ";}\n"
-        "\\viewkind4\\uc1\\pard\\tx720\\cf1\\f0\\fs" + str(fs) + " "
-        + escaped + "\\par\n}\n"
+        "{\\colortbl ;\\red"
+        + str(color.red())
+        + "\\green"
+        + str(color.green())
+        + "\\blue"
+        + str(color.blue())
+        + ";}\n"
+        "\\viewkind4\\uc1\\pard\\tx720\\cf1\\f0\\fs" + str(fs) + " " + escaped + "\\par\n}\n"
     )
     return base64.b64encode(rtf.encode("ascii", errors="replace")).decode("ascii")
 

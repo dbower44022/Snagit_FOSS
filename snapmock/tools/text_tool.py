@@ -251,6 +251,7 @@ class TextTool(BaseTool):
             "border_radius": DEFAULT_TEXT_BORDER_RADIUS,
             "padding": DEFAULT_TEXT_PADDING,
             "vertical_align": VerticalAlign.TOP,
+            "horizontal_align": Qt.AlignmentFlag.AlignLeft,
             "auto_size": True,
         }
 
@@ -493,6 +494,9 @@ class TextTool(BaseTool):
         item.border_radius = d.get("border_radius", DEFAULT_TEXT_BORDER_RADIUS)
         item.padding = d.get("padding", DEFAULT_TEXT_PADDING)
         item.vertical_align = d.get("vertical_align", VerticalAlign.TOP)
+        ha = d.get("horizontal_align", Qt.AlignmentFlag.AlignLeft)
+        if isinstance(ha, Qt.AlignmentFlag):
+            item.set_alignment(ha)
         item.auto_size = d.get("auto_size", True)
 
     def mouse_release(self, event: QMouseEvent) -> bool:

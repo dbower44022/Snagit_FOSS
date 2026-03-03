@@ -627,9 +627,7 @@ class SnapView(QGraphicsView):
         focus_widget = QApplication.focusWidget()
         vp = self.viewport()
         focus_to_child = (
-            focus_widget is not None
-            and vp is not None
-            and vp.isAncestorOf(focus_widget)
+            focus_widget is not None and vp is not None and vp.isAncestorOf(focus_widget)
         )
 
         if self._panning:

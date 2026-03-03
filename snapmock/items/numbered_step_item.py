@@ -49,6 +49,7 @@ class NumberedStepItem(SnapGraphicsItem):
     def paint(self, painter: QPainter | None, option: Any, widget: Any = None) -> None:
         if painter is None:
             return
+        self._apply_flip(painter)
         r = self._radius
         painter.setBrush(QBrush(self._bg_color))
         painter.setPen(Qt.PenStyle.NoPen)
@@ -60,6 +61,7 @@ class NumberedStepItem(SnapGraphicsItem):
             Qt.AlignmentFlag.AlignCenter,
             str(self._number),
         )
+        self._end_flip(painter)
 
     def serialize(self) -> dict[str, Any]:
         return {
@@ -69,6 +71,8 @@ class NumberedStepItem(SnapGraphicsItem):
             "pos": [self.pos().x(), self.pos().y()],
             "number": self._number,
             "bg_color": self._bg_color.name(QColor.NameFormat.HexArgb),
+            "flip_horizontal": self._flip_horizontal,
+            "flip_vertical": self._flip_vertical,
         }
 
     @classmethod
@@ -80,4 +84,6 @@ class NumberedStepItem(SnapGraphicsItem):
         item.layer_id = data.get("layer_id", "")
         if "bg_color" in data:
             item._bg_color = QColor(data["bg_color"])
+        item._flip_horizontal = data.get("flip_horizontal", False)
+        item._flip_vertical = data.get("flip_vertical", False)
         return item

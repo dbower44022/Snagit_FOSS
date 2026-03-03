@@ -194,6 +194,19 @@ def build_item_context_menu(parent: MainWindow) -> QMenu:
 
     menu.addSeparator()
 
+    # --- Flip actions ---
+    flip_h_action = menu.addAction("Flip Horizontal")
+    if flip_h_action is not None:
+        flip_h_action.setEnabled(has_sel)
+        flip_h_action.triggered.connect(parent._arrange_flip_horizontal)  # noqa: SLF001
+
+    flip_v_action = menu.addAction("Flip Vertical")
+    if flip_v_action is not None:
+        flip_v_action.setEnabled(has_sel)
+        flip_v_action.triggered.connect(parent._arrange_flip_vertical)  # noqa: SLF001
+
+    menu.addSeparator()
+
     # --- Properties ---
     props_action = menu.addAction("Properties...")
     if props_action is not None:

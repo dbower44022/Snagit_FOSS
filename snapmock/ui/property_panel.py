@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QFont, QTextCharFormat
+from PyQt6.QtGui import QColor, QFont, QTextCharFormat, QTextCursor
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
     QFontComboBox,
     QHBoxLayout,
     QLabel,
+    QPushButton,
     QScrollArea,
     QSlider,
     QSpinBox,
@@ -58,6 +59,8 @@ class PropertyPanel(QDockWidget):
         self._updating = False
         self._tool_manager: ToolManager | None = None
         self._active_tool_id: str = ""
+        self._editor_connected: bool = False
+        self._connected_editor: QWidget | None = None
 
         self.setAllowedAreas(
             Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea
@@ -84,6 +87,18 @@ class PropertyPanel(QDockWidget):
         self._transform_section.add_row("W:", self._w_spin)
         self._transform_section.add_row("H:", self._h_spin)
         self._transform_section.add_row("Rotation:", self._rot_spin)
+
+        flip_container = QWidget()
+        flip_layout = QHBoxLayout(flip_container)
+        flip_layout.setContentsMargins(0, 0, 0, 0)
+        self._flip_h_btn = QPushButton("Flip H")
+        self._flip_h_btn.setCheckable(True)
+        self._flip_v_btn = QPushButton("Flip V")
+        self._flip_v_btn.setCheckable(True)
+        flip_layout.addWidget(self._flip_h_btn)
+        flip_layout.addWidget(self._flip_v_btn)
+        self._transform_section.add_row("Flip:", flip_container)
+
         self._main_layout.addWidget(self._transform_section)
 
         # --- Appearance section ---
@@ -128,8 +143,9 @@ class PropertyPanel(QDockWidget):
         self._text_section.add_row("Font:", self._font_combo)
 
         self._font_size_spin = QSpinBox()
-        self._font_size_spin.setRange(1, 200)
+        self._font_size_spin.setRange(0, 200)
         self._font_size_spin.setSuffix(" pt")
+        self._font_size_spin.setSpecialValueText(" ")
         self._font_size_spin.setKeyboardTracking(False)
         self._text_section.add_row("Size:", self._font_size_spin)
 
@@ -146,6 +162,13 @@ class PropertyPanel(QDockWidget):
 
         self._text_color_picker = ColorPicker(QColor("black"))
         self._text_section.add_row("Color:", self._text_color_picker)
+
+        self._text_align_combo = QComboBox()
+        self._text_align_combo.addItem("Left", Qt.AlignmentFlag.AlignLeft)
+        self._text_align_combo.addItem("Center", Qt.AlignmentFlag.AlignHCenter)
+        self._text_align_combo.addItem("Right", Qt.AlignmentFlag.AlignRight)
+        self._text_align_combo.addItem("Justify", Qt.AlignmentFlag.AlignJustify)
+        self._text_section.add_row("Align:", self._text_align_combo)
 
         self._main_layout.addWidget(self._text_section)
 
@@ -220,6 +243,8 @@ class PropertyPanel(QDockWidget):
         self._w_spin.valueChanged.connect(self._on_w_changed)
         self._h_spin.valueChanged.connect(self._on_h_changed)
         self._rot_spin.valueChanged.connect(self._on_rotation_changed)
+        self._flip_h_btn.toggled.connect(self._on_flip_h_changed)
+        self._flip_v_btn.toggled.connect(self._on_flip_v_changed)
         self._stroke_color_picker.color_changed.connect(self._on_stroke_color_changed)
         self._stroke_w_slider.valueChanged.connect(self._on_stroke_w_slider_changed)
         self._stroke_w_spin.valueChanged.connect(self._on_stroke_w_spin_changed)
@@ -235,6 +260,7 @@ class PropertyPanel(QDockWidget):
         self._italic_check.toggled.connect(self._on_italic_changed)
         self._underline_check.toggled.connect(self._on_underline_changed)
         self._text_color_picker.color_changed.connect(self._on_text_color_changed)
+        self._text_align_combo.currentIndexChanged.connect(self._on_text_align_changed)
         self._text_bg_color_picker.color_changed.connect(self._on_text_bg_color_changed)
         self._text_border_color_picker.color_changed.connect(self._on_text_border_color_changed)
         self._text_border_w_spin.valueChanged.connect(self._on_text_border_w_changed)
@@ -321,6 +347,8 @@ class PropertyPanel(QDockWidget):
                 self._w_spin.setValue(br.width())
                 self._h_spin.setValue(br.height())
                 self._rot_spin.setValue(item.rotation_deg)
+                self._flip_h_btn.setChecked(item.flip_horizontal)
+                self._flip_v_btn.setChecked(item.flip_vertical)
 
                 # Appearance (VectorItem only)
                 if is_vector:
@@ -335,13 +363,25 @@ class PropertyPanel(QDockWidget):
                 # Text (TextItem / CalloutItem)
                 if has_text:
                     assert isinstance(item, (TextItem, CalloutItem))
-                    f = item.font
-                    self._font_combo.setCurrentFont(f)
-                    self._font_size_spin.setValue(f.pointSize())
-                    self._bold_check.setChecked(f.bold())
-                    self._italic_check.setChecked(f.italic())
-                    self._underline_check.setChecked(f.underline())
-                    self._text_color_picker.color = item.text_color
+                    if item.is_editing:
+                        self._ensure_editor_connected()
+                        self._refresh_text_from_cursor()
+                    else:
+                        self._disconnect_editor()
+                        self._bold_check.setTristate(False)
+                        self._italic_check.setTristate(False)
+                        self._underline_check.setTristate(False)
+                        f = item.font
+                        self._font_combo.setCurrentFont(f)
+                        self._font_size_spin.setValue(f.pointSize())
+                        self._bold_check.setChecked(f.bold())
+                        self._italic_check.setChecked(f.italic())
+                        self._underline_check.setChecked(f.underline())
+                        self._text_color_picker.color = item.text_color
+                        # Horizontal alignment from first block
+                        block_fmt = item.get_block_format()
+                        align = block_fmt.alignment()
+                        self._set_align_combo(align)
 
                 # Text Box (TextItem and CalloutItem)
                 if has_text:
@@ -407,6 +447,11 @@ class PropertyPanel(QDockWidget):
         self._underline_check.setChecked(bool(d.get("underline", False)))
         tc = d.get("text_color")
         self._text_color_picker.color = QColor(tc) if isinstance(tc, QColor) else QColor("black")
+
+        # Horizontal alignment
+        ha = d.get("horizontal_align", Qt.AlignmentFlag.AlignLeft)
+        if isinstance(ha, Qt.AlignmentFlag):
+            self._set_align_combo(ha)
 
         # Text Box section
         bg = d.get("bg_color")
@@ -523,6 +568,24 @@ class PropertyPanel(QDockWidget):
         if item is None:
             return
         cmd = ModifyPropertyCommand(item, "rotation_deg", item.rotation_deg, value)
+        self._scene.command_stack.push(cmd)
+
+    def _on_flip_h_changed(self, checked: bool) -> None:
+        if self._updating:
+            return
+        item = self._first_selected_item()
+        if item is None:
+            return
+        cmd = ModifyPropertyCommand(item, "flip_horizontal", item.flip_horizontal, checked)
+        self._scene.command_stack.push(cmd)
+
+    def _on_flip_v_changed(self, checked: bool) -> None:
+        if self._updating:
+            return
+        item = self._first_selected_item()
+        if item is None:
+            return
+        cmd = ModifyPropertyCommand(item, "flip_vertical", item.flip_vertical, checked)
         self._scene.command_stack.push(cmd)
 
     def _on_stroke_color_changed(self, color: QColor) -> None:
@@ -642,6 +705,191 @@ class PropertyPanel(QDockWidget):
         cmd = ModifyPropertyCommand(item, "locked", item.locked, checked)
         self._scene.command_stack.push(cmd)
 
+    def _set_align_combo(self, alignment: Qt.AlignmentFlag) -> None:
+        """Set the text align combo to match the given Qt alignment flag."""
+        # Qt may combine alignment flags; mask to horizontal component
+        h_align = alignment & Qt.AlignmentFlag.AlignHorizontal_Mask
+        for i in range(self._text_align_combo.count()):
+            if self._text_align_combo.itemData(i) == h_align:
+                self._text_align_combo.setCurrentIndex(i)
+                return
+        # Default to Left if not found
+        self._text_align_combo.setCurrentIndex(0)
+
+    def _ensure_editor_connected(self) -> None:
+        """Connect to the active editor's cursor/format signals for live updates."""
+        editor = self._get_active_editor()
+        if editor is None:
+            return
+        if self._editor_connected and self._connected_editor is editor:
+            return
+        self._disconnect_editor()
+        self._connected_editor = editor
+        self._editor_connected = True
+        if hasattr(editor, "cursorPositionChanged"):
+            editor.cursorPositionChanged.connect(self._on_editor_cursor_changed)
+        if hasattr(editor, "selectionChanged"):
+            editor.selectionChanged.connect(self._on_editor_cursor_changed)
+        if hasattr(editor, "currentCharFormatChanged"):
+            editor.currentCharFormatChanged.connect(self._on_editor_format_changed)
+
+    def _disconnect_editor(self) -> None:
+        """Safely disconnect from the previously connected editor."""
+        if not self._editor_connected or self._connected_editor is None:
+            self._editor_connected = False
+            self._connected_editor = None
+            return
+        editor = self._connected_editor
+        try:
+            if hasattr(editor, "cursorPositionChanged"):
+                editor.cursorPositionChanged.disconnect(self._on_editor_cursor_changed)
+            if hasattr(editor, "selectionChanged"):
+                editor.selectionChanged.disconnect(self._on_editor_cursor_changed)
+            if hasattr(editor, "currentCharFormatChanged"):
+                editor.currentCharFormatChanged.disconnect(self._on_editor_format_changed)
+        except (TypeError, RuntimeError):
+            pass
+        self._editor_connected = False
+        self._connected_editor = None
+
+    def _on_editor_cursor_changed(self) -> None:
+        """Slot for cursor position / selection changes in the editor."""
+        if self._updating:
+            return
+        self._updating = True
+        try:
+            self._refresh_text_from_cursor()
+        finally:
+            self._updating = False
+
+    def _on_editor_format_changed(self, _fmt: QTextCharFormat) -> None:
+        """Slot for currentCharFormatChanged (e.g. Ctrl+B in editor)."""
+        if self._updating:
+            return
+        self._updating = True
+        try:
+            self._refresh_text_from_cursor()
+        finally:
+            self._updating = False
+
+    def _refresh_text_from_cursor(self) -> None:
+        """Refresh text widgets from the editor's current cursor/selection format."""
+        editor = self._get_active_editor()
+        if editor is None or not hasattr(editor, "textCursor"):
+            return
+        cursor: QTextCursor = editor.textCursor()
+
+        if not cursor.hasSelection():
+            # No selection — show definite values from cursor char format
+            fmt = cursor.charFormat()
+            font = fmt.font()
+            self._font_combo.setCurrentFont(font)
+            size = font.pointSize()
+            self._font_size_spin.setValue(max(1, size))
+            self._bold_check.setTristate(False)
+            self._italic_check.setTristate(False)
+            self._underline_check.setTristate(False)
+            self._bold_check.setChecked(font.bold())
+            self._italic_check.setChecked(font.italic())
+            self._underline_check.setChecked(font.underline())
+            fg = fmt.foreground()
+            if fg.style() != Qt.BrushStyle.NoBrush:
+                self._text_color_picker.color = QColor(fg.color())
+            self._set_align_combo(cursor.blockFormat().alignment())
+            return
+
+        # Selection — analyze fragments for mixed state
+        families: set[str] = set()
+        sizes: set[int] = set()
+        bolds: set[bool] = set()
+        italics: set[bool] = set()
+        underlines: set[bool] = set()
+        colors: set[str] = set()
+        alignments: set[int] = set()
+
+        sel_start = cursor.selectionStart()
+        sel_end = cursor.selectionEnd()
+        doc = cursor.document()
+        if doc is None:
+            return
+
+        block = doc.begin()
+        while block.isValid():
+            block_start = block.position()
+            block_end = block_start + block.length()
+            block_overlaps = block_end > sel_start and block_start < sel_end
+            if block_overlaps:
+                align = block.blockFormat().alignment()
+                alignments.add(int(align & Qt.AlignmentFlag.AlignHorizontal_Mask))
+            it = block.begin()
+            while not it.atEnd():
+                fragment = it.fragment()
+                if fragment.isValid():
+                    frag_start = fragment.position()
+                    frag_end = frag_start + fragment.length()
+                    # Check overlap with selection
+                    if frag_end > sel_start and frag_start < sel_end:
+                        fmt = fragment.charFormat()
+                        font = fmt.font()
+                        families.add(font.family())
+                        sizes.add(font.pointSize())
+                        bolds.add(font.bold())
+                        italics.add(font.italic())
+                        underlines.add(font.underline())
+                        fg = fmt.foreground()
+                        if fg.style() != Qt.BrushStyle.NoBrush:
+                            colors.add(fg.color().name(QColor.NameFormat.HexArgb))
+                it += 1
+            block = block.next()
+
+        # Font family
+        if len(families) == 1:
+            self._font_combo.setCurrentFont(QFont(next(iter(families))))
+        elif len(families) > 1:
+            le = self._font_combo.lineEdit()
+            if le is not None:
+                le.setText("")
+
+        # Font size
+        if len(sizes) == 1:
+            self._font_size_spin.setValue(max(1, next(iter(sizes))))
+        elif len(sizes) > 1:
+            self._font_size_spin.setValue(0)
+
+        # Bold
+        if len(bolds) == 1:
+            self._bold_check.setTristate(False)
+            self._bold_check.setChecked(next(iter(bolds)))
+        elif len(bolds) > 1:
+            self._bold_check.setTristate(True)
+            self._bold_check.setCheckState(Qt.CheckState.PartiallyChecked)
+
+        # Italic
+        if len(italics) == 1:
+            self._italic_check.setTristate(False)
+            self._italic_check.setChecked(next(iter(italics)))
+        elif len(italics) > 1:
+            self._italic_check.setTristate(True)
+            self._italic_check.setCheckState(Qt.CheckState.PartiallyChecked)
+
+        # Underline
+        if len(underlines) == 1:
+            self._underline_check.setTristate(False)
+            self._underline_check.setChecked(next(iter(underlines)))
+        elif len(underlines) > 1:
+            self._underline_check.setTristate(True)
+            self._underline_check.setCheckState(Qt.CheckState.PartiallyChecked)
+
+        # Text color — show first found, leave unchanged if mixed
+        if len(colors) == 1:
+            self._text_color_picker.color = QColor(next(iter(colors)))
+
+        # Horizontal alignment
+        if len(alignments) == 1:
+            self._set_align_combo(Qt.AlignmentFlag(next(iter(alignments))))
+        elif len(alignments) > 1:
+            self._text_align_combo.setCurrentIndex(-1)
+
     def _text_item(self) -> TextItem | CalloutItem | None:
         item = self._first_selected_item()
         if isinstance(item, (TextItem, CalloutItem)):
@@ -688,7 +936,7 @@ class PropertyPanel(QDockWidget):
         self._push_font_change(item, new_font)
 
     def _on_font_size_changed(self, value: int) -> None:
-        if self._updating:
+        if self._updating or value == 0:
             return
         if self._in_tool_defaults_mode():
             d = self._active_tool_defaults()
@@ -713,6 +961,7 @@ class PropertyPanel(QDockWidget):
     def _on_bold_changed(self, checked: bool) -> None:
         if self._updating:
             return
+        self._bold_check.setTristate(False)
         if self._in_tool_defaults_mode():
             d = self._active_tool_defaults()
             if d is not None:
@@ -736,6 +985,7 @@ class PropertyPanel(QDockWidget):
     def _on_italic_changed(self, checked: bool) -> None:
         if self._updating:
             return
+        self._italic_check.setTristate(False)
         if self._in_tool_defaults_mode():
             d = self._active_tool_defaults()
             if d is not None:
@@ -759,6 +1009,7 @@ class PropertyPanel(QDockWidget):
     def _on_underline_changed(self, checked: bool) -> None:
         if self._updating:
             return
+        self._underline_check.setTristate(False)
         if self._in_tool_defaults_mode():
             d = self._active_tool_defaults()
             if d is not None:
@@ -800,6 +1051,29 @@ class PropertyPanel(QDockWidget):
                 return
         cmd = ModifyPropertyCommand(item, "text_color", item.text_color, color)
         self._scene.command_stack.push(cmd)
+
+    def _on_text_align_changed(self, index: int) -> None:
+        if self._updating or index < 0:
+            return
+        alignment = self._text_align_combo.itemData(index)
+        if not isinstance(alignment, Qt.AlignmentFlag):
+            return
+        if self._in_tool_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                d["horizontal_align"] = alignment
+            return
+        item = self._text_item()
+        if item is None:
+            return
+        # Edit-mode: apply to cursor's paragraph
+        if item.is_editing:
+            editor = self._get_active_editor()
+            if editor is not None and hasattr(editor, "setAlignment"):
+                editor.setAlignment(alignment)
+                return
+        # Non-editing: apply to entire document
+        item.set_alignment(alignment)
 
     def _on_text_bg_color_changed(self, color: QColor) -> None:
         if self._updating:

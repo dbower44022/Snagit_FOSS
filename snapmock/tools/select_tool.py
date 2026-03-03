@@ -533,9 +533,7 @@ class SelectTool(BaseTool):
                     f"{new_rect_w:.0f} × {new_rect_h:.0f}",
                 )
 
-    def _apply_edge_resize(
-        self, cursor: QPointF, skew: bool, shift: bool = False
-    ) -> None:
+    def _apply_edge_resize(self, cursor: QPointF, skew: bool, shift: bool = False) -> None:
         """Resize from an edge midpoint handle. Ctrl = shear."""
         anchor = self._handle_anchor
         orig_rect = self._handle_origin_rect
@@ -672,11 +670,7 @@ class SelectTool(BaseTool):
                     )
                 else:
                     # Normal resize: commit the geometry (width/rect) change
-                    sub.extend(
-                        self._commit_text_reflow(
-                            item, orig, orig_pos, new_pos, orig_xform
-                        )
-                    )
+                    sub.extend(self._commit_text_reflow(item, orig, orig_pos, new_pos, orig_xform))
 
                 if sub:
                     commands.extend(sub)
@@ -721,9 +715,7 @@ class SelectTool(BaseTool):
             item.prepareGeometryChange()
             item._width = old_width  # noqa: SLF001
             if new_pos != orig_pos:
-                sub.append(
-                    TransformItemCommand(item, orig_pos, new_pos, orig_xform, orig_xform)
-                )
+                sub.append(TransformItemCommand(item, orig_pos, new_pos, orig_xform, orig_xform))
             if new_width != old_width:
                 sub.append(ModifyPropertyCommand(item, "text_width", old_width, new_width))
         elif isinstance(item, CalloutItem):
@@ -735,20 +727,14 @@ class SelectTool(BaseTool):
             item.box_rect = QRectF(old_rect)
             item.tail_tip = QPointF(old_tail)
             if new_pos != orig_pos:
-                sub.append(
-                    TransformItemCommand(item, orig_pos, new_pos, orig_xform, orig_xform)
-                )
+                sub.append(TransformItemCommand(item, orig_pos, new_pos, orig_xform, orig_xform))
             if new_rect != old_rect:
                 sub.append(
-                    ModifyPropertyCommand(
-                        item, "box_rect", QRectF(old_rect), QRectF(new_rect)
-                    )
+                    ModifyPropertyCommand(item, "box_rect", QRectF(old_rect), QRectF(new_rect))
                 )
             if new_tail != old_tail:
                 sub.append(
-                    ModifyPropertyCommand(
-                        item, "tail_tip", QPointF(old_tail), QPointF(new_tail)
-                    )
+                    ModifyPropertyCommand(item, "tail_tip", QPointF(old_tail), QPointF(new_tail))
                 )
         return sub
 
@@ -795,9 +781,7 @@ class SelectTool(BaseTool):
             doc_font.setPointSize(old_font_size)
             item.text_document.setDefaultFont(doc_font)
             if new_pos != orig_pos:
-                sub.append(
-                    TransformItemCommand(item, orig_pos, new_pos, orig_xform, orig_xform)
-                )
+                sub.append(TransformItemCommand(item, orig_pos, new_pos, orig_xform, orig_xform))
             if new_width != old_width:
                 sub.append(ModifyPropertyCommand(item, "text_width", old_width, new_width))
             if new_font_size != old_font_size:
@@ -822,20 +806,14 @@ class SelectTool(BaseTool):
             doc_font.setPointSize(old_font_size)
             item.text_document.setDefaultFont(doc_font)
             if new_pos != orig_pos:
-                sub.append(
-                    TransformItemCommand(item, orig_pos, new_pos, orig_xform, orig_xform)
-                )
+                sub.append(TransformItemCommand(item, orig_pos, new_pos, orig_xform, orig_xform))
             if new_rect != old_rect:
                 sub.append(
-                    ModifyPropertyCommand(
-                        item, "box_rect", QRectF(old_rect), QRectF(new_rect)
-                    )
+                    ModifyPropertyCommand(item, "box_rect", QRectF(old_rect), QRectF(new_rect))
                 )
             if new_tail != old_tail:
                 sub.append(
-                    ModifyPropertyCommand(
-                        item, "tail_tip", QPointF(old_tail), QPointF(new_tail)
-                    )
+                    ModifyPropertyCommand(item, "tail_tip", QPointF(old_tail), QPointF(new_tail))
                 )
             if new_font_size != old_font_size:
                 old_font = QFont(item.text_document.defaultFont())

@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-from PyQt6.QtCore import QLineF, QPointF, QRectF
+from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
 from PyQt6.QtGui import QColor, QFont, QImage, QPixmap
 
 from snapmock.config.constants import VerticalAlign
@@ -103,9 +103,7 @@ def load_snagx(path: Path) -> SnapScene:
 # ---- dispatch ----
 
 
-def _convert_object(
-    obj: dict[str, Any], zf: zipfile.ZipFile
-) -> SnapGraphicsItem | None:
+def _convert_object(obj: dict[str, Any], zf: zipfile.ZipFile) -> SnapGraphicsItem | None:
     """Dispatch a Snagit CaptureObject to the appropriate converter."""
     tool_mode = obj.get("ToolMode", "")
     item: SnapGraphicsItem | None = None
@@ -257,6 +255,14 @@ def _convert_callout(obj: dict[str, Any]) -> CalloutItem:
     item._vertical_align = valign_map.get(
         obj.get("ToolVerticalAlign", "Center"), VerticalAlign.CENTER
     )
+    halign_map = {
+        "Left": Qt.AlignmentFlag.AlignLeft,
+        "Center": Qt.AlignmentFlag.AlignCenter,
+        "Right": Qt.AlignmentFlag.AlignRight,
+    }
+    ha = halign_map.get(obj.get("ToolHorizontalAlign", "Center"))
+    if ha is not None:
+        item.set_alignment(ha)
     return item
 
 
@@ -296,12 +302,19 @@ def _convert_text(obj: dict[str, Any]) -> TextItem:
     va_key = obj.get("ToolVerticalAlign", "Top")
     item._vertical_align = valign_map.get(va_key, VerticalAlign.TOP)
 
+    halign_map = {
+        "Left": Qt.AlignmentFlag.AlignLeft,
+        "Center": Qt.AlignmentFlag.AlignCenter,
+        "Right": Qt.AlignmentFlag.AlignRight,
+    }
+    ha = halign_map.get(obj.get("ToolHorizontalAlign", "Left"))
+    if ha is not None:
+        item.set_alignment(ha)
+
     return item
 
 
-def _convert_image(
-    obj: dict[str, Any], zf: zipfile.ZipFile
-) -> RasterRegionItem | None:
+def _convert_image(obj: dict[str, Any], zf: zipfile.ZipFile) -> RasterRegionItem | None:
     image_b64 = obj.get("Image", "")
     if not image_b64:
         return None
@@ -316,9 +329,7 @@ def _convert_image(
     points = obj.get("PointsArray", [])
     p1 = _parse_point(points[0]) if len(points) > 0 else (0.0, 0.0)
     p2 = (
-        _parse_point(points[1])
-        if len(points) > 1
-        else (p1[0] + img.width(), p1[1] + img.height())
+        _parse_point(points[1]) if len(points) > 1 else (p1[0] + img.width(), p1[1] + img.height())
     )
     x, y = min(p1[0], p2[0]), min(p1[1], p2[1])
     w = abs(p2[0] - p1[0])
@@ -335,9 +346,7 @@ def _convert_image(
     return item
 
 
-def _convert_stamp(
-    obj: dict[str, Any], zf: zipfile.ZipFile
-) -> RasterRegionItem | None:
+def _convert_stamp(obj: dict[str, Any], zf: zipfile.ZipFile) -> RasterRegionItem | None:
     """Convert a Stamp object.
 
     Stamps may contain PDF data.  We attempt to decode as a raster image
@@ -362,9 +371,7 @@ def _convert_stamp(
     points = obj.get("PointsArray", [])
     p1 = _parse_point(points[0]) if len(points) > 0 else (0.0, 0.0)
     p2 = (
-        _parse_point(points[1])
-        if len(points) > 1
-        else (p1[0] + img.width(), p1[1] + img.height())
+        _parse_point(points[1]) if len(points) > 1 else (p1[0] + img.width(), p1[1] + img.height())
     )
     x, y = min(p1[0], p2[0]), min(p1[1], p2[1])
     w = abs(p2[0] - p1[0])

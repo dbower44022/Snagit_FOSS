@@ -134,6 +134,8 @@ class MainWindow(QMainWindow):
         self._align_menu: QMenu | None = None
         self._distribute_menu: QMenu | None = None
         self._align_canvas_action: QAction | None = None
+        self._flip_h_action: QAction | None = None
+        self._flip_v_action: QAction | None = None
         # Layer action references (populated in _setup_layer_menu)
         self._layer_move_up_action: QAction | None = None
         self._layer_move_down_action: QAction | None = None
@@ -572,6 +574,16 @@ class MainWindow(QMainWindow):
 
         arrange_menu.addSeparator()
 
+        self._flip_h_action = QAction("Flip &Horizontal", self)
+        self._flip_h_action.triggered.connect(self._arrange_flip_horizontal)
+        arrange_menu.addAction(self._flip_h_action)
+
+        self._flip_v_action = QAction("Flip &Vertical", self)
+        self._flip_v_action.triggered.connect(self._arrange_flip_vertical)
+        arrange_menu.addAction(self._flip_v_action)
+
+        arrange_menu.addSeparator()
+
         # Align submenu
         self._align_menu = arrange_menu.addMenu("Ali&gn")
         if self._align_menu is not None:
@@ -762,6 +774,8 @@ class MainWindow(QMainWindow):
             self._send_backward_action,
             self._send_to_back_action,
             self._align_canvas_action,
+            self._flip_h_action,
+            self._flip_v_action,
         ):
             if action is not None:
                 action.setEnabled(has_selection)
@@ -927,8 +941,7 @@ class MainWindow(QMainWindow):
             self,
             "Save Project",
             "",
-            f"SnapMock Projects (*{PROJECT_EXTENSION})"
-            f";;Snagit Files (*{SNAGIT_EXTENSION})",
+            f"SnapMock Projects (*{PROJECT_EXTENSION});;Snagit Files (*{SNAGIT_EXTENSION})",
         )
         if not path_str:
             return
@@ -1011,9 +1024,7 @@ class MainWindow(QMainWindow):
         if dlg.exec() == PreferencesDialog.DialogCode.Accepted:
             self._apply_preference_changes(dlg.get_changes())
 
-    def _apply_preference_changes(
-        self, changes: dict[str, tuple[object, object]]
-    ) -> None:
+    def _apply_preference_changes(self, changes: dict[str, tuple[object, object]]) -> None:
         """Write changed preferences to settings and sync live UI state."""
         if not changes:
             return
@@ -1585,6 +1596,38 @@ class MainWindow(QMainWindow):
 
         cmd = ChangeZOrderCommand(self._scene, items, "back")
         self._scene.command_stack.push(cmd)
+
+    def _arrange_flip_horizontal(self) -> None:
+        items = self._selected_snap_items()
+        if not items:
+            return
+        from snapmock.commands.macro_command import MacroCommand
+        from snapmock.commands.modify_property import ModifyPropertyCommand
+        from snapmock.core.command_stack import BaseCommand
+
+        cmds: list[BaseCommand] = [
+            ModifyPropertyCommand(
+                item, "flip_horizontal", item.flip_horizontal, not item.flip_horizontal
+            )
+            for item in items
+        ]
+        self._scene.command_stack.push(MacroCommand(cmds, "Flip Horizontal"))
+
+    def _arrange_flip_vertical(self) -> None:
+        items = self._selected_snap_items()
+        if not items:
+            return
+        from snapmock.commands.macro_command import MacroCommand
+        from snapmock.commands.modify_property import ModifyPropertyCommand
+        from snapmock.core.command_stack import BaseCommand
+
+        cmds: list[BaseCommand] = [
+            ModifyPropertyCommand(
+                item, "flip_vertical", item.flip_vertical, not item.flip_vertical
+            )
+            for item in items
+        ]
+        self._scene.command_stack.push(MacroCommand(cmds, "Flip Vertical"))
 
     def _arrange_align(self, alignment: str) -> None:
         items = self._selected_snap_items()

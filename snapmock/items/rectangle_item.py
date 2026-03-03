@@ -69,12 +69,14 @@ class RectangleItem(VectorItem):
     def paint(self, painter: QPainter | None, option: Any, widget: Any = None) -> None:
         if painter is None:
             return
+        self._apply_flip(painter)
         painter.setPen(self.pen())
         painter.setBrush(QBrush(self._fill_color))
         if self._corner_radius > 0:
             painter.drawRoundedRect(self._rect, self._corner_radius, self._corner_radius)
         else:
             painter.drawRect(self._rect)
+        self._end_flip(painter)
 
     # --- serialization ---
 

@@ -90,6 +90,7 @@ class BorderStyle(Enum):
     DASHDOT = "dashdot"
     DASHDOTDOT = "dashdotdot"
 
+
 # Zoom step ladder (percentage values)
 ZOOM_STEPS = [
     10,

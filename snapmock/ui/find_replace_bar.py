@@ -108,11 +108,7 @@ class FindReplaceBar(QWidget):
 
         layout.addStretch()
         self.setStyleSheet(
-            "FindReplaceBar {"
-            "  background: #f0f0f0;"
-            "  border: 1px solid #ccc;"
-            "  border-radius: 3px;"
-            "}"
+            "FindReplaceBar {  background: #f0f0f0;  border: 1px solid #ccc;  border-radius: 3px;}"
         )
 
     def attach(self, document: QTextDocument) -> None:
@@ -236,9 +232,7 @@ class FindReplaceBar(QWidget):
             else:
                 self._match_label.setText("")
         else:
-            self._match_label.setText(
-                f"{self._current_match + 1}/{len(self._matches)}"
-            )
+            self._match_label.setText(f"{self._current_match + 1}/{len(self._matches)}")
 
     def _update_highlights(self) -> None:
         """Apply yellow highlights to all matches, orange to current match."""
@@ -286,11 +280,7 @@ class FindReplaceBar(QWidget):
 
     def _replace_current(self) -> None:
         """Replace the current match with the replace text."""
-        if (
-            self._document is None
-            or self._current_match < 0
-            or not self._matches
-        ):
+        if self._document is None or self._current_match < 0 or not self._matches:
             return
 
         start, length = self._matches[self._current_match]

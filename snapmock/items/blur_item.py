@@ -57,12 +57,14 @@ class BlurItem(SnapGraphicsItem):
     def paint(self, painter: QPainter | None, option: Any, widget: Any = None) -> None:
         if painter is None:
             return
+        self._apply_flip(painter)
         # Draw a semi-transparent overlay to indicate the blur region
         from PyQt6.QtGui import QBrush, QColor
 
         painter.setBrush(QBrush(QColor(128, 128, 128, 80)))
         painter.setPen(QColor(100, 100, 100, 150))
         painter.drawRect(self._rect)
+        self._end_flip(painter)
 
     def serialize(self) -> dict[str, Any]:
         return {
@@ -72,6 +74,8 @@ class BlurItem(SnapGraphicsItem):
             "pos": [self.pos().x(), self.pos().y()],
             "rect": [self._rect.x(), self._rect.y(), self._rect.width(), self._rect.height()],
             "blur_radius": self._blur_radius,
+            "flip_horizontal": self._flip_horizontal,
+            "flip_vertical": self._flip_vertical,
         }
 
     @classmethod
@@ -85,4 +89,6 @@ class BlurItem(SnapGraphicsItem):
         item.setPos(pos[0], pos[1])
         item.item_id = data.get("item_id", item.item_id)
         item.layer_id = data.get("layer_id", "")
+        item._flip_horizontal = data.get("flip_horizontal", False)
+        item._flip_vertical = data.get("flip_vertical", False)
         return item

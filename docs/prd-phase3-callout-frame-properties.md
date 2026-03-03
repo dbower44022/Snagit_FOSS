@@ -461,3 +461,397 @@ self._property_panel.set_tool_manager(self._tool_manager)
 - Manual testing confirmed: every ColorPicker shows a `∅` transparent toggle button
 - Manual testing confirmed: clicking `∅` sets color to alpha=0 and shows checkerboard swatch; clicking again restores the previous opaque color
 - Manual testing confirmed: QColorDialog includes an alpha channel slider
+
+---
+
+### 10. Universal Flip/Mirror (`snapmock/items/base_item.py` + all items)
+
+**Problem:** There was no way to flip/mirror an annotation item horizontally or vertically. Users needing a mirrored arrow, flipped stamp, or reversed text callout had no option.
+
+**Solution:** Added `flip_horizontal` and `flip_vertical` as universal bool properties on the `SnapGraphicsItem` base class, rendered via QPainter transforms, with UI in three locations (Arrange menu, Property Panel, context menu).
+
+#### Base Class: Properties + Paint Helpers (`snapmock/items/base_item.py`)
+
+**New fields** (in `__init__`):
+| Field | Type | Default |
+|-------|------|---------|
+| `_flip_horizontal` | `bool` | `False` |
+| `_flip_vertical` | `bool` | `False` |
+
+**Property accessors:** `flip_horizontal` and `flip_vertical` getter/setter pairs. Setters call `self.update()` to trigger repaint.
+
+**Paint helper methods:**
+```python
+def _apply_flip(self, painter: QPainter) -> None:
+    if self._flip_horizontal or self._flip_vertical:
+        painter.save()
+        br = self.boundingRect()
+        cx, cy = br.center().x(), br.center().y()
+        painter.translate(cx, cy)
+        painter.scale(
+            -1.0 if self._flip_horizontal else 1.0,
+            -1.0 if self._flip_vertical else 1.0,
+        )
+        painter.translate(-cx, -cy)
+
+def _end_flip(self, painter: QPainter) -> None:
+    if self._flip_horizontal or self._flip_vertical:
+        painter.restore()
+```
+
+**Why translate-scale-translate:** The flip must be around the item's visual center, not the origin. Translating to the bounding rect center, scaling with -1, and translating back produces a mirror about the center axis. The `save()`/`restore()` pairs ensure the transform doesn't leak to other items.
+
+**Why no-op when both flags are False:** The `if` guard avoids unnecessary `save()`/`restore()` calls during normal (unflipped) painting.
+
+#### All 12 Item `paint()` Methods Updated
+
+Each item's `paint()` method was updated with `self._apply_flip(painter)` after the null check and `self._end_flip(painter)` at the end:
+
+| Item Class | Base | File |
+|-----------|------|------|
+| RectangleItem | VectorItem | `items/rectangle_item.py` |
+| EllipseItem | VectorItem | `items/ellipse_item.py` |
+| LineItem | VectorItem | `items/line_item.py` |
+| ArrowItem | VectorItem | `items/arrow_item.py` |
+| FreehandItem | VectorItem | `items/freehand_item.py` |
+| HighlightItem | VectorItem | `items/highlight_item.py` |
+| BlurItem | SnapGraphicsItem | `items/blur_item.py` |
+| TextItem | SnapGraphicsItem | `items/text_item.py` |
+| CalloutItem | SnapGraphicsItem | `items/callout_item.py` |
+| NumberedStepItem | SnapGraphicsItem | `items/numbered_step_item.py` |
+| StampItem | SnapGraphicsItem | `items/stamp_item.py` |
+| RasterRegionItem | SnapGraphicsItem | `items/raster_region_item.py` |
+
+**Why per-item rather than overriding `QGraphicsItem.paint` in the base:** `SnapGraphicsItem.paint` is abstract — subclasses implement it directly. The helper pair is the cleanest way to inject the transform without changing the abstract contract.
+
+#### Serialization
+
+**VectorItem** (`items/vector_item.py`): Added `flip_horizontal` and `flip_vertical` keys to `_base_data()` and reading them in `_apply_base_data()` with `data.get("flip_horizontal", False)`. This automatically covers all 6 VectorItem subclasses (Rectangle, Ellipse, Line, Arrow, Freehand, Highlight).
+
+**Non-VectorItem items** (BlurItem, TextItem, CalloutItem, NumberedStepItem, StampItem, RasterRegionItem): Each item's `serialize()` includes `flip_horizontal` and `flip_vertical` keys, and `deserialize()` reads them with `False` defaults for backward compatibility.
+
+**Why `False` default:** Existing serialized data without flip keys loads correctly — items display unflipped, matching their original appearance.
+
+#### Arrange Menu (`snapmock/main_window.py`)
+
+**Added to `_setup_arrange_menu()`:** Two new actions ("Flip Horizontal", "Flip Vertical") between the z-order actions and the Align submenu, with a separator above and below.
+
+**Action references:** `self._flip_h_action` and `self._flip_v_action` stored on `MainWindow.__init__` alongside other arrange action refs.
+
+**Handler methods:**
+```python
+def _arrange_flip_horizontal(self) -> None:
+    items = self._selected_snap_items()
+    cmds: list[BaseCommand] = [
+        ModifyPropertyCommand(
+            item, "flip_horizontal", item.flip_horizontal, not item.flip_horizontal
+        )
+        for item in items
+    ]
+    self._scene.command_stack.push(MacroCommand(cmds, "Flip Horizontal"))
+```
+
+**Why `MacroCommand`:** When multiple items are selected, each gets its own `ModifyPropertyCommand` toggling its flip state. Wrapping in a `MacroCommand` makes the entire operation a single undo step.
+
+**Why toggle (`not item.flip_horizontal`):** Each item's current flip state is toggled independently. If some items are already flipped and others aren't, each toggles to the opposite state.
+
+**Menu state updates:** Both flip actions are added to the `_update_menu_states()` loop that enables/disables actions based on `has_selection`.
+
+#### Context Menu (`snapmock/ui/context_menus.py`)
+
+**Added to `build_item_context_menu()`:** "Flip Horizontal" and "Flip Vertical" entries after the Distribute submenu, before the final separator + Properties. Both are enabled when `has_sel` is True. Handlers connect to `parent._arrange_flip_horizontal` and `parent._arrange_flip_vertical`.
+
+#### Property Panel Transform Section (`snapmock/ui/property_panel.py`)
+
+**New widgets:** Two checkable `QPushButton`s ("Flip H", "Flip V") in a horizontal layout, added as a "Flip:" row after the Rotation row in the Transform section.
+
+**Signal connections:** `toggled` signals connected to `_on_flip_h_changed` and `_on_flip_v_changed`.
+
+**Refresh:** In `_refresh_from_selection()`, after setting rotation:
+```python
+self._flip_h_btn.setChecked(item.flip_horizontal)
+self._flip_v_btn.setChecked(item.flip_vertical)
+```
+
+**Handlers:** Standard `ModifyPropertyCommand` pattern:
+```python
+def _on_flip_h_changed(self, checked: bool) -> None:
+    if self._updating:
+        return
+    item = self._first_selected_item()
+    if item is None:
+        return
+    cmd = ModifyPropertyCommand(item, "flip_horizontal", item.flip_horizontal, checked)
+    self._scene.command_stack.push(cmd)
+```
+
+#### Design Decisions
+
+1. **Paint-time transform, not geometry mutation:** Flipping via `painter.scale(-1, 1)` preserves the original geometry (rects, paths, points). This means `boundingRect()`, `shape()`, hit-testing, and serialized data all remain unchanged. The flip is purely visual.
+
+2. **No keyboard shortcuts for flip:** Flip is a less common operation than z-order changes. Menu and panel access is sufficient.
+
+3. **Checkable QPushButton instead of QCheckBox:** Buttons provide clearer visual feedback for a binary toggle that represents a spatial transform rather than a boolean preference.
+
+---
+
+### 11. Text Property Panel — Mixed Formatting (`snapmock/ui/property_panel.py`)
+
+**Problem:** When inline-editing a text item containing mixed formatting (e.g., some bold and some non-bold text), the PropertyPanel always showed the item's default font properties. If the user selected a range with mixed bold/non-bold, the Bold checkbox showed the default font's bold state — not the actual selection. There was no indication that the selection contained mixed formatting, and no way to see cursor-position formatting in real time.
+
+**Solution:** The PropertyPanel now connects to the active text editor's cursor/selection/format signals during editing, analyzes the selection for mixed states, and displays indeterminate indicators when formatting values differ across the selection.
+
+#### Editor Signal Management
+
+**New state fields** (in `__init__`):
+| Field | Type | Purpose |
+|-------|------|---------|
+| `_editor_connected` | `bool` | Guards against duplicate signal connections |
+| `_connected_editor` | `QWidget \| None` | Reference to the currently connected editor |
+
+**`_ensure_editor_connected()`:** Gets the active editor via `_get_active_editor()`. If it's a different editor (or first connection), disconnects the old one and connects three signals:
+- `cursorPositionChanged` → `_on_editor_cursor_changed`
+- `selectionChanged` → `_on_editor_cursor_changed`
+- `currentCharFormatChanged` → `_on_editor_format_changed`
+
+**`_disconnect_editor()`:** Safely disconnects all three signals with `try/except (TypeError, RuntimeError)` to handle cases where the editor has already been destroyed (Qt deletes C++ objects independently of Python refs).
+
+**Why three signals:**
+- `cursorPositionChanged` — fires when cursor moves (arrow keys, click), updates panel to show format at cursor position
+- `selectionChanged` — fires when selection changes (shift+arrows, mouse drag), triggers mixed-state analysis
+- `currentCharFormatChanged` — fires when formatting changes via keyboard shortcuts (Ctrl+B, Ctrl+I, Ctrl+U) without cursor movement, keeps panel in sync
+
+#### Refresh Logic Changes
+
+In `_refresh_from_selection()`, the text refresh block was split into two paths:
+
+```python
+if has_text:
+    if item.is_editing:
+        self._ensure_editor_connected()
+        self._refresh_text_from_cursor()
+    else:
+        self._disconnect_editor()
+        self._bold_check.setTristate(False)
+        self._italic_check.setTristate(False)
+        self._underline_check.setTristate(False)
+        # ... show item's default font properties as before
+```
+
+**Why disconnect when not editing:** Prevents stale signal connections from a previous editing session. Also resets tristate on checkboxes to ensure clean two-state behavior when viewing item defaults.
+
+#### `_refresh_text_from_cursor()` Method
+
+**No selection path:** Reads `cursor.charFormat()` → shows definite values for all properties.
+
+**Selection path:** Iterates `QTextBlock` / `QTextFragment` across the document, checking each fragment that overlaps the selection range:
+
+```python
+block = doc.begin()
+while block.isValid():
+    it = block.begin()
+    while not it.atEnd():
+        fragment = it.fragment()
+        if fragment.isValid():
+            frag_start = fragment.position()
+            frag_end = frag_start + fragment.length()
+            if frag_end > sel_start and frag_start < sel_end:
+                # Collect font properties into sets
+                ...
+        it += 1
+    block = block.next()
+```
+
+**Why fragment iteration instead of sampling cursor positions:** Fragment iteration is O(n) over the document structure (not selection length), handles all formatting boundaries correctly, and doesn't miss short formatted runs. Sampling at positions could miss a 1-character bold run in the middle of a long selection.
+
+**Property sets collected:** `families`, `sizes`, `bolds`, `italics`, `underlines`, `colors` — each a `set` collecting unique values across overlapping fragments.
+
+#### Mixed State Display
+
+| Property | Single value | Multiple values (mixed) |
+|----------|-------------|------------------------|
+| Font family | `setCurrentFont(QFont(family))` | `lineEdit().setText("")` (blank) |
+| Font size | `setValue(size)` | `setValue(0)` — displays blank via `setSpecialValueText(" ")` |
+| Bold | `setTristate(False)` + `setChecked(value)` | `setTristate(True)` + `setCheckState(PartiallyChecked)` |
+| Italic | same as Bold | same as Bold |
+| Underline | same as Bold | same as Bold |
+| Text color | `color = QColor(...)` | Last known color shown (no indeterminate state for ColorPicker) |
+
+**Font size range change:** `setRange(0, 200)` with `setSpecialValueText(" ")`. Value 0 displays as blank, indicating mixed sizes. The `_on_font_size_changed` handler guards `if value == 0: return` to prevent applying a 0pt font size.
+
+#### User Interaction from Mixed State
+
+When Bold/Italic/Underline checkboxes are in `PartiallyChecked` state, the next click transitions to `Checked` or `Unchecked`. The change handlers call `setTristate(False)` before processing to ensure the checkbox returns to two-state mode:
+
+```python
+def _on_bold_changed(self, checked: bool) -> None:
+    if self._updating:
+        return
+    self._bold_check.setTristate(False)
+    # ... proceed with mergeCharFormat to apply uniform value
+```
+
+**Why `setTristate(False)` in handler:** Without this, Qt's tristate checkbox cycles through three states on each click (checked → partially checked → unchecked), which is confusing for formatting toggles. Resetting to two-state after the first user click ensures the expected toggle behavior.
+
+**Existing `mergeCharFormat()` logic:** Already correctly applies a uniform formatting value to the entire selection — no changes needed in the font/bold/italic/underline/color handlers.
+
+#### Feedback Loop Prevention
+
+The `_on_editor_cursor_changed` and `_on_editor_format_changed` slots wrap `_refresh_text_from_cursor()` in the `_updating` flag:
+
+```python
+def _on_editor_cursor_changed(self) -> None:
+    if self._updating:
+        return
+    self._updating = True
+    try:
+        self._refresh_text_from_cursor()
+    finally:
+        self._updating = False
+```
+
+**Why:** Without this guard, changing a widget value from `_refresh_text_from_cursor()` would trigger the widget's `valueChanged` signal, which would call a handler that modifies the editor's format, which would emit `currentCharFormatChanged`, which would call `_refresh_text_from_cursor()` again — an infinite loop.
+
+#### Design Decisions
+
+1. **Fragment-based analysis** — more reliable than sampling cursor positions. Correctly handles all formatting boundaries regardless of fragment length.
+
+2. **No indeterminate state for ColorPicker** — the existing `ColorPicker` widget has no concept of "mixed" (it always shows a color swatch). Adding a mixed state would require a UI redesign of the color picker. For now, the last known color is shown when mixed, which is acceptable since text color differences are visually obvious in the editor.
+
+3. **`setSpecialValueText(" ")` for font size** — using a space instead of empty string because Qt requires at least one character for special value text. Visually appears blank in the spin box.
+
+4. **Editor signals connected lazily** — `_ensure_editor_connected()` is only called when `item.is_editing` is True, avoiding unnecessary signal connections when items are selected but not being edited.
+
+5. **Safe disconnect with try/except** — Qt can destroy C++ objects before Python `__del__` runs, so disconnect attempts on a destroyed editor raise `RuntimeError`. The try/except handles this gracefully.
+
+---
+
+### 12. Horizontal Alignment PropertyPanel Control
+
+**What:** Added a QComboBox for horizontal text alignment (Left / Center / Right / Justify) to the PropertyPanel Text section, with full support for tool-defaults mode, live editing mode, non-editing mode, and Snagit I/O.
+
+**Background:** Horizontal alignment was already functional via keyboard shortcuts (Ctrl+L/E/R/J) in the text editor and stored at the `QTextBlockFormat` level in the `QTextDocument` HTML. However, there was no PropertyPanel control for it, and the Snagit writer hardcoded alignment values.
+
+#### PropertyPanel (`snapmock/ui/property_panel.py`)
+
+**Combo widget** — added after the Bold/Italic/Underline row:
+```python
+self._text_align_combo = QComboBox()
+self._text_align_combo.addItem("Left", Qt.AlignmentFlag.AlignLeft)
+self._text_align_combo.addItem("Center", Qt.AlignmentFlag.AlignHCenter)
+self._text_align_combo.addItem("Right", Qt.AlignmentFlag.AlignRight)
+self._text_align_combo.addItem("Justify", Qt.AlignmentFlag.AlignJustify)
+```
+
+**`_set_align_combo()` helper** — masks the input flag to horizontal component before matching:
+```python
+def _set_align_combo(self, alignment: Qt.AlignmentFlag) -> None:
+    h_align = alignment & Qt.AlignmentFlag.AlignHorizontal_Mask
+    for i in range(self._text_align_combo.count()):
+        if self._text_align_combo.itemData(i) == h_align:
+            self._text_align_combo.setCurrentIndex(i)
+            return
+    self._text_align_combo.setCurrentIndex(0)
+```
+
+**`_on_text_align_changed()` handler** — supports three modes:
+1. **Tool-defaults mode:** writes `horizontal_align` to active tool defaults dict
+2. **Edit mode:** calls `editor.setAlignment(alignment)` on the active `QTextEdit`
+3. **Non-editing mode:** calls `item.set_alignment(alignment)` on the item
+
+**Refresh paths:**
+- **Non-editing:** reads first block alignment via `item.get_block_format().alignment()`
+- **During editing, no selection:** reads current block alignment via `cursor.blockFormat().alignment()`
+- **During editing, with selection:** collects alignment across all blocks in selection; if mixed, sets `setCurrentIndex(-1)` (blank)
+
+#### AlignCenter vs AlignHCenter
+
+`Qt.AlignmentFlag.AlignCenter` (132) is a composite flag equal to `AlignHCenter | AlignVCenter`. When masked to horizontal component via `& AlignHorizontal_Mask`, it becomes `AlignHCenter` (4). The combo stores `AlignHCenter` directly so that masking and comparison work consistently.
+
+#### Tool Creation Defaults
+
+**`snapmock/tools/text_tool.py`** and **`snapmock/tools/callout_tool.py`:**
+- Added `"horizontal_align": Qt.AlignmentFlag.AlignLeft` to `_creation_defaults`
+- Added alignment application in `_apply_creation_defaults()`:
+  ```python
+  ha = d.get("horizontal_align", Qt.AlignmentFlag.AlignLeft)
+  if isinstance(ha, Qt.AlignmentFlag):
+      item.set_alignment(ha)
+  ```
+- `_populate_from_tool_defaults()` reads the `horizontal_align` key and calls `_set_align_combo()`
+
+#### Snagit I/O
+
+**`snapmock/io/snagit_reader.py`:**
+- Added horizontal alignment reading in both `_convert_callout` and `_convert_text`:
+  ```python
+  halign_map = {
+      "Left": Qt.AlignmentFlag.AlignLeft,
+      "Center": Qt.AlignmentFlag.AlignCenter,
+      "Right": Qt.AlignmentFlag.AlignRight,
+  }
+  ha = halign_map.get(obj.get("ToolHorizontalAlign", "Center"))
+  if ha is not None:
+      item.set_alignment(ha)
+  ```
+
+**`snapmock/io/snagit_writer.py`:**
+- Added `_get_halign_str()` helper that reads the first block's alignment and maps to Snagit string:
+  ```python
+  def _get_halign_str(item: TextItem | CalloutItem) -> str:
+      block_fmt = item.get_block_format()
+      align = block_fmt.alignment() & Qt.AlignmentFlag.AlignHorizontal_Mask
+      return {
+          Qt.AlignmentFlag.AlignLeft: "Left",
+          Qt.AlignmentFlag.AlignHCenter: "Center",
+          Qt.AlignmentFlag.AlignRight: "Right",
+          Qt.AlignmentFlag.AlignJustify: "Justify",
+      }.get(align, "Left")
+  ```
+- Replaced hardcoded `"ToolHorizontalAlign": "Center"` and `"Left"` with `_get_halign_str(item)` calls in both `_item_to_callout` and `_item_to_text`
+
+---
+
+## Files Modified (Updated)
+
+| File | Type | Summary |
+|------|------|---------|
+| `snapmock/items/base_item.py` | Modified | Added `flip_horizontal`/`flip_vertical` properties, `_apply_flip()`/`_end_flip()` paint helpers |
+| `snapmock/items/vector_item.py` | Modified | Added flip fields to `_base_data()` and `_apply_base_data()` |
+| `snapmock/items/rectangle_item.py` | Modified | Added `_apply_flip`/`_end_flip` in `paint()` |
+| `snapmock/items/ellipse_item.py` | Modified | Added `_apply_flip`/`_end_flip` in `paint()` |
+| `snapmock/items/line_item.py` | Modified | Added `_apply_flip`/`_end_flip` in `paint()` |
+| `snapmock/items/arrow_item.py` | Modified | Added `_apply_flip`/`_end_flip` in `paint()` |
+| `snapmock/items/freehand_item.py` | Modified | Added `_apply_flip`/`_end_flip` in `paint()` |
+| `snapmock/items/highlight_item.py` | Modified | Added `_apply_flip`/`_end_flip` in `paint()` |
+| `snapmock/items/blur_item.py` | Modified | Added `_apply_flip`/`_end_flip` in `paint()`, flip in serialize/deserialize |
+| `snapmock/items/text_item.py` | Modified | Added `_apply_flip`/`_end_flip` in `paint()`, flip in serialize/deserialize |
+| `snapmock/items/callout_item.py` | Modified | Added `_apply_flip`/`_end_flip` in `paint()`, flip in serialize/deserialize |
+| `snapmock/items/numbered_step_item.py` | Modified | Added `_apply_flip`/`_end_flip` in `paint()`, flip in serialize/deserialize |
+| `snapmock/items/stamp_item.py` | Modified | Added `_apply_flip`/`_end_flip` in `paint()`, flip in serialize/deserialize |
+| `snapmock/items/raster_region_item.py` | Modified | Added `_apply_flip`/`_end_flip` in `paint()`, flip in serialize/deserialize |
+| `snapmock/main_window.py` | Modified | Added Flip Horizontal/Vertical to Arrange menu with handlers, menu state updates |
+| `snapmock/ui/context_menus.py` | Modified | Added Flip Horizontal/Vertical to item context menu |
+| `snapmock/ui/property_panel.py` | Modified | Added flip buttons, editor signal management for mixed formatting, `_refresh_text_from_cursor()` with fragment analysis, mixed state display, horizontal alignment combo |
+| `snapmock/tools/text_tool.py` | Modified | Added `horizontal_align` to creation defaults and `_apply_creation_defaults()` |
+| `snapmock/tools/callout_tool.py` | Modified | Added `horizontal_align` to creation defaults and `_apply_creation_defaults()` |
+| `snapmock/io/snagit_reader.py` | Modified | Added `ToolHorizontalAlign` reading for callout and text items |
+| `snapmock/io/snagit_writer.py` | Modified | Added `_get_halign_str()` helper, writes actual alignment instead of hardcoded values |
+
+---
+
+## Verification (Updated)
+
+- **371 tests pass** (`uv run pytest`)
+- **No new lint errors** (`uv run ruff check .` — only pre-existing F841 in test file)
+- **No new mypy errors** (`uv run mypy snapmock` — only pre-existing errors in other files)
+- Manual: create items, flip via all 3 UI surfaces (Arrange menu, context menu, Property Panel), verify rendering, undo/redo, save/load round-trip
+- Manual: edit text with mixed formatting (bold some words, different sizes), verify panel shows indeterminate states (partial-check for bold/italic/underline, blank font size, blank font family)
+- Manual: from mixed state, click Bold checkbox → applies uniform bold to selection, checkbox returns to two-state
+- Manual: move cursor within edited text → panel updates to show formatting at cursor position
+- Manual: use Ctrl+B/Ctrl+I/Ctrl+U in editor → panel updates via `currentCharFormatChanged` signal
+- Manual: change horizontal alignment via PropertyPanel combo while editing text → block alignment updates immediately
+- Manual: select text spanning blocks with different alignments → combo shows blank (mixed state)
+- Manual: change alignment in tool-defaults mode → new items created with that alignment
+- Manual: load Snagit .snagx file with Center/Left/Right aligned text → alignment preserved
+- Manual: save file with non-default alignment → `ToolHorizontalAlign` value reflects actual alignment

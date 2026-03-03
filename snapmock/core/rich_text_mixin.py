@@ -110,9 +110,7 @@ class RichTextMixin:
             cursor = root.firstCursorPosition()
             cursor.movePosition(cursor.MoveOperation.End, cursor.MoveMode.KeepAnchor)
             fmt = QTextCharFormat()
-            fmt.setFont(
-                value, QTextCharFormat.FontPropertiesInheritanceBehavior.FontPropertiesAll
-            )
+            fmt.setFont(value, QTextCharFormat.FontPropertiesInheritanceBehavior.FontPropertiesAll)
             cursor.mergeCharFormat(fmt)
 
     def _get_text_color(self) -> QColor:
@@ -145,18 +143,14 @@ class RichTextMixin:
             cursor = root.firstCursorPosition()
         return cursor.blockFormat()
 
-    def set_block_format(
-        self, fmt: QTextBlockFormat, cursor: QTextCursor | None = None
-    ) -> None:
+    def set_block_format(self, fmt: QTextBlockFormat, cursor: QTextCursor | None = None) -> None:
         """Merge *fmt* into all blocks touched by *cursor* (or the entire document)."""
         if cursor is None:
             root = self._document.rootFrame()
             if root is None:
                 return
             cursor = root.firstCursorPosition()
-            cursor.movePosition(
-                QTextCursor.MoveOperation.End, QTextCursor.MoveMode.KeepAnchor
-            )
+            cursor.movePosition(QTextCursor.MoveOperation.End, QTextCursor.MoveMode.KeepAnchor)
         cursor.mergeBlockFormat(fmt)
 
     def set_alignment(
@@ -183,9 +177,7 @@ class RichTextMixin:
         fmt.setLineHeight(height, height_type)
         self.set_block_format(fmt, cursor)
 
-    def set_text_indent(
-        self, indent: float, cursor: QTextCursor | None = None
-    ) -> None:
+    def set_text_indent(self, indent: float, cursor: QTextCursor | None = None) -> None:
         """Set first-line text indent (in pixels) for blocks touched by *cursor*."""
         fmt = QTextBlockFormat()
         fmt.setTextIndent(indent)
@@ -197,17 +189,13 @@ class RichTextMixin:
         fmt.setIndent(level)
         self.set_block_format(fmt, cursor)
 
-    def set_space_before(
-        self, spacing: float, cursor: QTextCursor | None = None
-    ) -> None:
+    def set_space_before(self, spacing: float, cursor: QTextCursor | None = None) -> None:
         """Set space above paragraph (in pixels)."""
         fmt = QTextBlockFormat()
         fmt.setTopMargin(spacing)
         self.set_block_format(fmt, cursor)
 
-    def set_space_after(
-        self, spacing: float, cursor: QTextCursor | None = None
-    ) -> None:
+    def set_space_after(self, spacing: float, cursor: QTextCursor | None = None) -> None:
         """Set space below paragraph (in pixels)."""
         fmt = QTextBlockFormat()
         fmt.setBottomMargin(spacing)

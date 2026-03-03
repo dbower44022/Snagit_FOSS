@@ -7,7 +7,7 @@ from abc import abstractmethod
 from typing import Any
 
 from PyQt6.QtCore import QRectF
-from PyQt6.QtGui import QPainterPath
+from PyQt6.QtGui import QPainter, QPainterPath
 from PyQt6.QtWidgets import QGraphicsObject
 
 
@@ -23,6 +23,8 @@ class SnapGraphicsItem(QGraphicsObject):
         self._item_id: str = uuid.uuid4().hex
         self._layer_id: str = ""
         self._locked: bool = False
+        self._flip_horizontal: bool = False
+        self._flip_vertical: bool = False
         self.setFlag(QGraphicsObject.GraphicsItemFlag.ItemIsSelectable, True)
         self.setFlag(QGraphicsObject.GraphicsItemFlag.ItemIsMovable, False)
         self.setFlag(QGraphicsObject.GraphicsItemFlag.ItemSendsGeometryChanges, True)
@@ -52,6 +54,45 @@ class SnapGraphicsItem(QGraphicsObject):
     @locked.setter
     def locked(self, value: bool) -> None:
         self._locked = value
+
+    # --- flip properties ---
+
+    @property
+    def flip_horizontal(self) -> bool:
+        return self._flip_horizontal
+
+    @flip_horizontal.setter
+    def flip_horizontal(self, value: bool) -> None:
+        self._flip_horizontal = value
+        self.update()
+
+    @property
+    def flip_vertical(self) -> bool:
+        return self._flip_vertical
+
+    @flip_vertical.setter
+    def flip_vertical(self, value: bool) -> None:
+        self._flip_vertical = value
+        self.update()
+
+    def _apply_flip(self, painter: QPainter) -> None:
+        """Apply flip transform if either flip flag is set. Call at start of paint()."""
+        if self._flip_horizontal or self._flip_vertical:
+            painter.save()
+            br = self.boundingRect()
+            cx = br.center().x()
+            cy = br.center().y()
+            painter.translate(cx, cy)
+            painter.scale(
+                -1.0 if self._flip_horizontal else 1.0,
+                -1.0 if self._flip_vertical else 1.0,
+            )
+            painter.translate(-cx, -cy)
+
+    def _end_flip(self, painter: QPainter) -> None:
+        """Restore painter state after flip. Call at end of paint()."""
+        if self._flip_horizontal or self._flip_vertical:
+            painter.restore()
 
     # --- position / transform property shims ---
 

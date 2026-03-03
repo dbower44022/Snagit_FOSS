@@ -316,6 +316,7 @@ class TextItem(RichTextMixin, SnapGraphicsItem):
     def paint(self, painter: QPainter | None, option: Any, widget: Any = None) -> None:
         if painter is None:
             return
+        self._apply_flip(painter)
 
         w = self._item_width()
         frame_rect = QRectF(0, 0, w, self._frame_height())
@@ -326,9 +327,7 @@ class TextItem(RichTextMixin, SnapGraphicsItem):
             painter.setPen(Qt.PenStyle.NoPen)
             painter.setBrush(QBrush(self._bg_color))
             if self._border_radius > 0:
-                painter.drawRoundedRect(
-                    frame_rect, self._border_radius, self._border_radius
-                )
+                painter.drawRoundedRect(frame_rect, self._border_radius, self._border_radius)
             else:
                 painter.drawRect(frame_rect)
             painter.restore()
@@ -337,16 +336,12 @@ class TextItem(RichTextMixin, SnapGraphicsItem):
         if self._border_width > 0 and self._border_color.alpha() > 0:
             painter.save()
             pen = QPen(self._border_color, self._border_width)
-            pen.setStyle(
-                _BORDER_STYLE_MAP.get(self._border_style, Qt.PenStyle.SolidLine)
-            )
+            pen.setStyle(_BORDER_STYLE_MAP.get(self._border_style, Qt.PenStyle.SolidLine))
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
             painter.setPen(pen)
             painter.setBrush(Qt.BrushStyle.NoBrush)
             if self._border_radius > 0:
-                painter.drawRoundedRect(
-                    frame_rect, self._border_radius, self._border_radius
-                )
+                painter.drawRoundedRect(frame_rect, self._border_radius, self._border_radius)
             else:
                 painter.drawRect(frame_rect)
             painter.restore()
@@ -381,7 +376,8 @@ class TextItem(RichTextMixin, SnapGraphicsItem):
             painter.translate(text_rect.topLeft())
             painter.scale(self._text_scale_factor, self._text_scale_factor)
             scaled_rect = QRectF(
-                0, 0,
+                0,
+                0,
                 content_w / self._text_scale_factor,
                 doc_h / self._text_scale_factor,
             )
@@ -389,6 +385,7 @@ class TextItem(RichTextMixin, SnapGraphicsItem):
             painter.restore()
         else:
             self.draw_document(painter, text_rect)
+        self._end_flip(painter)
 
     def serialize(self) -> dict[str, Any]:
         font = self._document.defaultFont()
@@ -416,6 +413,8 @@ class TextItem(RichTextMixin, SnapGraphicsItem):
             "text_scale_factor": self._text_scale_factor,
             "min_width": self._min_width,
             "min_height": self._min_height,
+            "flip_horizontal": self._flip_horizontal,
+            "flip_vertical": self._flip_vertical,
         }
 
     @classmethod
@@ -449,6 +448,8 @@ class TextItem(RichTextMixin, SnapGraphicsItem):
         item._text_scale_factor = data.get("text_scale_factor", 1.0)
         item._min_width = data.get("min_width", DEFAULT_TEXT_WIDTH)
         item._min_height = data.get("min_height", None)
+        item._flip_horizontal = data.get("flip_horizontal", False)
+        item._flip_vertical = data.get("flip_vertical", False)
 
         if "html" in data:
             # Rich text: restore from HTML
