@@ -134,17 +134,18 @@ Where `has_text = isinstance(item, (TextItem, CalloutItem))`.
 if has_text:
     assert isinstance(item, (TextItem, CalloutItem))
     self._text_bg_color_picker.color = item.bg_color
-    self._no_bg_check.setChecked(item.bg_color.alpha() == 0)
     self._text_border_color_picker.color = item.border_color
     # ... etc
 ```
+
+Note: The `ColorPicker` widget itself handles transparent colors natively — each color picker includes a `∅` transparent toggle button and displays a checkerboard swatch when the color has alpha < 255. This replaces the previous `_no_fill_check` and `_no_bg_check` checkboxes that were separate from the color picker.
 
 **Auto-size checkbox:** Hidden for `CalloutItem` because callout dimensions come from its `_rect` (set by the callout tool or drag handles), not from a width+auto-height model:
 ```python
 self._text_auto_size_check.setVisible(is_text_item)
 ```
 
-**Handler type checks:** All seven text box change handlers (`_on_text_bg_color_changed`, `_on_no_bg_toggled`, `_on_text_border_color_changed`, `_on_text_border_w_changed`, `_on_text_corner_radius_changed`, `_on_text_padding_changed`, `_on_text_valign_changed`) changed from `isinstance(item, TextItem)` to `isinstance(item, (TextItem, CalloutItem))`.
+**Handler type checks:** All six text box change handlers (`_on_text_bg_color_changed`, `_on_text_border_color_changed`, `_on_text_border_w_changed`, `_on_text_corner_radius_changed`, `_on_text_padding_changed`, `_on_text_valign_changed`) changed from `isinstance(item, TextItem)` to `isinstance(item, (TextItem, CalloutItem))`. The previous `_on_no_bg_toggled` handler was removed — transparent is now handled directly by the `ColorPicker` widget's built-in transparent toggle.
 
 **Why shared handlers:** Both types have identical property names and semantics, so the same `ModifyPropertyCommand` calls work. No code duplication needed.
 
@@ -375,9 +376,11 @@ When `in_tool_defaults` is True:
 - `_populate_from_tool_defaults()` fills widgets from the active tool's `creation_defaults` dict
 - Auto-size checkbox is hidden for callout tool (matches behavior when a CalloutItem is selected)
 
-**Handler early-return paths:** All 14 text/text-box change handlers have an early-return path that writes to the `creation_defaults` dict (no command stack) when in tool-defaults mode:
+**Handler early-return paths:** All 13 text/text-box change handlers have an early-return path that writes to the `creation_defaults` dict (no command stack) when in tool-defaults mode:
 - `_on_font_family_changed`, `_on_font_size_changed`, `_on_bold_changed`, `_on_italic_changed`, `_on_underline_changed`, `_on_text_color_changed`
-- `_on_text_bg_color_changed`, `_on_no_bg_toggled`, `_on_text_border_color_changed`, `_on_text_border_w_changed`, `_on_text_corner_radius_changed`, `_on_text_padding_changed`, `_on_text_valign_changed`, `_on_text_auto_size_changed`
+- `_on_text_bg_color_changed`, `_on_text_border_color_changed`, `_on_text_border_w_changed`, `_on_text_corner_radius_changed`, `_on_text_padding_changed`, `_on_text_valign_changed`, `_on_text_auto_size_changed`
+
+Note: `_on_no_bg_toggled` and `_on_no_fill_toggled` were removed — transparent colors are now handled natively by the `ColorPicker` widget, which includes a `∅` transparent toggle button and emits `QColor(0,0,0,0)` through the normal `color_changed` signal.
 
 **Helper methods:**
 - `_in_tool_defaults_mode()` — returns True if no selection and text/callout tool active
@@ -405,6 +408,28 @@ self._property_panel.set_tool_manager(self._tool_manager)
 
 ---
 
+### 9. ColorPicker Transparent Color Support (`snapmock/ui/color_picker.py`)
+
+**Problem:** The `ColorPicker` widget opened Qt's `QColorDialog` with no alpha/transparency support. A few color properties (fill, text background) had separate "No fill" / "No background" checkboxes, but most color pickers (stroke, text color, text border, canvas background) had no way to select transparent. The approach was inconsistent and incomplete.
+
+**Solution:** The `ColorPicker` widget now natively supports transparency, so every color picker in the app gets the feature automatically:
+
+- **Widget restructured:** Changed from `QPushButton` to `QWidget` containing a custom `_SwatchButton` (with `paintEvent` override) and a `∅` transparent toggle button.
+- **`allow_transparent` parameter** (default `True`): Controls whether the transparent toggle appears. When `True`, a checkable `∅` button appears next to the swatch.
+- **Transparent toggle behavior:** Clicking `∅` saves the current opaque color and emits `QColor(0, 0, 0, 0)`. Clicking again restores the last opaque color. This gives users a quick way to toggle transparent on any color property.
+- **Checkerboard swatch:** `_SwatchButton.paintEvent()` draws a checkerboard pattern behind the color fill when `alpha < 255`. For fully transparent colors, only the checkerboard is visible, making it obvious the color is transparent. For semi-transparent colors, the checkerboard shows through proportionally.
+- **Alpha channel in QColorDialog:** The dialog now uses `ShowAlphaChannel` option, so users can also fine-tune alpha values directly.
+
+**Redundant controls removed from PropertyPanel:**
+- `_no_fill_check` checkbox and its container widget — fill color transparency is now handled by the fill `ColorPicker`'s transparent toggle
+- `_no_bg_check` checkbox and its container widget — text background transparency is now handled by the background `ColorPicker`'s transparent toggle
+- `_on_no_fill_toggled()` and `_on_no_bg_toggled()` handler methods — no longer needed
+- Related `setChecked()` calls in `_refresh_from_selection()` and `_populate_from_tool_defaults()`
+
+**Why a widget-level solution:** Every `ColorPicker` instance in the app (stroke, fill, text color, text background, text border, canvas background) automatically gains transparent support without any per-picker changes in `PropertyPanel` or `ItemPropertiesDialog`.
+
+---
+
 ## Files Modified
 
 | File | Type | Summary |
@@ -418,6 +443,7 @@ self._property_panel.set_tool_manager(self._tool_manager)
 | `snapmock/tools/text_tool.py` | Modified | Initialized creation defaults, added `_apply_creation_defaults()`, select item on edit start |
 | `snapmock/tools/callout_tool.py` | Modified | Initialized creation defaults, added `_apply_creation_defaults()` |
 | `snapmock/main_window.py` | Modified | Wired PropertyPanel to ToolManager via `set_tool_manager()` |
+| `snapmock/ui/color_picker.py` | Modified | Rewrote as QWidget with `_SwatchButton` (checkerboard paint), `∅` transparent toggle, `ShowAlphaChannel` in dialog; removed `_no_fill_check`/`_no_bg_check` from PropertyPanel |
 | `tests/test_rich_text.py` | Modified | 10 new callout frame property tests |
 | `tests/test_transform_resize.py` | Modified | 1 new callout scale_geometry test |
 
@@ -432,3 +458,6 @@ self._property_panel.set_tool_manager(self._tool_manager)
 - Manual testing confirmed: same for callout tool → shows callout defaults (yellow bg, visible border) → modify → create callout → properties match
 - Manual testing confirmed: select an existing item → panel shows item properties (not tool defaults) → deselect → panel returns to tool defaults
 - Manual testing confirmed: property changes during initial create-edit session affect the active item
+- Manual testing confirmed: every ColorPicker shows a `∅` transparent toggle button
+- Manual testing confirmed: clicking `∅` sets color to alpha=0 and shows checkerboard swatch; clicking again restores the previous opaque color
+- Manual testing confirmed: QColorDialog includes an alpha channel slider
