@@ -37,6 +37,7 @@ if TYPE_CHECKING:
 
     from snapmock.core.scene import SnapScene
     from snapmock.core.selection_manager import SelectionManager
+    from snapmock.tools.tool_manager import ToolManager
 
 
 class PropertyPanel(QDockWidget):
@@ -52,6 +53,8 @@ class PropertyPanel(QDockWidget):
         self._selection_manager = selection_manager
         self._scene = scene
         self._updating = False
+        self._tool_manager: ToolManager | None = None
+        self._active_tool_id: str = ""
 
         self.setAllowedAreas(
             Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea
@@ -301,15 +304,22 @@ class PropertyPanel(QDockWidget):
             has_text = isinstance(item, (TextItem, CalloutItem))
             is_text_item = isinstance(item, TextItem)
 
+            # Check for tool-defaults mode: no selection + text/callout tool active
+            in_tool_defaults = (
+                not has_selection and self._active_tool_id in ("text", "callout")
+            )
+
             # Section visibility
             self._transform_section.setVisible(has_selection)
             self._appearance_section.setVisible(has_selection and is_vector)
-            self._text_section.setVisible(has_selection and has_text)
-            self._text_box_section.setVisible(has_selection and has_text)
+            self._text_section.setVisible((has_selection and has_text) or in_tool_defaults)
+            self._text_box_section.setVisible((has_selection and has_text) or in_tool_defaults)
             self._info_section.setVisible(has_selection)
-            self._canvas_section.setVisible(not has_selection)
+            self._canvas_section.setVisible(not has_selection and not in_tool_defaults)
 
-            if item is not None:
+            if in_tool_defaults:
+                self._populate_from_tool_defaults()
+            elif item is not None:
                 # Transform
                 self._x_spin.setValue(item.pos_x)
                 self._y_spin.setValue(item.pos_y)
@@ -372,6 +382,65 @@ class PropertyPanel(QDockWidget):
                 self._bg_color_picker.color = self._scene.background_color
         finally:
             self._updating = False
+
+    def _in_tool_defaults_mode(self) -> bool:
+        """Return True if showing tool defaults (no selection + text/callout tool)."""
+        return (
+            self._first_selected_item() is None
+            and self._active_tool_id in ("text", "callout")
+        )
+
+    def _active_tool_defaults(self) -> dict[str, object] | None:
+        """Return the creation_defaults dict for the active tool, or None."""
+        if self._tool_manager is None:
+            return None
+        tool = self._tool_manager.tool(self._active_tool_id)
+        if tool is None:
+            return None
+        return tool.creation_defaults
+
+    def _populate_from_tool_defaults(self) -> None:
+        """Fill Text + Text Box widgets from the active tool's creation_defaults."""
+        d = self._active_tool_defaults()
+        if d is None:
+            return
+        # Text section
+        font = QFont(str(d.get("font_family", "Sans Serif")))
+        font.setPointSize(int(d.get("font_size", 14)))
+        self._font_combo.setCurrentFont(font)
+        self._font_size_spin.setValue(int(d.get("font_size", 14)))
+        self._bold_check.setChecked(bool(d.get("bold", False)))
+        self._italic_check.setChecked(bool(d.get("italic", False)))
+        self._underline_check.setChecked(bool(d.get("underline", False)))
+        tc = d.get("text_color")
+        self._text_color_picker.color = QColor(tc) if isinstance(tc, QColor) else QColor("black")
+
+        # Text Box section
+        bg = d.get("bg_color")
+        bg_color = QColor(bg) if isinstance(bg, QColor) else QColor("#00000000")
+        self._text_bg_color_picker.color = bg_color
+        self._no_bg_check.setChecked(bg_color.alpha() == 0)
+
+        bc = d.get("border_color")
+        self._text_border_color_picker.color = (
+            QColor(bc) if isinstance(bc, QColor) else QColor("#00000000")
+        )
+        self._text_border_w_spin.setValue(float(d.get("border_width", 0.0)))
+        self._text_corner_radius_spin.setValue(float(d.get("border_radius", 0.0)))
+        self._text_padding_spin.setValue(float(d.get("padding", 8.0)))
+
+        # Vertical align
+        va = d.get("vertical_align", VerticalAlign.TOP)
+        for i in range(self._text_valign_combo.count()):
+            if self._text_valign_combo.itemData(i) == va:
+                self._text_valign_combo.setCurrentIndex(i)
+                break
+
+        # Auto-size: only for text tool (not callout)
+        is_text_tool = self._active_tool_id == "text"
+        self._text_auto_size_check.setVisible(is_text_tool)
+        if is_text_tool:
+            self._text_auto_size_check.setChecked(bool(d.get("auto_size", True)))
 
     def _rebuild_layer_combo(self, *_args: object) -> None:
         was_updating = self._updating
@@ -575,6 +644,11 @@ class PropertyPanel(QDockWidget):
     def _on_font_family_changed(self, font: QFont) -> None:
         if self._updating:
             return
+        if self._in_tool_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                d["font_family"] = font.family()
+            return
         item = self._text_item()
         if item is None:
             return
@@ -592,6 +666,11 @@ class PropertyPanel(QDockWidget):
 
     def _on_font_size_changed(self, value: int) -> None:
         if self._updating:
+            return
+        if self._in_tool_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                d["font_size"] = value
             return
         item = self._text_item()
         if item is None:
@@ -611,6 +690,11 @@ class PropertyPanel(QDockWidget):
     def _on_bold_changed(self, checked: bool) -> None:
         if self._updating:
             return
+        if self._in_tool_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                d["bold"] = checked
+            return
         item = self._text_item()
         if item is None:
             return
@@ -628,6 +712,11 @@ class PropertyPanel(QDockWidget):
 
     def _on_italic_changed(self, checked: bool) -> None:
         if self._updating:
+            return
+        if self._in_tool_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                d["italic"] = checked
             return
         item = self._text_item()
         if item is None:
@@ -647,6 +736,11 @@ class PropertyPanel(QDockWidget):
     def _on_underline_changed(self, checked: bool) -> None:
         if self._updating:
             return
+        if self._in_tool_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                d["underline"] = checked
+            return
         item = self._text_item()
         if item is None:
             return
@@ -665,6 +759,11 @@ class PropertyPanel(QDockWidget):
     def _on_text_color_changed(self, color: QColor) -> None:
         if self._updating:
             return
+        if self._in_tool_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                d["text_color"] = QColor(color)
+            return
         item = self._text_item()
         if item is None:
             return
@@ -682,6 +781,11 @@ class PropertyPanel(QDockWidget):
     def _on_text_bg_color_changed(self, color: QColor) -> None:
         if self._updating:
             return
+        if self._in_tool_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                d["bg_color"] = QColor(color)
+            return
         item = self._first_selected_item()
         if not isinstance(item, (TextItem, CalloutItem)):
             return
@@ -690,6 +794,17 @@ class PropertyPanel(QDockWidget):
 
     def _on_no_bg_toggled(self, checked: bool) -> None:
         if self._updating:
+            return
+        if self._in_tool_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                old = d.get("bg_color", QColor("#00000000"))
+                new_color = QColor(old) if isinstance(old, QColor) else QColor(old)
+                if checked:
+                    new_color.setAlpha(0)
+                elif new_color.alpha() == 0:
+                    new_color.setAlpha(255)
+                d["bg_color"] = new_color
             return
         item = self._first_selected_item()
         if not isinstance(item, (TextItem, CalloutItem)):
@@ -708,6 +823,11 @@ class PropertyPanel(QDockWidget):
     def _on_text_border_color_changed(self, color: QColor) -> None:
         if self._updating:
             return
+        if self._in_tool_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                d["border_color"] = QColor(color)
+            return
         item = self._first_selected_item()
         if not isinstance(item, (TextItem, CalloutItem)):
             return
@@ -716,6 +836,11 @@ class PropertyPanel(QDockWidget):
 
     def _on_text_border_w_changed(self, value: float) -> None:
         if self._updating:
+            return
+        if self._in_tool_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                d["border_width"] = value
             return
         item = self._first_selected_item()
         if not isinstance(item, (TextItem, CalloutItem)):
@@ -726,6 +851,11 @@ class PropertyPanel(QDockWidget):
     def _on_text_corner_radius_changed(self, value: float) -> None:
         if self._updating:
             return
+        if self._in_tool_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                d["border_radius"] = value
+            return
         item = self._first_selected_item()
         if not isinstance(item, (TextItem, CalloutItem)):
             return
@@ -735,6 +865,11 @@ class PropertyPanel(QDockWidget):
     def _on_text_padding_changed(self, value: float) -> None:
         if self._updating:
             return
+        if self._in_tool_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                d["padding"] = value
+            return
         item = self._first_selected_item()
         if not isinstance(item, (TextItem, CalloutItem)):
             return
@@ -743,6 +878,12 @@ class PropertyPanel(QDockWidget):
 
     def _on_text_valign_changed(self, index: int) -> None:
         if self._updating or index < 0:
+            return
+        if self._in_tool_defaults_mode():
+            d = self._active_tool_defaults()
+            new_align = self._text_valign_combo.itemData(index)
+            if d is not None and isinstance(new_align, VerticalAlign):
+                d["vertical_align"] = new_align
             return
         item = self._first_selected_item()
         if not isinstance(item, (TextItem, CalloutItem)):
@@ -757,6 +898,11 @@ class PropertyPanel(QDockWidget):
 
     def _on_text_auto_size_changed(self, checked: bool) -> None:
         if self._updating:
+            return
+        if self._in_tool_defaults_mode():
+            d = self._active_tool_defaults()
+            if d is not None:
+                d["auto_size"] = checked
             return
         item = self._first_selected_item()
         if not isinstance(item, TextItem):
@@ -781,4 +927,14 @@ class PropertyPanel(QDockWidget):
         """Replace the SelectionManager (e.g. after opening a new project)."""
         self._selection_manager = selection_manager
         self._connect_selection_signals()
+        self._refresh_from_selection()
+
+    def set_tool_manager(self, tm: ToolManager) -> None:
+        """Wire the property panel to the tool manager for tool-defaults mode."""
+        self._tool_manager = tm
+        tm.tool_changed.connect(self._on_tool_changed)
+
+    def _on_tool_changed(self, tool_id: str) -> None:
+        """Track the active tool and refresh the panel."""
+        self._active_tool_id = tool_id
         self._refresh_from_selection()

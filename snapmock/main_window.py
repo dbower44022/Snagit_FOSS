@@ -99,6 +99,7 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._layer_panel)
 
         self._property_panel = PropertyPanel(self._selection_manager, self._scene, self)
+        self._property_panel.set_tool_manager(self._tool_manager)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._property_panel)
 
         self._status_bar = SnapStatusBar(self._view)

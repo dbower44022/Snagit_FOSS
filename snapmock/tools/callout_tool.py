@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
-from PyQt6.QtGui import QBrush, QColor, QKeyEvent, QMouseEvent, QPen
+from PyQt6.QtGui import QBrush, QColor, QFont, QKeyEvent, QMouseEvent, QPen
 from PyQt6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -17,7 +17,13 @@ from PyQt6.QtWidgets import (
 )
 
 from snapmock.commands.add_item import AddItemCommand
-from snapmock.config.constants import BubbleShape, TailStyle
+from snapmock.config.constants import (
+    DEFAULT_FONT_FAMILY,
+    DEFAULT_FONT_SIZE,
+    BubbleShape,
+    TailStyle,
+    VerticalAlign,
+)
 from snapmock.items.callout_item import CalloutItem
 from snapmock.tools.base_tool import BaseTool
 
@@ -36,6 +42,21 @@ class CalloutTool(BaseTool):
         self._is_dragging: bool = False
         self._preview_line: QGraphicsLineItem | None = None
         self._preview_dot: QGraphicsEllipseItem | None = None
+        # Creation defaults (pre-configurable via PropertyPanel)
+        self._creation_defaults = {
+            "font_family": DEFAULT_FONT_FAMILY,
+            "font_size": DEFAULT_FONT_SIZE,
+            "bold": False,
+            "italic": False,
+            "underline": False,
+            "text_color": QColor(Qt.GlobalColor.black),
+            "bg_color": QColor("#FFFFCC"),
+            "border_color": QColor("#333333"),
+            "border_width": 2.0,
+            "border_radius": 12.0,
+            "padding": 10.0,
+            "vertical_align": VerticalAlign.TOP,
+        }
 
     @property
     def tool_id(self) -> str:
@@ -201,6 +222,7 @@ class CalloutTool(BaseTool):
             )
             item = CalloutItem(text="", rect=bubble_rect, tail_tip=tail_tip)
 
+        self._apply_creation_defaults(item)
         layer = self._scene.layer_manager.active_layer
         if layer is not None:
             cmd = AddItemCommand(self._scene, item, layer.layer_id)
@@ -237,6 +259,23 @@ class CalloutTool(BaseTool):
         self._cleanup_preview()
         self._drag_start = None
         self._is_dragging = False
+
+    def _apply_creation_defaults(self, item: CalloutItem) -> None:
+        """Apply user-configured creation defaults to a newly constructed item."""
+        d = self._creation_defaults
+        font = QFont(d.get("font_family", DEFAULT_FONT_FAMILY))
+        font.setPointSize(d.get("font_size", DEFAULT_FONT_SIZE))
+        font.setBold(d.get("bold", False))
+        font.setItalic(d.get("italic", False))
+        font.setUnderline(d.get("underline", False))
+        item.font = font
+        item.text_color = QColor(d.get("text_color", QColor(Qt.GlobalColor.black)))
+        item.bg_color = QColor(d.get("bg_color", QColor("#FFFFCC")))
+        item.border_color = QColor(d.get("border_color", QColor("#333333")))
+        item.border_width = d.get("border_width", 2.0)
+        item.border_radius = d.get("border_radius", 12.0)
+        item.padding = d.get("padding", 10.0)
+        item.vertical_align = d.get("vertical_align", VerticalAlign.TOP)
 
     def _enter_text_editing(self, item: CalloutItem) -> None:
         """Switch to text tool and start editing the newly created callout."""

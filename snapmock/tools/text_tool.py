@@ -30,7 +30,18 @@ from PyQt6.QtWidgets import (
 from snapmock.commands.add_item import AddItemCommand
 from snapmock.commands.remove_item import RemoveItemCommand
 from snapmock.commands.text_edit_command import TextEditCommand
-from snapmock.config.constants import DEFAULT_TEXT_WIDTH, MIN_DRAG_TEXT_BOX
+from snapmock.config.constants import (
+    DEFAULT_FONT_FAMILY,
+    DEFAULT_FONT_SIZE,
+    DEFAULT_TEXT_BG_COLOR,
+    DEFAULT_TEXT_BORDER_COLOR,
+    DEFAULT_TEXT_BORDER_RADIUS,
+    DEFAULT_TEXT_BORDER_WIDTH,
+    DEFAULT_TEXT_PADDING,
+    DEFAULT_TEXT_WIDTH,
+    MIN_DRAG_TEXT_BOX,
+    VerticalAlign,
+)
 from snapmock.items.callout_item import CalloutItem
 from snapmock.items.text_item import TextItem
 from snapmock.tools.base_tool import BaseTool
@@ -226,6 +237,22 @@ class TextTool(BaseTool):
         self._drag_start: QPointF | None = None
         self._drag_preview: QGraphicsRectItem | None = None
         self._is_dragging: bool = False
+        # Creation defaults (pre-configurable via PropertyPanel)
+        self._creation_defaults = {
+            "font_family": DEFAULT_FONT_FAMILY,
+            "font_size": DEFAULT_FONT_SIZE,
+            "bold": False,
+            "italic": False,
+            "underline": False,
+            "text_color": QColor(Qt.GlobalColor.black),
+            "bg_color": QColor(DEFAULT_TEXT_BG_COLOR),
+            "border_color": QColor(DEFAULT_TEXT_BORDER_COLOR),
+            "border_width": DEFAULT_TEXT_BORDER_WIDTH,
+            "border_radius": DEFAULT_TEXT_BORDER_RADIUS,
+            "padding": DEFAULT_TEXT_PADDING,
+            "vertical_align": VerticalAlign.TOP,
+            "auto_size": True,
+        }
 
     @property
     def tool_id(self) -> str:
@@ -450,6 +477,24 @@ class TextTool(BaseTool):
 
         return True
 
+    def _apply_creation_defaults(self, item: TextItem) -> None:
+        """Apply user-configured creation defaults to a newly constructed item."""
+        d = self._creation_defaults
+        font = QFont(d.get("font_family", DEFAULT_FONT_FAMILY))
+        font.setPointSize(d.get("font_size", DEFAULT_FONT_SIZE))
+        font.setBold(d.get("bold", False))
+        font.setItalic(d.get("italic", False))
+        font.setUnderline(d.get("underline", False))
+        item.font = font
+        item.text_color = QColor(d.get("text_color", QColor(Qt.GlobalColor.black)))
+        item.bg_color = QColor(d.get("bg_color", QColor(DEFAULT_TEXT_BG_COLOR)))
+        item.border_color = QColor(d.get("border_color", QColor(DEFAULT_TEXT_BORDER_COLOR)))
+        item.border_width = d.get("border_width", DEFAULT_TEXT_BORDER_WIDTH)
+        item.border_radius = d.get("border_radius", DEFAULT_TEXT_BORDER_RADIUS)
+        item.padding = d.get("padding", DEFAULT_TEXT_PADDING)
+        item.vertical_align = d.get("vertical_align", VerticalAlign.TOP)
+        item.auto_size = d.get("auto_size", True)
+
     def mouse_release(self, event: QMouseEvent) -> bool:
         if self._drag_start is None or self._scene is None:
             return False
@@ -472,6 +517,7 @@ class TextTool(BaseTool):
             # Drag-to-create: set drawn dimensions as minimums, auto-size enabled
             rect = QRectF(self._drag_start, scene_pos).normalized()
             item = TextItem(text="", pos_x=rect.x(), pos_y=rect.y())
+            self._apply_creation_defaults(item)
             item._width = rect.width()
             item._auto_size = True
             item._auto_width = True
@@ -486,6 +532,7 @@ class TextTool(BaseTool):
             # Simple click: place new text item with auto-size
             click_pos = self._drag_start
             item = TextItem(text="", pos_x=click_pos.x(), pos_y=click_pos.y())
+            self._apply_creation_defaults(item)
             item._min_width = DEFAULT_TEXT_WIDTH
             layer = self._scene.layer_manager.active_layer
             if layer is not None:

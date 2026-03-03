@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QContextMenuEvent, QKeyEvent, QMouseEvent
@@ -26,6 +26,16 @@ class BaseTool(ABC):
     def __init__(self) -> None:
         self._scene: SnapScene | None = None
         self._selection_manager: SelectionManager | None = None
+        self._creation_defaults: dict[str, Any] = {}
+
+    @property
+    def creation_defaults(self) -> dict[str, Any]:
+        """Mutable dict of default property values applied to newly created items.
+
+        PropertyPanel can read/write this dict to let users pre-configure
+        properties before creating items.
+        """
+        return self._creation_defaults
 
     # --- identity ---
 
