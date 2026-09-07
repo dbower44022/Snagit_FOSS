@@ -7,6 +7,7 @@ import tempfile
 import uuid
 from pathlib import Path
 
+import pytest
 from PyQt6.QtWidgets import QApplication
 from pytestqt.qtbot import QtBot
 
@@ -43,6 +44,10 @@ def test_channel_receives_forwarded_command(qtbot: QtBot) -> None:
     assert not channel.is_listening
 
 
+@pytest.mark.skipif(
+    not hasattr(socket, "AF_UNIX"),
+    reason="QLocalServer is a named pipe here, so no socket file can be stranded",
+)
 def test_channel_recovers_from_stale_endpoint(qtbot: QtBot) -> None:
     # A bare name lands in the system temp directory, where a crashed instance
     # would leave its socket file behind: bound, then abandoned without unlinking.

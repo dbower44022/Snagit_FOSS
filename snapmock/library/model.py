@@ -105,7 +105,10 @@ def format_datetime(dt: datetime | None) -> str:
         return ""
     if dt.tzinfo is not None:
         dt = dt.astimezone()
-    return dt.strftime("%b %-d, %Y %-I:%M %p")
+    # %-d and %-I are glibc extensions that raise ValueError on Windows, so the
+    # unpadded day and hour are composed here instead.
+    hour = dt.hour % 12 or 12
+    return f"{dt.strftime('%b')} {dt.day}, {dt.year} {hour}:{dt.strftime('%M %p')}"
 
 
 class LibraryModel(QAbstractTableModel):

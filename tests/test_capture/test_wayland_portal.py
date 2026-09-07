@@ -1,5 +1,6 @@
 """Tests for the Wayland portal backend and onboarding (PRD 6.4, 9.2).
 
+The whole module is Linux-only: the portal backend is selected nowhere else.
 The D-Bus round trip runs against a fake portal registered on the session
 bus by the test itself; it is skipped when no session bus is reachable.
 """
@@ -7,22 +8,35 @@ bus by the test itself; it is skipped when no session bus is reachable.
 from __future__ import annotations
 
 import os
+import sys
 import uuid
 from pathlib import Path
 
 import pytest
-from PyQt6.QtCore import QObject, QRect, QSize, pyqtSlot
-from PyQt6.QtDBus import QDBusConnection, QDBusMessage, QDBusObjectPath
-from PyQt6.QtGui import QColor, QImage
-from PyQt6.QtWidgets import QApplication, QDialogButtonBox
-from pytestqt.qtbot import QtBot
 
-from snapmock.capture import wayland_portal as wp
-from snapmock.capture.backend import CaptureCancelledError, CaptureError, FakeHotkeyBackend
-from snapmock.capture.manager import CaptureManager, CaptureState
-from snapmock.capture.models import CaptureMode, CaptureRequest, MonitorInfo
-from snapmock.capture.onboarding import COMMANDS, WaylandOnboardingDialog
-from snapmock.config.settings import AppSettings
+if not sys.platform.startswith("linux"):
+    # select_backends() reaches the portal only on Linux. Elsewhere QtDBus is
+    # missing from some wheels, and where it is present there is no session bus
+    # and its event dispatcher faults on teardown, taking the interpreter with
+    # it. Skip before the import so neither case can be hit.
+    pytest.skip("the Wayland portal backend is Linux-only", allow_module_level=True)
+
+from PyQt6.QtCore import QObject, QRect, QSize, pyqtSlot  # noqa: E402
+from PyQt6.QtDBus import QDBusConnection, QDBusMessage, QDBusObjectPath  # noqa: E402
+from PyQt6.QtGui import QColor, QImage  # noqa: E402
+from PyQt6.QtWidgets import QApplication, QDialogButtonBox  # noqa: E402
+from pytestqt.qtbot import QtBot  # noqa: E402
+
+from snapmock.capture import wayland_portal as wp  # noqa: E402
+from snapmock.capture.backend import (  # noqa: E402
+    CaptureCancelledError,
+    CaptureError,
+    FakeHotkeyBackend,
+)
+from snapmock.capture.manager import CaptureManager, CaptureState  # noqa: E402
+from snapmock.capture.models import CaptureMode, CaptureRequest, MonitorInfo  # noqa: E402
+from snapmock.capture.onboarding import COMMANDS, WaylandOnboardingDialog  # noqa: E402
+from snapmock.config.settings import AppSettings  # noqa: E402
 
 
 def _desktop_image(width: int, height: int) -> QImage:

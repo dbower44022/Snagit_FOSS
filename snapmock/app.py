@@ -19,10 +19,13 @@ def main(argv: list[str] | None = None) -> None:
     """Launch the application, or forward a capture request to the running instance."""
     argv = list(sys.argv if argv is None else argv)
     command = parse_capture_args(argv)
+    # The application is created before the forward because the write to the
+    # channel completes only once an event loop is available to pump it, which
+    # is how a Windows named pipe behaves (PRD 3.5).
+    app = QApplication(argv)
     if command is not None and try_forward(argv):
         sys.exit(0)
 
-    app = QApplication(argv)
     window = MainWindow(restore_session=True)
     manager = window.capture_manager
     manager.listen_for_commands()

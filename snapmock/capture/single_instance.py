@@ -10,12 +10,13 @@ import getpass
 import json
 import logging
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QCoreApplication, QDeadlineTimer, QEventLoop, QObject, pyqtSignal
 from PyQt6.QtNetwork import QLocalServer, QLocalSocket
 
 log = logging.getLogger("snapmock.capture")
 
 FORWARD_TIMEOUT_MS = 100
+PUMP_SLICE_MS = 10
 
 
 def default_channel_name() -> str:
@@ -27,6 +28,29 @@ def default_channel_name() -> str:
     return f"snapmock-{safe}"
 
 
+def _drain_write_queue(socket: QLocalSocket, timeout_ms: int) -> bool:
+    """Flush the socket's write queue; True when it emptied within *timeout_ms*.
+
+    ``waitForBytesWritten`` is not enough on a Windows named pipe: it returns
+    False with every byte still queued, because the write completes only once
+    the event loop runs. So pump the loop until the queue drains. There is no
+    loop to pump before :class:`QCoreApplication` exists, which is why
+    ``app.py`` creates the application before it forwards.
+    """
+    if socket.bytesToWrite() == 0:
+        return True
+    socket.waitForBytesWritten(timeout_ms)
+    if socket.bytesToWrite() == 0:
+        return True
+    app = QCoreApplication.instance()
+    if app is None:  # pragma: no cover - app.py always creates one first
+        return False
+    deadline = QDeadlineTimer(timeout_ms)
+    while socket.bytesToWrite() > 0 and not deadline.hasExpired():
+        app.processEvents(QEventLoop.ProcessEventsFlag.AllEvents, PUMP_SLICE_MS)
+    return socket.bytesToWrite() == 0
+
+
 def try_forward(
     argv: list[str], name: str | None = None, timeout_ms: int = FORWARD_TIMEOUT_MS
 ) -> bool:
@@ -36,8 +60,9 @@ def try_forward(
     if not socket.waitForConnected(timeout_ms):
         return False
     payload = json.dumps({"argv": argv}).encode("utf-8") + b"\n"
-    socket.write(payload)
-    ok = socket.waitForBytesWritten(timeout_ms)
+    if socket.write(payload) != len(payload):
+        return False
+    ok = _drain_write_queue(socket, timeout_ms)
     socket.disconnectFromServer()
     if socket.state() != QLocalSocket.LocalSocketState.UnconnectedState:
         socket.waitForDisconnected(timeout_ms)

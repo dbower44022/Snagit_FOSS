@@ -20,6 +20,10 @@ from snapmock.capture import x11
 from snapmock.capture.models import HOTKEY_ACTION_REGION, HotkeyBinding
 
 
+@pytest.mark.skipif(
+    ctypes.sizeof(ctypes.c_ulong) != 8,
+    reason="the layouts are LP64; this platform is LLP64 and never selects X11",
+)
 def test_struct_sizes_match_lp64_layouts() -> None:
     assert ctypes.sizeof(x11.XKeyEvent) == 96
     assert ctypes.sizeof(x11.XEvent) == 192
