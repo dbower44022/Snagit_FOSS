@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Basic Shape Annotation Tools</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.2</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.3</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Line · Arrow · Rectangle · Ellipse · Arc · Polygon · Freehand / Pen</dd>
-    <dt>Document version</dt><dd>1.2</dd>
-    <dt>Last Updated</dt>    <dd>09-07-26 15:40</dd>
+    <dt>Document version</dt><dd>1.3</dd>
+    <dt>Last Updated</dt>    <dd>09-07-26 18:55</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -32,12 +32,21 @@
     </thead>
     <tbody>
       <tr>
+        <td>1.3</td>
+        <td class="nowrap">09-07-26 18:55</td>
+        <td>Doug Bower</td>
+        <td>Aligned with the universal Transparent color option defined in General UI
+        PRD v1.6, Section 11.1. "No fill" wording replaced in Sections 2.2, 2.6, and
+        13.3. Content otherwise unchanged.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
+      <tr>
         <td>1.2</td>
         <td class="nowrap">09-07-26 15:40</td>
         <td>Doug Bower</td>
         <td>Converted from Word to HTML. Content unchanged except for corrections
         noted in the change log below.</td>
-        <td><span class="status open">Pending</span></td>
+        <td><span class="status closed">Superseded</span></td>
       </tr>
       <tr>
         <td>1.2</td>
@@ -82,6 +91,35 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-07-26 18:55</td>
+        <td>2.6</td>
+        <td>Changed</td>
+        <td>Stroke Color and Fill Color swatch descriptions now state that a diagonal
+        line indicates the color is set to transparent, replacing the "no fill" wording.
+        Transparent is selected in the color picker like any other color (General UI
+        PRD v1.6, Section 11.1).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 18:55</td>
+        <td>2.2</td>
+        <td>Changed</td>
+        <td>fill_color description reworded to remove "Transparent means no fill".</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 18:55</td>
+        <td>13.3</td>
+        <td>Changed</td>
+        <td>Rectangle selection rule reworded from "empty rectangles, with no fill" to
+        rectangles whose fill color is transparent.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 18:55</td>
+        <td>2.2</td>
+        <td>Flagged</td>
+        <td>With transparent available as a fill color, the fill_enabled property may
+        be redundant. Left as written and flagged as an open issue.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-07-26 15:40</td>
         <td>All</td>
@@ -322,7 +360,7 @@ defines only the differences.</p>
     <tr><th>stroke_style</th><td>enum</td><td>Solid</td><td>Solid, Dashed, Dotted, DashDot, DashDotDot.</td></tr>
     <tr><th>stroke_cap</th><td>enum</td><td>Round</td><td>Line cap style: Flat, Square, Round. Affects line endpoints and dash caps.</td></tr>
     <tr><th>stroke_join</th><td>enum</td><td>Round</td><td>Line join style: Miter, Bevel, Round. Affects corners of rectangles and polygons.</td></tr>
-    <tr><th>fill_color</th><td>QColor</td><td>transparent</td><td>Interior fill color. Transparent means no fill.</td></tr>
+    <tr><th>fill_color</th><td>QColor</td><td>transparent</td><td>Interior fill color. Transparent is selected in the color picker like any other color (General UI PRD Section 11.1).</td></tr>
     <tr><th>fill_enabled</th><td>bool</td><td>False</td><td>Whether the shape has a visible fill. When False, <code>fill_color</code> is ignored.</td></tr>
     <tr><th>fill_opacity</th><td>float</td><td>1.0</td><td>Fill opacity, 0.0 to 1.0. Controls fill and background transparency. Multiplied with layer opacity.</td></tr>
     <tr><th>stroke_opacity</th><td>float</td><td>1.0</td><td>Stroke opacity, 0.0 to 1.0. Controls stroke, border, and outline transparency. Multiplied with layer opacity.</td></tr>
@@ -414,9 +452,10 @@ overridden in the tool-specific section.</p>
 from left to right.</p>
 
 <ol>
-  <li>Stroke Color swatch button, 24 by 24 pixels. Click for a color picker popover.</li>
-  <li>Fill Color swatch button, 24 by 24 pixels. Shows a diagonal line for no fill. Click
-  for a color picker popover.</li>
+  <li>Stroke Color swatch button, 24 by 24 pixels. A small diagonal line through the
+  swatch indicates the color is set to transparent. Click for a color picker popover.</li>
+  <li>Fill Color swatch button, 24 by 24 pixels. A small diagonal line through the swatch
+  indicates the color is set to transparent. Click for a color picker popover.</li>
   <li>Stroke Width spin box and slider, 0.5 to 50.0, step 0.5.</li>
   <li>Stroke Style dropdown: Solid, Dashed, Dotted, DashDot, DashDotDot.</li>
   <li>Fill Opacity slider and spin box, 0% to 100%. Controls fill transparency.</li>
@@ -1814,8 +1853,8 @@ field identifying the item class, and all properties listed in Section 10.</p>
   rounding.</li>
   <li>Individual corner radii produce a different radius on each corner.</li>
   <li>Fill renders correctly behind stroke with no overlap artifacts.</li>
-  <li>Empty rectangles, with no fill, can only be selected by clicking near the
-  border.</li>
+  <li>Rectangles whose fill color is transparent can only be selected by clicking near
+  the border.</li>
   <li>Filled rectangles can be selected by clicking anywhere inside.</li>
 </ol>
 
@@ -1928,8 +1967,18 @@ requirement; each needs a decision before this document leaves draft.</p>
 
 <div class="note issue">
   <span class="note-label">Open — approval status never recorded</span>
-  <p>The original carried no approval record. Version 1.2 is shown as pending. Confirm
+  <p>The original carried no approval record. Version 1.3 is shown as pending. Confirm
   whether any earlier version was formally approved.</p>
+</div>
+
+<div class="note issue">
+  <span class="note-label">Open — fill_enabled may be redundant</span>
+  <p>General UI PRD v1.6 makes transparent a color picker option available in every
+  color context. A shape whose fill_color is transparent and a shape whose fill_enabled
+  is False render identically, so the fill_enabled property in Section 2.2 may no longer
+  be needed. Removing it changes the data model, serialization, and hit testing, and is
+  deferred to a separate decision. The Technical Architecture PRD v1.2 carries the same
+  question.</p>
 </div>
 
 </main>
