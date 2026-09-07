@@ -1,0 +1,2017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Navigation &amp; Raster Operations — SnapMock Product Requirements Document</title>
+<link rel="stylesheet" href="prd.css">
+</head>
+<body>
+<div class="doc">
+
+<header class="doc-head">
+  <h1>Navigation &amp; Raster Operations</h1>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.1</span>
+  <dl class="doc-meta">
+    <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
+    <dt>Covers</dt>          <dd>Select / Move · Pan · Zoom · Raster selection · Crop · Resize canvas · Copy, cut, paste, duplicate</dd>
+    <dt>Document version</dt><dd>1.1</dd>
+    <dt>Last Updated</dt>    <dd>09-07-26 19:31</dd>
+    <dt>Author</dt>          <dd>Doug Bower</dd>
+    <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
+  </dl>
+</header>
+
+<section class="front-matter">
+
+  <h2 class="unnumbered">Revision control</h2>
+  <table>
+    <colgroup><col class="w-narrow"><col class="w-short"><col class="w-short"><col><col class="w-short"></colgroup>
+    <thead>
+      <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1.1</td>
+        <td class="nowrap">09-07-26 19:31</td>
+        <td>Doug Bower</td>
+        <td>Converted from Word to HTML. Content unchanged except for corrections
+        noted in the change log below.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
+      <tr>
+        <td>1.1</td>
+        <td class="nowrap">02-28-26</td>
+        <td>Doug Bower</td>
+        <td>Section 2.6: Double-click on empty canvas now toggles between fit-to-window zoom and
+        100% zoom (previously no action).</td>
+        <td><span class="status closed">Superseded by format conversion</span></td>
+      </tr>
+      <tr>
+        <td>1.0</td>
+        <td class="nowrap">February 2026</td>
+        <td>Doug Bower</td>
+        <td>Initial release.</td>
+        <td><span class="status closed">Superseded</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note issue">
+    <span class="note-label">Open — incomplete revision history</span>
+    <p>The Word original recorded release months only for version 1.0, so
+    that date does not meet the MM-DD-YY HH:MM standard. They are carried over as written
+    rather than invented. Supply the exact dates and they will be corrected.</p>
+  </div>
+
+  <h2 class="unnumbered">Change log</h2>
+  <table>
+    <colgroup><col class="w-short"><col class="w-short"><col class="w-short"><col></colgroup>
+    <thead>
+      <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="nowrap">09-07-26 19:31</td>
+        <td>All</td>
+        <td>Format</td>
+        <td>Converted from Word to HTML against the shared stylesheet. Revision control
+        and change log tables added to meet the output standard; the original had a
+        change log only. Open issues gathered in new Section 13.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 19:31</td>
+        <td>13</td>
+        <td>Format</td>
+        <td>The Word original carried its change log as numbered Section 13. It now lives in the
+        front matter with the other documents, and Section 13 is reused for open issues.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">02-28-26</td>
+        <td>2.6</td>
+        <td>Changed</td>
+        <td>Section 2.6: Double-click on empty canvas now toggles between fit-to-window zoom and
+        100% zoom (previously no action).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">02-28-26</td>
+        <td>2.6</td>
+        <td>Changed</td>
+        <td>Section 2.6: Double-click on RasterRegionItem now triggers the same zoom toggle
+        (previously no action; future pixel editor note removed).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">02-28-26</td>
+        <td>3.5</td>
+        <td>Added</td>
+        <td>New Section 3.5: Added Keyboard Pan (Arrow Keys). Arrow keys pan the viewport when no
+        items are selected; Shift+Arrow pans by half the viewport dimension.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">02-28-26</td>
+        <td>3.6</td>
+        <td>Added</td>
+        <td>New Section 3.6: Added Auto Edge Scroll. Viewport auto-pans when cursor reaches the
+        outermost 20px during any drag operation (item moves, rubber-band, transforms, raster
+        selection, crop). Speed is proportional to cursor depth in the trigger zone.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">02-28-26</td>
+        <td>3.5–3.9</td>
+        <td>Changed</td>
+        <td>Sections 3.5–3.9 renumbered (previously 3.5–3.7) to accommodate new sections.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">02-28-26</td>
+        <td>5.5.3</td>
+        <td>Changed</td>
+        <td>Sections 5.5.3, 9.3.1, 9.3.3, 9.3.4: All paste operations now place content at the
+        current cursor position on the canvas (previously viewport center).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">02-28-26</td>
+        <td>5.5.4</td>
+        <td>Changed</td>
+        <td>Section 5.5.4: Commit selection now offsets the new RasterRegionItem by 10% of the
+        selection region’s width/height (previously placed at the selection position with no
+        offset).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">02-28-26</td>
+        <td>9.5</td>
+        <td>Changed</td>
+        <td>Section 9.5: Duplicate offset changed from fixed (+10, +10) pixels to 10% of the
+        selection bounding box width/height, consistent with commit behavior.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">02-28-26</td>
+        <td>12</td>
+        <td>Changed</td>
+        <td>Section 12: Acceptance criteria updated and added for all changes above.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Initial</td>
+        <td>Initial release.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 class="unnumbered">Contents</h2>
+  <ol class="toc">
+    <li><a href="#s1">Document Overview</a>
+      <ol>
+        <li><a href="#s1-1">Purpose</a></li>
+        <li><a href="#s1-2">Scope</a></li>
+        <li><a href="#s1-3">Dependencies</a></li>
+      </ol>
+    </li>
+    <li><a href="#s2">Select / Move Tool</a>
+      <ol>
+        <li><a href="#s2-1">Overview</a></li>
+        <li><a href="#s2-2">Mouse Press Behavior</a></li>
+        <li><a href="#s2-3">Rubber-Band Selection</a></li>
+        <li><a href="#s2-4">Move Operation</a></li>
+        <li><a href="#s2-5">TransformHandle Interactions</a></li>
+        <li><a href="#s2-6">Double-Click Behavior</a></li>
+        <li><a href="#s2-7">Delete Behavior</a></li>
+        <li><a href="#s2-8">Tool Options Bar Content</a></li>
+        <li><a href="#s2-9">Status Bar Hints</a></li>
+      </ol>
+    </li>
+    <li><a href="#s3">Pan / Hand Tool</a>
+      <ol>
+        <li><a href="#s3-1">Overview</a></li>
+        <li><a href="#s3-2">Activation Modes</a></li>
+        <li><a href="#s3-3">Mouse Event Handling</a></li>
+        <li><a href="#s3-4">Scroll Wheel Behavior</a></li>
+        <li><a href="#s3-5">Keyboard Pan (Arrow Keys)</a></li>
+        <li><a href="#s3-6">Auto Edge Scroll</a></li>
+        <li><a href="#s3-7">Trackpad Gesture Support (macOS)</a></li>
+        <li><a href="#s3-8">Edge Cases</a></li>
+        <li><a href="#s3-9">Status Bar Hints</a></li>
+      </ol>
+    </li>
+    <li><a href="#s4">Zoom Tool</a>
+      <ol>
+        <li><a href="#s4-1">Overview</a></li>
+        <li><a href="#s4-2">Zoom Levels</a></li>
+        <li><a href="#s4-3">Zoom Methods</a></li>
+        <li><a href="#s4-4">Zoom-Dependent Rendering</a></li>
+        <li><a href="#s4-5">Zoom Animation</a></li>
+        <li><a href="#s4-6">Status Bar Hints</a></li>
+      </ol>
+    </li>
+    <li><a href="#s5">Raster Selection Tool (Rectangle)</a>
+      <ol>
+        <li><a href="#s5-1">Overview</a></li>
+        <li><a href="#s5-2">Selection States</a></li>
+        <li><a href="#s5-3">Drawing a Selection</a></li>
+        <li><a href="#s5-4">Active Selection Manipulation</a></li>
+        <li><a href="#s5-5">Pixel Operations on Active Selection</a></li>
+        <li><a href="#s5-6">Marching Ants Rendering</a></li>
+        <li><a href="#s5-7">Edge Cases</a></li>
+        <li><a href="#s5-8">Status Bar Hints</a></li>
+      </ol>
+    </li>
+    <li><a href="#s6">Raster Selection Tool (Freeform / Lasso)</a>
+      <ol>
+        <li><a href="#s6-1">Overview</a></li>
+        <li><a href="#s6-2">Freeform Mode (Default)</a></li>
+        <li><a href="#s6-3">Polygonal Mode</a></li>
+        <li><a href="#s6-4">Selection Mask &amp; Pixel Operations</a></li>
+        <li><a href="#s6-5">Active Selection Manipulation</a></li>
+        <li><a href="#s6-6">Status Bar Hints</a></li>
+      </ol>
+    </li>
+    <li><a href="#s7">Crop Canvas Tool</a>
+      <ol>
+        <li><a href="#s7-1">Overview</a></li>
+        <li><a href="#s7-2">States</a></li>
+        <li><a href="#s7-3">Crop Overlay Visual</a></li>
+        <li><a href="#s7-4">Drawing a Crop Region</a></li>
+        <li><a href="#s7-5">Adjusting the Crop Region</a></li>
+        <li><a href="#s7-6">Committing the Crop</a></li>
+        <li><a href="#s7-7">Canceling the Crop</a></li>
+        <li><a href="#s7-8">Status Bar Hints</a></li>
+      </ol>
+    </li>
+    <li><a href="#s8">Resize Canvas Operation</a>
+      <ol>
+        <li><a href="#s8-1">Resize Canvas Dialog</a></li>
+        <li><a href="#s8-2">Resize Image Dialog</a></li>
+        <li><a href="#s8-3">Edge Cases</a></li>
+      </ol>
+    </li>
+    <li><a href="#s9">Copy, Cut, Paste &amp; Duplicate Operations</a>
+      <ol>
+        <li><a href="#s9-1">Copy (Ctrl+C)</a></li>
+        <li><a href="#s9-2">Cut (Ctrl+X)</a></li>
+        <li><a href="#s9-3">Paste (Ctrl+V)</a></li>
+        <li><a href="#s9-4">Paste in Place (Ctrl+Shift+V)</a></li>
+        <li><a href="#s9-5">Duplicate (Ctrl+D)</a></li>
+        <li><a href="#s9-6">Clipboard Priority &amp; MIME Types</a></li>
+        <li><a href="#s9-7">Cross-Instance Paste</a></li>
+        <li><a href="#s9-8">Status Bar Hints</a></li>
+      </ol>
+    </li>
+    <li><a href="#s10">Inter-Tool Interactions &amp; Edge Cases</a>
+      <ol>
+        <li><a href="#s10-1">Tool Switching During Active Operations</a></li>
+        <li><a href="#s10-2">Layer State Changes During Tool Operations</a></li>
+        <li><a href="#s10-3">Undo/Redo During Tool Operations</a></li>
+        <li><a href="#s10-4">Multi-Monitor &amp; Focus</a></li>
+      </ol>
+    </li>
+    <li><a href="#s11">Command Definitions (Undo/Redo)</a>
+      <ol>
+        <li><a href="#s11-1">MoveItemsCommand</a></li>
+        <li><a href="#s11-2">TransformItemCommand</a></li>
+        <li><a href="#s11-3">RasterCutCommand</a></li>
+        <li><a href="#s11-4">CropCanvasCommand</a></li>
+        <li><a href="#s11-5">ResizeCanvasCommand</a></li>
+        <li><a href="#s11-6">ResizeImageCommand</a></li>
+      </ol>
+    </li>
+    <li><a href="#s12">Acceptance Criteria</a>
+      <ol>
+        <li><a href="#s12-1">Select / Move Tool</a></li>
+        <li><a href="#s12-2">Pan / Hand Tool</a></li>
+        <li><a href="#s12-3">Zoom Tool</a></li>
+        <li><a href="#s12-4">Raster Selection (Rectangle)</a></li>
+        <li><a href="#s12-5">Raster Selection (Freeform / Lasso)</a></li>
+        <li><a href="#s12-6">Crop Canvas</a></li>
+        <li><a href="#s12-7">Resize Canvas / Resize Image</a></li>
+        <li><a href="#s12-8">Copy / Cut / Paste / Duplicate</a></li>
+        <li><a href="#s12-9">Inter-Tool Interactions</a></li>
+        <li><a href="#s12-10">Performance</a></li>
+      </ol>
+    </li>
+    <li><a href="#s13">Open Issues</a></li>
+  </ol>
+
+</section>
+
+<main>
+
+<h2 id="s1">Document Overview</h2>
+
+<h3 id="s1-1">Purpose</h3>
+
+<p>This document defines the detailed functional requirements for the navigation tools
+(Select/Move, Pan, Zoom) and raster operations (Raster Selection, Crop, Resize,
+Copy/Cut/Paste) in SnapMock. These tools collectively form the foundation for all canvas
+interaction. They must be implemented and tested before any annotation tools, as every
+annotation tool depends on selection, navigation, and clipboard behavior.</p>
+
+<h3 id="s1-2">Scope</h3>
+
+<p>This PRD covers the complete interaction model for each tool: activation, mouse event
+handling, keyboard modifiers, visual feedback, state transitions, edge cases, error
+handling, and the undoable commands each tool produces. It references the Technical
+Architecture PRD for class structures and the General UI PRD for toolbar and options bar
+integration.</p>
+
+<h3 id="s1-3">Dependencies</h3>
+
+<p>These tools depend on the following subsystems from the Technical Architecture PRD:</p>
+
+<ul>
+  <li>SnapScene and SnapView (Section 3.1): canvas rendering, coordinate transformation, zoom
+  and pan infrastructure.</li>
+  <li>LayerManager (Section 3.2): active layer tracking, visibility and lock state queries.</li>
+  <li>ToolManager (Section 3.3): tool activation, event routing, temporary tool override.</li>
+  <li>SelectionManager (Section 3.4): selection state, multi-select, selection filtering.</li>
+  <li>TransformHandles (Section 3.4.2): resize, rotate, skew overlays on selected items.</li>
+  <li>CommandStack (Section 3.7): undo/redo for all state-changing operations.</li>
+  <li>ClipboardManager (Section 3.6): system and internal clipboard integration.</li>
+  <li>RasterRegionItem (Section 3.5.4): the item type created by raster cut/copy/paste.</li>
+</ul>
+
+<h2 id="s2">Select / Move Tool</h2>
+
+<h3 id="s2-1">Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Tool ID</th><td>select</td></tr>
+    <tr><th>Display Name</th><td>Select / Move</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>V</td></tr>
+    <tr><th>Default Cursor</th><td>Arrow (Qt.ArrowCursor)</td></tr>
+    <tr><th>Category</th><td>Selection</td></tr>
+    <tr><th>Tool Options Bar</th><td>Shows "Selection: N items" when items selected. Shows quick alignment buttons when 2+ items selected.</td></tr>
+  </tbody>
+</table>
+
+<p>The Select / Move tool is the default and most frequently used tool. It handles single
+and multi-item selection, moving items, and activating the TransformHandles for
+resize/rotate/skew. It is the only tool that interacts with TransformHandles directly.</p>
+
+<h3 id="s2-2">Mouse Press Behavior</h3>
+
+<p><strong>2.2.1 Left-click on empty canvas (no item under cursor):</strong></p>
+
+<ul>
+  <li>If no modifier keys are held: deselect all currently selected items. Emit
+  <code>selectionCleared()</code>. Begin rubber-band selection (see 2.3).</li>
+  <li>If Shift is held: do not deselect existing selection. Begin additive rubber-band
+  selection.</li>
+  <li>If Ctrl is held: do not deselect existing selection. Begin toggle rubber-band selection.</li>
+</ul>
+
+<p><strong>2.2.2 Left-click on an unselected item:</strong></p>
+
+<ul>
+  <li>Verify the item is on a visible, unlocked layer. If not, ignore the click (show
+  forbidden cursor on hover).</li>
+  <li>If no modifier keys: deselect all, then select this item. Emit
+  selectionChanged([<code>item_id</code>]).</li>
+  <li>If Shift is held: add this item to the current selection (additive select).</li>
+  <li>If Ctrl is held: add this item to the current selection (same as Shift for click; Ctrl
+  distinction is used for toggle on already-selected items).</li>
+  <li>After selection, prepare for potential drag-move. Record the mouse press position as
+  <code>drag_start_pos</code>. Do not begin the move yet (wait for <code>mouse_move</code>
+  exceeding a drag threshold).</li>
+</ul>
+
+<p><strong>2.2.3 Left-click on an already-selected item:</strong></p>
+
+<ul>
+  <li>If no modifier keys: keep the current selection (do not deselect others). Prepare for
+  potential drag-move.</li>
+  <li>If Ctrl is held: deselect this item (toggle behavior). Emit
+  <code>selectionChanged()</code> with updated list.</li>
+  <li>If Shift is held: no change (item is already selected).</li>
+</ul>
+
+<p><strong>2.2.4 Left-click on a TransformHandle:</strong></p>
+
+<ul>
+  <li>Do not change the selection. Begin the corresponding transform operation (resize,
+  rotate, or skew). Delegate to TransformHandles.begin_transform(<code>handle_type</code>,
+  event).</li>
+  <li>See Section 2.5 for TransformHandle interaction details.</li>
+</ul>
+
+<p><strong>2.2.5 Right-click:</strong></p>
+
+<ul>
+  <li>If clicking on an unselected item: select it first (single select), then show the item
+  context menu.</li>
+  <li>If clicking on a selected item: show the item context menu without changing selection.</li>
+  <li>If clicking on empty canvas: show the canvas context menu.</li>
+</ul>
+
+<h3 id="s2-3">Rubber-Band Selection</h3>
+
+<p>Rubber-band selection begins when the user presses the left mouse button on empty canvas
+and drags.</p>
+
+<p><strong>Visual Feedback:</strong></p>
+
+<ul>
+  <li>A dashed rectangle (1px, accent color, 50% opacity fill) is drawn from the mouse press
+  position to the current mouse position.</li>
+  <li>The rectangle updates in real-time as the mouse moves.</li>
+  <li>Items whose shapes intersect the rectangle are temporarily highlighted (outline glow) to
+  preview the selection.</li>
+</ul>
+
+<p><strong>On Mouse Release:</strong></p>
+
+<ul>
+  <li>Calculate all items whose <code>shape()</code> intersects the rubber-band rectangle.</li>
+  <li>Filter out items on hidden or locked layers.</li>
+  <li>If no modifier: these items become the new selection (replacing any previous selection).</li>
+  <li>If Shift was held during drag: add these items to the existing selection (union).</li>
+  <li>If Ctrl was held during drag: toggle these items in the selection (XOR - items that were
+  selected become deselected, items that were not selected become selected).</li>
+  <li>Emit <code>selectionChanged()</code> with the final selection set.</li>
+  <li>Remove the rubber-band rectangle overlay.</li>
+</ul>
+
+<p><strong>Minimum Drag Threshold:</strong></p>
+
+<p>If the mouse is released within 3 pixels of the press position, treat it as a click (not
+a rubber-band drag). Apply click behavior from Section 2.2.1.</p>
+
+<h3 id="s2-4">Move Operation</h3>
+
+<p>Moving begins when the user presses on a selected item and drags beyond the drag
+threshold (3 pixels).</p>
+
+<p><strong>During Drag:</strong></p>
+
+<ul>
+  <li>Move all selected items by the delta between the current mouse position and
+  <code>drag_start_pos</code>.</li>
+  <li>Movement is applied in real-time (items visually move as the mouse drags).</li>
+  <li>If Shift is held during drag: constrain movement to the axis with the largest delta
+  (horizontal-only or vertical-only). The constraint axis is determined by the first 10
+  pixels of drag movement and then locked.</li>
+  <li>If Snap to Grid is enabled: snap the primary item's position to the nearest grid
+  intersection. All other selected items maintain their relative offsets.</li>
+  <li>Display a tooltip near the cursor showing the delta: "ΔX: +15  ΔY: -8" (pixels from
+  original position).</li>
+</ul>
+
+<p><strong>On Mouse Release:</strong></p>
+
+<ul>
+  <li>Calculate the total delta from the original positions (recorded at mouse press).</li>
+  <li>If the delta is (0, 0) (items returned to original position), do not push a command.</li>
+  <li>Otherwise, push a MoveItemsCommand to the CommandStack with: <code>item_ids</code>,
+  <code>delta_x</code>, <code>delta_y</code>.</li>
+  <li>The command stores original positions for undo.</li>
+</ul>
+
+<p><strong>Keyboard Nudge:</strong></p>
+
+<ul>
+  <li>Arrow keys nudge all selected items by 1 pixel in the arrow direction.</li>
+  <li>Shift + Arrow keys nudge by 10 pixels.</li>
+  <li>Each nudge pushes a MoveItemsCommand. Consecutive nudges in the same direction within
+  500ms are merged into a single command (using <code>merge_with</code>()).</li>
+</ul>
+
+<h3 id="s2-5">TransformHandle Interactions</h3>
+
+<p><strong>2.5.1 Resize via Corner Handles:</strong></p>
+
+<ul>
+  <li>Dragging a corner handle resizes the selection bounding box. All selected items are
+  scaled proportionally relative to the opposite corner (the anchor point).</li>
+  <li>Default behavior: free resize (aspect ratio is not preserved).</li>
+  <li>Shift held: constrain to original aspect ratio.</li>
+  <li>Alt held: resize from center (both the dragged corner and the opposite corner move
+  symmetrically).</li>
+  <li>Shift + Alt: constrain aspect ratio and resize from center.</li>
+  <li>Minimum size: items cannot be resized below 1x1 pixel. If the drag would result in a
+  smaller size, clamp to 1x1.</li>
+  <li>Visual feedback: display the current width and height near the handle being dragged.</li>
+</ul>
+
+<p><strong>2.5.2 Resize via Edge Midpoint Handles:</strong></p>
+
+<ul>
+  <li>Dragging a top or bottom midpoint handle resizes vertically only.</li>
+  <li>Dragging a left or right midpoint handle resizes horizontally only.</li>
+  <li>Shift held: no effect (aspect ratio constraint does not apply to single-axis resize).</li>
+  <li>Alt held: resize from center.</li>
+  <li>Ctrl held: apply skew transform instead of resize (see 2.5.4).</li>
+</ul>
+
+<p><strong>2.5.3 Rotate via Rotate Handle:</strong></p>
+
+<ul>
+  <li>The rotate handle is a circular handle positioned 30 pixels above the top-center of the
+  bounding box, connected by a thin line.</li>
+  <li>Dragging the rotate handle rotates all selected items around the center of the bounding
+  box.</li>
+  <li>Default: free rotation (continuous angle).</li>
+  <li>Shift held: snap rotation to 15-degree increments (0, 15, 30, 45, 60, 75, 90, ...).</li>
+  <li>Visual feedback: display the current rotation angle near the handle (e.g., "45.0°"). A
+  dashed line from the center to the handle shows the current angle.</li>
+  <li>The rotation pivot point is always the center of the selection bounding box.</li>
+</ul>
+
+<p><strong>2.5.4 Skew via Ctrl + Edge Midpoint Drag:</strong></p>
+
+<ul>
+  <li>When Ctrl is held and an edge midpoint handle is dragged, the opposite edge remains
+  fixed and the dragged edge slides parallel to itself.</li>
+  <li>Top/bottom edge drag: horizontal skew.</li>
+  <li>Left/right edge drag: vertical skew.</li>
+  <li>Visual feedback: the bounding box transforms into a parallelogram preview.</li>
+</ul>
+
+<p><strong>2.5.5 Transform Command:</strong></p>
+
+<ul>
+  <li>On mouse release after any transform (resize, rotate, skew), push a TransformItemCommand
+  to the CommandStack.</li>
+  <li>The command stores: <code>item_ids</code>, original transform matrices, new transform
+  matrices.</li>
+  <li>Undo restores the original transforms. Redo re-applies the new transforms.</li>
+</ul>
+
+<h3 id="s2-6">Double-Click Behavior</h3>
+
+<ul>
+  <li>Double-click on a TextItem: enter inline text editing mode (delegate to TextTool).</li>
+  <li>Double-click on a CalloutItem: enter inline text editing mode for the callout text.</li>
+  <li>Double-click on a RasterRegionItem: zoom to fit the entire canvas in the viewport
+  (equivalent to Ctrl+0). If the view is already at fit-to-window zoom, reset to 100% zoom
+  centered on the canvas (equivalent to Ctrl+1). This matches the
+  double-click-on-empty-canvas behavior, since raster regions have no inline editing mode.</li>
+  <li>Double-click on any other item: select only that item (deselect all others) and open the
+  Property Panel scrolled to its properties.</li>
+  <li>Double-click on empty canvas: if the current zoom level is not “fit to window,” zoom to
+  fit the entire canvas in the viewport (equivalent to Ctrl+0). If the view is already at
+  fit-to-window zoom, reset to 100% zoom centered on the canvas (equivalent to Ctrl+1).
+  This provides a quick toggle between overview and actual-size views.</li>
+</ul>
+
+<h3 id="s2-7">Delete Behavior</h3>
+
+<ul>
+  <li>Pressing Delete or Backspace with items selected: remove all selected items. Push a
+  MacroCommand containing a RemoveItemCommand for each item.</li>
+  <li>If the selection includes items on locked layers, those items are silently skipped (not
+  deleted).</li>
+  <li>After deletion, emit <code>selectionCleared()</code>.</li>
+</ul>
+
+<h3 id="s2-8">Tool Options Bar Content</h3>
+
+<ul>
+  <li>When no items are selected: display "No selection" in gray text.</li>
+  <li>When items are selected: display "Selection: N item(s)" and the bounding box dimensions
+  ("W: 200  H: 150").</li>
+  <li>When 2+ items are selected: additionally show quick alignment buttons (Align Left,
+  Center, Right, Top, Middle, Bottom) and distribute buttons (Horizontal, Vertical).</li>
+  <li>All alignment/distribution buttons trigger their respective commands from the Arrange
+  menu.</li>
+</ul>
+
+<h3 id="s2-9">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>State</th><th>Status Bar Text</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Tool active, no selection</th><td>Click to select an item. Drag on empty area for rubber-band selection.</td></tr>
+    <tr><th>Hovering over selectable item</th><td>Click to select. Shift+click to add to selection. Drag to move.</td></tr>
+    <tr><th>Items selected, idle</th><td>Drag to move. Arrow keys to nudge. Delete to remove. Shift+drag to constrain.</td></tr>
+    <tr><th>Dragging items (move)</th><td>ΔX: +15  ΔY: -8 | Shift: constrain axis | Release to confirm</td></tr>
+    <tr><th>Rubber-band selecting</th><td>Release to select enclosed items. Shift: add to selection. Ctrl: toggle.</td></tr>
+    <tr><th>Resizing via handle</th><td>W: 200  H: 150 | Shift: maintain ratio | Alt: from center</td></tr>
+    <tr><th>Rotating via handle</th><td>45.0° | Shift: snap to 15° increments</td></tr>
+    <tr><th>Hovering over locked item</th><td>This item is locked. Unlock its layer to interact with it.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s3">Pan / Hand Tool</h2>
+
+<h3 id="s3-1">Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Tool ID</th><td>pan</td></tr>
+    <tr><th>Display Name</th><td>Pan / Hand</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>Space (hold for temporary activation)</td></tr>
+    <tr><th>Default Cursor</th><td>Open Hand (Qt.OpenHandCursor)</td></tr>
+    <tr><th>Drag Cursor</th><td>Closed Hand (Qt.ClosedHandCursor)</td></tr>
+    <tr><th>Category</th><td>Navigation</td></tr>
+    <tr><th>Tool Options Bar</th><td>Empty (no options)</td></tr>
+  </tbody>
+</table>
+
+<p>The Pan tool allows the user to scroll the canvas viewport by clicking and dragging. It
+is most commonly accessed as a temporary tool override by holding the Space bar while
+another tool is active.</p>
+
+<h3 id="s3-2">Activation Modes</h3>
+
+<p><strong>3.2.1 Permanent Activation:</strong></p>
+
+<ul>
+  <li>Click the Pan tool in the Left Tool Palette, or select it from the Tools menu.</li>
+  <li>The tool remains active until another tool is selected.</li>
+  <li>Cursor changes to Open Hand.</li>
+</ul>
+
+<p><strong>3.2.2 Temporary Activation (Space Bar):</strong></p>
+
+<ul>
+  <li>Holding the Space bar temporarily activates the Pan tool regardless of the currently
+  active tool.</li>
+  <li>The previous tool is saved. On Space release, the previous tool is restored.</li>
+  <li>If the user is in the middle of a tool operation (e.g., drawing a rectangle), Space is
+  ignored to prevent interruption.</li>
+  <li>The cursor changes to Open Hand while Space is held.</li>
+  <li>If the user presses Space and then presses the left mouse button, pan behavior begins.
+  Releasing Space while still dragging continues the pan until the mouse button is
+  released. After both are released, the previous tool is restored.</li>
+</ul>
+
+<p><strong>3.2.3 Middle Mouse Button:</strong></p>
+
+<ul>
+  <li>Pressing and holding the middle mouse button activates pan behavior regardless of the
+  active tool.</li>
+  <li>This works even during other tool operations (it does not interrupt the active tool's
+  state).</li>
+  <li>Cursor changes to Closed Hand during the drag.</li>
+  <li>On release, the active tool resumes with no state change.</li>
+</ul>
+
+<h3 id="s3-3">Mouse Event Handling</h3>
+
+<p><strong>Mouse Press (Left button, when Pan tool is active):</strong></p>
+
+<ul>
+  <li>Record the current viewport scroll position and mouse screen position as
+  <code>pan_start</code>.</li>
+  <li>Change cursor to Closed Hand.</li>
+</ul>
+
+<p><strong>Mouse Move (dragging):</strong></p>
+
+<ul>
+  <li>Calculate the delta between the current mouse screen position and
+  <code>pan_start</code>.</li>
+  <li>Scroll the viewport by this delta (using QGraphicsView.horizontalScrollBar() and
+  <code>verticalScrollBar()</code>, or QGraphicsView.translate()).</li>
+  <li>The movement is 1:1 (pixel-perfect tracking of the mouse movement).</li>
+  <li>This must be smooth and responsive at 60 FPS.</li>
+</ul>
+
+<p><strong>Mouse Release:</strong></p>
+
+<ul>
+  <li>Change cursor back to Open Hand.</li>
+  <li>Pan is complete. No command is pushed to the CommandStack (panning is not undoable).</li>
+</ul>
+
+<h3 id="s3-4">Scroll Wheel Behavior</h3>
+
+<ul>
+  <li>Without Ctrl: vertical scroll wheel scrolls the viewport vertically. Shift + scroll
+  wheel scrolls horizontally.</li>
+  <li>With Ctrl: scroll wheel triggers zoom (see Zoom Tool, Section 4).</li>
+  <li>Scroll speed: 3 lines per wheel notch (configurable in Preferences).</li>
+</ul>
+
+<h3 id="s3-5">Keyboard Pan (Arrow Keys)</h3>
+
+<p>When no items are selected, the arrow keys pan the viewport instead of nudging items.
+This provides a quick, hands-on-keyboard method for navigating a zoomed-in canvas
+without switching tools or holding modifier keys.</p>
+
+<p><strong>Pan Distances:</strong></p>
+
+<ul>
+  <li>Arrow key (no modifier): pan the viewport by one scroll step (equivalent to one scroll
+  wheel notch, default 3 lines) in the arrow direction.</li>
+  <li>Shift + Arrow key: pan the viewport by half the viewport width (for Left/Right) or half
+  the viewport height (for Up/Down). This allows the user to quickly traverse large
+  distances across a zoomed-in canvas.</li>
+</ul>
+
+<p><strong>Conditions and Edge Cases:</strong></p>
+
+<ul>
+  <li>Arrow key pan is only active when no items are selected. When items are selected, arrow
+  keys revert to their standard nudge behavior (Section 2.4).</li>
+  <li>Arrow key pan works regardless of the active tool (Select, Pan, Zoom, etc.), as long as
+  no items are selected and no text input field has focus.</li>
+  <li>If the viewport is already at the edge of the pasteboard in the arrow direction, the key
+  press has no visible effect (the pan is clamped, consistent with unlimited pasteboard
+  scrolling from Section 3.8).</li>
+  <li>Pan via arrow keys is not recorded in the undo history (consistent with all other pan
+  methods).</li>
+</ul>
+
+<h3 id="s3-6">Auto Edge Scroll</h3>
+
+<p>When the user is performing any drag operation and the cursor reaches the edge of the
+viewport, the canvas automatically pans in that direction. This allows the user to move
+items, draw selections, and perform other drag operations across a zoomed-in canvas in a
+single continuous gesture without releasing the mouse.</p>
+
+<p><strong>Applicable Operations:</strong></p>
+
+<ul>
+  <li>Moving items with the Select tool (Section 2.4).</li>
+  <li>Rubber-band selection (Section 2.3).</li>
+  <li>Transform handle dragging: resize, rotate, and skew (Section 2.5).</li>
+  <li>Drawing a raster selection rectangle (Section 5.3).</li>
+  <li>Drawing a freeform or polygonal lasso selection (Section 6.2, 6.3).</li>
+  <li>Moving or resizing a raster selection marquee (Section 5.4).</li>
+  <li>Drawing a crop region (Section 7.4).</li>
+  <li>Moving or resizing a crop region via handles (Section 7.5).</li>
+</ul>
+
+<p><strong>Trigger Zone and Speed:</strong></p>
+
+<ul>
+  <li>The auto-scroll trigger zone is the outermost 20 pixels of the viewport on each edge
+  (top, bottom, left, right). When the cursor enters this zone during a qualifying drag
+  operation, scrolling begins.</li>
+  <li>Scroll speed is proportional to how deep the cursor is within the trigger zone. At the
+  inner edge of the zone (20px from viewport edge), scrolling is slow (approximately 2
+  pixels per frame). At the outermost pixel of the viewport, scrolling is fast
+  (approximately 15 pixels per frame). This provides fine control near the boundary and
+  rapid traversal when the cursor is pushed hard against the edge.</li>
+  <li>Scrolling operates on a 16ms timer (approximately 60 FPS) that is started when the
+  cursor enters the trigger zone and stopped when the cursor leaves the zone or the drag
+  operation ends.</li>
+  <li>Corner zones (where two edges meet) scroll diagonally, combining the horizontal and
+  vertical scroll speeds.</li>
+</ul>
+
+<p><strong>Behavior During Scroll:</strong></p>
+
+<ul>
+  <li>The active drag operation continues to update as the viewport scrolls. For item moves,
+  the items move with the scroll so the cursor-to-item offset remains constant. For
+  selections and crop regions, the selection area expands as the viewport pans to reveal
+  more canvas.</li>
+  <li>Visual feedback: the viewport scrolls smoothly. No additional cursor change or overlay
+  is shown (the existing drag cursor remains).</li>
+  <li>Auto-scroll respects the pasteboard bounds. Scrolling continues into the pasteboard area
+  the same way manual pan does (unlimited).</li>
+</ul>
+
+<p><strong>Edge Cases:</strong></p>
+
+<ul>
+  <li>If the canvas is fully visible (zoom level is at or below fit-to-window), auto edge
+  scroll is disabled because there is nothing to scroll to.</li>
+  <li>If the cursor moves outside the viewport entirely (e.g., onto a second monitor or the OS
+  taskbar), auto-scroll continues at maximum speed in the direction the cursor exited
+  until the mouse button is released or the cursor re-enters the viewport.</li>
+  <li>Auto edge scroll does not apply to the Pan tool itself (dragging with the Pan tool
+  already provides direct viewport movement).</li>
+</ul>
+
+<h3 id="s3-7">Trackpad Gesture Support (macOS)</h3>
+
+<ul>
+  <li>Two-finger drag: pan the viewport (same as middle-mouse-button pan).</li>
+  <li>Pinch: zoom in/out (delegates to Zoom Tool behavior).</li>
+  <li>These gestures should work regardless of the active tool.</li>
+</ul>
+
+<h3 id="s3-8">Edge Cases</h3>
+
+<ul>
+  <li>Panning beyond the canvas bounds is allowed. The pasteboard area (gray background) is
+  infinitely scrollable in all directions.</li>
+  <li>After panning far from the canvas, the user can return via Home key (pan to origin) or
+  Ctrl+0 (fit to window).</li>
+  <li>Pan does not affect the scene or any items. It is purely a viewport transformation.</li>
+</ul>
+
+<h3 id="s3-9">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>State</th><th>Status Bar Text</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Pan tool active, idle</th><td>Click and drag to pan the canvas. Ctrl+scroll to zoom.</td></tr>
+    <tr><th>Panning (dragging)</th><td>Release to stop panning.</td></tr>
+    <tr><th>Space held (temporary pan)</th><td>Release Space to return to previous tool.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s4">Zoom Tool</h2>
+
+<h3 id="s4-1">Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Tool ID</th><td><code>zoom_tool</code></td></tr>
+    <tr><th>Display Name</th><td>Zoom In/Out</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>Ctrl+Space (hold for temporary activation)</td></tr>
+    <tr><th>Default Cursor</th><td>Magnifying glass with +</td></tr>
+    <tr><th>Alt Cursor</th><td>Magnifying glass with - (when Alt is held)</td></tr>
+    <tr><th>Category</th><td>Navigation</td></tr>
+    <tr><th>Tool Options Bar</th><td>Zoom level display. Toggle buttons: Zoom In mode / Zoom Out mode.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s4-2">Zoom Levels</h3>
+
+<p>SnapMock supports zoom levels from 10% to 3200%. The zoom step progression follows a
+perceptual scale where each step feels approximately equal in visual change:</p>
+
+<p>10%, 15%, 20%, 25%, 33%, 50%, 67%, 75%, 100%, 125%, 150%, 200%, 250%, 300%, 400%, 500%,
+600%, 800%, 1200%, 1600%, 2400%, 3200%</p>
+
+<p>Custom zoom levels (typed into the zoom dropdown) are allowed at any integer percentage.
+The zoom step shortcuts (Ctrl++, Ctrl+-) always jump to the nearest predefined step.</p>
+
+<h3 id="s4-3">Zoom Methods</h3>
+
+<p><strong>4.3.1 Ctrl + Scroll Wheel (Primary Method):</strong></p>
+
+<ul>
+  <li>This is the most common zoom method and works regardless of the active tool.</li>
+  <li>Scroll up: zoom in one step. Scroll down: zoom out one step.</li>
+  <li>Zoom center point: the zoom is centered on the cursor position. The scene point under
+  the cursor should remain under the cursor after zooming. This provides intuitive
+  zoom-to-point behavior.</li>
+  <li>Smooth animated transition: each zoom step animates over 100ms using QPropertyAnimation
+  on the view's transform. If the user scrolls rapidly, animations queue and blend
+  smoothly.</li>
+</ul>
+
+<p><strong>4.3.2 Zoom Tool Click:</strong></p>
+
+<ul>
+  <li>Left-click: zoom in one step, centered on the click position.</li>
+  <li>Alt + left-click: zoom out one step, centered on the click position.</li>
+  <li>Click and drag: draw a zoom rectangle. On release, zoom to fit the drawn rectangle in
+  the viewport. This allows precise zoom-to-area.</li>
+  <li>The zoom rectangle is drawn with a dashed accent-color outline and a 10% opacity fill.</li>
+</ul>
+
+<p><strong>4.3.3 Keyboard Shortcuts:</strong></p>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Shortcut</th><th>Action</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Ctrl++  (or Ctrl+=)</th><td>Zoom in one step, centered on viewport center.</td></tr>
+    <tr><th>Ctrl+-</th><td>Zoom out one step, centered on viewport center.</td></tr>
+    <tr><th>Ctrl+0</th><td>Fit entire canvas in viewport (zoom to fit).</td></tr>
+    <tr><th>Ctrl+1</th><td>Set zoom to exactly 100%.</td></tr>
+    <tr><th>Ctrl+Shift+0</th><td>Zoom to fit the current selection in viewport (with 10% padding).</td></tr>
+  </tbody>
+</table>
+
+<p><strong>4.3.4 Zoom Dropdown (Toolbar):</strong></p>
+
+<ul>
+  <li>The editable combo box in the Main Toolbar shows the current zoom level (e.g., "150%").</li>
+  <li>Clicking the dropdown shows the predefined zoom levels as selectable options.</li>
+  <li>The user can type a custom integer percentage (e.g., "137") and press Enter to set it.</li>
+  <li>Invalid input (non-numeric, out of range) is rejected and the field reverts to the
+  current zoom.</li>
+</ul>
+
+<h3 id="s4-4">Zoom-Dependent Rendering</h3>
+
+<ul>
+  <li>Below 100% zoom: items may appear aliased. Anti-aliasing is applied to smooth rendering.</li>
+  <li>At 100% zoom: pixel-perfect rendering (1:1 mapping between canvas pixels and screen
+  pixels).</li>
+  <li>Above 100% zoom: individual pixels become visible. Item rendering remains smooth (vector
+  items use QPainter's sub-pixel rendering).</li>
+  <li>Above 800% zoom (configurable): a pixel grid overlay is drawn as 1px lines at 30%
+  opacity delineating individual canvas pixels. This aids precise pixel-level work.</li>
+  <li>Rulers tick marks and labels adapt to zoom level (fewer labels at low zoom, more at high
+  zoom) to remain readable.</li>
+</ul>
+
+<h3 id="s4-5">Zoom Animation</h3>
+
+<ul>
+  <li>All zoom transitions are animated over 100ms using an ease-out curve.</li>
+  <li>If a new zoom is triggered during an animation, the current animation is replaced (not
+  queued) with a new animation from the current intermediate state to the new target.</li>
+  <li>Animation can be disabled in Preferences for users who prefer instant zoom.</li>
+</ul>
+
+<h3 id="s4-6">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>State</th><th>Status Bar Text</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Zoom tool active</th><td>Click to zoom in. Alt+click to zoom out. Drag to zoom to area.</td></tr>
+    <tr><th>Zoom via Ctrl+scroll</th><td>(No change to status bar - the hint from the active tool remains.)</td></tr>
+    <tr><th>Drawing zoom rectangle</th><td>Release to zoom to this area.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s5">Raster Selection Tool (Rectangle)</h2>
+
+<h3 id="s5-1">Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Tool ID</th><td><code>raster_select</code></td></tr>
+    <tr><th>Display Name</th><td>Raster Selection (Rectangle)</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>M</td></tr>
+    <tr><th>Default Cursor</th><td>Crosshair with dotted rectangle icon</td></tr>
+    <tr><th>Category</th><td>Selection</td></tr>
+    <tr><th>Tool Options Bar</th><td>Feather: slider 0-20px (default 0). Anti-alias: checkbox (default on). Source: dropdown (Active Layer, All Visible Layers, Specific Layer). Fixed Size: checkbox + width/height inputs for fixed-dimension selection.</td></tr>
+  </tbody>
+</table>
+
+<p>The Raster Selection tool allows the user to select a rectangular region of pixels from
+the canvas. This is the primary mechanism for the UI mockup workflow: selecting a piece
+of a screenshot, cutting or copying it, and pasting it as a movable element.</p>
+
+<h3 id="s5-2">Selection States</h3>
+
+<p>The raster selection tool has three distinct states:</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>State</th><th>Description</th><th>Transitions</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Idle</th><td>No selection exists. The tool is waiting for the user to draw a selection.</td><td>Mouse press on canvas → Drawing</td></tr>
+    <tr><th>Drawing</th><td>The user is actively dragging to define a selection rectangle.</td><td>Mouse release → Active Selection</td></tr>
+    <tr><th>Active Selection</th><td>A selection marquee (marching ants) is visible. The user can manipulate the selection before committing.</td><td>Press Enter or double-click inside → Commit. Press Escape → Cancel (back to Idle). Press outside selection → Cancel and start new. Drag inside selection → Move Marquee. Drag handle → Resize Marquee. Ctrl+C/X → Copy/Cut pixels.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s5-3">Drawing a Selection</h3>
+
+<p><strong>Mouse Press (on canvas with no active selection):</strong></p>
+
+<ul>
+  <li>Record the press position as <code>selection_origin</code> (in canvas coordinates).</li>
+  <li>If Fixed Size is enabled in the Tool Options Bar, the selection size is predetermined.
+  The press position is the top-left corner (or center if Alt is held).</li>
+  <li>Transition to Drawing state.</li>
+</ul>
+
+<p><strong>Mouse Move (dragging during Drawing state):</strong></p>
+
+<ul>
+  <li>Calculate the selection rectangle from <code>selection_origin</code> to the current
+  mouse position.</li>
+  <li>Draw the selection rectangle as a marching-ants dashed outline (animated, 2px dashes
+  alternating black and white, cycling at 200ms intervals).</li>
+  <li>Display selection dimensions near the cursor: "W: 320  H: 240" in a small tooltip.</li>
+  <li>Modifier keys during drag: Shift held: constrain to a square (width = height). The
+  constraint uses the larger of the two dimensions. Alt held: draw from center
+  (<code>selection_origin</code> is the center, not the corner). Both: square from center.</li>
+  <li>If Snap to Grid is enabled, snap the selection edges to grid intersections.</li>
+  <li>The selection rectangle is clipped to the canvas bounds (cannot extend beyond the
+  canvas).</li>
+</ul>
+
+<p><strong>Mouse Release (end of Drawing):</strong></p>
+
+<ul>
+  <li>If the selection area is less than 4 square pixels (essentially a click), cancel the
+  selection and return to Idle.</li>
+  <li>Otherwise, transition to Active Selection state. The marching-ants animation continues.</li>
+  <li>Place resize handles (8 handles: 4 corners + 4 edge midpoints) on the selection marquee.</li>
+</ul>
+
+<h3 id="s5-4">Active Selection Manipulation</h3>
+
+<p><strong>5.4.1 Move Marquee:</strong></p>
+
+<ul>
+  <li>Click inside the selection rectangle and drag to move the selection marquee without
+  affecting pixels.</li>
+  <li>This allows repositioning the selection before performing copy/cut.</li>
+  <li>Shift constrains movement to horizontal or vertical axis.</li>
+  <li>The selection is clipped to canvas bounds.</li>
+</ul>
+
+<p><strong>5.4.2 Resize Marquee:</strong></p>
+
+<ul>
+  <li>Drag any of the 8 handles to resize the selection.</li>
+  <li>Shift constrains to square (on corner handles).</li>
+  <li>The selection is clipped to canvas bounds.</li>
+</ul>
+
+<p><strong>5.4.3 Replace Selection:</strong></p>
+
+<ul>
+  <li>Clicking outside the selection (on canvas) cancels the current selection and immediately
+  begins a new selection drag from that point.</li>
+  <li>This provides a seamless workflow: you don't need to explicitly press Escape before
+  drawing a new selection.</li>
+</ul>
+
+<h3 id="s5-5">Pixel Operations on Active Selection</h3>
+
+<p><strong>5.5.1 Copy (Ctrl+C):</strong></p>
+
+<ul>
+  <li>Composite the pixel content within the selection rectangle from the configured source
+  (active layer, all visible layers, or a specific layer).</li>
+  <li>Apply feather if configured (gaussian blur on the alpha channel at the edges).</li>
+  <li>Place the resulting QImage on both: the internal clipboard (with metadata:
+  <code>source_rect</code>, <code>source_layer_id</code>, feather amount) and the system
+  clipboard as a PNG image (for interoperability).</li>
+  <li>The selection remains active after copy.</li>
+  <li>No command is pushed (copy alone does not modify the document).</li>
+</ul>
+
+<p><strong>5.5.2 Cut (Ctrl+X):</strong></p>
+
+<ul>
+  <li>Perform the same pixel capture as Copy.</li>
+  <li>Additionally, erase the pixels within the selection rectangle on the source layer(s).
+  The erased area becomes transparent (alpha = 0) or fills with the canvas background
+  color (configurable in Preferences: "Cut fills with transparency" checkbox, default:
+  transparency).</li>
+  <li>If the source is "All Visible Layers," the cut only erases from the active layer (not
+  all layers).</li>
+  <li>Push a RasterCutCommand to the CommandStack. The command stores: the original pixel data
+  of the erased area (for undo), the selection rect, the source layer ID.</li>
+  <li>The selection is dismissed after cut (return to Idle state).</li>
+</ul>
+
+<p><strong>5.5.3 Paste (Ctrl+V, from Raster Selection context):</strong></p>
+
+<ul>
+  <li>If the internal clipboard contains raster data from a raster selection copy/cut: create
+  a new RasterRegionItem with the clipboard pixel data.</li>
+  <li>Position the new item at the current cursor position on the canvas. If Ctrl+Shift+V is
+  used (Paste in Place), paste at the original source location.</li>
+  <li>Add the item to the active layer.</li>
+  <li>Push an AddItemCommand to the CommandStack.</li>
+  <li>Automatically switch to the Select tool and select the newly pasted item (so the user
+  can immediately move it).</li>
+  <li>Dismiss the raster selection marquee (return to Idle).</li>
+</ul>
+
+<p><strong>5.5.4 Commit Selection (Enter or Double-Click inside):</strong></p>
+
+<ul>
+  <li>Performs the same operation as Copy + Paste: captures the pixel content within the
+  selection, creates a RasterRegionItem on the active layer offset from the selection
+  position by 10% of the selection region’s width to the right and 10% of the selection
+  region’s height downward. This offset ensures the new item is visually distinguishable
+  from the original source pixels beneath it.</li>
+  <li>Does NOT erase the source pixels (unlike Cut).</li>
+  <li>Switches to Select tool with the new item selected.</li>
+  <li>This is the quick workflow for "grab a piece of the screenshot and make it movable."</li>
+</ul>
+
+<h3 id="s5-6">Marching Ants Rendering</h3>
+
+<ul>
+  <li>The marching ants are rendered as an overlay on top of all scene content (highest
+  z-order, not part of any layer).</li>
+  <li>Pattern: alternating 4px black and 4px white dashes on the selection outline.</li>
+  <li>Animation: the dash pattern offset advances by 1px every 100ms, creating the illusion of
+  movement.</li>
+  <li>The area outside the selection is dimmed with a semi-transparent overlay (10% black) to
+  visually isolate the selected region.</li>
+  <li>When the selection is being moved or resized, the dimming overlay updates in real-time.</li>
+</ul>
+
+<h3 id="s5-7">Edge Cases</h3>
+
+<ul>
+  <li>Selection on a fully transparent area: copy/cut captures transparent pixels. The
+  resulting RasterRegionItem appears invisible but exists as a valid item.</li>
+  <li>Selection that extends beyond canvas bounds during drawing: clamp the selection to
+  canvas bounds.</li>
+  <li>Switching tools while an active selection exists: the selection is dismissed (return to
+  Idle). A warning is not shown; this is expected behavior.</li>
+  <li>Undo after Cut: restores the erased pixels to the source layer. The RasterRegionItem
+  created by a subsequent paste is not affected (it's a separate undo step).</li>
+  <li>Very large selections (e.g., full 4K canvas): the copy operation may take a moment. Show
+  a brief progress indicator in the status bar for operations taking more than 200ms.</li>
+</ul>
+
+<h3 id="s5-8">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>State</th><th>Status Bar Text</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Idle</th><td>Click and drag to select a rectangular pixel region.</td></tr>
+    <tr><th>Drawing</th><td>W: 320  H: 240 | Shift: square | Alt: from center | Release to confirm.</td></tr>
+    <tr><th>Active Selection</th><td>Ctrl+C: copy | Ctrl+X: cut | Enter: create layer item | Escape: cancel | Drag: move marquee.</td></tr>
+    <tr><th>Moving marquee</th><td>Release to reposition selection. Shift: constrain axis.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s6">Raster Selection Tool (Freeform / Lasso)</h2>
+
+<h3 id="s6-1">Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Tool ID</th><td><code>freeform_select</code></td></tr>
+    <tr><th>Display Name</th><td>Raster Selection (Freeform / Lasso)</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>L</td></tr>
+    <tr><th>Default Cursor</th><td>Crosshair with lasso icon</td></tr>
+    <tr><th>Category</th><td>Selection</td></tr>
+    <tr><th>Tool Options Bar</th><td>Feather: slider 0-20px (default 0). Anti-alias: checkbox (default on). Source: dropdown (Active Layer, All Visible Layers). Mode: dropdown (Freeform, Polygonal). Smoothing: slider 0-100% (default 50%).</td></tr>
+  </tbody>
+</table>
+
+<p>The Freeform / Lasso selection tool works identically to the Rectangle Raster Selection
+tool (Section 5) in terms of pixel operations (copy, cut, paste, commit) but defines a
+non-rectangular selection boundary.</p>
+
+<h3 id="s6-2">Freeform Mode (Default)</h3>
+
+<p><strong>Drawing:</strong></p>
+
+<ul>
+  <li>Mouse press begins the path at the press position.</li>
+  <li>Mouse drag continuously appends points to the path (sampled at the mouse move event
+  rate).</li>
+  <li>The path is rendered as a solid accent-color line (2px) as the user draws.</li>
+  <li>Mouse release auto-closes the path: a straight line is drawn from the last point to the
+  first point.</li>
+  <li>The closed path becomes the selection boundary. Marching ants animate along the path.</li>
+  <li>Path smoothing is applied based on the Smoothing slider value. At 0%, the raw sampled
+  points are used. At 100%, an aggressive Bezier curve simplification is applied to
+  produce smooth curves.</li>
+  <li>If the resulting closed path has an area less than 16 square pixels, the selection is
+  canceled.</li>
+</ul>
+
+<h3 id="s6-3">Polygonal Mode</h3>
+
+<p><strong>Drawing:</strong></p>
+
+<ul>
+  <li>Each left-click adds a vertex to the polygon path.</li>
+  <li>A preview line is drawn from the last vertex to the current cursor position.</li>
+  <li>Shift constrains the preview line to 0/45/90 degree angles.</li>
+  <li>Double-click or pressing Enter closes the polygon (connects the last vertex to the
+  first).</li>
+  <li>Pressing Escape during drawing cancels the polygon and returns to Idle.</li>
+  <li>Right-click removes the last vertex (undo last point).</li>
+  <li>Minimum 3 vertices required to form a valid selection.</li>
+</ul>
+
+<h3 id="s6-4">Selection Mask &amp; Pixel Operations</h3>
+
+<ul>
+  <li>The freeform/polygonal path defines an alpha mask. Pixels inside the path are fully
+  selected (alpha = 255). Pixels outside are not selected (alpha = 0).</li>
+  <li>When feathering is applied, the alpha mask is blurred at the edges by the feather
+  radius.</li>
+  <li>When anti-aliasing is enabled, edge pixels have partial alpha values for smooth
+  boundaries.</li>
+  <li>Copy/Cut/Paste operations use this mask to extract pixels. The resulting
+  RasterRegionItem stores both the pixel data (QPixmap) and the alpha mask (QBitmap).</li>
+  <li>The RasterRegionItem's <code>boundingRect()</code> is the bounding box of the freeform
+  path. Pixels outside the mask are transparent.</li>
+</ul>
+
+<h3 id="s6-5">Active Selection Manipulation</h3>
+
+<ul>
+  <li>Unlike the rectangle selection, the freeform selection cannot be resized by handles
+  after drawing (the shape is too complex for simple handle-based editing).</li>
+  <li>The selection marquee can be moved by clicking inside and dragging (same as rectangle
+  selection).</li>
+  <li>Replacing the selection works the same: click outside to cancel and start a new path.</li>
+</ul>
+
+<h3 id="s6-6">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>State</th><th>Status Bar Text</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Idle (Freeform mode)</th><td>Click and drag to draw a freeform selection path.</td></tr>
+    <tr><th>Drawing (Freeform)</th><td>Drawing freeform selection. Release to close path.</td></tr>
+    <tr><th>Idle (Polygonal mode)</th><td>Click to add vertices. Double-click or Enter to close. Escape to cancel.</td></tr>
+    <tr><th>Drawing (Polygonal)</th><td>Click to add vertex. Right-click to undo last. Double-click to close.</td></tr>
+    <tr><th>Active Selection</th><td>Ctrl+C: copy | Ctrl+X: cut | Enter: create layer item | Escape: cancel</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s7">Crop Canvas Tool</h2>
+
+<h3 id="s7-1">Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Tool ID</th><td>crop</td></tr>
+    <tr><th>Display Name</th><td>Crop Canvas</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>C</td></tr>
+    <tr><th>Default Cursor</th><td>Crosshair</td></tr>
+    <tr><th>Category</th><td>Canvas</td></tr>
+    <tr><th>Tool Options Bar</th><td>Aspect Ratio Lock: toggle button. Preset Ratios: dropdown (Free, 1:1, 4:3, 3:2, 16:9, Custom). Rule of Thirds: checkbox (default on). Width x Height: spinboxes for numeric entry of crop dimensions.</td></tr>
+  </tbody>
+</table>
+
+<p>The Crop tool resizes the canvas by allowing the user to define a rectangular region
+that becomes the new canvas bounds. Content outside the crop area is permanently removed
+(but the operation is undoable).</p>
+
+<h3 id="s7-2">States</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>State</th><th>Description</th><th>Transitions</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Initial</th><td>Tool just activated. No crop region defined yet.</td><td>Draw on canvas → Drawing. If canvas has content, a default crop region matching the full canvas is shown.</td></tr>
+    <tr><th>Drawing</th><td>User is dragging to define the crop rectangle.</td><td>Release → Adjusting.</td></tr>
+    <tr><th>Adjusting</th><td>A crop overlay is visible with handles. User can resize, move, or type exact dimensions.</td><td>Enter or double-click inside → Commit. Escape → Cancel.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s7-3">Crop Overlay Visual</h3>
+
+<ul>
+  <li>The area outside the crop rectangle is covered with a semi-transparent dark overlay (50%
+  black). This dims the content that will be removed.</li>
+  <li>The crop rectangle has a 2px solid accent-color border.</li>
+  <li>Eight resize handles (4 corners + 4 edge midpoints) on the crop border, styled as 8x8
+  filled squares.</li>
+  <li>Inside the crop area, a rule-of-thirds grid is drawn (if enabled): two horizontal and
+  two vertical lines dividing the area into 9 equal sections, drawn at 30% opacity.</li>
+  <li>Crop dimensions are displayed near the top-left corner of the crop area: "1920 x 1080"
+  in a small label.</li>
+</ul>
+
+<h3 id="s7-4">Drawing a Crop Region</h3>
+
+<ul>
+  <li>Mouse press on the canvas (when no crop region exists or when clicking outside the
+  existing crop) starts a new crop region.</li>
+  <li>Drag to define the rectangle. Visual feedback is the same as the final crop overlay.</li>
+  <li>Shift constrains to the selected aspect ratio (or square if no ratio is set).</li>
+  <li>Alt draws from center.</li>
+  <li>On release, transition to Adjusting state.</li>
+</ul>
+
+<h3 id="s7-5">Adjusting the Crop Region</h3>
+
+<p><strong>Resize:</strong></p>
+
+<ul>
+  <li>Drag any handle to resize the crop region.</li>
+  <li>If Aspect Ratio Lock is enabled, resizing maintains the locked ratio.</li>
+  <li>The crop region is clipped to the canvas bounds (cannot crop to an area larger than the
+  canvas).</li>
+  <li>Dimensions update in real-time in both the crop overlay label and the Tool Options Bar
+  spinboxes.</li>
+</ul>
+
+<p><strong>Move:</strong></p>
+
+<ul>
+  <li>Click inside the crop region and drag to reposition it within the canvas.</li>
+  <li>The crop region is clipped to canvas bounds (the entire crop rectangle must remain
+  within the canvas).</li>
+</ul>
+
+<p><strong>Numeric Entry:</strong></p>
+
+<ul>
+  <li>The Tool Options Bar width/height spinboxes allow typing exact crop dimensions. The crop
+  region resizes to match, anchored at its top-left corner.</li>
+  <li>If Aspect Ratio Lock is on, changing width auto-updates height and vice versa.</li>
+</ul>
+
+<h3 id="s7-6">Committing the Crop</h3>
+
+<p>Pressing Enter or double-clicking inside the crop region commits the crop:</p>
+
+<ol>
+  <li>Record the crop rectangle in canvas coordinates.</li>
+  <li>Resize the canvas to the crop rectangle dimensions.</li>
+  <li>Reposition all items: subtract the crop rectangle's top-left corner from every item's
+  position, so items maintain their visual position relative to the crop area.</li>
+  <li>Clip raster items: any RasterRegionItem or background layer is pixel-clipped to the crop
+  boundary.</li>
+  <li>Remove items that are entirely outside the crop boundary (they would be invisible
+  anyway).</li>
+  <li>Push a CropCanvasCommand to the CommandStack. The command stores: the original canvas
+  size, the crop rectangle, original positions of all items, and pixel data of any clipped
+  raster items (for undo).</li>
+  <li>Dismiss the crop overlay and switch to the Select tool.</li>
+</ol>
+
+<h3 id="s7-7">Canceling the Crop</h3>
+
+<ul>
+  <li>Pressing Escape or switching to another tool cancels the crop.</li>
+  <li>The crop overlay is removed. No changes are made to the canvas or items.</li>
+  <li>If switching tools, the crop is silently canceled (no confirmation dialog).</li>
+</ul>
+
+<h3 id="s7-8">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>State</th><th>Status Bar Text</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Initial</th><td>Click and drag to define crop area. Or use the options bar for exact dimensions.</td></tr>
+    <tr><th>Drawing</th><td>W: 1920  H: 1080 | Shift: constrain ratio | Alt: from center</td></tr>
+    <tr><th>Adjusting</th><td>Drag handles to resize. Drag inside to move. Enter: apply crop. Escape: cancel.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s8">Resize Canvas Operation</h2>
+
+<p>Resize Canvas is not a tool (it does not have a <code>tool_id</code> or appear in the
+Left Tool Palette). It is an operation accessed via Image &gt; Resize Canvas or Image
+&gt; Resize Image menu items. It opens a modal dialog and applies changes as a single
+undoable command.</p>
+
+<h3 id="s8-1">Resize Canvas Dialog</h3>
+
+<p><strong>Purpose:</strong></p>
+
+<p>Changes the canvas dimensions without scaling existing content. Content is repositioned
+based on an anchor point. New canvas area is filled with a configurable color.</p>
+
+<p><strong>Dialog Fields:</strong></p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Field</th><th>Widget</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Width</th><td>QSpinBox</td><td>Current canvas width</td><td>New canvas width in pixels. Range: 1 to 32000.</td></tr>
+    <tr><th>Height</th><td>QSpinBox</td><td>Current canvas height</td><td>New canvas height in pixels. Range: 1 to 32000.</td></tr>
+    <tr><th>Lock Aspect Ratio</th><td>Toggle button (chain link)</td><td>Off</td><td>When enabled, changing width auto-calculates height and vice versa.</td></tr>
+    <tr><th>Anchor</th><td>3x3 radio button grid</td><td>Center</td><td>Determines which point of the existing content stays fixed. 9 positions: top-left, top-center, top-right, center-left, center, center-right, bottom-left, bottom-center, bottom-right.</td></tr>
+    <tr><th>Fill Color</th><td>Color swatch + hex input</td><td>Canvas background color</td><td>Color used to fill any newly created canvas area.</td></tr>
+    <tr><th>Relative Mode</th><td>Checkbox</td><td>Off</td><td>When enabled, width/height values are interpreted as deltas (e.g., +100 adds 100px). Negative values shrink the canvas.</td></tr>
+    <tr><th>Preview</th><td>Canvas thumbnail</td><td>n/a</td><td>Shows the current canvas outline (solid) and the new canvas outline (dashed) with the anchor point marked.</td></tr>
+  </tbody>
+</table>
+
+<p><strong>On OK:</strong></p>
+
+<ol>
+  <li>Calculate the new canvas bounds based on dimensions and anchor point.</li>
+  <li>If the canvas is shrinking, any items or item portions outside the new bounds are
+  clipped (raster) or repositioned (vector items fully outside are removed).</li>
+  <li>If the canvas is growing, new area is filled with the selected fill color.</li>
+  <li>Background layer raster data is resized (with pixel fill, no scaling).</li>
+  <li>Push a ResizeCanvasCommand. Stores: original dimensions, new dimensions, anchor, fill
+  color, original item positions, clipped pixel data.</li>
+  <li>Update canvas size property in the Project model.</li>
+</ol>
+
+<h3 id="s8-2">Resize Image Dialog</h3>
+
+<p><strong>Purpose:</strong></p>
+
+<p>Scales all content (all layers and items) to new dimensions using interpolation. This is
+a destructive operation that changes pixel data.</p>
+
+<p><strong>Dialog Fields:</strong></p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Field</th><th>Widget</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Width</th><td>QSpinBox</td><td>Current width</td><td>New width in pixels.</td></tr>
+    <tr><th>Height</th><td>QSpinBox</td><td>Current height</td><td>New height in pixels.</td></tr>
+    <tr><th>Lock Aspect Ratio</th><td>Toggle (chain link)</td><td>On</td><td>Constrain proportions.</td></tr>
+    <tr><th>Percentage Mode</th><td>Toggle</td><td>Off</td><td>Switch between pixel values and percentage (e.g., 50% = half size).</td></tr>
+    <tr><th>Width %</th><td>QSpinBox</td><td>100%</td><td>Scale percentage (visible when Percentage Mode is on).</td></tr>
+    <tr><th>Height %</th><td>QSpinBox</td><td>100%</td><td>Scale percentage (visible when Percentage Mode is on).</td></tr>
+    <tr><th>Interpolation</th><td>QComboBox</td><td>Bicubic</td><td>Resampling algorithm: Nearest Neighbor, Bilinear, Bicubic, Lanczos.</td></tr>
+    <tr><th>Resize All Layers</th><td>Checkbox</td><td>On</td><td>If off, only the active layer is resized.</td></tr>
+    <tr><th>Preview</th><td>Thumbnail</td><td>n/a</td><td>Shows before/after comparison of the resize.</td></tr>
+  </tbody>
+</table>
+
+<p><strong>On OK:</strong></p>
+
+<ol>
+  <li>Calculate the scale factors (<code>new_width</code> / <code>old_width</code>,
+  <code>new_height</code> / <code>old_height</code>).</li>
+  <li>For each layer (or only active layer if checkbox is off): scale all raster data
+  (background, RasterRegionItems) using the selected interpolation method. Scale all
+  vector items' positions and dimensions by the scale factors. Scale all vector property
+  values (stroke width, font size, etc.) by the average scale factor to maintain visual
+  proportions.</li>
+  <li>Update the canvas size.</li>
+  <li>Push a ResizeImageCommand. This command stores: the original canvas size, all original
+  item states (positions, transforms, raster data). Due to the large data involved, this
+  command may store references to temporary files rather than holding all raster data in
+  memory.</li>
+  <li>Display a progress bar for large images (operations taking more than 500ms).</li>
+</ol>
+
+<h3 id="s8-3">Edge Cases</h3>
+
+<ul>
+  <li>Resize to very small dimensions (e.g., 10x10): allowed but a warning is displayed ("The
+  resulting canvas will be very small. Continue?").</li>
+  <li>Resize to very large dimensions (e.g., 32000x32000): allowed but a memory warning is
+  displayed ("This may require significant memory. Estimated: X MB. Continue?"). If
+  estimated memory exceeds available system memory, the operation is blocked with an
+  error.</li>
+  <li>Undo of Resize Image: restores original pixel data. For large images, undo may take
+  several seconds. A progress bar is shown.</li>
+  <li>Resize Image with locked layers: locked layers are still resized (the lock prevents
+  interactive editing, not programmatic operations). The user is informed in the dialog.</li>
+</ul>
+
+<h2 id="s9">Copy, Cut, Paste &amp; Duplicate Operations</h2>
+
+<p>This section defines the clipboard operations that work across all tools and item types.
+Raster-selection-specific clipboard behavior is covered in Section 5.5; this section
+covers the general case for vector annotation items and mixed selections.</p>
+
+<h3 id="s9-1">Copy (Ctrl+C)</h3>
+
+<p><strong>When vector items are selected (via Select tool):</strong></p>
+
+<ol>
+  <li>Serialize all selected items to JSON (the same format used by project serialization).</li>
+  <li>Package the JSON as MIME type "application/x-snapmock-items" on the internal clipboard.</li>
+  <li>Additionally, render the selected items to a QImage (with transparent background) and
+  place it on the system clipboard as a PNG. This enables pasting into other applications.</li>
+  <li>Store metadata on the internal clipboard: <code>item_ids</code>, original positions,
+  source <code>layer_id</code>.</li>
+  <li>No command is pushed (copy is non-destructive).</li>
+</ol>
+
+<p><strong>When a raster selection is active (marching ants visible):</strong></p>
+
+<p>See Section 5.5.1 (Raster Selection Copy). The raster pixels take priority over any
+vector item selection.</p>
+
+<p><strong>When nothing is selected:</strong></p>
+
+<p>Ctrl+C is a no-op. The menu item is grayed out.</p>
+
+<h3 id="s9-2">Cut (Ctrl+X)</h3>
+
+<p><strong>When vector items are selected:</strong></p>
+
+<ol>
+  <li>Perform Copy (Section 9.1).</li>
+  <li>Delete all selected items from the scene and their respective layers.</li>
+  <li>Push a MacroCommand containing: a CopyToClipboardCommand (for redo state) and a
+  RemoveItemCommand for each deleted item.</li>
+  <li>Emit <code>selectionCleared()</code>.</li>
+</ol>
+
+<p><strong>When a raster selection is active:</strong></p>
+
+<p>See Section 5.5.2 (Raster Selection Cut).</p>
+
+<h3 id="s9-3">Paste (Ctrl+V)</h3>
+
+<p><strong>9.3.1 Internal Clipboard Has SnapMock Items:</strong></p>
+
+<ol>
+  <li>Deserialize the JSON from the internal clipboard.</li>
+  <li>Create new instances of each item with new UUIDs (deep clone).</li>
+  <li>Position the items at the current cursor position on the canvas. The top-left corner of
+  the pasted items’ bounding box is placed at the cursor location.</li>
+  <li>If the original items came from a different layer than the currently active layer, paste
+  them onto the active layer.</li>
+  <li>Add all items to the active layer and scene.</li>
+  <li>Push a MacroCommand containing an AddItemCommand for each item.</li>
+  <li>Select all newly pasted items. Switch to Select tool if not already active.</li>
+  <li>Each subsequent Ctrl+V paste places items at the current cursor position. No automatic
+  cascade offset is applied since the user controls placement via the cursor.</li>
+</ol>
+
+<p><strong>9.3.2 Internal Clipboard Has Raster Data:</strong></p>
+
+<p>See Section 5.5.3 (Raster Selection Paste).</p>
+
+<p><strong>9.3.3 System Clipboard Has an Image (No Internal Data):</strong></p>
+
+<ol>
+  <li>Read the image from the system clipboard (QClipboard.image()).</li>
+  <li>Create a new RasterRegionItem with the image as its pixmap.</li>
+  <li>Position at the current cursor position on the canvas.</li>
+  <li>Add to the active layer.</li>
+  <li>Push an AddItemCommand.</li>
+  <li>Select the new item. Switch to Select tool.</li>
+</ol>
+
+<p><strong>9.3.4 System Clipboard Has Text (No Internal or Image Data):</strong></p>
+
+<ol>
+  <li>Create a new TextItem with the clipboard text as its content.</li>
+  <li>Use default text properties (font, size, color from Preferences).</li>
+  <li>Position at the current cursor position on the canvas.</li>
+  <li>Add to the active layer.</li>
+  <li>Push an AddItemCommand.</li>
+  <li>Select the new item. Switch to Select tool.</li>
+</ol>
+
+<p><strong>9.3.5 Clipboard Is Empty:</strong></p>
+
+<p>Ctrl+V is a no-op. The menu item is grayed out.</p>
+
+<h3 id="s9-4">Paste in Place (Ctrl+Shift+V)</h3>
+
+<ul>
+  <li>Same as Paste, except items are placed at their original positions (not at the cursor
+  position).</li>
+  <li>Useful for copying items between layers: copy on Layer A, switch to Layer B, paste in
+  place.</li>
+  <li>If the original position data is not available (e.g., pasting from system clipboard),
+  behaves identically to regular Paste.</li>
+</ul>
+
+<h3 id="s9-5">Duplicate (Ctrl+D)</h3>
+
+<ul>
+  <li>A shortcut that combines Copy and Paste in Place with a small offset.</li>
+  <li>Clone all selected items with new UUIDs.</li>
+  <li>Place the clones offset from the originals by 10% of the selection bounding box’s width
+  to the right and 10% of its height downward. This ensures the duplicates are visually
+  distinguishable from the originals.</li>
+  <li>Add to the same layer as the originals.</li>
+  <li>Push a MacroCommand containing AddItemCommands for each clone.</li>
+  <li>Select the clones (deselect originals).</li>
+  <li>Subsequent Duplicate operations (without moving in between) continue to offset by the
+  same 10% increment from the last duplicate position (not from the original).</li>
+</ul>
+
+<h3 id="s9-6">Clipboard Priority &amp; MIME Types</h3>
+
+<p>When pasting, the clipboard is checked in this order:</p>
+
+<ol>
+  <li>Internal clipboard: "application/x-snapmock-items" (vector items)</li>
+  <li>Internal clipboard: "application/x-snapmock-raster" (raster selection data)</li>
+  <li>System clipboard: image data (QClipboard.image())</li>
+  <li>System clipboard: text data (QClipboard.text())</li>
+  <li>If none of the above: paste is disabled.</li>
+</ol>
+
+<p>The internal clipboard takes priority because it contains richer data (item properties,
+layer info, etc.). Pasting from external sources creates new items with default
+properties.</p>
+
+<h3 id="s9-7">Cross-Instance Paste</h3>
+
+<p>Copying from one SnapMock window and pasting into another uses the system clipboard (PNG
+or text). Internal clipboard data is per-process and does not transfer between SnapMock
+instances. This means vector items copied between instances will arrive as raster
+images, not editable vector objects. A future enhancement could use a custom MIME type
+on the system clipboard to preserve vector data across instances.</p>
+
+<h3 id="s9-8">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Context</th><th>Status Bar Text</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>After Copy</th><td>Copied N items to clipboard.</td></tr>
+    <tr><th>After Cut</th><td>Cut N items to clipboard.</td></tr>
+    <tr><th>After Paste</th><td>Pasted N items onto [Layer Name].</td></tr>
+    <tr><th>After Duplicate</th><td>Duplicated N items.</td></tr>
+    <tr><th>Paste with empty clipboard</th><td>Nothing to paste. Copy or cut items first.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s10">Inter-Tool Interactions &amp; Edge Cases</h2>
+
+<h3 id="s10-1">Tool Switching During Active Operations</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Current State</th><th>User Action</th><th>Behavior</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Drawing a raster selection</th><td>Press V (Select tool)</td><td>Cancel the in-progress selection. Dismiss overlay. Activate Select tool.</td></tr>
+    <tr><th>Active raster selection (marching ants)</th><td>Press A (Arrow tool)</td><td>Dismiss the selection (cancel). Activate Arrow tool. The unconfirmed selection is lost.</td></tr>
+    <tr><th>Active raster selection</th><td>Press Ctrl+C then switch tools</td><td>Copy is performed, then the selection is dismissed when the new tool activates. Paste is still available.</td></tr>
+    <tr><th>Crop overlay active</th><td>Press V (Select tool)</td><td>Cancel the crop. Dismiss overlay. Activate Select tool.</td></tr>
+    <tr><th>Dragging items (Select tool)</th><td>Press Space (Pan)</td><td>Space is ignored during active drag. Pan does not interrupt move operations.</td></tr>
+    <tr><th>Drawing a selection (Select rubber band)</th><td>Press Space (Pan)</td><td>Space is ignored during active rubber-band selection.</td></tr>
+    <tr><th>Any tool idle</th><td>Press Space</td><td>Temporarily activate Pan tool. Release returns to previous tool.</td></tr>
+    <tr><th>Any tool idle</th><td>Middle mouse button</td><td>Pan behavior begins. Does not change active tool.</td></tr>
+    <tr><th>Any tool idle</th><td>Ctrl+Scroll</td><td>Zoom behavior. Does not change active tool.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s10-2">Layer State Changes During Tool Operations</h3>
+
+<ul>
+  <li>If the active layer is locked while the user has items selected on that layer:
+  immediately deselect those items. The user cannot interact with them until the layer is
+  unlocked.</li>
+  <li>If the active layer is hidden while the user has items selected on that layer:
+  immediately deselect those items.</li>
+  <li>If the active layer is deleted while a raster selection is active on it: cancel the
+  raster selection.</li>
+  <li>If the active layer changes (user clicks a different layer in Layer Panel) while a
+  raster selection is active: cancel the raster selection.</li>
+  <li>If the active layer changes while items are selected: keep the selection if the selected
+  items are on visible, unlocked layers. Deselect any items that are on the newly
+  hidden/locked layer.</li>
+</ul>
+
+<h3 id="s10-3">Undo/Redo During Tool Operations</h3>
+
+<ul>
+  <li>Pressing Ctrl+Z while in the middle of a draw operation (raster selection being drawn,
+  crop being drawn): cancels the current operation first, then performs the undo.</li>
+  <li>Pressing Ctrl+Z with an active raster selection (marching ants): dismisses the selection
+  first. A second Ctrl+Z performs the actual undo.</li>
+  <li>Pressing Ctrl+Z with a crop overlay: dismisses the crop first.</li>
+  <li>Pressing Ctrl+Z while dragging items: cancels the drag (items snap back to pre-drag
+  positions). No command is pushed. A second Ctrl+Z undoes the previous command.</li>
+</ul>
+
+<h3 id="s10-4">Multi-Monitor &amp; Focus</h3>
+
+<ul>
+  <li>If the application loses focus (user switches to another application) while holding
+  Space (pan) or Ctrl+Space (zoom): treat it as a key release event. Return to the
+  previous tool.</li>
+  <li>If the application loses focus during a drag operation: treat it as a mouse release.
+  Finalize or cancel the operation as appropriate.</li>
+  <li>Keyboard shortcuts only work when the main window or its child widgets have focus.</li>
+</ul>
+
+<h2 id="s11">Command Definitions (Undo/Redo)</h2>
+
+<p>This section provides detailed specifications for each command type produced by the
+tools in this PRD. All commands implement the interface defined in Technical
+Architecture PRD Section 3.7.2.</p>
+
+<h3 id="s11-1">MoveItemsCommand</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>item_ids</code></th><td>list[UUID]</td><td>IDs of all items being moved.</td></tr>
+    <tr><th><code>delta_x</code></th><td>float</td><td>Horizontal displacement in pixels.</td></tr>
+    <tr><th><code>delta_y</code></th><td>float</td><td>Vertical displacement in pixels.</td></tr>
+    <tr><th><code>original_positions</code></th><td>dict[UUID, QPointF]</td><td>Map of <code>item_id</code> to original position (recorded at drag start).</td></tr>
+  </tbody>
+</table>
+
+<p><strong><code>redo()</code>:</strong> For each item, set position to
+<code>original_position</code> + (<code>delta_x</code>, <code>delta_y</code>).</p>
+
+<p><strong><code>undo()</code>:</strong> For each item, set position to
+<code>original_position</code>.</p>
+
+<p><strong><code>merge_with</code>(other):</strong> If other is a MoveItemsCommand with the
+same <code>item_ids</code> (same set), merge by updating
+<code>delta_x</code>/<code>delta_y</code> to include the other's delta. Return True.
+Used for keyboard nudge coalescing.</p>
+
+<p><strong><code>description()</code>:</strong> "Move N item(s)"</p>
+
+<h3 id="s11-2">TransformItemCommand</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>item_ids</code></th><td>list[UUID]</td><td>IDs of all items being transformed.</td></tr>
+    <tr><th><code>original_transforms</code></th><td>dict[UUID, QTransform]</td><td>Original transform matrix per item.</td></tr>
+    <tr><th><code>new_transforms</code></th><td>dict[UUID, QTransform]</td><td>New transform matrix per item.</td></tr>
+    <tr><th><code>transform_type</code></th><td>str</td><td>One of: "resize", "rotate", "skew". Used for description.</td></tr>
+  </tbody>
+</table>
+
+<p><strong><code>redo()</code>:</strong> For each item, apply
+<code>new_transforms</code>[<code>item_id</code>].</p>
+
+<p><strong><code>undo()</code>:</strong> For each item, apply
+<code>original_transforms</code>[<code>item_id</code>].</p>
+
+<p><strong><code>description()</code>:</strong> "Resize N item(s)" / "Rotate N item(s)" /
+"Skew N item(s)"</p>
+
+<h3 id="s11-3">RasterCutCommand</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>source_layer_id</code></th><td>UUID</td><td>Layer from which pixels were cut.</td></tr>
+    <tr><th><code>selection_rect</code></th><td>QRectF</td><td>Rectangle (or bounding rect of freeform path) of the cut area.</td></tr>
+    <tr><th><code>selection_mask</code></th><td>QBitmap (optional)</td><td>Alpha mask for freeform selections.</td></tr>
+    <tr><th><code>original_pixels</code></th><td>QImage</td><td>The pixel data that was erased (stored for undo).</td></tr>
+    <tr><th><code>fill_mode</code></th><td>str</td><td>"transparent" or "<code>background_color</code>".</td></tr>
+    <tr><th><code>created_item_id</code></th><td>UUID (optional)</td><td>If a paste immediately followed the cut, the ID of the created RasterRegionItem.</td></tr>
+  </tbody>
+</table>
+
+<p><strong><code>redo()</code>:</strong> Erase pixels in the selection area on the source
+layer (replace with transparency or fill color).</p>
+
+<p><strong><code>undo()</code>:</strong> Restore <code>original_pixels</code> to the source
+layer at <code>selection_rect</code> position.</p>
+
+<p><strong><code>description()</code>:</strong> "Cut raster selection"</p>
+
+<h3 id="s11-4">CropCanvasCommand</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>original_canvas_size</code></th><td>QSize</td><td>Canvas dimensions before crop.</td></tr>
+    <tr><th><code>crop_rect</code></th><td>QRectF</td><td>The crop rectangle in canvas coordinates.</td></tr>
+    <tr><th><code>original_item_states</code></th><td>list[dict]</td><td>Serialized state of all items (positions, transforms) before crop.</td></tr>
+    <tr><th><code>removed_item_ids</code></th><td>list[UUID]</td><td>IDs of items that were entirely outside the crop area and removed.</td></tr>
+    <tr><th><code>clipped_raster_data</code></th><td>dict[UUID, QImage]</td><td>Original pixel data of raster items that were clipped.</td></tr>
+  </tbody>
+</table>
+
+<p><strong><code>redo()</code>:</strong> Resize canvas to <code>crop_rect</code>
+dimensions. Reposition all items. Remove out-of-bounds items. Clip raster items.</p>
+
+<p><strong><code>undo()</code>:</strong> Restore original canvas size. Restore all items to
+original states. Re-add removed items. Restore clipped raster data.</p>
+
+<p><strong><code>description()</code>:</strong> "Crop canvas to W x H"</p>
+
+<h3 id="s11-5">ResizeCanvasCommand</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>original_size</code></th><td>QSize</td><td>Canvas dimensions before resize.</td></tr>
+    <tr><th><code>new_size</code></th><td>QSize</td><td>Canvas dimensions after resize.</td></tr>
+    <tr><th>anchor</th><td>str</td><td>Anchor position (e.g., "center", "top-left").</td></tr>
+    <tr><th><code>fill_color</code></th><td>QColor</td><td>Color used to fill new canvas area.</td></tr>
+    <tr><th><code>original_item_states</code></th><td>list[dict]</td><td>Serialized item states before resize.</td></tr>
+    <tr><th><code>clipped_data</code></th><td>dict[UUID, QImage]</td><td>Pixel data of raster items clipped during shrink.</td></tr>
+  </tbody>
+</table>
+
+<p><strong><code>redo()</code>:</strong> Resize canvas. Reposition items based on anchor.
+Fill new area. Clip items if shrinking.</p>
+
+<p><strong><code>undo()</code>:</strong> Restore original size, item states, and clipped
+pixel data.</p>
+
+<p><strong><code>description()</code>:</strong> "Resize canvas to W x H"</p>
+
+<h3 id="s11-6">ResizeImageCommand</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>original_size</code></th><td>QSize</td><td>Canvas dimensions before resize.</td></tr>
+    <tr><th><code>new_size</code></th><td>QSize</td><td>Canvas dimensions after resize.</td></tr>
+    <tr><th><code>scale_x</code></th><td>float</td><td>Horizontal scale factor.</td></tr>
+    <tr><th><code>scale_y</code></th><td>float</td><td>Vertical scale factor.</td></tr>
+    <tr><th>interpolation</th><td>str</td><td>Resampling method used.</td></tr>
+    <tr><th><code>affected_layers</code></th><td>list[UUID]</td><td>Layer IDs that were resized.</td></tr>
+    <tr><th><code>original_raster_data</code></th><td>dict[UUID, bytes]</td><td>Original pixel data of all affected raster items (may reference temp files for large data).</td></tr>
+    <tr><th><code>original_item_states</code></th><td>list[dict]</td><td>Serialized item states before resize.</td></tr>
+  </tbody>
+</table>
+
+<p><strong><code>redo()</code>:</strong> Scale all affected layers and items by scale
+factors. Resize canvas.</p>
+
+<p><strong><code>undo()</code>:</strong> Restore all original raster data and item states.
+Restore original canvas size.</p>
+
+<p><strong><code>description()</code>:</strong> "Resize image to W x H"</p>
+
+<h2 id="s12">Acceptance Criteria</h2>
+
+<h3 id="s12-1">Select / Move Tool</h3>
+
+<ol>
+  <li>Single-click selects an item. Shift+click adds to selection. Ctrl+click toggles. Click
+  on empty canvas deselects all.</li>
+  <li>Rubber-band selection selects all items whose shapes intersect the rectangle. Shift and
+  Ctrl modifiers work as specified.</li>
+  <li>Dragging selected items moves them. Shift constrains to one axis. Snap to grid works
+  when enabled.</li>
+  <li>Arrow key nudge moves items by 1px (10px with Shift). Consecutive nudges merge into a
+  single undo step.</li>
+  <li>TransformHandles appear around the selection bounding box. All 8 resize handles, the
+  rotate handle, and skew (Ctrl+edge drag) work as specified.</li>
+  <li>All move and transform operations produce correct undoable commands. Undo restores exact
+  original state.</li>
+  <li>Items on locked or hidden layers cannot be selected.</li>
+  <li>Double-click on TextItem enters text editing mode.</li>
+  <li>Double-click on empty canvas toggles between fit-to-window zoom and 100% zoom.</li>
+</ol>
+
+<h3 id="s12-2">Pan / Hand Tool</h3>
+
+<ol>
+  <li>Clicking and dragging pans the viewport with 1:1 mouse tracking at 60 FPS.</li>
+  <li>Space bar temporarily activates pan without changing the active tool. Release returns to
+  previous tool.</li>
+  <li>Middle mouse button pans without changing active tool, even during other operations.</li>
+  <li>Panning beyond canvas bounds into the pasteboard is smooth and unlimited.</li>
+  <li>Pan is not recorded in the undo history.</li>
+  <li>Arrow keys pan the viewport when no items are selected. Shift+Arrow pans by half the
+  viewport dimension. Arrow keys revert to nudge behavior when items are selected.</li>
+  <li>Auto edge scroll activates when the cursor enters the outermost 20px of the viewport
+  during any drag operation (item move, rubber-band, transform handle, raster selection,
+  crop). Scroll speed increases as the cursor approaches the viewport edge. Scrolling
+  stops when the cursor leaves the trigger zone or the drag ends.</li>
+</ol>
+
+<h3 id="s12-3">Zoom Tool</h3>
+
+<ol>
+  <li>Ctrl+scroll wheel zooms in/out centered on the cursor position. The scene point under
+  the cursor remains stable.</li>
+  <li>Zoom range is 10% to 3200%. All predefined zoom steps are reachable.</li>
+  <li>Ctrl+0 fits the canvas in the viewport. Ctrl+1 sets 100% zoom.</li>
+  <li>The zoom dropdown in the toolbar reflects the current zoom and accepts custom values.</li>
+  <li>Zoom transitions are animated (100ms ease-out).</li>
+  <li>Pixel grid overlay appears above 800% zoom.</li>
+  <li>Zoom rectangle (drag with zoom tool) correctly zooms to the drawn area.</li>
+</ol>
+
+<h3 id="s12-4">Raster Selection (Rectangle)</h3>
+
+<ol>
+  <li>Click-and-drag draws a rectangular selection with marching-ants animation.</li>
+  <li>Shift constrains to square. Alt draws from center.</li>
+  <li>Selection dimensions are displayed near the cursor during drawing.</li>
+  <li>Active selection can be moved by dragging inside and resized via handles.</li>
+  <li>Ctrl+C copies the selected pixels to clipboard (both internal and system).</li>
+  <li>Ctrl+X cuts the pixels, leaving transparency, and the operation is undoable.</li>
+  <li>Enter commits the selection as a RasterRegionItem on the active layer, offset by 10% of
+  the selection region’s width to the right and 10% of its height downward from the
+  original position.</li>
+  <li>Escape cancels the selection.</li>
+  <li>Pasting raster data creates a new RasterRegionItem at the current cursor position that
+  can be moved with the Select tool.</li>
+  <li>Feather and anti-alias options produce correct results on selection edges.</li>
+</ol>
+
+<h3 id="s12-5">Raster Selection (Freeform / Lasso)</h3>
+
+<ol>
+  <li>Freeform mode: click-and-drag draws a freeform path. Release auto-closes the path.</li>
+  <li>Polygonal mode: each click adds a vertex. Double-click closes the polygon.</li>
+  <li>Path smoothing is applied according to the slider value.</li>
+  <li>All pixel operations (copy, cut, paste, commit) produce correctly masked results.</li>
+  <li>The alpha mask is preserved in the resulting RasterRegionItem.</li>
+</ol>
+
+<h3 id="s12-6">Crop Canvas</h3>
+
+<ol>
+  <li>Activating the crop tool shows the crop overlay with dim area, handles, and optional
+  rule-of-thirds grid.</li>
+  <li>Crop region can be drawn, resized via handles, moved, and entered numerically.</li>
+  <li>Aspect ratio lock constrains the crop proportions.</li>
+  <li>Enter commits the crop: canvas resizes, items reposition, and out-of-bounds items are
+  removed.</li>
+  <li>The crop operation is fully undoable: undo restores the original canvas size, all item
+  positions, and any clipped raster data.</li>
+  <li>Escape cancels the crop with no changes.</li>
+</ol>
+
+<h3 id="s12-7">Resize Canvas / Resize Image</h3>
+
+<ol>
+  <li>Resize Canvas dialog correctly expands/shrinks the canvas based on anchor position and
+  fills new area with the selected color.</li>
+  <li>Resize Image dialog scales all layers and items. Interpolation method selection produces
+  visually correct results.</li>
+  <li>Both operations are fully undoable.</li>
+  <li>Progress indicators appear for operations taking longer than 500ms.</li>
+  <li>Memory warnings appear for operations that would exceed reasonable memory bounds.</li>
+</ol>
+
+<h3 id="s12-8">Copy / Cut / Paste / Duplicate</h3>
+
+<ol>
+  <li>Copy places both internal (JSON) and system (PNG) data on clipboard.</li>
+  <li>Cut copies and then deletes items as a single undoable command.</li>
+  <li>Paste from internal clipboard creates new items with new UUIDs at the current cursor
+  position on the canvas.</li>
+  <li>Paste in Place positions items at their original coordinates.</li>
+  <li>Paste from system clipboard (image) creates a RasterRegionItem. Paste from system
+  clipboard (text) creates a TextItem.</li>
+  <li>Duplicate creates copies offset by 10% of the selection bounding box width/height on the
+  same layer in a single undoable command.</li>
+  <li>Clipboard priority order (internal items &gt; internal raster &gt; system image &gt;
+  system text) is respected.</li>
+</ol>
+
+<h3 id="s12-9">Inter-Tool Interactions</h3>
+
+<ol>
+  <li>Switching tools during active raster selection or crop silently cancels the operation.</li>
+  <li>Space bar pan override does not interrupt active drawing/dragging operations.</li>
+  <li>Middle mouse button pan works during any tool state without interruption.</li>
+  <li>Ctrl+Z during active operations cancels the operation before performing undo.</li>
+  <li>Layer lock/hide during active selection correctly deselects affected items.</li>
+</ol>
+
+<h3 id="s12-10">Performance</h3>
+
+<ol>
+  <li>Rubber-band selection renders at 60 FPS even with 100+ items in the scene.</li>
+  <li>Raster selection copy/cut of a 4K region completes in under 500ms.</li>
+  <li>Crop commit on a project with 50 items completes in under 1 second.</li>
+  <li>Zoom animation maintains 60 FPS.</li>
+  <li>Marching ants animation does not cause measurable CPU load when idle.</li>
+</ol>
+
+<h2 id="s13">Open Issues</h2>
+
+<p>These items were raised by the conversion from Word. None of them changes a
+requirement; each needs a decision before this document leaves draft.</p>
+
+<div class="note issue">
+  <span class="note-label">Open — approval status never recorded</span>
+  <p>The original carried no approval record. Version 1.1 is shown as pending. Confirm
+  whether any earlier version was formally approved.</p>
+</div>
+
+</main>
+
+</div>
+</body>
+</html>
