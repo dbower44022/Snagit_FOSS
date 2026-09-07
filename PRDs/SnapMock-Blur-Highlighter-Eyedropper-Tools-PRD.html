@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blur, Highlighter &amp; Eyedropper Tools — SnapMock Product Requirements Document</title>
+<link rel="stylesheet" href="prd.css">
+</head>
+<body>
+<div class="doc">
+
+<header class="doc-head">
+  <h1>Blur, Highlighter &amp; Eyedropper Tools</h1>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.2</span>
+  <dl class="doc-meta">
+    <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
+    <dt>Covers</dt>          <dd>Blur / Pixelate · Highlighter · Eyedropper</dd>
+    <dt>Document version</dt><dd>1.2</dd>
+    <dt>Last Updated</dt>    <dd>09-07-26 19:31</dd>
+    <dt>Author</dt>          <dd>Doug Bower</dd>
+    <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
+  </dl>
+</header>
+
+<section class="front-matter">
+
+  <h2 class="unnumbered">Revision control</h2>
+  <table>
+    <colgroup><col class="w-narrow"><col class="w-short"><col class="w-short"><col><col class="w-short"></colgroup>
+    <thead>
+      <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1.2</td>
+        <td class="nowrap">09-07-26 19:31</td>
+        <td>Doug Bower</td>
+        <td>Converted from Word to HTML. Content unchanged except for corrections
+        noted in the change log below.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
+      <tr>
+        <td>1.2</td>
+        <td class="nowrap">March 2026</td>
+        <td>Doug Bower</td>
+        <td>Sections 2.7 and 3.7: Added flip transform rendering notes for BlurRegionItem and
+        HighlightItem, describing inherited flip_horizontal and flip_vertical properties from…</td>
+        <td><span class="status closed">Superseded by format conversion</span></td>
+      </tr>
+      <tr>
+        <td>1.1</td>
+        <td class="nowrap">February 2026</td>
+        <td>Doug Bower</td>
+        <td>Added stroke_style property (Solid, Dashed, Dotted, DashDot, DashDotDot) to
+        HighlightItem data model (Section 3.4), Tool Options Bar (Section 3.5), rendering
+        pipeline (Section…</td>
+        <td><span class="status closed">Superseded</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note issue">
+    <span class="note-label">Open — incomplete revision history</span>
+    <p>The Word original recorded release months only for versions 1.2, 1.1, so
+    those dates do not meet the MM-DD-YY HH:MM standard. They are carried over as written
+    rather than invented. Supply the exact dates and they will be corrected.</p>
+  </div>
+
+  <h2 class="unnumbered">Change log</h2>
+  <table>
+    <colgroup><col class="w-short"><col class="w-short"><col class="w-short"><col></colgroup>
+    <thead>
+      <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="nowrap">09-07-26 19:31</td>
+        <td>All</td>
+        <td>Format</td>
+        <td>Converted from Word to HTML against the shared stylesheet. Revision control
+        and change log tables added to meet the output standard; the original had a
+        change log only. Open issues gathered in new Section 9.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 19:31</td>
+        <td>2.7, 3.7</td>
+        <td>Corrected</td>
+        <td>The version 1.2 flip transform notes for BlurRegionItem and HighlightItem had been
+        inserted into the Word table of contents instead of into Sections 2.7 and 3.7. Moved to
+        the end of those sections, as the version 1.2 change log entry describes. Wording
+        unchanged.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 19:31</td>
+        <td>Front matter</td>
+        <td>Flagged</td>
+        <td>The title page carried February 2026 while the change log placed version 1.2 in March
+        2026. Left as written and flagged as an open issue.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>2.7</td>
+        <td>Added</td>
+        <td>Sections 2.7 and 3.7: Added flip transform rendering notes for BlurRegionItem and
+        HighlightItem, describing inherited <code>flip_horizontal</code> and
+        <code>flip_vertical</code> properties from SnapGraphicsItem base class.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added <code>stroke_style</code> property (Solid, Dashed, Dotted, DashDot, DashDotDot) to
+        HighlightItem data model (Section 3.4), Tool Options Bar (Section 3.5), rendering
+        pipeline (Section 3.8), and serialization (Section 5).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 class="unnumbered">Contents</h2>
+  <ol class="toc">
+    <li><a href="#s1">Document Overview</a>
+      <ol>
+        <li><a href="#s1-1">Purpose</a></li>
+        <li><a href="#s1-2">Scope</a></li>
+        <li><a href="#s1-3">Dependencies</a></li>
+      </ol>
+    </li>
+    <li><a href="#s2">Blur / Pixelate Tool</a>
+      <ol>
+        <li><a href="#s2-1">Tool Overview</a></li>
+        <li><a href="#s2-2">Blur Modes</a></li>
+        <li><a href="#s2-3">Creation Workflow</a></li>
+        <li><a href="#s2-4">Region Shapes</a></li>
+        <li><a href="#s2-5">Tool-Specific Properties</a></li>
+        <li><a href="#s2-6">Tool Options Bar</a></li>
+        <li><a href="#s2-7">Rendering Pipeline</a></li>
+        <li><a href="#s2-8">Post-Creation Editing</a></li>
+        <li><a href="#s2-9">Hit Testing</a></li>
+        <li><a href="#s2-10">Performance</a></li>
+        <li><a href="#s2-11">Status Bar Hints</a></li>
+      </ol>
+    </li>
+    <li><a href="#s3">Highlighter Tool</a>
+      <ol>
+        <li><a href="#s3-1">Tool Overview</a></li>
+        <li><a href="#s3-2">Drawing Behavior</a></li>
+        <li><a href="#s3-3">Straightening &amp; Snap-to-Line</a></li>
+        <li><a href="#s3-4">Tool-Specific Properties</a></li>
+        <li><a href="#s3-5">Tool Options Bar</a></li>
+        <li><a href="#s3-6">Post-Creation Editing</a></li>
+        <li><a href="#s3-7">Rendering</a></li>
+        <li><a href="#s3-8">Hit Testing</a></li>
+        <li><a href="#s3-9">Status Bar Hints</a></li>
+      </ol>
+    </li>
+    <li><a href="#s4">Eyedropper Tool</a>
+      <ol>
+        <li><a href="#s4-1">Tool Overview</a></li>
+        <li><a href="#s4-2">Sampling Behavior</a></li>
+        <li><a href="#s4-3">Preview Loupe</a></li>
+        <li><a href="#s4-4">Tool-Specific Properties</a></li>
+        <li><a href="#s4-5">Tool Options Bar</a></li>
+        <li><a href="#s4-6">Color Output &amp; Integration</a></li>
+        <li><a href="#s4-7">Alt-Key Shortcut Mode</a></li>
+        <li><a href="#s4-8">Status Bar Hints</a></li>
+      </ol>
+    </li>
+    <li><a href="#s5">Data Models</a>
+      <ol>
+        <li><a href="#s5-1">BlurRegionItem</a></li>
+        <li><a href="#s5-2">HighlightItem</a></li>
+      </ol>
+    </li>
+    <li><a href="#s6">Command Definitions</a>
+      <ol>
+        <li><a href="#s6-1">ModifyBlurMaskCommand</a></li>
+        <li><a href="#s6-2">ApplyEyedropperColorCommand</a></li>
+      </ol>
+    </li>
+    <li><a href="#s7">Serialization</a>
+      <ol>
+        <li><a href="#s7-1">BlurRegionItem Serialization</a></li>
+        <li><a href="#s7-2">HighlightItem Serialization</a></li>
+        <li><a href="#s7-3">Eyedropper</a></li>
+        <li><a href="#s7-4">Example: BlurRegionItem JSON</a></li>
+      </ol>
+    </li>
+    <li><a href="#s8">Acceptance Criteria</a>
+      <ol>
+        <li><a href="#s8-1">Blur / Pixelate Tool</a></li>
+        <li><a href="#s8-2">Highlighter Tool</a></li>
+        <li><a href="#s8-3">Eyedropper Tool</a></li>
+        <li><a href="#s8-4">Shared Behavior</a></li>
+      </ol>
+    </li>
+    <li><a href="#s9">Open Issues</a></li>
+  </ol>
+
+</section>
+
+<main>
+
+<h2 id="s1">Document Overview</h2>
+
+<h3 id="s1-1">Purpose</h3>
+
+<p>This document defines the detailed functional requirements for the three remaining
+annotation utility tools in SnapMock: the Blur / Pixelate tool (for obscuring sensitive
+content), the Highlighter tool (for drawing semi-transparent emphasis strokes), and the
+Eyedropper tool (for sampling colors from the canvas). These tools complete the full
+annotation toolset defined in the Technical Architecture PRD.</p>
+
+<h3 id="s1-2">Scope</h3>
+
+<p>This PRD covers: blur and pixelate rendering modes and region-based application,
+highlighter drawing mechanics and blending behavior, eyedropper color sampling and
+integration with other tools, all tool-specific properties, data models, command
+definitions, serialization, and acceptance criteria.</p>
+
+<h3 id="s1-3">Dependencies</h3>
+
+<ul>
+  <li>Technical Architecture PRD: SnapGraphicsItem, VectorItem base, CommandStack, BaseTool
+  interface, Rendering Pipeline (Section 3.9).</li>
+  <li>General UI PRD: Tool Options Bar, Color Picker integration, Status Bar.</li>
+  <li>Navigation &amp; Raster Operations PRD: Select / Move tool, RasterRegionItem (blur
+  regions share raster pixel operations).</li>
+  <li>Basic Shape Annotation Tools PRD: Shared VectorItem properties for Highlighter strokes.</li>
+</ul>
+
+<h2 id="s2">Blur / Pixelate Tool</h2>
+
+<h3 id="s2-1">Tool Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Tool ID</th><td>blur</td></tr>
+    <tr><th>Display Name</th><td>Blur / Pixelate</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>D</td></tr>
+    <tr><th>Default Cursor</th><td>Crosshair with blur icon</td></tr>
+    <tr><th>Category</th><td>Annotation</td></tr>
+    <tr><th>Item Class</th><td>BlurRegionItem (extends SnapGraphicsItem)</td></tr>
+  </tbody>
+</table>
+
+<p>The Blur / Pixelate tool creates regions that obscure content underneath them. This is
+the essential privacy tool for screenshot annotation: hiding personal information, email
+addresses, account numbers, faces, and other sensitive content before sharing
+screenshots. The blur region is non-destructive — it sits on top of the canvas content
+as a separate item that can be moved, resized, or deleted at any time, and the original
+content underneath is preserved.</p>
+
+<h3 id="s2-2">Blur Modes</h3>
+
+<p>The tool supports three obscuring methods:</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Mode</th><th>ID</th><th>Description</th><th>Use Case</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Gaussian Blur</th><td>gaussian</td><td>Applies a Gaussian blur filter to the content beneath the region. The blur radius controls how aggressively the content is obscured. Higher radius = more blurry and less readable.</td><td>General-purpose obscuring. Good for backgrounds, images, and text that should be unreadable but retain its general shape and color.</td></tr>
+    <tr><th>Pixelate</th><td>pixelate</td><td>Replaces the content beneath the region with a grid of enlarged pixels (mosaic effect). The <code>pixel_size</code> controls how large each mosaic tile is. Larger tiles = less detail preserved.</td><td>Strong obscuring that is visually obvious. Good for faces, text, and any content where it should be clear that redaction has been applied.</td></tr>
+    <tr><th>Solid Fill</th><td>solid</td><td>Replaces the content beneath the region with a solid color. Completely hides all underlying content with no visual hint of what was there.</td><td>Maximum obscuring. Use for complete redaction where even the shape/color of the original content should not be visible.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s2-3">Creation Workflow</h3>
+
+<p><strong>Click-and-Drag to Draw Region:</strong></p>
+
+<ol>
+  <li>With the Blur tool active, click and drag on the canvas to define the blur region.</li>
+  <li>The region shape depends on the <code>region_shape</code> setting (see Section 2.4). The
+  default is Rectangle.</li>
+  <li>During drag, a preview of the blur effect is rendered in real-time within the drawn
+  region. This shows the user exactly how the content will look when obscured.</li>
+  <li>Shift constrains to a square (for rectangle shape) or circle (for ellipse shape).</li>
+  <li>Alt draws from center.</li>
+  <li>On mouse release, the BlurRegionItem is created and added to the scene.</li>
+</ol>
+
+<p><strong>Brush-Style Blur (Freeform region):</strong></p>
+
+<ul>
+  <li>When <code>region_shape</code> is set to "Freeform", the user paints the blur region
+  with a brush, similar to the Freehand tool.</li>
+  <li>Click and drag to paint the blur area. The brush radius is set by
+  <code>brush_size</code> in the Tool Options Bar.</li>
+  <li>The painted region is stored as an alpha mask (bitmap). Pixels within the painted area
+  are blurred; pixels outside are unaffected.</li>
+  <li>Multiple strokes accumulate into the same region (additive painting). The user can
+  release the mouse and continue painting to add to the region.</li>
+  <li>Pressing Enter or switching tools finalizes the freeform region.</li>
+  <li>This mode is useful for blurring irregular areas (e.g., a person's face that does not
+  fit a neat rectangle).</li>
+</ul>
+
+<p><strong>Minimum Size:</strong></p>
+
+<p>Regions with bounding box area less than 16 square pixels are discarded (accidental
+click).</p>
+
+<h3 id="s2-4">Region Shapes</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Shape</th><th>ID</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Rectangle</th><td>rectangle</td><td>A rectangular blur region defined by two diagonal corners. Optional <code>corner_radius</code> for rounded rectangles. The default shape.</td></tr>
+    <tr><th>Ellipse</th><td>ellipse</td><td>An elliptical blur region defined by its bounding rectangle.</td></tr>
+    <tr><th>Freeform</th><td>freeform</td><td>A brush-painted irregular region stored as an alpha mask. See brush-style workflow above.</td></tr>
+    <tr><th>Whole Layer</th><td><code>whole_layer</code></td><td>Blurs the entire canvas (or the entire active layer). No region drawing needed — the effect applies everywhere. Useful as a background diffusion effect.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s2-5">Tool-Specific Properties</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>blur_mode</code></th><td>enum</td><td>gaussian</td><td>The obscuring method: gaussian, pixelate, solid.</td></tr>
+    <tr><th><code>region_shape</code></th><td>enum</td><td>rectangle</td><td>Shape of the blur region: rectangle, ellipse, freeform, <code>whole_layer</code>.</td></tr>
+    <tr><th><code>blur_radius</code></th><td>float</td><td>10.0</td><td>Gaussian blur radius in pixels. Range: 1.0 to 50.0, step 0.5. Only used when <code>blur_mode</code> is gaussian.</td></tr>
+    <tr><th><code>pixel_size</code></th><td>int</td><td>10</td><td>Mosaic tile size in pixels. Range: 2 to 100. Only used when <code>blur_mode</code> is pixelate.</td></tr>
+    <tr><th><code>fill_color</code></th><td>QColor</td><td>#000000 (black)</td><td>Solid fill color. Only used when <code>blur_mode</code> is solid.</td></tr>
+    <tr><th><code>corner_radius</code></th><td>float</td><td>0.0</td><td>Corner radius for rounded rectangle regions. Only used when <code>region_shape</code> is rectangle.</td></tr>
+    <tr><th>feather</th><td>float</td><td>0.0</td><td>Edge feathering radius in pixels. Softens the boundary of the blur region with a gradual falloff. Range: 0 to 30.</td></tr>
+    <tr><th><code>brush_size</code></th><td>float</td><td>30.0</td><td>Brush radius for freeform painting mode. Range: 5 to 200. Only used when <code>region_shape</code> is freeform.</td></tr>
+    <tr><th><code>alpha_mask</code></th><td>QImage (nullable)</td><td>null</td><td>The alpha mask bitmap for freeform regions. White = blur, Black = no blur. Stored at 1:1 pixel resolution with the canvas.</td></tr>
+    <tr><th><code>source_mode</code></th><td>enum</td><td><code>all_below</code></td><td>What content to blur: "<code>all_below</code>" (all layers below this item), "<code>active_layer</code>" (only the active layer's content), "<code>specific_layer</code>" (a named layer).</td></tr>
+    <tr><th><code>source_layer_id</code></th><td>UUID (nullable)</td><td>null</td><td>Layer ID for <code>specific_layer</code> source mode.</td></tr>
+    <tr><th>opacity</th><td>float</td><td>1.0</td><td>Opacity of the blur effect. At 0.5, the blur is 50% blended with the original content, creating a partial obscuring effect.</td></tr>
+    <tr><th><code>border_color</code></th><td>QColor</td><td>transparent</td><td>Optional border around the blur region.</td></tr>
+    <tr><th><code>border_width</code></th><td>float</td><td>0.0</td><td>Border width. 0 = no border.</td></tr>
+    <tr><th><code>invert_mask</code></th><td>bool</td><td>False</td><td>When True, blur everything OUTSIDE the region instead of inside. Useful for spotlight/focus effects.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s2-6">Tool Options Bar</h3>
+
+<p>The Blur tool's Tool Options Bar shows:</p>
+
+<ol>
+  <li>Blur Mode: toggle button group with icons (Gaussian Blur, Pixelate, Solid Fill).</li>
+  <li>Blur Intensity: slider + spinbox. Label changes based on mode: "Blur Radius" (1-50) for
+  Gaussian, "Pixel Size" (2-100) for Pixelate. Hidden when mode is Solid.</li>
+  <li>Fill Color: color swatch (only visible when mode is Solid Fill).</li>
+  <li>Region Shape: toggle button group with icons (Rectangle, Ellipse, Freeform).</li>
+  <li>Corner Radius: slider + spinbox (only visible when shape is Rectangle).</li>
+  <li>Feather: slider + spinbox (0-30px).</li>
+  <li>Brush Size: slider + spinbox (only visible when shape is Freeform).</li>
+  <li>Invert Mask: toggle button (spotlight icon).</li>
+  <li>Opacity: slider + spinbox (0-100%).</li>
+</ol>
+
+<h3 id="s2-7">Rendering Pipeline</h3>
+
+<p><strong>Gaussian Blur Rendering:</strong></p>
+
+<ol>
+  <li>Capture the content beneath the blur region as a QImage. This is done by rendering all
+  items below the BlurRegionItem in z-order into a temporary QImage at the region's
+  bounding rectangle.</li>
+  <li>Apply a Gaussian blur filter to the captured image using the configured
+  <code>blur_radius</code>. Implementation: use QGraphicsBlurEffect or a custom
+  convolution kernel for precise control.</li>
+  <li>Clip the blurred image to the region shape (rectangle, ellipse, or
+  <code>alpha_mask</code> for freeform).</li>
+  <li>Apply feathering by multiplying the region's alpha channel with a feather gradient at
+  the edges.</li>
+  <li>Apply opacity by blending the blurred result with the original captured content at the
+  configured opacity.</li>
+  <li>Draw the resulting image at the region's position.</li>
+  <li>If <code>border_width</code> &gt; 0, draw the region outline on top.</li>
+</ol>
+
+<p><strong>Pixelate Rendering:</strong></p>
+
+<ol>
+  <li>Capture the content beneath the region (same as Gaussian).</li>
+  <li>Divide the captured image into a grid of <code>pixel_size</code> x
+  <code>pixel_size</code> tiles.</li>
+  <li>For each tile, compute the average color of all pixels in the tile.</li>
+  <li>Fill the entire tile with that average color, producing the mosaic effect.</li>
+  <li>Clip to region shape, apply feathering and opacity, draw result.</li>
+</ol>
+
+<p><strong>Solid Fill Rendering:</strong></p>
+
+<ol>
+  <li>Draw a filled shape (rectangle, ellipse, or freeform mask) in <code>fill_color</code>.</li>
+  <li>Clip to region shape.</li>
+  <li>Apply feathering (solid color fades to transparent at the edges).</li>
+  <li>Apply opacity.</li>
+  <li>Draw border if configured.</li>
+</ol>
+
+<p><strong>Invert Mask Rendering:</strong></p>
+
+<ul>
+  <li>When <code>invert_mask</code> is True, the rendering is inverted: the blur/pixelate/fill
+  is applied to everything OUTSIDE the region, while the region interior shows the
+  original content clearly.</li>
+  <li>This creates a spotlight or focus effect: the area of interest is sharp, everything
+  around it is obscured.</li>
+  <li>Implementation: capture the full canvas area, apply the blur to the entire capture, then
+  composite the original (unblurred) content back into the region shape.</li>
+</ul>
+
+<p><strong>Caching:</strong></p>
+
+<ul>
+  <li>The rendered blur result is cached as a QPixmap on the BlurRegionItem. The cache is
+  invalidated and re-rendered when: the blur properties change (mode, radius,
+  <code>pixel_size</code>), the region is moved or resized, the content beneath the region
+  changes (items are added, moved, or edited on lower layers), or the zoom level changes
+  significantly (&gt; 2x change in either direction).</li>
+  <li>Cache invalidation on underlying content changes is detected by listening to the scene's
+  itemChanged signals for items on layers below the blur region's layer.</li>
+  <li>At 60 FPS zooming, the cache may briefly show a stale blur. This is acceptable; the
+  cache is refreshed when the zoom interaction ends.</li>
+</ul>
+
+<p>Flip transforms: BlurRegionItem inherits <code>flip_horizontal</code> and
+<code>flip_vertical</code> from the SnapGraphicsItem base class (Technical Architecture
+PRD Section 3.1.4). When either property is True, the blur region is mirrored around its
+bounding box center via QPainter scale(-1, 1) or scale(1, -1). Flip is applied after
+rotation in the rendering transform order.</p>
+
+<h3 id="s2-8">Post-Creation Editing</h3>
+
+<p><strong>Select Tool:</strong></p>
+
+<ul>
+  <li>Click to select. TransformHandles appear around the region bounding box.</li>
+  <li>Drag to move the region (the blur updates to show the content beneath the new position).</li>
+  <li>Resize via handles resizes the region. Blur re-renders for the new area.</li>
+  <li>For freeform regions, resize scales the <code>alpha_mask</code> proportionally.</li>
+</ul>
+
+<p><strong>Editing Freeform Regions:</strong></p>
+
+<ul>
+  <li>Double-clicking a freeform BlurRegionItem enters brush editing mode.</li>
+  <li>The user can paint additional blur area (additive) or hold Alt and paint to erase blur
+  area (subtractive).</li>
+  <li>The brush cursor shows the current <code>brush_size</code> as a circle outline.</li>
+  <li>Enter or Escape exits brush editing mode.</li>
+  <li>Editing pushes a ModifyPropertyCommand storing the old and new <code>alpha_mask</code>.</li>
+</ul>
+
+<p><strong>Property Panel:</strong></p>
+
+<p>All properties from Section 2.5 are editable in the Property Panel. Changing
+<code>blur_mode</code> or <code>blur_radius</code> provides a live preview on the
+canvas.</p>
+
+<h3 id="s2-9">Hit Testing</h3>
+
+<ul>
+  <li>For rectangle and ellipse regions: <code>shape()</code> returns the region shape path.</li>
+  <li>For freeform regions: <code>shape()</code> returns the bounding rectangle of the
+  <code>alpha_mask</code> (precise mask-level hit testing would be expensive and is not
+  needed for selection).</li>
+  <li>Blur regions always have a visible effect on the canvas, so they are inherently
+  clickable/discoverable.</li>
+</ul>
+
+<h3 id="s2-10">Performance</h3>
+
+<ul>
+  <li>Gaussian blur is computationally expensive. The blur is rendered once and cached. Cache
+  invalidation triggers a re-render in a background thread if the region is large (&gt;
+  500x500 pixels).</li>
+  <li>Real-time preview during drawing: use a lower-resolution blur (render at 50% resolution,
+  scale up) for the preview, then render at full resolution on mouse release.</li>
+  <li>Pixelate is cheaper than Gaussian blur (simple averaging, no convolution). Real-time
+  preview is feasible at full resolution.</li>
+  <li>Solid fill is trivial and always renders at full speed.</li>
+  <li>Target: blur re-render for a 1000x1000 pixel region completes within 100ms. For regions
+  larger than 2000x2000 pixels, a progress indicator is shown.</li>
+  <li>Multiple overlapping blur regions: each region captures and blurs independently. The
+  upper blur region sees the already-blurred content from the lower region. This naturally
+  produces correct stacking behavior.</li>
+</ul>
+
+<h3 id="s2-11">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>State</th><th>Status Bar Text</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Idle (Rectangle/Ellipse)</th><td>Click and drag to define blur region. Shift: constrain. Alt: from center.</td></tr>
+    <tr><th>Drawing</th><td>W: 320  H: 240 | Mode: Gaussian Blur | Radius: 10 | Release to apply.</td></tr>
+    <tr><th>Idle (Freeform)</th><td>Paint to define blur area. Enter: finish. Shift: straight strokes.</td></tr>
+    <tr><th>Painting (Freeform)</th><td>Painting blur area. Release and continue, or Enter to finish.</td></tr>
+    <tr><th>Editing freeform</th><td>Paint to add blur. Alt+paint to erase. Enter/Escape: finish.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s3">Highlighter Tool</h2>
+
+<h3 id="s3-1">Tool Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Tool ID</th><td>highlight</td></tr>
+    <tr><th>Display Name</th><td>Highlighter</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>H</td></tr>
+    <tr><th>Default Cursor</th><td>Angled marker tip icon</td></tr>
+    <tr><th>Category</th><td>Annotation</td></tr>
+    <tr><th>Item Class</th><td>HighlightItem (extends VectorItem)</td></tr>
+  </tbody>
+</table>
+
+<p>The Highlighter tool draws semi-transparent colored strokes over the canvas, simulating
+a physical highlighter marker pen. It is used to draw attention to specific text, UI
+elements, or areas of a screenshot by overlaying them with a translucent color wash. The
+highlighter differs from the Freehand tool in its blend mode (multiply), default
+opacity, and auto-straightening behavior.</p>
+
+<h3 id="s3-2">Drawing Behavior</h3>
+
+<p><strong>Mouse Press:</strong></p>
+
+<ul>
+  <li>Verify the active layer is visible and unlocked.</li>
+  <li>Record the press position as the first point.</li>
+  <li>Begin capturing mouse move events.</li>
+  <li>Change cursor to the angled marker tip icon.</li>
+</ul>
+
+<p><strong>Mouse Move (Drawing):</strong></p>
+
+<ul>
+  <li>Append the current mouse position to the raw stroke path.</li>
+  <li>Render the stroke in real-time with the current highlight color and blend mode.</li>
+  <li>The stroke has a flat, wide shape: it is rendered as a broad band
+  (<code>stroke_width</code> range 10-80px, default 24px) with flat ends
+  (<code>stroke_cap</code> = Flat by default).</li>
+  <li>The stroke is rendered with the configured <code>blend_mode</code> (default: Multiply),
+  which interacts naturally with the content underneath: dark content shows through the
+  highlight, light content takes on the highlight color. This matches the behavior of a
+  real highlighter on paper.</li>
+  <li>Path smoothing is applied in real-time using a simple moving-average filter on the last
+  5 points, producing a naturally smooth stroke without the post-processing delay of the
+  Freehand tool.</li>
+</ul>
+
+<p><strong>Mouse Release:</strong></p>
+
+<ul>
+  <li>Apply auto-straightening if enabled (see Section 3.3).</li>
+  <li>Apply path simplification (Ramer-Douglas-Peucker with a tolerance of 2px) to reduce
+  point count.</li>
+  <li>If the resulting stroke is shorter than 4 pixels, discard (accidental click).</li>
+  <li>Finalize the HighlightItem. Add to scene and active layer. Push AddItemCommand.</li>
+  <li>Return to Idle.</li>
+</ul>
+
+<h3 id="s3-3">Straightening &amp; Snap-to-Line</h3>
+
+<p><strong>Auto-Straighten:</strong></p>
+
+<ul>
+  <li>When <code>auto_straighten</code> is enabled (default: True), the tool analyzes the
+  completed stroke path to determine if the user intended a straight line.</li>
+  <li>Straight-line detection: compute the ratio of the path's arc length to the Euclidean
+  distance between start and end points. If the ratio is less than the
+  <code>straighten_threshold</code> (default: 1.15, meaning the path is within 15% of a
+  straight line), replace the entire path with a single straight line from start to end.</li>
+  <li>This allows users to quickly highlight a line of text by drawing an approximately
+  straight stroke — the tool cleans it up into a perfectly straight highlight.</li>
+  <li>If the ratio exceeds the threshold, the path is kept as-is (freeform).</li>
+  <li>Auto-straighten applies on mouse release, before the AddItemCommand is pushed. The user
+  sees the straightened result immediately.</li>
+</ul>
+
+<p><strong>Manual Straight Mode (Shift):</strong></p>
+
+<ul>
+  <li>Holding Shift while drawing forces a perfectly straight highlight from the press point
+  to the current cursor position, regardless of mouse movement.</li>
+  <li>The angle is NOT constrained (unlike Shift in the Line tool). The line follows the exact
+  angle from start to cursor. This is intentional: for highlighting text, the user
+  typically wants a horizontal-ish stroke that follows the text baseline exactly.</li>
+  <li>If the user wants angle-constrained straight highlights, they can hold Shift+Alt, which
+  constrains to 15-degree increments (horizontal, vertical, diagonal).</li>
+</ul>
+
+<p><strong>Snap to Horizontal/Vertical:</strong></p>
+
+<ul>
+  <li>When <code>snap_to_axis</code> is enabled and the stroke angle is within 5 degrees of
+  horizontal or vertical, the stroke is snapped to a perfectly horizontal or vertical
+  line.</li>
+  <li>This is a secondary correction applied after auto-straighten. It only triggers on
+  strokes that have already been straightened to a line.</li>
+  <li>This ensures that highlights drawn roughly along text lines become perfectly horizontal.</li>
+</ul>
+
+<h3 id="s3-4">Tool-Specific Properties</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>path_points</code></th><td>list[QPointF]</td><td>(from drawing)</td><td>The stroke path points (after smoothing and straightening).</td></tr>
+    <tr><th><code>highlight_color</code></th><td>QColor</td><td>#FFFF00CC (yellow, ~80% opacity)</td><td>The highlight color including alpha. The alpha channel controls transparency.</td></tr>
+    <tr><th><code>stroke_width</code></th><td>float</td><td>24.0</td><td>Width of the highlight band in pixels. Range: 10 to 80, step 1.</td></tr>
+    <tr><th><code>stroke_cap</code></th><td>enum</td><td>Flat</td><td>Line cap style: Flat (default for highlighter — gives a clean marker edge), Round, Square.</td></tr>
+    <tr><th><code>stroke_style</code></th><td>enum</td><td>Solid</td><td>Stroke line style: Solid, Dashed, Dotted, DashDot, DashDotDot.</td></tr>
+    <tr><th><code>blend_mode</code></th><td>enum</td><td>multiply</td><td>QPainter composition mode: multiply (default, natural highlighter), overlay, <code>soft_light</code>, normal. See Section 3.7 for details.</td></tr>
+    <tr><th><code>auto_straighten</code></th><td>bool</td><td>True</td><td>Whether to auto-detect and straighten approximately-straight strokes.</td></tr>
+    <tr><th><code>straighten_threshold</code></th><td>float</td><td>1.15</td><td>Arc-length / Euclidean ratio threshold for straightening. Lower = more aggressive straightening. Range: 1.01 to 1.50.</td></tr>
+    <tr><th><code>snap_to_axis</code></th><td>bool</td><td>True</td><td>Whether to snap near-horizontal/near-vertical strokes to exact axis alignment.</td></tr>
+    <tr><th><code>shadow_enabled</code></th><td>bool</td><td>False</td><td>Highlights rarely use shadows, but the option is available.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s3-5">Tool Options Bar</h3>
+
+<p>The Highlighter tool's Tool Options Bar shows:</p>
+
+<ol>
+  <li>Highlight Color: color swatch button. Clicking opens the color picker with preset
+  highlight colors shown prominently (Yellow, Green, Cyan, Pink, Orange, Purple).</li>
+  <li>Stroke Width: slider + spinbox (10-80px, default 24). A visual preview shows the stroke
+  thickness.</li>
+  <li>Blend Mode: dropdown (Multiply, Overlay, Soft Light, Normal). Multiply is the default
+  and most natural. Normal renders the highlight as a flat semi-transparent overlay
+  without color blending.</li>
+  <li>Cap Style: toggle group (Flat, Round, Square) with small preview icons.</li>
+  <li>Stroke Style: dropdown (Solid, Dashed, Dotted, DashDot, DashDotDot).</li>
+  <li>Auto-Straighten: toggle button (ruler icon). When active, approximately-straight strokes
+  are snapped to lines.</li>
+  <li>Snap to Axis: toggle button (magnet icon). When active, straightened strokes near
+  horizontal/vertical are snapped to exact axis.</li>
+  <li>Preset Colors: a row of 6 small color swatches for quick color selection (Yellow, Green,
+  Cyan, Pink, Orange, Purple). Click to select without opening the full color picker.</li>
+</ol>
+
+<h3 id="s3-6">Post-Creation Editing</h3>
+
+<p><strong>Select Tool:</strong></p>
+
+<ul>
+  <li>Click to select. TransformHandles appear around the stroke bounding box.</li>
+  <li>Drag to move.</li>
+  <li>Resize scales the entire stroke (all path points scale relative to bounding box center).
+  Stroke width also scales proportionally.</li>
+  <li>Rotate rotates the stroke around its bounding box center.</li>
+</ul>
+
+<p><strong>Point Editing Mode (Double-Click):</strong></p>
+
+<ul>
+  <li>Double-clicking a selected HighlightItem enters point-editing mode.</li>
+  <li>For straightened strokes (only 2 points), the two endpoints are shown as draggable
+  handles. The user can adjust the start and end of the highlight.</li>
+  <li>For freeform strokes, the simplified path points are shown as handles, similar to the
+  Freehand tool's point-editing mode.</li>
+  <li>Escape exits point-editing mode.</li>
+</ul>
+
+<p><strong>Property Panel:</strong></p>
+
+<p>All properties including <code>highlight_color</code>, <code>stroke_width</code>,
+<code>stroke_style</code>, <code>blend_mode</code>, and <code>cap_style</code> are
+editable. Changes apply immediately with live preview. Changing
+<code>auto_straighten</code> or <code>snap_to_axis</code> has no retroactive effect
+(they only apply during drawing).</p>
+
+<h3 id="s3-7">Rendering</h3>
+
+<p><strong>Blend Mode Implementation:</strong></p>
+
+<ul>
+  <li>The blend mode is implemented using QPainter's CompositionMode. The key modes and their
+  visual effect:</li>
+  <li>Multiply (<code>CompositionMode_Multiply</code>): darkens the content beneath the
+  highlight. White content becomes the highlight color. Dark content stays dark. This is
+  the most natural highlighter simulation.</li>
+  <li>Overlay (<code>CompositionMode_Overlay</code>): increases contrast. Bright areas get
+  brighter, dark areas get darker, with the highlight color tinting everything.</li>
+  <li>Soft Light (<code>CompositionMode_SoftLight</code>): a gentler version of Overlay.
+  Subtly tints the content with the highlight color without harsh contrast changes.</li>
+  <li>Normal (<code>CompositionMode_SourceOver</code>): standard alpha blending. The highlight
+  simply sits on top with its alpha transparency. No color interaction with the content
+  beneath.</li>
+</ul>
+
+<p><strong>Rendering Steps:</strong></p>
+
+<ol>
+  <li>Construct a QPainterPath from the stroke <code>path_points</code>.</li>
+  <li>Create a QPen with <code>highlight_color</code>, <code>stroke_width</code>,
+  <code>stroke_style</code>, <code>stroke_cap</code>, and Round join.</li>
+  <li>Save the QPainter state.</li>
+  <li>Set QPainter.setCompositionMode() to the configured <code>blend_mode</code>.</li>
+  <li>Draw the path with the configured pen.</li>
+  <li>Restore the QPainter state (reset composition mode to SourceOver).</li>
+  <li>If <code>shadow_enabled</code>: draw the shadow with normal composition mode (shadows
+  should not use blend modes).</li>
+</ol>
+
+<p><strong>Opacity Handling:</strong></p>
+
+<p>The <code>highlight_color</code>'s alpha channel is the primary opacity control.
+Item-level opacity (inherited from SnapGraphicsItem) is multiplicative. For example:
+<code>highlight_color</code> with alpha 204 (80%) at item opacity 0.5 produces an
+effective alpha of 102 (40%).</p>
+
+<p>Flip transforms: HighlightItem inherits <code>flip_horizontal</code> and
+<code>flip_vertical</code> from the SnapGraphicsItem base class (Technical Architecture
+PRD Section 3.1.4). When either property is True, the highlight stroke is mirrored
+around its bounding box center via QPainter scale(-1, 1) or scale(1, -1). Flip is
+applied after rotation in the rendering transform order.</p>
+
+<h3 id="s3-8">Hit Testing</h3>
+
+<ul>
+  <li>The <code>shape()</code> returns a QPainterPathStroker result of the stroke path with
+  the <code>stroke_width</code> + 4px padding.</li>
+  <li>For wide strokes (&gt; 20px), clicking anywhere within the stroke band selects it.</li>
+  <li>The blend mode does not affect hit testing (hit testing uses geometry, not rendering).</li>
+</ul>
+
+<h3 id="s3-9">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>State</th><th>Status Bar Text</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Idle</th><td>Click and drag to highlight. Shift: straight line. Auto-straighten: ON.</td></tr>
+    <tr><th>Drawing</th><td>Highlighting... Release to finish. Shift: force straight.</td></tr>
+    <tr><th>Drawing (Shift held)</th><td>Straight highlight. Release to finish.</td></tr>
+    <tr><th>Point editing</th><td>Drag points to reshape. Escape: exit.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s4">Eyedropper Tool</h2>
+
+<h3 id="s4-1">Tool Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Tool ID</th><td>eyedropper</td></tr>
+    <tr><th>Display Name</th><td>Eyedropper</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>I</td></tr>
+    <tr><th>Default Cursor</th><td>Eyedropper icon</td></tr>
+    <tr><th>Category</th><td>Utility</td></tr>
+    <tr><th>Item Class</th><td>None (the Eyedropper does not create items)</td></tr>
+  </tbody>
+</table>
+
+<p>The Eyedropper tool samples colors from the canvas and applies them to other tools or
+items. Unlike all other tools, the Eyedropper does not create scene items. It is a
+utility tool that reads pixel colors and sets color properties on other tools and items.
+It is also available as a temporary mode (Alt key) from within other tools.</p>
+
+<h3 id="s4-2">Sampling Behavior</h3>
+
+<p><strong>Single-Point Sampling (Click):</strong></p>
+
+<ol>
+  <li>With the Eyedropper tool active, click on the canvas.</li>
+  <li>Sample the pixel color at the click position. The sampled color is a composite of all
+  visible content at that point (all visible layers composited together, including the
+  canvas background).</li>
+  <li>The sampled color is stored as the "last sampled color" and applied to the target (see
+  Section 4.6).</li>
+  <li>The tool remains active after sampling. The user can click again to sample a different
+  color.</li>
+</ol>
+
+<p><strong>Click-and-Drag Sampling (Live Preview):</strong></p>
+
+<ul>
+  <li>Click and hold, then drag across the canvas. As the cursor moves, the color under the
+  cursor is continuously sampled and displayed in the preview loupe (see Section 4.3).</li>
+  <li>The Tool Options Bar color display updates in real-time as the cursor moves.</li>
+  <li>On mouse release, the color under the cursor at the release position is applied as the
+  sampled color.</li>
+  <li>This allows the user to visually find the exact pixel they want to sample.</li>
+</ul>
+
+<p><strong>Sample Area:</strong></p>
+
+<ul>
+  <li>By default, the eyedropper samples a single pixel. However, the <code>sample_size</code>
+  property can be set to sample an area and average the colors:</li>
+  <li>1x1 (Point): samples the exact pixel under the cursor. Most precise.</li>
+  <li>3x3: averages a 3x3 pixel area centered on the cursor. Reduces noise in dithered or
+  anti-aliased areas.</li>
+  <li>5x5: averages a 5x5 area. Good for sampling the "general" color of a region.</li>
+  <li>11x11: averages an 11x11 area. Captures the dominant color of a larger area.</li>
+  <li>The averaged color is a simple arithmetic mean of the RGB values of all pixels in the
+  area.</li>
+</ul>
+
+<h3 id="s4-3">Preview Loupe</h3>
+
+<p>While the Eyedropper tool is active (or during Alt-key temporary activation), a
+magnified loupe follows the cursor to help the user see exactly which pixel they are
+sampling.</p>
+
+<p><strong>Loupe Appearance:</strong></p>
+
+<ul>
+  <li>A circular magnification window, 120px diameter, positioned 20px above and to the right
+  of the cursor (repositioned if it would go off-screen).</li>
+  <li>Magnification level: 8x (each pixel is rendered as an 8x8 block in the loupe).</li>
+  <li>A thin crosshair in the center of the loupe indicates the exact sample point.</li>
+  <li>The sampled pixel (or <code>sample_size</code> area) is highlighted with a small colored
+  square outline in the loupe.</li>
+  <li>Below the loupe circle, a small rectangular color swatch (40x24 px) shows the sampled
+  color, with the hex value displayed beneath it in a small font (e.g., "#4A90D9").</li>
+  <li>The loupe has a 2px border in the accent color and a subtle drop shadow for visibility
+  against any background.</li>
+  <li>If the cursor is over transparent canvas (no content), the loupe shows the checkerboard
+  transparency pattern and the color swatch shows "transparent".</li>
+</ul>
+
+<p><strong>Loupe Rendering Performance:</strong></p>
+
+<ul>
+  <li>The loupe captures a small region of the canvas (approximately 15x15 pixels at 8x
+  magnification = the area that fits in the 120px loupe) and scales it up using
+  nearest-neighbor interpolation (no smoothing, to show exact pixel boundaries).</li>
+  <li>This capture and render must occur every frame (60 FPS) during drag. For efficiency, the
+  capture area is small and the render is a simple scaled blit.</li>
+  <li>The loupe is rendered as a temporary overlay on the viewport (not a scene item). It is
+  drawn in QGraphicsView.drawForeground() or as a QWidget overlay.</li>
+</ul>
+
+<h3 id="s4-4">Tool-Specific Properties</h3>
+
+<p>The Eyedropper does not have persistent item properties (it does not create items). It
+has tool-session properties:</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>sample_size</code></th><td>enum</td><td>1x1</td><td>Sample area: 1x1, 3x3, 5x5, 11x11.</td></tr>
+    <tr><th><code>last_sampled_color</code></th><td>QColor</td><td>None</td><td>The most recently sampled color. Displayed in the Tool Options Bar.</td></tr>
+    <tr><th><code>copy_to_clipboard</code></th><td>bool</td><td>False</td><td>When True, the hex value of the sampled color is automatically copied to the system clipboard on each sample.</td></tr>
+    <tr><th><code>color_format</code></th><td>enum</td><td>hex</td><td>Display format in the info area: hex (#4A90D9), rgb (74, 144, 217), hsl (210°, 63%, 57%).</td></tr>
+    <tr><th><code>apply_target</code></th><td>enum</td><td><code>stroke_color</code></td><td>Which color property to set on the previously active tool: <code>stroke_color</code>, <code>fill_color</code>, <code>text_color</code>, <code>highlight_color</code>, <code>badge_color</code>. See Section 4.6.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s4-5">Tool Options Bar</h3>
+
+<p>The Eyedropper tool's Tool Options Bar shows:</p>
+
+<ol>
+  <li>Sampled Color Swatch: a large (32x32) color swatch showing the last sampled color. Shows
+  checkerboard pattern if no color has been sampled.</li>
+  <li>Color Value: read-only text field showing the color in the selected format. Click to
+  copy to clipboard.</li>
+  <li>Color Format: dropdown (Hex, RGB, HSL).</li>
+  <li>Sample Size: toggle button group (1x1, 3x3, 5x5, 11x11) with small visual indicators
+  showing the area size.</li>
+  <li>Apply Target: dropdown (Stroke Color, Fill Color, Text Color). Determines which property
+  is set when a color is sampled.</li>
+  <li>Copy to Clipboard: toggle button (clipboard icon). When active, every sample auto-copies
+  the hex value.</li>
+  <li>Color History: a row of the last 8 sampled colors as small swatches (16x16). Click any
+  swatch to re-apply that color.</li>
+</ol>
+
+<h3 id="s4-6">Color Output &amp; Integration</h3>
+
+<p><strong>Applying the Sampled Color:</strong></p>
+
+<p>When a color is sampled, it is applied based on the <code>apply_target</code> setting
+and the context:</p>
+
+<ul>
+  <li>If the user was using a shape/annotation tool before switching to the Eyedropper, the
+  sampled color is set as the configured target property (<code>stroke_color</code>,
+  <code>fill_color</code>, etc.) on that tool. When the user switches back to the previous
+  tool, the new color is ready to use.</li>
+  <li>If items are currently selected (the user had items selected before activating the
+  Eyedropper), the sampled color is applied directly to the selected items' target
+  property. This pushes a ModifyPropertyCommand and is undoable.</li>
+  <li>If no items are selected and no previous tool context exists, the sampled color is
+  stored as the application's active <code>stroke_color</code> (default target).</li>
+</ul>
+
+<p><strong>Integration with Color Picker:</strong></p>
+
+<ul>
+  <li>The sampled color is also pushed to the Color Picker's "Recent Colors" list.</li>
+  <li>If the Color Picker popover is open (e.g., the user opened it from a tool options bar
+  swatch), sampling a color with the Eyedropper fills the Color Picker with the sampled
+  value and selects it.</li>
+</ul>
+
+<h3 id="s4-7">Alt-Key Shortcut Mode</h3>
+
+<p>The Eyedropper is available as a temporary mode from any tool by holding the Alt key (as
+defined in the General UI PRD keyboard conventions).</p>
+
+<p><strong>Workflow:</strong></p>
+
+<ol>
+  <li>While using any tool (e.g., Arrow, Rectangle, Text), the user presses and holds Alt.</li>
+  <li>The cursor changes to the Eyedropper icon. The loupe appears.</li>
+  <li>The user clicks (or holds and drags) to sample a color.</li>
+  <li>On mouse release, the sampled color is applied to the currently active tool's primary
+  color property (<code>stroke_color</code> for shape tools, <code>highlight_color</code>
+  for the Highlighter, <code>text_color</code> for the Text tool, <code>badge_color</code>
+  for Numbered Step).</li>
+  <li>The Alt key is released. The cursor returns to the previous tool's cursor. The tool
+  continues as before, now using the new color.</li>
+  <li>The user never had to leave their current tool. This is the fastest way to pick a color
+  while annotating.</li>
+</ol>
+
+<p><strong>Alt-Key Behavior Details:</strong></p>
+
+<ul>
+  <li>Alt+click during an in-progress drawing operation (e.g., the user is mid-drag drawing a
+  rectangle): the eyedropper activates temporarily, samples the color, and the drawing
+  operation continues with the new color applied when the user resumes.</li>
+  <li>Alt does NOT activate the eyedropper if the user is in inline text editing mode (Alt is
+  used for other purposes in text editing). In text editing mode, the eyedropper is
+  accessed via the Tool Palette or keyboard shortcut (I).</li>
+  <li>The loupe preview appears instantly when Alt is pressed, even before clicking, allowing
+  the user to see what color is under the cursor.</li>
+  <li>If the user presses Alt but does not click (just previews), releasing Alt returns to the
+  previous tool with no changes.</li>
+</ul>
+
+<h3 id="s4-8">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>State</th><th>Status Bar Text</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Active, idle</th><td>Click to sample a color. Drag to preview. Sample: 1x1 | Target: Stroke Color.</td></tr>
+    <tr><th>Dragging (live preview)</th><td>Sampling: #4A90D9 (rgb 74,144,217). Release to apply.</td></tr>
+    <tr><th>Alt-key temporary mode</th><td>Eyedropper: click to sample color for [current tool]. Release Alt to cancel.</td></tr>
+    <tr><th>After sampling</th><td>Sampled: #4A90D9. Applied to Stroke Color. Click to sample again.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s5">Data Models</h2>
+
+<p>The Eyedropper tool does not create scene items and therefore has no data model in this
+section.</p>
+
+<h3 id="s5-1">BlurRegionItem</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Serialization Key</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>rect</th><td>QRectF</td><td>"rect": {"x": float, "y": float, "w": float, "h": float}</td></tr>
+    <tr><th><code>blur_mode</code></th><td>str</td><td>"<code>blur_mode</code>": "gaussian" | "pixelate" | "solid"</td></tr>
+    <tr><th><code>region_shape</code></th><td>str</td><td>"<code>region_shape</code>": "rectangle" | "ellipse" | "freeform" | "<code>whole_layer</code>"</td></tr>
+    <tr><th><code>blur_radius</code></th><td>float</td><td>"<code>blur_radius</code>": float</td></tr>
+    <tr><th><code>pixel_size</code></th><td>int</td><td>"<code>pixel_size</code>": int</td></tr>
+    <tr><th><code>fill_color</code></th><td>str</td><td>"<code>fill_color</code>": "#RRGGBB"</td></tr>
+    <tr><th><code>corner_radius</code></th><td>float</td><td>"<code>corner_radius</code>": float</td></tr>
+    <tr><th>feather</th><td>float</td><td>"feather": float</td></tr>
+    <tr><th><code>alpha_mask_data</code></th><td>str (base64)</td><td>"<code>alpha_mask_data</code>": "base64 PNG..." (freeform only)</td></tr>
+    <tr><th><code>source_mode</code></th><td>str</td><td>"<code>source_mode</code>": "<code>all_below</code>" | "<code>active_layer</code>" | "<code>specific_layer</code>"</td></tr>
+    <tr><th><code>source_layer_id</code></th><td>str (nullable)</td><td>"<code>source_layer_id</code>": "UUID" | null</td></tr>
+    <tr><th>opacity</th><td>float</td><td>"opacity": float</td></tr>
+    <tr><th><code>border_color</code></th><td>str</td><td>"<code>border_color</code>": "#RRGGBBAA"</td></tr>
+    <tr><th><code>border_width</code></th><td>float</td><td>"<code>border_width</code>": float</td></tr>
+    <tr><th><code>invert_mask</code></th><td>bool</td><td>"<code>invert_mask</code>": bool</td></tr>
+  </tbody>
+</table>
+
+<p>Note: The <code>alpha_mask_data</code> for freeform regions is stored as a
+base64-encoded PNG in the project's items.json. For large masks, the PNG may also be
+stored as a separate file in the raster/ directory of the <code>.smk</code> ZIP archive,
+with the serialization key referencing the filename instead.</p>
+
+<h3 id="s5-2">HighlightItem</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Serialization Key</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>path_points</code></th><td>list[QPointF]</td><td>"<code>path_points</code>": [{"x": float, "y": float}, ...]</td></tr>
+    <tr><th><code>highlight_color</code></th><td>str</td><td>"<code>highlight_color</code>": "#RRGGBBAA"</td></tr>
+    <tr><th><code>stroke_width</code></th><td>float</td><td>"<code>stroke_width</code>": float</td></tr>
+    <tr><th><code>stroke_cap</code></th><td>str</td><td>"<code>stroke_cap</code>": "flat" | "round" | "square"</td></tr>
+    <tr><th><code>stroke_style</code></th><td>str</td><td>"<code>stroke_style</code>": "solid" | "dashed" | "dotted" | "dashdot" | "dashdotdot"</td></tr>
+    <tr><th><code>blend_mode</code></th><td>str</td><td>"<code>blend_mode</code>": "multiply" | "overlay" | "<code>soft_light</code>" | "normal"</td></tr>
+    <tr><th><code>auto_straighten</code></th><td>bool</td><td>"<code>auto_straighten</code>": bool</td></tr>
+    <tr><th><code>straighten_threshold</code></th><td>float</td><td>"<code>straighten_threshold</code>": float</td></tr>
+    <tr><th><code>snap_to_axis</code></th><td>bool</td><td>"<code>snap_to_axis</code>": bool</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s6">Command Definitions</h2>
+
+<p>Both the Blur and Highlighter tools produce AddItemCommand on creation (standard). The
+Eyedropper produces no item commands but may produce ModifyPropertyCommand when applying
+colors to selected items. This section covers tool-specific commands.</p>
+
+<h3 id="s6-1">ModifyBlurMaskCommand</h3>
+
+<p>Recorded when a freeform blur region's alpha mask is edited (brush painting in edit
+mode).</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>item_id</code></th><td>UUID</td><td>The blur region item.</td></tr>
+    <tr><th><code>old_mask_data</code></th><td>QImage</td><td>The alpha mask before editing.</td></tr>
+    <tr><th><code>new_mask_data</code></th><td>QImage</td><td>The alpha mask after editing.</td></tr>
+  </tbody>
+</table>
+
+<p><strong><code>redo()</code>:</strong> Set <code>alpha_mask</code> =
+<code>new_mask_data</code>. Invalidate blur cache.</p>
+
+<p><strong><code>undo()</code>:</strong> Set <code>alpha_mask</code> =
+<code>old_mask_data</code>. Invalidate blur cache.</p>
+
+<p><strong><code>description()</code>:</strong> "Edit blur region mask"</p>
+
+<h3 id="s6-2">ApplyEyedropperColorCommand</h3>
+
+<p>Recorded when the Eyedropper applies a sampled color to one or more selected items.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>item_ids</code></th><td>list[UUID]</td><td>The items whose color was changed.</td></tr>
+    <tr><th><code>property_name</code></th><td>str</td><td>The color property that was changed (e.g., "<code>stroke_color</code>", "<code>fill_color</code>").</td></tr>
+    <tr><th><code>old_values</code></th><td>dict[UUID, QColor]</td><td>Previous color values for each item.</td></tr>
+    <tr><th><code>new_value</code></th><td>QColor</td><td>The sampled color applied to all items.</td></tr>
+  </tbody>
+</table>
+
+<p><strong><code>redo()</code>:</strong> For each item, set <code>property_name</code> =
+<code>new_value</code>.</p>
+
+<p><strong><code>undo()</code>:</strong> For each item, set <code>property_name</code> =
+<code>old_values</code>[<code>item_id</code>].</p>
+
+<p><strong><code>description()</code>:</strong> "Apply eyedropper color"</p>
+
+<h2 id="s7">Serialization</h2>
+
+<h3 id="s7-1">BlurRegionItem Serialization</h3>
+
+<ul>
+  <li>All properties are serialized to JSON in items.json as standard key-value pairs (see
+  Section 5.1).</li>
+  <li>Freeform alpha masks: for small masks (&lt; 100KB as PNG), the base64 PNG data is stored
+  inline in the <code>alpha_mask_data</code> field. For larger masks, the PNG is stored as
+  a separate file in the <code>.smk</code> archive's raster/ directory (e.g.,
+  raster/<code>blur_mask_a1b2c3d4</code>.png), and <code>alpha_mask_data</code> contains
+  the filename reference prefixed with "file:" (e.g.,
+  "file:raster/<code>blur_mask_a1b2c3d4</code>.png").</li>
+  <li>On deserialization: if <code>alpha_mask_data</code> starts with "file:", load the PNG
+  from the archive. Otherwise, decode the base64 data directly.</li>
+  <li>The blur cache is NOT serialized. It is regenerated on project load.</li>
+</ul>
+
+<h3 id="s7-2">HighlightItem Serialization</h3>
+
+<ul>
+  <li>All properties are serialized to JSON with the <code>path_points</code> as an array of
+  {x, y} objects.</li>
+  <li>The <code>blend_mode</code> is stored as a string identifier ("multiply", "overlay",
+  etc.) that maps to QPainter::CompositionMode on deserialization.</li>
+  <li>The <code>highlight_color</code> is stored with alpha (e.g., "#FFFF00CC" for yellow at
+  80% opacity). The 8-character hex format includes the alpha channel.</li>
+</ul>
+
+<h3 id="s7-3">Eyedropper</h3>
+
+<p>The Eyedropper has no serialization requirements. Its session state
+(<code>last_sampled_color</code>, <code>color_history</code>) is transient and not saved
+with the project. The sampled color history could optionally be saved in application
+preferences (QSettings) for persistence across sessions.</p>
+
+<h3 id="s7-4">Example: BlurRegionItem JSON</h3>
+
+<pre><code>{
+  &quot;type&quot;: &quot;blur_region&quot;,
+  &quot;item_id&quot;: &quot;a1b2c3d4-...&quot;,
+  &quot;layer_id&quot;: &quot;f1e2d3c4-...&quot;,
+  &quot;rect&quot;: {&quot;x&quot;: 100, &quot;y&quot;: 200, &quot;w&quot;: 300, &quot;h&quot;: 150},
+  &quot;blur_mode&quot;: &quot;pixelate&quot;,
+  &quot;region_shape&quot;: &quot;rectangle&quot;,
+  &quot;blur_radius&quot;: 10,
+  &quot;pixel_size&quot;: 12,
+  &quot;fill_color&quot;: &quot;#000000&quot;,
+  &quot;corner_radius&quot;: 4,
+  &quot;feather&quot;: 2,
+  &quot;alpha_mask_data&quot;: null,
+  &quot;source_mode&quot;: &quot;all_below&quot;,
+  &quot;opacity&quot;: 1.0,
+  &quot;border_color&quot;: &quot;#00000000&quot;,
+  &quot;border_width&quot;: 0,
+  &quot;invert_mask&quot;: false,
+  &quot;transform&quot;: {&quot;m11&quot;: 1, &quot;m12&quot;: 0, ...}
+}</code></pre>
+
+<h2 id="s8">Acceptance Criteria</h2>
+
+<h3 id="s8-1">Blur / Pixelate Tool</h3>
+
+<ol>
+  <li>Click-and-drag creates a blur region at the drawn position and size with real-time blur
+  preview during drawing.</li>
+  <li>All three blur modes render correctly: Gaussian blur produces a smooth, unreadable
+  result at radius 10+. Pixelate produces a clean mosaic grid. Solid fill completely hides
+  content.</li>
+  <li>Gaussian blur radius is visually proportional: radius 1 is barely noticeable, radius 50
+  makes content completely unrecognizable.</li>
+  <li>Pixelate <code>pixel_size</code> is visually proportional: size 2 is nearly invisible,
+  size 50+ produces very large mosaic tiles.</li>
+  <li>Rectangle and Ellipse region shapes work correctly with Shift (constrain) and Alt (from
+  center) modifiers.</li>
+  <li>Rounded rectangle (<code>corner_radius</code> &gt; 0) produces smooth rounded corners on
+  the blur region.</li>
+  <li>Freeform brush mode allows painting irregular blur regions. Multiple paint strokes
+  accumulate additively.</li>
+  <li>Freeform editing mode (double-click) allows adding (paint) and erasing (Alt+paint) blur
+  area.</li>
+  <li>Feathering produces a smooth gradual transition at the region edges.</li>
+  <li>Invert mask mode blurs everything OUTSIDE the region, creating a spotlight effect.</li>
+  <li>Moving or resizing a blur region updates the blur to reflect the new underlying content.</li>
+  <li>Non-destructive: deleting a blur region fully restores the original content beneath.</li>
+  <li>Opacity slider allows partial blur effects (50% opacity shows a blend of blurred and
+  original).</li>
+  <li>Performance: Gaussian blur of a 1000x1000 region renders within 100ms. Pixelate renders
+  within 50ms.</li>
+  <li>Blur regions on locked/hidden layers cannot be created. Status bar warning is shown.</li>
+</ol>
+
+<h3 id="s8-2">Highlighter Tool</h3>
+
+<ol>
+  <li>Click-and-drag draws a semi-transparent colored stroke with the configured width.</li>
+  <li>Multiply blend mode produces a natural highlighter effect: white backgrounds take the
+  highlight color, dark text shows through.</li>
+  <li>All four blend modes (Multiply, Overlay, Soft Light, Normal) render correctly and
+  produce visually distinct results.</li>
+  <li>Auto-straighten correctly detects approximately-straight strokes and replaces them with
+  perfectly straight lines. Curved strokes are not incorrectly straightened.</li>
+  <li>Manual straight mode (Shift held) produces a perfectly straight highlight from press to
+  release.</li>
+  <li>Shift+Alt constrains the straight highlight to 15-degree angle increments.</li>
+  <li>Snap-to-axis correctly snaps near-horizontal strokes to perfect horizontal and
+  near-vertical to perfect vertical.</li>
+  <li>The default stroke width (24px) and flat cap style produce a clean, marker-like
+  appearance.</li>
+  <li>Preset highlight colors (Yellow, Green, Cyan, Pink, Orange, Purple) are quickly
+  accessible in the Tool Options Bar.</li>
+  <li>Point-editing mode allows adjusting endpoints of straightened highlights.</li>
+  <li>Strokes shorter than 4 pixels are discarded (accidental clicks).</li>
+  <li>Highlight strokes render correctly at all zoom levels from 10% to 3200%.</li>
+</ol>
+
+<h3 id="s8-3">Eyedropper Tool</h3>
+
+<ol>
+  <li>Clicking on the canvas samples the correct composite pixel color from all visible
+  layers.</li>
+  <li>Click-and-drag shows real-time color sampling with the preview loupe and continuously
+  updating color display.</li>
+  <li>The preview loupe renders correctly: 8x magnification, crosshair at center, pixel grid
+  visible, sampled color swatch and hex value below.</li>
+  <li>The loupe repositions to stay on-screen when the cursor is near screen edges.</li>
+  <li>All four sample sizes (1x1, 3x3, 5x5, 11x11) sample correctly. Averaged colors are
+  visually plausible (not noisy or distorted).</li>
+  <li>Sampled color is correctly applied to the previous tool's <code>stroke_color</code> (or
+  configured <code>apply_target</code>).</li>
+  <li>Sampled color is correctly applied to selected items when items are selected before
+  activating the Eyedropper. The change is undoable.</li>
+  <li>Copy to Clipboard correctly copies the hex value to the system clipboard.</li>
+  <li>Color Format dropdown correctly displays the color in Hex, RGB, and HSL formats.</li>
+  <li>Color History shows the last 8 sampled colors. Clicking a history swatch re-applies that
+  color.</li>
+  <li>Alt-key shortcut mode works from all tools: Alt activates the loupe, click samples,
+  release returns to the previous tool with the new color applied.</li>
+  <li>Alt-key mode does NOT activate during inline text editing (Alt is reserved for other
+  purposes in text edit mode).</li>
+  <li>Sampling transparent areas correctly reports "transparent" and shows the checkerboard
+  pattern in the loupe.</li>
+  <li>Loupe rendering maintains 60 FPS during drag sampling.</li>
+</ol>
+
+<h3 id="s8-4">Shared Behavior</h3>
+
+<ol>
+  <li>Blur and Highlighter tools respect active layer: cannot draw on locked/hidden layers.</li>
+  <li>All item creation produces AddItemCommand and is fully undoable.</li>
+  <li>All property changes produce ModifyPropertyCommand and are undoable.</li>
+  <li>All items serialize and deserialize correctly with full property fidelity.</li>
+  <li>Blur and Highlight items support copy, cut, paste, and duplicate operations.</li>
+  <li>All tools display appropriate status bar hints in all states.</li>
+  <li>Tool Options Bar updates correctly when switching between tools and when selecting
+  existing items of each type.</li>
+</ol>
+
+<p><em>--- End of Blur, Highlighter &amp; Eyedropper Tools PRD ---</em></p>
+
+<h2 id="s9">Open Issues</h2>
+
+<p>These items were raised by the conversion from Word. None of them changes a
+requirement; each needs a decision before this document leaves draft.</p>
+
+<div class="note issue">
+  <span class="note-label">Open — The title page carried February 2026 while the change log placed versi</span>
+  <p>The title page carried February 2026 while the change log placed version 1.2 in March 2026. Carried over as written.</p>
+</div>
+
+<div class="note issue">
+  <span class="note-label">Open — approval status never recorded</span>
+  <p>The original carried no approval record. Version 1.2 is shown as pending. Confirm
+  whether any earlier version was formally approved.</p>
+</div>
+
+</main>
+
+</div>
+</body>
+</html>
