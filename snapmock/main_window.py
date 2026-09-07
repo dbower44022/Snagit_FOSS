@@ -7,7 +7,15 @@ from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QAction, QCloseEvent, QDesktopServices, QKeyEvent, QKeySequence
-from PyQt6.QtWidgets import QApplication, QFileDialog, QMainWindow, QMenu, QMenuBar, QMessageBox
+from PyQt6.QtWidgets import (
+    QApplication,
+    QFileDialog,
+    QMainWindow,
+    QMenu,
+    QMenuBar,
+    QMessageBox,
+    QProgressDialog,
+)
 
 if TYPE_CHECKING:
     from PyQt6.QtWidgets import QGraphicsItem
@@ -15,6 +23,8 @@ if TYPE_CHECKING:
 from snapmock.config.constants import (
     APP_NAME,
     APP_VERSION,
+    DEFAULT_CANVAS_HEIGHT,
+    DEFAULT_CANVAS_WIDTH,
     PROJECT_EXTENSION,
     SNAGIT_EXTENSION,
 )
@@ -32,6 +42,8 @@ from snapmock.io.project_serializer import load_project, read_library_metadata, 
 from snapmock.io.snagit_reader import load_snagx
 from snapmock.io.snagit_writer import save_snagx
 from snapmock.items.base_item import SnapGraphicsItem
+from snapmock.library.manager import LibraryManager
+from snapmock.library.render import export_files_to_png
 from snapmock.tools.arrow_tool import ArrowTool
 from snapmock.tools.blur_tool import BlurTool
 from snapmock.tools.callout_tool import CalloutTool
@@ -53,12 +65,17 @@ from snapmock.tools.tool_manager import ToolManager
 from snapmock.tools.zoom_tool import ZoomTool
 from snapmock.ui.document_tabs import DocumentTabs
 from snapmock.ui.layer_panel import LayerPanel
+from snapmock.ui.library_panel import LibraryPanel
 from snapmock.ui.property_panel import PropertyPanel
 from snapmock.ui.status_bar import SnapStatusBar
+from snapmock.ui.toast import Toast
 from snapmock.ui.tool_options_bar import ToolOptionsBar
 from snapmock.ui.toolbar import SnapToolBar
 
 MAX_RECENT_FILES = 10
+
+
+_extra_windows: list[MainWindow] = []
 
 
 class MainWindow(QMainWindow):
@@ -70,11 +87,14 @@ class MainWindow(QMainWindow):
     ``_selection_manager`` and ``_clipboard`` always refer to the active tab.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, restore_session: bool = False) -> None:
         super().__init__()
         self._settings = AppSettings()
         self.setWindowTitle(APP_NAME)
         self.resize(1200, 800)
+
+        # Library: auto-saved capture workspace (Library PRD)
+        self._library = LibraryManager(self._settings.library_directory(), parent=self)
 
         # Documents (tabs): each owns a scene, view, selection and clipboard.
         # There is always at least one document open.
@@ -105,6 +125,24 @@ class MainWindow(QMainWindow):
         self._property_panel.set_tool_manager(self._tool_manager)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._property_panel)
 
+        self._library_panel = LibraryPanel(self._library, self._settings, self)
+        self._library_panel.set_is_open_provider(
+            lambda p: self._documents.find_by_path(p) is not None
+        )
+        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self._library_panel)
+        self._library_panel.open_requested.connect(self._open_library_files)
+        self._library_panel.open_in_new_window_requested.connect(self._open_in_new_window)
+        self._library_panel.files_about_to_be_deleted.connect(self._close_documents_for_paths)
+        self._library_panel.export_requested.connect(self._export_library_files)
+        self._library_panel.export_quick_requested.connect(self._export_library_files_quick)
+        self._library_panel.new_canvas_requested.connect(self._library_new_canvas)
+        self._library.file_created.connect(self._on_library_file_created)
+        self._documents.document_added.connect(lambda _d: self._library_panel.refresh_open_state())
+        self._documents.document_removed.connect(
+            lambda _d: self._library_panel.refresh_open_state()
+        )
+        self._toast = Toast(self)
+
         # Style the dock splitter so it's easier to grab
         self.setStyleSheet(
             "QMainWindow::separator {"
@@ -133,6 +171,7 @@ class MainWindow(QMainWindow):
         self._tabs.close_all_requested.connect(self._close_all_documents)
         self._tabs.close_right_requested.connect(self._close_documents_to_right)
         self._tabs.reveal_in_file_manager_requested.connect(self._reveal_document_in_file_manager)
+        self._tabs.reveal_in_library_requested.connect(self._reveal_document_in_library)
 
         # Menu bar
         self._recent_menu: QMenu | None = None
@@ -174,6 +213,7 @@ class MainWindow(QMainWindow):
         state = self._settings.window_state()
         if state is not None:
             self.restoreState(state)
+        self.resizeDocks([self._library_panel], [250], Qt.Orientation.Vertical)
 
         # Size the layer panel: auto-fit to the number of layers (capped at 10 rows).
         layer_h = self._layer_panel.preferred_height()
@@ -184,6 +224,9 @@ class MainWindow(QMainWindow):
         )
 
         self._update_title()
+
+        if restore_session:
+            self._restore_session()
 
     def _register_tools(self) -> None:
         """Register all built-in tools with the ToolManager."""
@@ -221,6 +264,7 @@ class MainWindow(QMainWindow):
         self._setup_layer_menu(menu_bar)
         self._setup_arrange_menu(menu_bar)
         self._setup_tools_menu(menu_bar)
+        self._setup_library_menu(menu_bar)
         self._setup_help_menu(menu_bar)
 
     def _setup_file_menu(self, menu_bar: QMenuBar) -> None:  # noqa: C901
@@ -443,6 +487,10 @@ class MainWindow(QMainWindow):
         if property_toggle is not None:
             property_toggle.setText("Show &Properties Panel")
             view_menu.addAction(property_toggle)
+
+        library_toggle = self._library_panel.toggleViewAction()
+        if library_toggle is not None:
+            view_menu.addAction(library_toggle)
 
         view_menu.addSeparator()
 
@@ -705,6 +753,50 @@ class MainWindow(QMainWindow):
         # Set initial checkmark
         self._update_tools_menu_check(self._tool_manager.active_tool_id)
 
+    def _setup_library_menu(self, menu_bar: QMenuBar) -> None:
+        """Library menu (Library PRD Section 5)."""
+        library_menu = menu_bar.addMenu("Li&brary")
+        if library_menu is None:
+            return
+
+        self._library_toggle_action = self._library_panel.toggleViewAction()
+        if self._library_toggle_action is not None:
+            self._library_toggle_action.setText("Show &Library Panel")
+            self._library_toggle_action.setShortcut(
+                QKeySequence(SHORTCUTS["library.toggle_panel"])
+            )
+            library_menu.addAction(self._library_toggle_action)
+
+        library_menu.addSeparator()
+
+        open_lib = library_menu.addAction("&Open Library...")
+        if open_lib is not None:
+            open_lib.triggered.connect(self._library_panel.choose_library_directory)
+
+        move_lib = library_menu.addAction("&Move Library...")
+        if move_lib is not None:
+            move_lib.triggered.connect(self._library_move)
+
+        library_menu.addSeparator()
+
+        new_folder = library_menu.addAction("New &Folder")
+        if new_folder is not None:
+            new_folder.triggered.connect(self._library_panel.create_folder)
+
+        library_menu.addSeparator()
+
+        reveal = library_menu.addAction("&Reveal in File Manager")
+        if reveal is not None:
+            reveal.triggered.connect(
+                lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(self._library.root)))
+            )
+
+        library_menu.addSeparator()
+
+        prefs = library_menu.addAction("Library &Preferences...")
+        if prefs is not None:
+            prefs.triggered.connect(lambda: self._file_preferences(focus_library=True))
+
     def _setup_help_menu(self, menu_bar: QMenuBar) -> None:
         help_menu = menu_bar.addMenu("&Help")
         if help_menu is None:
@@ -886,19 +978,28 @@ class MainWindow(QMainWindow):
         except Exception as e:  # noqa: BLE001
             QMessageBox.critical(self, "Open Error", f"Could not open project:\n{e}")
             return None
+        is_library = self._library.is_library_path(path)
         doc = Document(
             scene,
             file_path=path,
+            is_library_file=is_library,
             display_name=(metadata or {}).get("display_name"),
             library_metadata=metadata,
             parent=self,
         )
         self._add_document(doc)
-        self._add_recent_file(path)
+        if is_library:
+            self._library.attach_document(doc)
+        else:
+            self._add_recent_file(path)
         return doc
 
     def _file_save(self) -> None:
-        """Save the current project."""
+        """Save the current project (library files are written back immediately)."""
+        doc = self._active_document
+        if doc.is_library_file:
+            self._library.write_back(doc)
+            return
         if self._current_file is None:
             self._file_save_as()
             return
@@ -920,7 +1021,24 @@ class MainWindow(QMainWindow):
                 path = path.with_suffix(SNAGIT_EXTENSION)
         elif path.suffix.lower() != PROJECT_EXTENSION:
             path = path.with_suffix(PROJECT_EXTENSION)
+        doc = self._active_document
+        if doc.is_library_file and not self._library.is_library_path(path):
+            # Library files stay bound to the library; Save As writes a copy.
+            self._save_copy_to(path)
+            return
         self._save_to(path)
+
+    def _save_copy_to(self, path: Path) -> None:
+        try:
+            if path.suffix.lower() == SNAGIT_EXTENSION:
+                save_snagx(self._scene, path)
+            else:
+                save_project(self._scene, path)
+        except Exception as e:  # noqa: BLE001
+            QMessageBox.critical(self, "Save Error", f"Could not save copy:\n{e}")
+            return
+        self._add_recent_file(path)
+        self._status_bar.set_hint(f"Saved copy to {path.name}")
 
     def _save_to(self, path: Path) -> None:
         try:
@@ -940,6 +1058,9 @@ class MainWindow(QMainWindow):
         doc = self._active_document
         doc.file_path = path
         doc.display_name = None
+        if self._library.is_library_path(path):
+            doc.is_library_file = True
+            self._library.attach_document(doc)
         self._scene.command_stack.mark_clean()
         self._add_recent_file(path)
         self._update_title()
@@ -976,7 +1097,7 @@ class MainWindow(QMainWindow):
 
     def _file_export_quick_png(self) -> None:
         """Quick-export the scene as PNG next to the current file."""
-        if self._current_file is not None:
+        if self._current_file is not None and not self._active_document.is_library_file:
             path = self._current_file.with_suffix(".png")
         else:
             path_str, _ = QFileDialog.getSaveFileName(self, "Export PNG", "", "PNG Image (*.png)")
@@ -988,10 +1109,12 @@ class MainWindow(QMainWindow):
     def _file_print(self) -> None:
         QMessageBox.information(self, "Print", "Print support is coming soon.")
 
-    def _file_preferences(self) -> None:
+    def _file_preferences(self, *, focus_library: bool = False) -> None:
         from snapmock.ui.preferences_dialog import PreferencesDialog
 
         dlg = PreferencesDialog(self._settings, self)
+        if focus_library:
+            dlg.focus_library_section()
         if dlg.exec() == PreferencesDialog.DialogCode.Accepted:
             self._apply_preference_changes(dlg.get_changes())
 
@@ -1045,6 +1168,187 @@ class MainWindow(QMainWindow):
             if self._settings.autosave_enabled():
                 ms = self._settings.autosave_interval_minutes() * 60_000
                 self._autosave_timer.start(ms)
+
+        # Library preferences (Library PRD 8.1) take effect immediately
+        if "library_directory" in changes:
+            new_dir = Path(str(changes["library_directory"][1])).expanduser()
+            self._library_panel.set_library_directory(new_dir)
+        if "library_auto_open" in changes:
+            self._settings.set_library_auto_open(bool(changes["library_auto_open"][1]))
+        if "library_toast_enabled" in changes:
+            self._settings.set_library_toast_enabled(bool(changes["library_toast_enabled"][1]))
+        if "library_default_view_mode" in changes:
+            mode = str(changes["library_default_view_mode"][1])
+            self._settings.set_library_default_view_mode(mode)
+            self._library_panel.set_view_mode(mode)
+        if "library_default_thumbnail_size" in changes:
+            size = _int(changes["library_default_thumbnail_size"][1])
+            self._settings.set_library_default_thumbnail_size(size)
+            self._settings.set_library_thumbnail_size(size)
+            self._library_panel.set_view_mode(self._library_panel.view_mode)
+        if "library_default_sort" in changes:
+            sort_id = str(changes["library_default_sort"][1])
+            self._settings.set_library_default_sort(sort_id)
+            self._library_panel.set_sort_id(sort_id)
+
+    # ---- library ----
+
+    def _open_library_files(self, paths: list[Path]) -> None:
+        for p in paths:
+            self._open_project(p)
+
+    def _open_in_new_window(self, path: Path) -> None:
+        window = MainWindow()
+        window.show()
+        window._open_project(path)  # noqa: SLF001
+        _extra_windows.append(window)
+
+    def _close_documents_for_paths(self, paths: list[Path]) -> None:
+        """Close tabs for library files that are about to be deleted (no prompt)."""
+        for p in paths:
+            doc = self._documents.find_by_path(p)
+            if doc is None:
+                continue
+            self._library.detach_document(doc)
+            if self._documents.count == 1:
+                self._documents.add(Document(SnapScene(), parent=self))
+                self._configure_view(self._active_document.view)
+                self._wire_document(self._active_document)
+            self._documents.remove(doc)
+            self._wired_docs.discard(doc.tab_id)
+            doc.dispose()
+
+    def _library_new_canvas(self, folder: Path) -> None:
+        path = self._library.create_blank(
+            DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT, folder=folder
+        )
+        self._open_project(path)
+
+    def add_to_library(self, image: object, *, source: str = "capture") -> Path | None:
+        """Store *image* (QImage or QPixmap) as a new library file (Library PRD 6.1).
+
+        Opens it in a tab when the Auto-open preference is on. This is the
+        entry point a screen-capture feature should call.
+        """
+        from PyQt6.QtGui import QImage, QPixmap
+
+        if not isinstance(image, (QImage, QPixmap)):
+            return None
+        path = self._library.create_from_image(
+            image, source=source, folder=self._library_panel.current_path
+        )
+        if self._settings.library_auto_open():
+            self._open_project(path)
+        return path
+
+    def _on_library_file_created(self, path: Path) -> None:
+        if not self._settings.library_toast_enabled():
+            return
+        self._toast.show_message(
+            f"Captured to Library: {path.stem}",
+            "Open",
+            lambda: self._open_library_files([path]),
+        )
+
+    def _export_library_files(self, paths: list[Path]) -> None:
+        """Export one file via the Export dialog, or many into a directory."""
+        if len(paths) == 1:
+            doc = self._open_project(paths[0])
+            if doc is not None:
+                self._file_export()
+            return
+        out = QFileDialog.getExistingDirectory(self, "Export To Directory", str(Path.home()))
+        if not out:
+            return
+        self._export_paths_as_png(paths, Path(out))
+
+    def _export_library_files_quick(self, paths: list[Path]) -> None:
+        out = QFileDialog.getExistingDirectory(self, "Export PNGs To", str(Path.home()))
+        if not out:
+            return
+        self._export_paths_as_png(paths, Path(out))
+
+    def _export_paths_as_png(self, paths: list[Path], out_dir: Path) -> None:
+        progress = QProgressDialog("Exporting…", "Cancel", 0, len(paths), self)
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(400)
+        written: list[Path] = []
+        errors: list[str] = []
+        for i, p in enumerate(paths):
+            if progress.wasCanceled():
+                break
+            progress.setValue(i)
+            QApplication.processEvents()
+            ok, errs = export_files_to_png([p], out_dir)
+            written.extend(ok)
+            errors.extend(errs)
+        progress.setValue(len(paths))
+        summary = f"Exported {len(written)} of {len(paths)} file(s) to {out_dir}"
+        if errors:
+            summary += "\n\nErrors:\n" + "\n".join(errors)
+            QMessageBox.warning(self, "Export", summary)
+        else:
+            self._status_bar.set_hint(summary)
+
+    def _library_move(self) -> None:
+        chosen = QFileDialog.getExistingDirectory(self, "Move Library To", str(self._library.root))
+        if not chosen:
+            return
+        new_root = Path(chosen)
+        if new_root.resolve() == self._library.root.resolve():
+            return
+        progress = QProgressDialog("Moving library…", "Cancel", 0, 100, self)
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(0)
+
+        def report(done: int, total: int) -> bool:
+            progress.setMaximum(max(1, total))
+            progress.setValue(done)
+            QApplication.processEvents()
+            return not progress.wasCanceled()
+
+        old_root = self._library.root
+        try:
+            self._library.move_library(new_root, report)
+        except OSError as e:
+            QMessageBox.critical(self, "Move Library", f"Could not move library:\n{e}")
+            return
+        finally:
+            progress.close()
+        self._settings.set_library_directory(self._library.root)
+        # Re-point open library tabs at their new locations
+        for doc in self._documents.documents:
+            if doc.is_library_file and doc.file_path is not None:
+                try:
+                    rel = doc.file_path.resolve().relative_to(old_root.resolve())
+                except ValueError:
+                    continue
+                doc.file_path = self._library.root / rel
+
+    def _reveal_document_in_library(self, doc: Document) -> None:
+        if doc.file_path is None or not self._library.is_library_path(doc.file_path):
+            QMessageBox.information(
+                self, "Reveal in Library", "This document is not a library file."
+            )
+            return
+        self._library_panel.show()
+        self._library_panel.raise_()
+        self._library_panel.select_path(doc.file_path)
+
+    def _restore_session(self) -> None:
+        """Reopen the tabs from the previous session (Library PRD 11.2)."""
+        paths = [Path(p) for p in self._settings.session_open_files()]
+        paths = [p for p in paths if p.is_file()]
+        for p in paths:
+            self._open_project(p)
+        idx = self._settings.session_active_index()
+        if paths and 0 <= idx < self._documents.count:
+            self._documents.set_active_index(idx)
+
+    def _save_session(self) -> None:
+        open_files = [str(d.file_path) for d in self._documents.documents if d.file_path]
+        self._settings.set_session_open_files(open_files)
+        self._settings.set_session_active_index(max(0, self._documents.active_index))
 
     # ---- edit operations ----
 
@@ -1808,6 +2112,7 @@ class MainWindow(QMainWindow):
         """
         if not self._maybe_save_before_close(doc):
             return False
+        self._library.detach_document(doc)
         if self._documents.count == 1:
             # Keep one document open at all times
             self._documents.add(Document(SnapScene(), parent=self))
@@ -1943,6 +2248,8 @@ class MainWindow(QMainWindow):
                     if event is not None:
                         event.ignore()
                     return
+        self._library.flush()
+        self._save_session()
         self._settings.save_window_geometry(self.saveGeometry().data())
         self._settings.save_window_state(self.saveState().data())
         super().closeEvent(event)
@@ -1972,6 +2279,14 @@ class MainWindow(QMainWindow):
     @property
     def documents(self) -> DocumentManager:
         return self._documents
+
+    @property
+    def library(self) -> LibraryManager:
+        return self._library
+
+    @property
+    def library_panel(self) -> LibraryPanel:
+        return self._library_panel
 
     @property
     def active_document(self) -> Document:

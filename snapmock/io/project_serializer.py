@@ -89,6 +89,9 @@ def save_project(
     }
     if library_metadata:
         manifest["library_metadata"] = dict(library_metadata)
+    active = scene.layer_manager.active_layer
+    if active is not None:
+        manifest["active_layer_id"] = active.layer_id
 
     layers_data: list[dict[str, Any]] = []
     items_data: list[dict[str, Any]] = []
@@ -138,6 +141,32 @@ def read_library_metadata(path: Path) -> dict[str, Any] | None:
     except (OSError, zipfile.BadZipFile, KeyError, ValueError):
         return None
     return meta if isinstance(meta, dict) else None
+
+
+def update_library_metadata(path: Path, **fields: Any) -> None:
+    """Merge *fields* into the ``library_metadata`` block of an existing .smk.
+
+    Every other archive entry is copied through unchanged.
+    """
+    tmp_path = path.with_name(path.name + ".tmp")
+    with (
+        zipfile.ZipFile(path, "r") as src,
+        zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as dst,
+    ):
+        for info in src.infolist():
+            data = src.read(info.filename)
+            if info.filename == "manifest.json":
+                manifest = json.loads(data)
+                if not isinstance(manifest, dict):
+                    manifest = {}
+                meta = manifest.get("library_metadata")
+                if not isinstance(meta, dict):
+                    meta = {}
+                meta.update(fields)
+                manifest["library_metadata"] = meta
+                data = json.dumps(manifest, indent=2).encode("utf-8")
+            dst.writestr(info.filename, data)
+    tmp_path.replace(path)
 
 
 def read_thumbnail(path: Path) -> QPixmap | None:
@@ -205,7 +234,10 @@ def load_project(path: Path) -> SnapScene:
         scene.layer_manager.insert_layer(layer, scene.layer_manager.count)
 
     if scene.layer_manager.count > 0:
-        scene.layer_manager.set_active(scene.layer_manager.layers[0].layer_id)
+        active_id = manifest.get("active_layer_id")
+        if not isinstance(active_id, str) or scene.layer_manager.layer_by_id(active_id) is None:
+            active_id = scene.layer_manager.layers[0].layer_id
+        scene.layer_manager.set_active(active_id)
 
     # Reconstruct items
     for item_data in items_data:

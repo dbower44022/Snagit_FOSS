@@ -35,6 +35,7 @@ from snapmock.config.constants import (
     GRID_MAJOR_MULTIPLE,
     GRID_MIN_PIXEL_SPACING,
     GRID_SIZE_DEFAULT,
+    LIBRARY_PATHS_MIME,
     PASTEBOARD_COLOR,
     RULER_SIZE,
     ZOOM_DEFAULT,
@@ -64,6 +65,7 @@ class SnapView(QGraphicsView):
 
     zoom_changed = pyqtSignal(int)
     cursor_moved = pyqtSignal(float, float)
+    library_files_dropped = pyqtSignal(list)
 
     def __init__(self, scene: SnapScene) -> None:
         super().__init__(scene)
@@ -666,6 +668,9 @@ class SnapView(QGraphicsView):
         if event is None:
             return
         mime: QMimeData | None = event.mimeData()
+        if mime is not None and mime.hasFormat(LIBRARY_PATHS_MIME):
+            event.acceptProposedAction()
+            return
         if mime is not None and self._has_image_urls(mime):
             event.acceptProposedAction()
             return
@@ -686,6 +691,16 @@ class SnapView(QGraphicsView):
         if mime is None:
             return
         scene_pos = self.mapToScene(event.position().toPoint())
+
+        if mime.hasFormat(LIBRARY_PATHS_MIME):
+            # Dragging a library file onto the canvas opens it in a tab
+            raw = bytes(mime.data(LIBRARY_PATHS_MIME).data()).decode("utf-8")
+            paths = [Path(line) for line in raw.splitlines() if line]
+            if paths:
+                self.library_files_dropped.emit(paths)
+            event.setDropAction(Qt.DropAction.CopyAction)
+            event.accept()
+            return
 
         if self._has_image_urls(mime):
             for url in mime.urls():

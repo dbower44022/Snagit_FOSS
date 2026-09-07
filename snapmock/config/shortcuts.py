@@ -74,6 +74,8 @@ SHORTCUTS: dict[str, str] = {
     "tool.pan": "",
     "tool.zoom": "Z",
     "tool.lasso_select": "Shift+M",
+    # Library
+    "library.toggle_panel": "Ctrl+L",
     # Additional edit shortcuts
     "edit.paste_in_place": "Ctrl+Shift+V",
 }

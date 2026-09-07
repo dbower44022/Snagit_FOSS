@@ -10,6 +10,6 @@ from snapmock.main_window import MainWindow
 def main() -> None:
     """Launch the application."""
     app = QApplication(sys.argv)
-    window = MainWindow()
+    window = MainWindow(restore_session=True)
     window.show()
     sys.exit(app.exec())

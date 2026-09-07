@@ -40,3 +40,7 @@ testpaths = ["tests"]
 [tool.mypy]
 strict = true
 python_version = "3.12"
+
+[[tool.mypy.overrides]]
+module = ["send2trash", "send2trash.*"]
+ignore_missing_imports = true

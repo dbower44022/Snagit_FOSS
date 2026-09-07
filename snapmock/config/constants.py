@@ -1,6 +1,7 @@
 """Application-wide constants."""
 
 from enum import Enum
+from pathlib import Path
 
 APP_NAME = "SnapMock"
 APP_VERSION = "0.1.0"
@@ -32,6 +33,18 @@ AUTOSAVE_INTERVAL_MS = 120_000
 # File format
 PROJECT_EXTENSION = ".smk"
 THUMBNAIL_MAX_SIZE = 256
+
+# Library
+DEFAULT_LIBRARY_DIRECTORY = Path.home() / "SnapMock" / "Library"
+LIBRARY_THUMBNAIL_MIN = 80
+LIBRARY_THUMBNAIL_MAX = 256
+LIBRARY_THUMBNAIL_DEFAULT = 128
+LIBRARY_PREVIEW_MIN = 48
+LIBRARY_PREVIEW_MAX = 128
+LIBRARY_PREVIEW_DEFAULT = 64
+LIBRARY_WRITE_BACK_DELAY_MS = 300
+LIBRARY_PATHS_MIME = "application/x-snapmock-library-paths"
+LIBRARY_IMPORT_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".gif", ".webp")
 PROJECT_FORMAT_VERSION = 1
 SNAGIT_EXTENSION = ".snagx"
 SNAGIT_FORMAT_VERSION = "1.0"

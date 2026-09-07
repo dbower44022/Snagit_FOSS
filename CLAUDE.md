@@ -35,7 +35,8 @@ snapmock/              # Main application package
     tools/             # BaseTool subclasses and ToolManager (15 tools)
     commands/          # Command objects for undo/redo (all scene mutations)
     io/                # File I/O — .smk project save/load, PNG/JPG/SVG/PDF export, image import
-    ui/                # UI panels — toolbar, layer panel, property panel, status bar, color picker
+    library/           # Library — LibraryManager, LibraryModel, LibraryFileInfo, commands, render
+    ui/                # UI panels — toolbar, layer panel, property panel, library panel, tabs, status bar
     resources/         # Icons, stamps, themes (placeholder)
 tests/                 # Test suite (pytest + pytest-qt)
 ```
@@ -55,7 +56,8 @@ tests/                 # Test suite (pytest + pytest-qt)
 
 - **All mutations via Commands** — tools push commands to CommandStack, never modify scene directly
 - **Signals flow up, calls flow down** — UI listens to manager signals, calls manager methods
-- **SnapScene owns** LayerManager + CommandStack; MainWindow owns SnapScene, SnapView, ToolManager, ClipboardManager
+- **SnapScene owns** LayerManager + CommandStack; a Document owns one SnapScene + SnapView + SelectionManager + ClipboardManager; MainWindow owns DocumentManager (tabs), the shared ToolManager, and LibraryManager
+- **Library files** (.smk under the library directory) are written back on every command via LibraryManager; they are never dirty and never prompt on close
 - **Layer z-values**: each layer gets z_base = index × 10,000; items offset within range
 - **Project format**: .smk files are ZIP archives containing manifest.json, layers.json, items.json
 - **Tool engine**: ToolManager registry with BaseTool ABC; single-key shortcuts activate tools
