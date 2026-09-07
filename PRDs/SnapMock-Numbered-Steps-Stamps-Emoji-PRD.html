@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Numbered Steps, Stamps &amp; Emoji — SnapMock Product Requirements Document</title>
+<link rel="stylesheet" href="prd.css">
+</head>
+<body>
+<div class="doc">
+
+<header class="doc-head">
+  <h1>Numbered Steps, Stamps &amp; Emoji</h1>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.3</span>
+  <dl class="doc-meta">
+    <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
+    <dt>Covers</dt>          <dd>Numbered Step · Stamp / Sticker · Emoji</dd>
+    <dt>Document version</dt><dd>1.3</dd>
+    <dt>Last Updated</dt>    <dd>09-07-26 19:31</dd>
+    <dt>Author</dt>          <dd>Doug Bower</dd>
+    <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
+  </dl>
+</header>
+
+<section class="front-matter">
+
+  <h2 class="unnumbered">Revision control</h2>
+  <table>
+    <colgroup><col class="w-narrow"><col class="w-short"><col class="w-short"><col><col class="w-short"></colgroup>
+    <thead>
+      <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1.3</td>
+        <td class="nowrap">09-07-26 19:31</td>
+        <td>Doug Bower</td>
+        <td>Converted from Word to HTML. Content unchanged except for corrections
+        noted in the change log below.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
+      <tr>
+        <td>1.3</td>
+        <td class="nowrap">March 2026</td>
+        <td>Doug Bower</td>
+        <td>Sections 3.5 and 4.4: Updated flip_horizontal and flip_vertical property descriptions in
+        StampItem and EmojiItem tool-specific properties tables to note these are now inherited…</td>
+        <td><span class="status closed">Superseded by format conversion</span></td>
+      </tr>
+      <tr>
+        <td>1.2</td>
+        <td class="nowrap">March 2026</td>
+        <td>Doug Bower</td>
+        <td>Replaced single opacity with fill_opacity and stroke_opacity for NumberedStepItem data
+        model (Section 2.4), Tool Options Bar (Section 2.7), and serialization (Section 5).…</td>
+        <td><span class="status closed">Superseded</span></td>
+      </tr>
+      <tr>
+        <td>1.1</td>
+        <td class="nowrap">February 2026</td>
+        <td>Doug Bower</td>
+        <td>Added border_style property (Solid, Dashed, Dotted, DashDot, DashDotDot) to
+        NumberedStepItem data model (Section 2.4), Tool Options Bar (Section 2.7), rendering
+        pipeline…</td>
+        <td><span class="status closed">Superseded</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note issue">
+    <span class="note-label">Open — incomplete revision history</span>
+    <p>The Word original recorded release months only for versions 1.3, 1.2, 1.1, so
+    those dates do not meet the MM-DD-YY HH:MM standard. They are carried over as written
+    rather than invented. Supply the exact dates and they will be corrected.</p>
+  </div>
+
+  <h2 class="unnumbered">Change log</h2>
+  <table>
+    <colgroup><col class="w-short"><col class="w-short"><col class="w-short"><col></colgroup>
+    <thead>
+      <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="nowrap">09-07-26 19:31</td>
+        <td>All</td>
+        <td>Format</td>
+        <td>Converted from Word to HTML against the shared stylesheet. Revision control
+        and change log tables added to meet the output standard; the original had a
+        change log only. Open issues gathered in new Section 9.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 19:31</td>
+        <td>Front matter</td>
+        <td>Flagged</td>
+        <td>The title page carried February 2026 while the change log placed version 1.3 in March
+        2026. Left as written and flagged as an open issue.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>3.5</td>
+        <td>Changed</td>
+        <td>Sections 3.5 and 4.4: Updated <code>flip_horizontal</code> and
+        <code>flip_vertical</code> property descriptions in StampItem and EmojiItem
+        tool-specific properties tables to note these are now inherited from the
+        SnapGraphicsItem base class (Technical Architecture PRD Section 3.1.4). Tool Options Bar
+        controls and context menu entries retained as UI surface for toggling the inherited
+        properties.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>General</td>
+        <td>Changed</td>
+        <td>Replaced single opacity with <code>fill_opacity</code> and <code>stroke_opacity</code>
+        for NumberedStepItem data model (Section 2.4), Tool Options Bar (Section 2.7), and
+        serialization (Section 5). StampItem and EmojiItem retain single opacity.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added <code>border_style</code> property (Solid, Dashed, Dotted, DashDot, DashDotDot) to
+        NumberedStepItem data model (Section 2.4), Tool Options Bar (Section 2.7), rendering
+        pipeline (Section 2.8), and serialization (Section 5).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 class="unnumbered">Contents</h2>
+  <ol class="toc">
+    <li><a href="#s1">Document Overview</a>
+      <ol>
+        <li><a href="#s1-1">Purpose</a></li>
+        <li><a href="#s1-2">Scope</a></li>
+        <li><a href="#s1-3">Dependencies</a></li>
+      </ol>
+    </li>
+    <li><a href="#s2">Numbered Step Tool</a>
+      <ol>
+        <li><a href="#s2-1">Tool Overview</a></li>
+        <li><a href="#s2-2">Creation Workflow</a></li>
+        <li><a href="#s2-3">Auto-Numbering Engine</a></li>
+        <li><a href="#s2-4">Tool-Specific Properties</a></li>
+        <li><a href="#s2-5">Badge Shapes</a></li>
+        <li><a href="#s2-6">Label Line Feature</a></li>
+        <li><a href="#s2-7">Tool Options Bar</a></li>
+        <li><a href="#s2-8">Post-Creation Editing</a></li>
+        <li><a href="#s2-9">Rendering</a></li>
+        <li><a href="#s2-10">Hit Testing</a></li>
+        <li><a href="#s2-11">Status Bar Hints</a></li>
+      </ol>
+    </li>
+    <li><a href="#s3">Stamp / Sticker Tool</a>
+      <ol>
+        <li><a href="#s3-1">Tool Overview</a></li>
+        <li><a href="#s3-2">Stamp Library Architecture</a></li>
+        <li><a href="#s3-3">Built-in Stamp Categories</a></li>
+        <li><a href="#s3-4">Creation Workflow</a></li>
+        <li><a href="#s3-5">Tool-Specific Properties</a></li>
+        <li><a href="#s3-6">Tool Options Bar</a></li>
+        <li><a href="#s3-7">Post-Creation Editing</a></li>
+        <li><a href="#s3-8">Custom Stamps</a></li>
+        <li><a href="#s3-9">Rendering</a></li>
+        <li><a href="#s3-10">Hit Testing</a></li>
+        <li><a href="#s3-11">Status Bar Hints</a></li>
+      </ol>
+    </li>
+    <li><a href="#s4">Emoji Tool</a>
+      <ol>
+        <li><a href="#s4-1">Tool Overview</a></li>
+        <li><a href="#s4-2">Emoji Picker</a></li>
+        <li><a href="#s4-3">Creation Workflow</a></li>
+        <li><a href="#s4-4">Tool-Specific Properties</a></li>
+        <li><a href="#s4-5">Tool Options Bar</a></li>
+        <li><a href="#s4-6">Post-Creation Editing</a></li>
+        <li><a href="#s4-7">Rendering</a></li>
+        <li><a href="#s4-8">Hit Testing</a></li>
+        <li><a href="#s4-9">Status Bar Hints</a></li>
+      </ol>
+    </li>
+    <li><a href="#s5">Data Models</a>
+      <ol>
+        <li><a href="#s5-1">NumberedStepItem</a></li>
+        <li><a href="#s5-2">StampItem</a></li>
+        <li><a href="#s5-3">EmojiItem</a></li>
+      </ol>
+    </li>
+    <li><a href="#s6">Command Definitions</a>
+      <ol>
+        <li><a href="#s6-1">RenumberStepsCommand</a></li>
+        <li><a href="#s6-2">ChangeStampCommand</a></li>
+        <li><a href="#s6-3">ChangeEmojiCommand</a></li>
+      </ol>
+    </li>
+    <li><a href="#s7">Serialization</a>
+      <ol>
+        <li><a href="#s7-1">NumberedStepItem Serialization Notes</a></li>
+        <li><a href="#s7-2">StampItem Serialization Notes</a></li>
+        <li><a href="#s7-3">EmojiItem Serialization Notes</a></li>
+        <li><a href="#s7-4">Example: NumberedStepItem JSON</a></li>
+      </ol>
+    </li>
+    <li><a href="#s8">Acceptance Criteria</a>
+      <ol>
+        <li><a href="#s8-1">Numbered Step Tool</a></li>
+        <li><a href="#s8-2">Stamp / Sticker Tool</a></li>
+        <li><a href="#s8-3">Emoji Tool</a></li>
+        <li><a href="#s8-4">Shared Behavior</a></li>
+      </ol>
+    </li>
+    <li><a href="#s9">Open Issues</a></li>
+  </ol>
+
+</section>
+
+<main>
+
+<h2 id="s1">Document Overview</h2>
+
+<h3 id="s1-1">Purpose</h3>
+
+<p>This document defines the detailed functional requirements for three marker-style
+annotation tools in SnapMock: the Numbered Step tool (for creating sequential step
+indicators on screenshots), the Stamp / Sticker tool (for placing pre-designed
+annotation graphics), and the Emoji tool (for placing scalable emoji characters as
+annotation elements). These tools share a common click-to-place workflow and are grouped
+together because they all produce small, discrete annotation markers rather than drawn
+shapes or text blocks.</p>
+
+<h3 id="s1-2">Scope</h3>
+
+<p>This PRD covers: the click-to-place interaction model, auto-numbering logic, stamp
+library architecture and built-in stamps, emoji picker integration, all tool-specific
+properties, rendering behavior, data models, serialization, and acceptance criteria.
+Post-creation selection, move, resize, and rotate are handled by the Select / Move tool
+(Navigation &amp; Raster Operations PRD).</p>
+
+<h3 id="s1-3">Dependencies</h3>
+
+<ul>
+  <li>Technical Architecture PRD: SnapGraphicsItem, VectorItem base, CommandStack, BaseTool
+  interface, Plugin Architecture (for stamp packs).</li>
+  <li>General UI PRD: Tool Options Bar layout, Left Tool Palette integration.</li>
+  <li>Navigation &amp; Raster Operations PRD: Select / Move tool handles post-creation
+  interaction.</li>
+</ul>
+
+<h2 id="s2">Numbered Step Tool</h2>
+
+<h3 id="s2-1">Tool Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Tool ID</th><td><code>numbered_step</code></td></tr>
+    <tr><th>Display Name</th><td>Numbered Step</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>N</td></tr>
+    <tr><th>Default Cursor</th><td>Crosshair with number badge icon</td></tr>
+    <tr><th>Category</th><td>Annotation</td></tr>
+    <tr><th>Item Class</th><td>NumberedStepItem (extends VectorItem)</td></tr>
+  </tbody>
+</table>
+
+<p>The Numbered Step tool creates circular (or other shaped) badges containing sequential
+numbers. This is the primary tool for creating step-by-step visual instructions on
+screenshots, such as "Step 1: Click here, Step 2: Enter your name, Step 3: Press
+Submit." Each click places the next number in the sequence.</p>
+
+<h3 id="s2-2">Creation Workflow</h3>
+
+<p><strong>Click-to-Place:</strong></p>
+
+<ol>
+  <li>With the Numbered Step tool active, click on the canvas to place a step badge.</li>
+  <li>The badge is created at the click position (centered on the click point) with the next
+  number in the auto-numbering sequence.</li>
+  <li>The badge appears immediately at its default size. No dragging is required.</li>
+  <li>The tool remains active after placement. The next click places the next sequential
+  number.</li>
+  <li>This allows rapid placement: click, click, click to place steps 1, 2, 3 in quick
+  succession.</li>
+</ol>
+
+<p><strong>Click-and-Drag to Size:</strong></p>
+
+<ul>
+  <li>Optionally, the user can click and drag to control the badge size. The badge diameter
+  equals the drag distance (diameter = 2 * distance from center to cursor).</li>
+  <li>Shift constrains to a perfect circle (relevant for non-circular badge shapes).</li>
+  <li>On release, the badge is created with the drawn size.</li>
+  <li>If the drag distance is less than 10px, use the default size instead (treat as a click).</li>
+</ul>
+
+<p><strong>Placement Feedback:</strong></p>
+
+<ul>
+  <li>On click, a brief scale-up animation (badge appears at 120% size and scales down to 100%
+  over 150ms) provides satisfying placement feedback.</li>
+  <li>A subtle drop shadow pulse accompanies the animation.</li>
+  <li>The status bar briefly shows "Placed Step N" then returns to the standard tool hint.</li>
+</ul>
+
+<h3 id="s2-3">Auto-Numbering Engine</h3>
+
+<p><strong>Sequence Tracking:</strong></p>
+
+<ul>
+  <li>The Numbered Step tool maintains a per-session sequence counter. The counter starts at
+  the value configured in the Tool Options Bar (default: 1) and increments by 1 for each
+  placed step.</li>
+  <li>The counter is global to the project, not per-layer. Steps placed on different layers
+  continue the same sequence.</li>
+  <li>The counter resets when: the user manually sets a new starting number in the Tool
+  Options Bar, or a new project is created.</li>
+  <li>Switching away from the Numbered Step tool and back does NOT reset the counter. The
+  sequence continues from where it left off.</li>
+</ul>
+
+<p><strong>Manual Override:</strong></p>
+
+<ul>
+  <li>The "Starting Number" field in the Tool Options Bar sets the number for the NEXT placed
+  step. After placement, the counter continues incrementing from that value.</li>
+  <li>Example: counter is at 5, user sets Starting Number to 10, places a step (gets 10), next
+  step is 11, etc.</li>
+  <li>Individual step numbers can also be edited post-creation by selecting the step and
+  changing the <code>number_value</code> property in the Property Panel or by
+  double-clicking the step to enter inline edit mode.</li>
+</ul>
+
+<p><strong>Renumbering Command:</strong></p>
+
+<ul>
+  <li>A "Renumber All Steps" action is available via right-click context menu when a
+  NumberedStepItem is selected.</li>
+  <li>This command finds all NumberedStepItems on the canvas (across all layers), sorts them
+  by their Y position (top-to-bottom), then X position (left-to-right) as a tiebreaker,
+  and reassigns sequential numbers starting from the configured starting number.</li>
+  <li>The renumber operation is a single undoable MacroCommand that contains a
+  ModifyPropertyCommand for each step.</li>
+  <li>This is useful after rearranging steps or deleting intermediate steps (e.g., removing
+  step 3 from a sequence of 1-5 and renumbering to 1-4).</li>
+</ul>
+
+<p><strong>Custom Text Mode:</strong></p>
+
+<ul>
+  <li>Instead of a number, the step badge can display a custom short text string (1-3
+  characters recommended). This is set by switching the <code>display_mode</code> property
+  from "number" to "text" and entering custom text.</li>
+  <li>Custom text examples: letter sequences (A, B, C), Roman numerals (I, II, III), check
+  marks, or short labels.</li>
+  <li>When <code>display_mode</code> is "text", the auto-numbering counter does not advance
+  for that step.</li>
+</ul>
+
+<h3 id="s2-4">Tool-Specific Properties</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>number_value</code></th><td>int</td><td>(auto)</td><td>The displayed number. Set by the auto-numbering engine or manually overridden.</td></tr>
+    <tr><th><code>display_mode</code></th><td>enum</td><td>number</td><td>"number": display <code>number_value</code>. "text": display <code>custom_text</code>. "letter": display letter (A=1, B=2...). "roman": display Roman numeral.</td></tr>
+    <tr><th><code>custom_text</code></th><td>str</td><td>""</td><td>Text to display when <code>display_mode</code> is "text". Max 3 characters recommended.</td></tr>
+    <tr><th><code>badge_shape</code></th><td>enum</td><td>circle</td><td>Shape of the badge background. See Section 2.5.</td></tr>
+    <tr><th><code>badge_color</code></th><td>QColor</td><td>#CC0000 (red)</td><td>Fill color of the badge background.</td></tr>
+    <tr><th><code>badge_size</code></th><td>float</td><td>32.0</td><td>Diameter (or bounding dimension) of the badge in pixels. Range: 16 to 128.</td></tr>
+    <tr><th><code>text_color</code></th><td>QColor</td><td>#FFFFFF (white)</td><td>Color of the number/text inside the badge.</td></tr>
+    <tr><th><code>font_family</code></th><td>str</td><td>Arial</td><td>Font for the number/text.</td></tr>
+    <tr><th><code>font_size</code></th><td>float</td><td>0 (auto)</td><td>Font size in points. 0 = auto-calculated to fit within the badge (approximately <code>badge_size</code> * 0.55).</td></tr>
+    <tr><th><code>font_weight</code></th><td>enum</td><td>Bold</td><td>Normal or Bold.</td></tr>
+    <tr><th><code>border_color</code></th><td>QColor</td><td>#FFFFFF (white)</td><td>Border color around the badge.</td></tr>
+    <tr><th><code>border_width</code></th><td>float</td><td>2.0</td><td>Border width in pixels. 0 = no border.</td></tr>
+    <tr><th><code>border_style</code></th><td>enum</td><td>Solid</td><td>Border line style: Solid, Dashed, Dotted, DashDot, DashDotDot.</td></tr>
+    <tr><th><code>shadow_enabled</code></th><td>bool</td><td>True</td><td>Numbered steps have shadows enabled by default for visibility.</td></tr>
+    <tr><th><code>shadow_color</code></th><td>QColor</td><td>#00000066</td><td>Shadow color.</td></tr>
+    <tr><th><code>shadow_offset_x</code></th><td>float</td><td>2.0</td><td>Shadow offset.</td></tr>
+    <tr><th><code>shadow_offset_y</code></th><td>float</td><td>2.0</td><td>Shadow offset.</td></tr>
+    <tr><th><code>shadow_blur</code></th><td>float</td><td>4.0</td><td>Shadow blur radius.</td></tr>
+    <tr><th><code>label_text</code></th><td>str</td><td>""</td><td>Optional label text displayed next to the badge. See Section 2.6.</td></tr>
+    <tr><th><code>label_position</code></th><td>enum</td><td>right</td><td>Position of the label relative to the badge: right, left, top, bottom.</td></tr>
+    <tr><th><code>label_font_size</code></th><td>float</td><td>12.0</td><td>Font size for the label text.</td></tr>
+    <tr><th><code>label_color</code></th><td>QColor</td><td>#000000</td><td>Color for the label text.</td></tr>
+    <tr><th><code>label_background</code></th><td>QColor</td><td>#FFFFFFCC</td><td>Background color for the label (semi-transparent white by default).</td></tr>
+    <tr><th><code>label_background_enabled</code></th><td>bool</td><td>False</td><td>Whether the label has a background pill.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s2-5">Badge Shapes</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Shape</th><th>ID</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Circle</th><td>circle</td><td>A perfect circle. The default and most common. Number is centered. <code>badge_size</code> = diameter.</td></tr>
+    <tr><th>Rounded Square</th><td><code>rounded_square</code></td><td>A square with rounded corners (radius = <code>badge_size</code> * 0.2). <code>badge_size</code> = side length.</td></tr>
+    <tr><th>Square</th><td>square</td><td>A sharp-cornered square.</td></tr>
+    <tr><th>Diamond</th><td>diamond</td><td>A square rotated 45 degrees. <code>badge_size</code> = diagonal length.</td></tr>
+    <tr><th>Hexagon</th><td>hexagon</td><td>A regular hexagon. Flat-top orientation.</td></tr>
+    <tr><th>Star</th><td>star</td><td>A 5-pointed star. The number is centered in the star body.</td></tr>
+    <tr><th>Oval</th><td>oval</td><td>A horizontal oval (width = <code>badge_size</code>, height = <code>badge_size</code> * 0.7). Useful for wider content like two-digit numbers.</td></tr>
+    <tr><th>Pin / Map Marker</th><td>pin</td><td>A teardrop / map pin shape with the number in the circular head. The pin point sits at the item's anchor position (the click point).</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s2-6">Label Line Feature</h3>
+
+<p>Numbered steps can optionally include a short text label that appears adjacent to the
+badge. This is useful for adding brief descriptions directly alongside the step number
+(e.g., step badge "1" with label "Click Login").</p>
+
+<ul>
+  <li>The label is part of the NumberedStepItem (not a separate item). It moves, scales, and
+  is selected as a unit with the badge.</li>
+  <li>The label text is rendered in a small font next to the badge at the configured
+  <code>label_position</code>.</li>
+  <li>If <code>label_background_enabled</code> is True, the label text is rendered inside a
+  small pill-shaped background (rounded rectangle with <code>corner_radius</code> =
+  <code>label_font_size</code> * 0.5).</li>
+  <li>A thin connecting line (1px, <code>badge_color</code>, 50% opacity) is drawn from the
+  badge edge to the label.</li>
+  <li>The label can be edited inline by double-clicking the badge (enters a combined edit mode
+  where Tab switches focus between the number/text and the label).</li>
+  <li>Labels are optional. When <code>label_text</code> is empty, no label or connecting line
+  is rendered.</li>
+</ul>
+
+<h3 id="s2-7">Tool Options Bar</h3>
+
+<p>The Numbered Step tool's Tool Options Bar shows:</p>
+
+<ol>
+  <li>Badge Color: color swatch button. Default red.</li>
+  <li>Text Color: color swatch button. Default white.</li>
+  <li>Badge Shape: dropdown with visual icons for each shape.</li>
+  <li>Badge Size: slider + spinbox (16-128px, default 32).</li>
+  <li>Starting Number: spinbox (1-999). Sets the next number to be placed.</li>
+  <li>Display Mode: dropdown (Number, Letter, Roman, Custom Text).</li>
+  <li>Font Weight: toggle (Normal / Bold).</li>
+  <li>Border Width: spinbox (0-8px).</li>
+  <li>Border Color: color swatch.</li>
+  <li>Border Style: dropdown (Solid, Dashed, Dotted, DashDot, DashDotDot).</li>
+  <li>Shadow: toggle checkbox.</li>
+  <li>Renumber All: button that triggers the Renumber All Steps command.</li>
+</ol>
+
+<h3 id="s2-8">Post-Creation Editing</h3>
+
+<p><strong>Select Tool:</strong></p>
+
+<ul>
+  <li>Click to select. TransformHandles appear. Drag to move.</li>
+  <li>Resize via TransformHandles scales the badge uniformly (maintains aspect ratio by
+  default; Shift releases the constraint).</li>
+  <li>Rotate via the rotate handle rotates the badge (useful for diamond and star shapes; less
+  useful for circles).</li>
+</ul>
+
+<p><strong>Inline Edit (Double-Click):</strong></p>
+
+<ul>
+  <li>Double-clicking a NumberedStepItem enters inline edit mode.</li>
+  <li>The number/text becomes an editable field. The user can type a new value directly.</li>
+  <li>For number mode: typing a new number overrides auto-numbering for this step. The
+  auto-counter is not affected.</li>
+  <li>For text mode: the user can type up to 3 characters (more characters are allowed but may
+  overflow the badge visually).</li>
+  <li>Tab key switches focus to the label text field (if <code>label_text</code> is configured
+  or if the user wants to add a label).</li>
+  <li>Enter or Escape exits inline edit mode.</li>
+</ul>
+
+<p><strong>Context Menu:</strong></p>
+
+<ul>
+  <li>Right-click on a selected NumberedStepItem shows the standard item context menu plus:
+  "Renumber All Steps", "Set as Starting Number" (sets the Starting Number field in the
+  Tool Options Bar to this step's number), "Convert to Text Mode / Convert to Number Mode"
+  toggle.</li>
+</ul>
+
+<h3 id="s2-9">Rendering</h3>
+
+<ol>
+  <li>Draw shadow (if enabled): offset, blurred copy of the badge shape in
+  <code>shadow_color</code>.</li>
+  <li>Draw badge fill: fill the badge shape path with <code>badge_color</code>.</li>
+  <li>Draw badge border: stroke the badge shape with <code>border_color</code>,
+  <code>border_width</code>, and <code>border_style</code>.</li>
+  <li>Draw number/text: render the display string (number, letter, Roman numeral, or custom
+  text) centered in the badge using QPainter.drawText() with the configured font, size,
+  weight, and <code>text_color</code>.</li>
+  <li>Auto font sizing: if <code>font_size</code> is 0 (auto), calculate the largest font size
+  that fits within the badge interior (approximately <code>badge_size</code> * 0.55 for
+  single digits, smaller for multi-digit/character). Use QFontMetrics.boundingRect() to
+  measure.</li>
+  <li>For the Pin shape: render the circular head with number, then the pointed tail below.
+  The item's position anchor is at the pin point (bottom of the tail), not the center of
+  the circle.</li>
+  <li>Draw label (if configured): render the connecting line from badge edge to label
+  position, then the label background pill (if enabled), then the label text.</li>
+</ol>
+
+<h3 id="s2-10">Hit Testing</h3>
+
+<ul>
+  <li>The <code>shape()</code> returns the badge shape path (circle, square, etc.) plus the
+  label bounding box (if label exists).</li>
+  <li>For the Pin shape, the shape includes both the circular head and the triangular tail.</li>
+  <li>A minimum hit area of 24x24 pixels is enforced even for small badges, ensuring they
+  remain clickable.</li>
+</ul>
+
+<h3 id="s2-11">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>State</th><th>Status Bar Text</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Idle</th><td>Click to place step N. Drag to set size. Next: N.</td></tr>
+    <tr><th>After placement</th><td>Placed Step N. Click to place Step N+1.</td></tr>
+    <tr><th>Inline editing</th><td>Type to change value. Tab: edit label. Enter/Escape: finish.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s3">Stamp / Sticker Tool</h2>
+
+<h3 id="s3-1">Tool Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Tool ID</th><td>stamp</td></tr>
+    <tr><th>Display Name</th><td>Stamp / Sticker</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>S</td></tr>
+    <tr><th>Default Cursor</th><td>Crosshair with stamp icon</td></tr>
+    <tr><th>Category</th><td>Annotation</td></tr>
+    <tr><th>Item Class</th><td>StampItem (extends SnapGraphicsItem)</td></tr>
+  </tbody>
+</table>
+
+<p>The Stamp / Sticker tool places pre-designed graphic elements onto the canvas. Stamps
+are commonly used for status indicators (approved, rejected, draft), directional markers
+(arrows, pointers), UI annotation symbols (cursor, click indicators, attention markers),
+and decorative elements. Stamps are SVG-based for resolution-independent scaling.</p>
+
+<h3 id="s3-2">Stamp Library Architecture</h3>
+
+<p><strong>Storage Structure:</strong></p>
+
+<ul>
+  <li>Stamps are stored in the application's resources directory: resources/stamps/</li>
+  <li>Each stamp category is a subdirectory: resources/stamps/status/,
+  resources/stamps/arrows/, etc.</li>
+  <li>Each stamp is an SVG file with optional metadata in a companion JSON file.</li>
+  <li>Stamp SVG files should be designed at a nominal 64x64 viewport with clean paths suitable
+  for scaling from 16px to 512px.</li>
+</ul>
+
+<p><strong>Stamp Index:</strong></p>
+
+<ul>
+  <li>A <code>stamp_index</code>.json file in resources/stamps/ catalogs all available stamps
+  with metadata: id, name, category, filename, tags (for search),
+  <code>default_size</code>, colorizable (whether the stamp supports recoloring).</li>
+  <li>The index is loaded at application startup and cached.</li>
+  <li>Custom stamps (user-added) are stored in a user data directory and merged into the
+  index.</li>
+</ul>
+
+<p><strong>Colorizable Stamps:</strong></p>
+
+<ul>
+  <li>Some stamps are designed to support recoloring. Their SVG uses a specific fill color
+  placeholder (#FF0000 for primary color, #0000FF for secondary color).</li>
+  <li>When the user changes the <code>stamp_color</code> property, the placeholder colors in
+  the SVG are replaced at render time.</li>
+  <li>Non-colorizable stamps (photographic or multi-color designs) render as-is regardless of
+  the <code>stamp_color</code> setting.</li>
+  <li>The colorizable flag is set per stamp in the index metadata.</li>
+</ul>
+
+<h3 id="s3-3">Built-in Stamp Categories</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Category</th><th>ID</th><th>Stamps Included</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Status</th><td>status</td><td>Approved (checkmark in circle), Rejected (X in circle), Draft (stamp-style "DRAFT" text), Attention (exclamation in triangle), Question (question mark in circle), Info (i in circle), Star (5-pointed star), Heart, Thumbs Up, Thumbs Down.</td></tr>
+    <tr><th>Arrows &amp; Pointers</th><td>arrows</td><td>Curved arrow (clockwise), Curved arrow (counter-clockwise), Thick arrow (right), Thick arrow (left/up/down), Double arrow (horizontal, vertical), Pointer hand (index finger), Magnifying glass, Target crosshair.</td></tr>
+    <tr><th>UI Annotations</th><td>ui</td><td>Mouse cursor (default arrow), Mouse cursor (pointer/hand), Click indicator (concentric circles), Double-click indicator, Right-click indicator, Drag indicator (hand with motion lines), Scroll indicator, Keyboard key outline, Touch/tap indicator (finger with ripple).</td></tr>
+    <tr><th>Shapes &amp; Symbols</th><td>shapes</td><td>Checkmark, X mark, Plus, Minus, Warning triangle, Lock, Unlock, Eye (visible), Eye crossed (hidden), Lightning bolt, Gear/settings, Pencil/edit, Trash/delete, Link, Unlink, Pin/bookmark.</td></tr>
+    <tr><th>Decorative</th><td>decorative</td><td>Starburst / explosion, Speech bubble (empty), Thought bubble (empty), Banner/ribbon, Bracket (left, right, both), Underline swoosh, Circle highlight, Box highlight.</td></tr>
+  </tbody>
+</table>
+
+<p>The initial release targets approximately 50-60 built-in stamps across these categories.
+Additional stamp packs can be added via the plugin system in future releases.</p>
+
+<h3 id="s3-4">Creation Workflow</h3>
+
+<p><strong>Stamp Selection:</strong></p>
+
+<ul>
+  <li>Before placing a stamp, the user must select which stamp to use. The active stamp is
+  shown in the Tool Options Bar.</li>
+  <li>The stamp library is accessible via: a dropdown panel in the Tool Options Bar that shows
+  a grid of stamp thumbnails organized by category, or the Stamp Library dialog (opened
+  via a button in the Tool Options Bar or double-clicking the Stamp tool in the palette).</li>
+  <li>The stamp library panel includes: category tabs across the top, a search field that
+  filters stamps by name and tags, a grid of stamp thumbnails (48x48 preview), and a
+  "Custom" tab for user-added stamps.</li>
+  <li>Clicking a stamp in the library selects it as the active stamp. The panel closes and the
+  cursor updates to show a preview of the selected stamp.</li>
+</ul>
+
+<p><strong>Click-to-Place:</strong></p>
+
+<ol>
+  <li>With a stamp selected and the Stamp tool active, click on the canvas.</li>
+  <li>The stamp is placed centered on the click position at the configured default size.</li>
+  <li>The tool remains active. Subsequent clicks place additional copies of the same stamp.</li>
+  <li>A brief scale-up animation (similar to Numbered Step) provides placement feedback.</li>
+</ol>
+
+<p><strong>Click-and-Drag to Size:</strong></p>
+
+<ul>
+  <li>Click and drag to place the stamp at a custom size. The stamp scales uniformly to fit
+  within the drag rectangle.</li>
+  <li>Shift constrains to a perfect square (uniform scale).</li>
+  <li>On release, the stamp is created at the drawn size.</li>
+</ul>
+
+<p><strong>No Stamp Selected:</strong></p>
+
+<p>If no stamp is selected when the user clicks the canvas, the stamp library panel opens
+automatically. After the user selects a stamp, the tool is ready for placement.</p>
+
+<h3 id="s3-5">Tool-Specific Properties</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>stamp_id</code></th><td>str</td><td>(required)</td><td>Unique identifier of the stamp in the library (e.g., "status/approved").</td></tr>
+    <tr><th><code>stamp_source</code></th><td>enum</td><td>builtin</td><td>"builtin" (ships with app), "custom" (user-added), "embedded" (SVG data stored inline in the project).</td></tr>
+    <tr><th><code>svg_data</code></th><td>str</td><td>(from library)</td><td>The SVG content. For builtin stamps, loaded from disk. For embedded stamps, stored in the project file.</td></tr>
+    <tr><th><code>stamp_size</code></th><td>float</td><td>48.0</td><td>Display size in pixels (the larger of width or height). Range: 16 to 512.</td></tr>
+    <tr><th><code>stamp_color</code></th><td>QColor</td><td>#CC0000 (red)</td><td>Primary recolor for colorizable stamps. Ignored for non-colorizable stamps.</td></tr>
+    <tr><th><code>stamp_secondary_color</code></th><td>QColor</td><td>#FFFFFF</td><td>Secondary recolor for colorizable stamps.</td></tr>
+    <tr><th>colorizable</th><td>bool</td><td>(from metadata)</td><td>Whether this stamp supports recoloring. Read from the stamp index.</td></tr>
+    <tr><th><code>fill_opacity</code></th><td>float</td><td>1.0</td><td>Fill opacity (0.0 to 1.0). Controls badge fill and background transparency. Multiplied with layer opacity.</td></tr>
+    <tr><th><code>stroke_opacity</code></th><td>float</td><td>1.0</td><td>Stroke opacity (0.0 to 1.0). Controls border transparency. Multiplied with layer opacity.</td></tr>
+    <tr><th><code>flip_horizontal</code></th><td>bool</td><td>False</td><td>Inherited from SnapGraphicsItem base class (Technical Architecture PRD Section 3.1.4). Mirror the stamp horizontally.</td></tr>
+    <tr><th><code>flip_vertical</code></th><td>bool</td><td>False</td><td>Inherited from SnapGraphicsItem base class (Technical Architecture PRD Section 3.1.4). Mirror the stamp vertically.</td></tr>
+    <tr><th><code>shadow_enabled</code></th><td>bool</td><td>False</td><td>Drop shadow.</td></tr>
+    <tr><th><code>shadow_color</code></th><td>QColor</td><td>#00000066</td><td>Shadow color.</td></tr>
+    <tr><th><code>shadow_offset_x</code></th><td>float</td><td>2.0</td><td>Shadow offset.</td></tr>
+    <tr><th><code>shadow_offset_y</code></th><td>float</td><td>2.0</td><td>Shadow offset.</td></tr>
+    <tr><th><code>shadow_blur</code></th><td>float</td><td>4.0</td><td>Shadow blur radius.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s3-6">Tool Options Bar</h3>
+
+<p>The Stamp tool's Tool Options Bar shows:</p>
+
+<ol>
+  <li>Active Stamp Preview: a 32x32 thumbnail of the currently selected stamp. Click to open
+  the stamp library panel.</li>
+  <li>Stamp Library Button: opens the full stamp library panel/dialog.</li>
+  <li>Stamp Size: slider + spinbox (16-512px, default 48).</li>
+  <li>Stamp Color: color swatch (only enabled when the active stamp is colorizable). Grayed
+  out with a tooltip "This stamp does not support recoloring" when not colorizable.</li>
+  <li>Secondary Color: color swatch (only visible when stamp is colorizable and has secondary
+  color regions).</li>
+  <li>Flip Horizontal: toggle button (mirror icon).</li>
+  <li>Flip Vertical: toggle button.</li>
+  <li>Fill Opacity: slider + spinbox (0-100%). Controls badge fill transparency.</li>
+  <li>Stroke Opacity: slider + spinbox (0-100%). Controls border transparency.</li>
+  <li>Shadow: toggle checkbox.</li>
+</ol>
+
+<h3 id="s3-7">Post-Creation Editing</h3>
+
+<p><strong>Select Tool:</strong></p>
+
+<ul>
+  <li>Click to select. TransformHandles appear.</li>
+  <li>Resize via handles scales uniformly by default (stamps maintain aspect ratio). Shift
+  releases the constraint for non-uniform scaling.</li>
+  <li>Rotate via the rotate handle rotates the stamp.</li>
+  <li>Drag to move.</li>
+</ul>
+
+<p><strong>Double-Click:</strong></p>
+
+<ul>
+  <li>Double-clicking a StampItem opens the stamp library panel with the current stamp
+  highlighted. The user can select a different stamp to replace the current one. This
+  pushes a ModifyPropertyCommand changing the <code>stamp_id</code> and
+  <code>svg_data</code>.</li>
+</ul>
+
+<p><strong>Context Menu:</strong></p>
+
+<ul>
+  <li>Standard item context menu plus: "Change Stamp..." (opens library), "Flip Horizontal",
+  "Flip Vertical", "Reset Size" (restore to default size from stamp metadata).</li>
+</ul>
+
+<h3 id="s3-8">Custom Stamps</h3>
+
+<p><strong>Adding Custom Stamps:</strong></p>
+
+<ul>
+  <li>Users can add custom stamps via: File &gt; Import... and selecting SVG files, or
+  dragging SVG files onto the stamp library panel's "Custom" tab, or the Preferences &gt;
+  Stamps section where a "Custom Stamps Directory" can be configured.</li>
+  <li>Custom stamps are copied to the user's application data directory (e.g.,
+  ~/.config/snapmock/stamps/custom/).</li>
+  <li>Users can assign a name, category, tags, and colorizable flag to custom stamps via a
+  simple metadata dialog.</li>
+  <li>Custom stamps appear in the "Custom" tab of the stamp library and are searchable by
+  their assigned tags.</li>
+</ul>
+
+<p><strong>Stamp Embedding:</strong></p>
+
+<ul>
+  <li>When a project is saved, stamps that are referenced by items in the project are embedded
+  in the <code>.smk</code> file to ensure portability.</li>
+  <li>Built-in stamps are referenced by <code>stamp_id</code> (they ship with every SnapMock
+  installation).</li>
+  <li>Custom stamps are embedded as inline SVG data in the project file. The
+  <code>stamp_source</code> is set to "embedded" and <code>svg_data</code> contains the
+  complete SVG.</li>
+  <li>On project load, if a <code>stamp_id</code> references a builtin stamp that exists in
+  the current installation, the local version is used (allowing updates). If the stamp is
+  not found locally, the embedded SVG data is used as a fallback.</li>
+</ul>
+
+<h3 id="s3-9">Rendering</h3>
+
+<ol>
+  <li>Load or retrieve the cached SVG data for the stamp.</li>
+  <li>If colorizable: perform color substitution on the SVG (replace #FF0000 with
+  <code>stamp_color</code>, #0000FF with <code>stamp_secondary_color</code>).</li>
+  <li>Parse the SVG using QSvgRenderer.</li>
+  <li>Calculate the render rect: center the stamp at the item position, scaled to
+  <code>stamp_size</code> while maintaining aspect ratio.</li>
+  <li>Apply flip transforms if <code>flip_horizontal</code> or <code>flip_vertical</code> is
+  True.</li>
+  <li>Draw shadow if enabled.</li>
+  <li>Render the SVG using QSvgRenderer.render(painter, <code>target_rect</code>).</li>
+  <li>SVG rendering is resolution-independent: stamps render crisply at all zoom levels.</li>
+</ol>
+
+<h3 id="s3-10">Hit Testing</h3>
+
+<ul>
+  <li>The <code>shape()</code> returns a rectangle matching the stamp's bounding box.</li>
+  <li>For more precise hit testing on stamps with irregular shapes (e.g., a star), the SVG
+  path data could be used, but the rectangular bounding box is sufficient for v1.0.</li>
+  <li>Minimum hit area: 24x24 pixels.</li>
+</ul>
+
+<h3 id="s3-11">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>State</th><th>Status Bar Text</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>No stamp selected</th><td>Select a stamp from the library, then click to place.</td></tr>
+    <tr><th>Stamp selected, idle</th><td>Click to place [Stamp Name]. Drag to set size.</td></tr>
+    <tr><th>After placement</th><td>Placed [Stamp Name]. Click to place another.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s4">Emoji Tool</h2>
+
+<h3 id="s4-1">Tool Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Tool ID</th><td>emoji</td></tr>
+    <tr><th>Display Name</th><td>Emoji</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>Shift+E</td></tr>
+    <tr><th>Default Cursor</th><td>Crosshair</td></tr>
+    <tr><th>Category</th><td>Annotation</td></tr>
+    <tr><th>Item Class</th><td>EmojiItem (extends SnapGraphicsItem)</td></tr>
+  </tbody>
+</table>
+
+<p>The Emoji tool places scalable emoji characters as annotation elements on the canvas.
+Emoji are rendered using the system's native emoji font (or a bundled emoji font as a
+fallback) at configurable sizes. Unlike stamps, which are SVG-based vector graphics,
+emoji leverage Unicode emoji characters and are rendered via the platform's text
+rendering system.</p>
+
+<h3 id="s4-2">Emoji Picker</h3>
+
+<p><strong>Picker Panel:</strong></p>
+
+<ul>
+  <li>The emoji picker is a popover panel that appears when the Emoji tool is activated (or
+  when the user clicks the emoji preview in the Tool Options Bar).</li>
+  <li>The picker is implemented as a QWidget popover, similar to the color picker but larger
+  (approximately 320x400 pixels).</li>
+  <li>Layout: search bar at the top, category tabs below (or a scrollable grid with category
+  headers), and recent emoji row at the very top.</li>
+</ul>
+
+<p><strong>Categories (following Unicode standard):</strong></p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Category</th><th>Icon</th><th>Examples</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Recent</th><td>Clock icon</td><td>Last 24 used emoji, most recent first.</td></tr>
+    <tr><th>Smileys &amp; Emotion</th><td>Smiley face</td><td>Grinning, laughing, crying, thinking, etc.</td></tr>
+    <tr><th>People &amp; Body</th><td>Hand wave</td><td>Thumbs up, pointing, clapping, etc.</td></tr>
+    <tr><th>Animals &amp; Nature</th><td>Paw print</td><td>Dog, cat, tree, flower, sun, etc.</td></tr>
+    <tr><th>Food &amp; Drink</th><td>Apple</td><td>Pizza, coffee, cake, etc.</td></tr>
+    <tr><th>Travel &amp; Places</th><td>Airplane</td><td>House, car, globe, etc.</td></tr>
+    <tr><th>Activities</th><td>Soccer ball</td><td>Trophy, medal, game controller, etc.</td></tr>
+    <tr><th>Objects</th><td>Lightbulb</td><td>Laptop, phone, wrench, magnifying glass, etc.</td></tr>
+    <tr><th>Symbols</th><td>Heart</td><td>Arrows, checkmarks, warning signs, mathematical symbols, etc.</td></tr>
+    <tr><th>Flags</th><td>Flag</td><td>Country flags, pride flags, etc.</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Search:</strong></p>
+
+<ul>
+  <li>The search bar filters emoji by name and keywords in real time as the user types.</li>
+  <li>Search data comes from a bundled emoji keyword database (Unicode CLDR annotations).</li>
+  <li>Example: typing "happy" shows all emoji with "happy" in their name or annotations
+  (grinning face, smiling face with open mouth, etc.).</li>
+  <li>Empty search results show a helpful message: "No emoji found for '[query]'"</li>
+</ul>
+
+<p><strong>Skin Tone Support:</strong></p>
+
+<ul>
+  <li>For emoji that support skin tone modifiers (hand gestures, people), a long-press or
+  right-click on the emoji shows a skin tone palette with 6 options (default yellow + 5
+  Fitzpatrick scale tones).</li>
+  <li>The selected skin tone preference is remembered per-session and applied to subsequent
+  placements of skin-tone-capable emoji.</li>
+  <li>A global skin tone preference can be set in Preferences &gt; Emoji.</li>
+</ul>
+
+<p><strong>Picker Behavior:</strong></p>
+
+<ul>
+  <li>Clicking an emoji in the picker selects it as the active emoji and closes the picker.
+  The cursor updates to show a small preview of the selected emoji.</li>
+  <li>The picker panel remembers its last scroll position and open category across uses within
+  a session.</li>
+  <li>The picker can be reopened at any time by clicking the emoji preview in the Tool Options
+  Bar or pressing Shift+E again.</li>
+</ul>
+
+<h3 id="s4-3">Creation Workflow</h3>
+
+<p><strong>Click-to-Place:</strong></p>
+
+<ol>
+  <li>With an emoji selected and the Emoji tool active, click on the canvas.</li>
+  <li>The emoji is placed centered on the click position at the configured
+  <code>emoji_size</code>.</li>
+  <li>The tool remains active. Subsequent clicks place additional copies of the same emoji.</li>
+  <li>A brief pop-in animation (scale from 0% to 110% to 100% over 200ms with ease-out)
+  provides feedback.</li>
+</ol>
+
+<p><strong>Click-and-Drag to Size:</strong></p>
+
+<ul>
+  <li>Click and drag to place at a custom size. The emoji scales to fit within the drag
+  rectangle.</li>
+  <li>On release, the emoji is placed at the drawn size.</li>
+  <li>If drag distance &lt; 10px, use the default size.</li>
+</ul>
+
+<p><strong>No Emoji Selected:</strong></p>
+
+<p>If no emoji is selected when the user clicks the canvas, the emoji picker opens
+automatically.</p>
+
+<h3 id="s4-4">Tool-Specific Properties</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>emoji_char</code></th><td>str</td><td>(required)</td><td>The Unicode emoji character(s). May be a single code point or a multi-code-point sequence (e.g., with skin tone modifier, ZWJ sequences).</td></tr>
+    <tr><th><code>emoji_name</code></th><td>str</td><td>(from database)</td><td>Human-readable name for display and search (e.g., "Thumbs Up").</td></tr>
+    <tr><th><code>emoji_size</code></th><td>float</td><td>48.0</td><td>Display size in pixels. Range: 16 to 256.</td></tr>
+    <tr><th><code>skin_tone</code></th><td>enum</td><td>default</td><td>Skin tone modifier: default, light, <code>medium_light</code>, medium, <code>medium_dark</code>, dark. Applied to skin-tone-capable emoji.</td></tr>
+    <tr><th>opacity</th><td>float</td><td>1.0</td><td>Item opacity.</td></tr>
+    <tr><th><code>shadow_enabled</code></th><td>bool</td><td>False</td><td>Drop shadow behind the emoji.</td></tr>
+    <tr><th><code>shadow_color</code></th><td>QColor</td><td>#00000066</td><td>Shadow color.</td></tr>
+    <tr><th><code>shadow_offset_x</code></th><td>float</td><td>2.0</td><td>Shadow offset.</td></tr>
+    <tr><th><code>shadow_offset_y</code></th><td>float</td><td>2.0</td><td>Shadow offset.</td></tr>
+    <tr><th><code>shadow_blur</code></th><td>float</td><td>4.0</td><td>Shadow blur radius.</td></tr>
+    <tr><th><code>flip_horizontal</code></th><td>bool</td><td>False</td><td>Inherited from SnapGraphicsItem base class (Technical Architecture PRD Section 3.1.4). Mirror horizontally.</td></tr>
+    <tr><th><code>flip_vertical</code></th><td>bool</td><td>False</td><td>Inherited from SnapGraphicsItem base class (Technical Architecture PRD Section 3.1.4). Mirror vertically.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s4-5">Tool Options Bar</h3>
+
+<p>The Emoji tool's Tool Options Bar shows:</p>
+
+<ol>
+  <li>Active Emoji Preview: the currently selected emoji displayed at approximately 28px.
+  Click to reopen the emoji picker.</li>
+  <li>Emoji Name: read-only label showing the name (e.g., "Thumbs Up").</li>
+  <li>Size: slider + spinbox (16-256px, default 48).</li>
+  <li>Skin Tone: a row of 6 small color swatches representing skin tone options. Click to
+  select. Only visible when the active emoji supports skin tones.</li>
+  <li>Opacity: slider + spinbox (0-100%).</li>
+  <li>Flip Horizontal: toggle button.</li>
+  <li>Flip Vertical: toggle button.</li>
+  <li>Shadow: toggle checkbox.</li>
+</ol>
+
+<h3 id="s4-6">Post-Creation Editing</h3>
+
+<p><strong>Select Tool:</strong></p>
+
+<ul>
+  <li>Click to select. TransformHandles appear.</li>
+  <li>Resize via handles scales uniformly (maintains aspect ratio). Shift releases constraint.</li>
+  <li>Rotate via rotate handle.</li>
+  <li>Drag to move.</li>
+</ul>
+
+<p><strong>Double-Click:</strong></p>
+
+<ul>
+  <li>Double-clicking an EmojiItem opens the emoji picker with the current emoji highlighted.
+  The user can select a different emoji to replace the current one. This pushes a
+  ModifyPropertyCommand.</li>
+  <li>If the emoji supports skin tones, the skin tone palette is shown alongside the picker.</li>
+</ul>
+
+<p><strong>Context Menu:</strong></p>
+
+<ul>
+  <li>Standard context menu plus: "Change Emoji..." (opens picker), "Flip Horizontal", "Flip
+  Vertical", "Reset Size".</li>
+</ul>
+
+<h3 id="s4-7">Rendering</h3>
+
+<p><strong>Font-Based Rendering:</strong></p>
+
+<ol>
+  <li>Determine the emoji font to use: prefer the system's native emoji font (Apple Color
+  Emoji on macOS, Segoe UI Emoji on Windows, Noto Color Emoji on Linux).</li>
+  <li>If the system emoji font is not available, fall back to a bundled Noto Color Emoji font
+  included in SnapMock's resources.</li>
+  <li>Create a QFont with the emoji font family at a size calculated to render at
+  <code>emoji_size</code> pixels.</li>
+  <li>Apply skin tone modifier to <code>emoji_char</code> if <code>skin_tone</code> is not
+  "default".</li>
+  <li>Apply flip transforms if configured.</li>
+  <li>Draw shadow if enabled.</li>
+  <li>Draw the emoji character using QPainter.drawText() centered in the item's bounding rect.</li>
+  <li>Emoji rendering varies by platform (color bitmap on macOS/Windows, SVG-in-OpenType on
+  Linux). SnapMock should handle both correctly.</li>
+</ol>
+
+<p><strong>Cross-Platform Consistency:</strong></p>
+
+<ul>
+  <li>Emoji appearance differs across operating systems (Apple, Google/Noto, Microsoft
+  designs). This is expected and acceptable.</li>
+  <li>To ensure a baseline consistent experience on Linux, SnapMock bundles Noto Color Emoji
+  (Apache 2.0 licensed) as a fallback font.</li>
+  <li>The project file stores the Unicode code points, not the rendered appearance. Re-opening
+  a project on a different OS will show that OS's emoji design.</li>
+  <li>A future enhancement could offer a setting to use the bundled Noto font on all platforms
+  for consistent rendering.</li>
+</ul>
+
+<h3 id="s4-8">Hit Testing</h3>
+
+<ul>
+  <li>The <code>shape()</code> returns a square matching the emoji's bounding box
+  (<code>emoji_size</code> x <code>emoji_size</code>).</li>
+  <li>Minimum hit area: 24x24 pixels.</li>
+</ul>
+
+<h3 id="s4-9">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>State</th><th>Status Bar Text</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>No emoji selected</th><td>Select an emoji from the picker, then click to place.</td></tr>
+    <tr><th>Emoji selected, idle</th><td>Click to place [Emoji Name]. Drag to set size.</td></tr>
+    <tr><th>After placement</th><td>Placed [Emoji Name]. Click to place another.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s5">Data Models</h2>
+
+<h3 id="s5-1">NumberedStepItem</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Serialization Key</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>position</th><td>QPointF</td><td>"position": {"x": float, "y": float}</td></tr>
+    <tr><th><code>number_value</code></th><td>int</td><td>"<code>number_value</code>": int</td></tr>
+    <tr><th><code>display_mode</code></th><td>str</td><td>"<code>display_mode</code>": "number" | "letter" | "roman" | "text"</td></tr>
+    <tr><th><code>custom_text</code></th><td>str</td><td>"<code>custom_text</code>": "str"</td></tr>
+    <tr><th><code>badge_shape</code></th><td>str</td><td>"<code>badge_shape</code>": "circle" | "<code>rounded_square</code>" | "square" | "diamond" | "hexagon" | "star" | "oval" | "pin"</td></tr>
+    <tr><th><code>badge_color</code></th><td>str</td><td>"<code>badge_color</code>": "#RRGGBB"</td></tr>
+    <tr><th><code>badge_size</code></th><td>float</td><td>"<code>badge_size</code>": float</td></tr>
+    <tr><th><code>text_color</code></th><td>str</td><td>"<code>text_color</code>": "#RRGGBB"</td></tr>
+    <tr><th><code>font_family</code></th><td>str</td><td>"<code>font_family</code>": "str"</td></tr>
+    <tr><th><code>font_size</code></th><td>float</td><td>"<code>font_size</code>": float (0 = auto)</td></tr>
+    <tr><th><code>font_weight</code></th><td>str</td><td>"<code>font_weight</code>": "normal" | "bold"</td></tr>
+    <tr><th><code>border_color</code></th><td>str</td><td>"<code>border_color</code>": "#RRGGBB"</td></tr>
+    <tr><th><code>border_width</code></th><td>float</td><td>"<code>border_width</code>": float</td></tr>
+    <tr><th><code>border_style</code></th><td>str</td><td>"<code>border_style</code>": "solid" | "dashed" | "dotted" | "dashdot" | "dashdotdot"</td></tr>
+    <tr><th><code>label_text</code></th><td>str</td><td>"<code>label_text</code>": "str"</td></tr>
+    <tr><th><code>label_position</code></th><td>str</td><td>"<code>label_position</code>": "right" | "left" | "top" | "bottom"</td></tr>
+    <tr><th><code>label_font_size</code></th><td>float</td><td>"<code>label_font_size</code>": float</td></tr>
+    <tr><th><code>label_color</code></th><td>str</td><td>"<code>label_color</code>": "#RRGGBB"</td></tr>
+    <tr><th><code>label_background</code></th><td>str</td><td>"<code>label_background</code>": "#RRGGBBAA"</td></tr>
+    <tr><th><code>label_background_enabled</code></th><td>bool</td><td>"<code>label_background_enabled</code>": bool</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s5-2">StampItem</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Serialization Key</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>position</th><td>QPointF</td><td>"position": {"x": float, "y": float}</td></tr>
+    <tr><th><code>stamp_id</code></th><td>str</td><td>"<code>stamp_id</code>": "category/name"</td></tr>
+    <tr><th><code>stamp_source</code></th><td>str</td><td>"<code>stamp_source</code>": "builtin" | "custom" | "embedded"</td></tr>
+    <tr><th><code>svg_data</code></th><td>str</td><td>"<code>svg_data</code>": "&lt;svg&gt;...&lt;/svg&gt;" (only for embedded stamps)</td></tr>
+    <tr><th><code>stamp_size</code></th><td>float</td><td>"<code>stamp_size</code>": float</td></tr>
+    <tr><th><code>stamp_color</code></th><td>str</td><td>"<code>stamp_color</code>": "#RRGGBB"</td></tr>
+    <tr><th><code>stamp_secondary_color</code></th><td>str</td><td>"<code>stamp_secondary_color</code>": "#RRGGBB"</td></tr>
+    <tr><th>colorizable</th><td>bool</td><td>"colorizable": bool</td></tr>
+    <tr><th><code>flip_horizontal</code></th><td>bool</td><td>"<code>flip_horizontal</code>": bool</td></tr>
+    <tr><th><code>flip_vertical</code></th><td>bool</td><td>"<code>flip_vertical</code>": bool</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s5-3">EmojiItem</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Serialization Key</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>position</th><td>QPointF</td><td>"position": {"x": float, "y": float}</td></tr>
+    <tr><th><code>emoji_char</code></th><td>str</td><td>"<code>emoji_char</code>": "\uXXXX" or multi-codepoint sequence</td></tr>
+    <tr><th><code>emoji_name</code></th><td>str</td><td>"<code>emoji_name</code>": "str"</td></tr>
+    <tr><th><code>emoji_size</code></th><td>float</td><td>"<code>emoji_size</code>": float</td></tr>
+    <tr><th><code>skin_tone</code></th><td>str</td><td>"<code>skin_tone</code>": "default" | "light" | "<code>medium_light</code>" | "medium" | "<code>medium_dark</code>" | "dark"</td></tr>
+    <tr><th><code>flip_horizontal</code></th><td>bool</td><td>"<code>flip_horizontal</code>": bool</td></tr>
+    <tr><th><code>flip_vertical</code></th><td>bool</td><td>"<code>flip_vertical</code>": bool</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s6">Command Definitions</h2>
+
+<p>All three tools produce AddItemCommand on creation (standard from Technical Architecture
+PRD). This section covers tool-specific commands.</p>
+
+<h3 id="s6-1">RenumberStepsCommand</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>item_assignments</code></th><td>list[tuple[UUID, int, int]]</td><td>List of (<code>item_id</code>, <code>old_number</code>, <code>new_number</code>) tuples for each renumbered step.</td></tr>
+    <tr><th><code>starting_number</code></th><td>int</td><td>The starting number used for renumbering.</td></tr>
+  </tbody>
+</table>
+
+<p><strong><code>redo()</code>:</strong> For each (<code>item_id</code>, _,
+<code>new_number</code>) in <code>item_assignments</code>, set item.number_value =
+<code>new_number</code>.</p>
+
+<p><strong><code>undo()</code>:</strong> For each (<code>item_id</code>,
+<code>old_number</code>, _) in <code>item_assignments</code>, set item.number_value =
+<code>old_number</code>.</p>
+
+<p><strong><code>description()</code>:</strong> "Renumber all steps"</p>
+
+<h3 id="s6-2">ChangeStampCommand</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>item_id</code></th><td>UUID</td><td>The stamp item being changed.</td></tr>
+    <tr><th><code>old_stamp_id</code></th><td>str</td><td>Previous stamp identifier.</td></tr>
+    <tr><th><code>new_stamp_id</code></th><td>str</td><td>New stamp identifier.</td></tr>
+    <tr><th><code>old_svg_data</code></th><td>str</td><td>Previous SVG content.</td></tr>
+    <tr><th><code>new_svg_data</code></th><td>str</td><td>New SVG content.</td></tr>
+    <tr><th><code>old_colorizable</code></th><td>bool</td><td>Previous colorizable flag.</td></tr>
+    <tr><th><code>new_colorizable</code></th><td>bool</td><td>New colorizable flag.</td></tr>
+  </tbody>
+</table>
+
+<p><strong><code>redo()</code>:</strong> Set <code>stamp_id</code>, <code>svg_data</code>,
+and colorizable to new values. Refresh rendering.</p>
+
+<p><strong><code>undo()</code>:</strong> Set <code>stamp_id</code>, <code>svg_data</code>,
+and colorizable to old values. Refresh rendering.</p>
+
+<p><strong><code>description()</code>:</strong> "Change stamp to [name]"</p>
+
+<h3 id="s6-3">ChangeEmojiCommand</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>item_id</code></th><td>UUID</td><td>The emoji item being changed.</td></tr>
+    <tr><th><code>old_emoji_char</code></th><td>str</td><td>Previous emoji character.</td></tr>
+    <tr><th><code>new_emoji_char</code></th><td>str</td><td>New emoji character.</td></tr>
+    <tr><th><code>old_emoji_name</code></th><td>str</td><td>Previous emoji name.</td></tr>
+    <tr><th><code>new_emoji_name</code></th><td>str</td><td>New emoji name.</td></tr>
+    <tr><th><code>old_skin_tone</code></th><td>str</td><td>Previous skin tone.</td></tr>
+    <tr><th><code>new_skin_tone</code></th><td>str</td><td>New skin tone.</td></tr>
+  </tbody>
+</table>
+
+<p><strong><code>redo()</code>:</strong> Set <code>emoji_char</code>,
+<code>emoji_name</code>, and <code>skin_tone</code> to new values.</p>
+
+<p><strong><code>undo()</code>:</strong> Set <code>emoji_char</code>,
+<code>emoji_name</code>, and <code>skin_tone</code> to old values.</p>
+
+<p><strong><code>description()</code>:</strong> "Change emoji to [name]"</p>
+
+<h2 id="s7">Serialization</h2>
+
+<h3 id="s7-1">NumberedStepItem Serialization Notes</h3>
+
+<ul>
+  <li>The <code>number_value</code> is stored explicitly. The auto-numbering counter state is
+  NOT saved in the project file (it is a tool-session concept, not a project concept).</li>
+  <li>On project load, the Numbered Step tool's counter is initialized to
+  max(<code>number_value</code> across all NumberedStepItems) + 1 to avoid conflicts.</li>
+  <li>All properties including label text and styling are fully serialized.</li>
+</ul>
+
+<h3 id="s7-2">StampItem Serialization Notes</h3>
+
+<ul>
+  <li>Built-in stamps are referenced by <code>stamp_id</code> only. The SVG data is NOT stored
+  in the project file for built-in stamps (to keep projects small).</li>
+  <li>Custom and embedded stamps store the full <code>svg_data</code> in the project file for
+  portability.</li>
+  <li>When saving, any custom stamp referenced by a StampItem is embedded: its
+  <code>stamp_source</code> is changed from "custom" to "embedded" and
+  <code>svg_data</code> is populated.</li>
+  <li>On load, if <code>stamp_source</code> is "builtin" and the <code>stamp_id</code> is
+  found in the local library, the local SVG is used. If not found, and
+  <code>svg_data</code> is present (shouldn't be for builtins, but as a safety net), use
+  the embedded data. If neither is available, render a placeholder "missing stamp" icon.</li>
+  <li>Color substitution values (<code>stamp_color</code>, <code>stamp_secondary_color</code>)
+  are stored as standard hex color strings.</li>
+</ul>
+
+<h3 id="s7-3">EmojiItem Serialization Notes</h3>
+
+<ul>
+  <li>The <code>emoji_char</code> is stored as a Unicode string. Multi-code-point sequences
+  (ZWJ sequences, skin tone modifiers) are stored as the complete sequence.</li>
+  <li>Skin tone is stored as a separate property for clarity, but it is also already part of
+  the <code>emoji_char</code> when applied. On load, the <code>skin_tone</code> property
+  is used to reconstruct the correct code point sequence if needed.</li>
+  <li>Emoji rendering depends on the platform's emoji font. A project with emoji may look
+  different on different operating systems. This is documented behavior.</li>
+  <li>The <code>emoji_name</code> is stored for display purposes and search. It is not
+  required for rendering (the <code>emoji_char</code> is sufficient).</li>
+</ul>
+
+<h3 id="s7-4">Example: NumberedStepItem JSON</h3>
+
+<pre><code>{
+  &quot;type&quot;: &quot;numbered_step&quot;,
+  &quot;item_id&quot;: &quot;a1b2c3d4-...&quot;,
+  &quot;layer_id&quot;: &quot;f1e2d3c4-...&quot;,
+  &quot;position&quot;: {&quot;x&quot;: 250, &quot;y&quot;: 180},
+  &quot;number_value&quot;: 3,
+  &quot;display_mode&quot;: &quot;number&quot;,
+  &quot;badge_shape&quot;: &quot;circle&quot;,
+  &quot;badge_color&quot;: &quot;#CC0000&quot;,
+  &quot;badge_size&quot;: 32,
+  &quot;text_color&quot;: &quot;#FFFFFF&quot;,
+  &quot;font_family&quot;: &quot;Arial&quot;,
+  &quot;font_size&quot;: 0,
+  &quot;font_weight&quot;: &quot;bold&quot;,
+  &quot;border_color&quot;: &quot;#FFFFFF&quot;,
+  &quot;border_width&quot;: 2,
+  &quot;border_style&quot;: &quot;solid&quot;,
+  &quot;shadow_enabled&quot;: true,
+  &quot;label_text&quot;: &quot;Click Login&quot;,
+  &quot;label_position&quot;: &quot;right&quot;,
+  &quot;label_font_size&quot;: 12,
+  &quot;label_background_enabled&quot;: true,
+  &quot;fill_opacity&quot;: 1.0, &quot;stroke_opacity&quot;: 1.0,
+  &quot;transform&quot;: {&quot;m11&quot;: 1, &quot;m12&quot;: 0, ...}
+}</code></pre>
+
+<h2 id="s8">Acceptance Criteria</h2>
+
+<h3 id="s8-1">Numbered Step Tool</h3>
+
+<ol>
+  <li>Click-to-place creates a numbered badge at the click position with the correct
+  sequential number.</li>
+  <li>Rapid clicking places sequential numbers (1, 2, 3, ...) without requiring any
+  intermediate steps.</li>
+  <li>Click-and-drag allows custom sizing. The badge scales correctly.</li>
+  <li>All 8 badge shapes render correctly with the number centered and legible.</li>
+  <li>Auto font sizing produces readable text at all badge sizes from 16px to 128px.</li>
+  <li>Display modes work correctly: Number (1, 2, 3), Letter (A, B, C), Roman (I, II, III),
+  Custom Text.</li>
+  <li>Changing Starting Number in the Tool Options Bar correctly sets the next placed number.</li>
+  <li>"Renumber All Steps" correctly sorts by position and reassigns sequential numbers. The
+  operation is fully undoable.</li>
+  <li>Double-click inline editing allows changing the number/text and label. Tab switches
+  between number and label fields.</li>
+  <li>Label line feature renders correctly at all four positions with optional background
+  pill.</li>
+  <li>Pin badge shape correctly anchors at the pin point (bottom of tail).</li>
+  <li>Shadow renders correctly for all badge shapes.</li>
+  <li>Steps on locked/hidden layers cannot be placed.</li>
+</ol>
+
+<h3 id="s8-2">Stamp / Sticker Tool</h3>
+
+<ol>
+  <li>The stamp library panel opens and displays all built-in stamps organized by category.</li>
+  <li>Search correctly filters stamps by name and tags.</li>
+  <li>Click-to-place creates a stamp at the click position at the configured size.</li>
+  <li>Click-and-drag allows custom sizing with uniform scaling.</li>
+  <li>Colorizable stamps correctly recolor when <code>stamp_color</code> is changed.
+  Non-colorizable stamps are unaffected.</li>
+  <li>Secondary color substitution works for stamps with dual-color regions.</li>
+  <li>Flip horizontal and vertical produce correct mirrored rendering.</li>
+  <li>Double-click opens the stamp library for replacement. Replacement is undoable.</li>
+  <li>Custom stamps can be imported (SVG files), are stored in the user directory, and appear
+  in the Custom tab.</li>
+  <li>Project save embeds custom stamps. Projects with embedded stamps open correctly on
+  systems without those custom stamps.</li>
+  <li>Built-in stamps are not embedded in the project file (reference by ID only).</li>
+  <li>All stamps render crisply at zoom levels from 10% to 3200%.</li>
+  <li>Missing stamps (referenced but not found) show a placeholder icon rather than crashing.</li>
+</ol>
+
+<h3 id="s8-3">Emoji Tool</h3>
+
+<ol>
+  <li>The emoji picker opens and displays emoji organized by Unicode standard categories.</li>
+  <li>Search correctly filters emoji by name and keywords.</li>
+  <li>Recent emoji section shows the last 24 used emoji.</li>
+  <li>Click-to-place creates an emoji at the click position at the configured size.</li>
+  <li>Emoji render correctly using the platform's emoji font at all sizes from 16px to 256px.</li>
+  <li>Skin tone selection works for applicable emoji. The selected tone is remembered for the
+  session.</li>
+  <li>Flip horizontal and vertical produce correct rendering.</li>
+  <li>Double-click opens the emoji picker for replacement. Replacement is undoable.</li>
+  <li>On Linux, the bundled Noto Color Emoji font is used as a fallback when no system emoji
+  font is detected.</li>
+  <li>Emoji render correctly at all zoom levels.</li>
+  <li>The <code>emoji_char</code> is correctly serialized and deserialized, including
+  multi-codepoint sequences (ZWJ, skin tones).</li>
+  <li>Opacity and shadow work correctly on emoji items.</li>
+</ol>
+
+<h3 id="s8-4">Shared Behavior</h3>
+
+<ol>
+  <li>All three tools respect the active layer: cannot place on locked or hidden layers.</li>
+  <li>All items are created with AddItemCommand and are fully undoable.</li>
+  <li>All property changes produce ModifyPropertyCommand and are undoable.</li>
+  <li>All items serialize and deserialize correctly with full property fidelity.</li>
+  <li>Placement animation (scale-up for steps, pop-in for emoji) plays smoothly at 60 FPS.</li>
+  <li>All items can be selected, moved, resized, and rotated via the Select tool after
+  creation.</li>
+  <li>All items support copy, cut, paste, and duplicate operations.</li>
+  <li>Performance: placing 100 items of any type and selecting all 100 maintains 60 FPS.</li>
+</ol>
+
+<p><em>--- End of Numbered Steps, Stamps &amp; Emoji PRD ---</em></p>
+
+<h2 id="s9">Open Issues</h2>
+
+<p>These items were raised by the conversion from Word. None of them changes a
+requirement; each needs a decision before this document leaves draft.</p>
+
+<div class="note issue">
+  <span class="note-label">Open — The title page carried February 2026 while the change log placed versi</span>
+  <p>The title page carried February 2026 while the change log placed version 1.3 in March 2026. Carried over as written.</p>
+</div>
+
+<div class="note issue">
+  <span class="note-label">Open — approval status never recorded</span>
+  <p>The original carried no approval record. Version 1.3 is shown as pending. Confirm
+  whether any earlier version was formally approved.</p>
+</div>
+
+</main>
+
+</div>
+</body>
+</html>
