@@ -42,6 +42,7 @@ from snapmock.capture.models import (
     PermissionState,
     ScreenGrab,
 )
+from snapmock.capture.overlay import make_overlay
 from snapmock.capture.single_instance import SingleInstanceChannel
 from snapmock.capture.sound import play_shutter
 from snapmock.capture.window_state import WindowHider
@@ -141,7 +142,7 @@ class CaptureManager(QObject):
         self._hotkeys = hotkey_backend
         self._hotkeys.setParent(self)
         self._settings = settings or AppSettings()
-        self._overlay_factory = overlay_factory
+        self._overlay_factory: Callable[[], RegionSelector] = overlay_factory or make_overlay
         self._overlay: RegionSelector | None = None
         self._sound_player = sound_player or play_shutter
         self._capabilities = backend.capabilities()
@@ -457,8 +458,6 @@ class CaptureManager(QObject):
 
     def _ensure_overlay(self) -> RegionSelector | None:
         if self._overlay is None:
-            if self._overlay_factory is None:
-                return None
             overlay = self._overlay_factory()
             overlay.region_selected.connect(self._on_region_selected)
             overlay.cancelled.connect(self._on_region_cancelled)
