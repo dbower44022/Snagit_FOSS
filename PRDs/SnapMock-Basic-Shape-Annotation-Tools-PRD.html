@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Basic Shape Annotation Tools</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.3</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.4</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Line · Arrow · Rectangle · Ellipse · Arc · Polygon · Freehand / Pen</dd>
-    <dt>Document version</dt><dd>1.3</dd>
-    <dt>Last Updated</dt>    <dd>09-07-26 18:55</dd>
+    <dt>Document version</dt><dd>1.4</dd>
+    <dt>Last Updated</dt>    <dd>09-07-26 19:19</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -32,13 +32,22 @@
     </thead>
     <tbody>
       <tr>
+        <td>1.4</td>
+        <td class="nowrap">09-07-26 19:19</td>
+        <td>Doug Bower</td>
+        <td>Decision: a shape has no fill exactly when its fill color is transparent.
+        The fill_enabled property is removed; rendering and hit-testing rules now key
+        on the fill color's alpha.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
+      <tr>
         <td>1.3</td>
         <td class="nowrap">09-07-26 18:55</td>
         <td>Doug Bower</td>
         <td>Aligned with the universal Transparent color option defined in General UI
         PRD v1.6, Section 11.1. "No fill" wording replaced in Sections 2.2, 2.6, and
         13.3. Content otherwise unchanged.</td>
-        <td><span class="status open">Pending</span></td>
+        <td><span class="status closed">Superseded</span></td>
       </tr>
       <tr>
         <td>1.2</td>
@@ -92,6 +101,30 @@
     </thead>
     <tbody>
       <tr>
+        <td class="nowrap">09-07-26 19:19</td>
+        <td>2.2</td>
+        <td>Removed</td>
+        <td>fill_enabled removed from Shared Properties. A shape has no fill exactly
+        when its fill_color is transparent. This matches the implementation, which has
+        never carried fill_enabled. The Technical Architecture PRD v1.3 carries the
+        same change.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 19:19</td>
+        <td>5.5, 5.6, 6.6, 7.6, 8.7, 9.8, 9.9, 13.4</td>
+        <td>Changed</td>
+        <td>Rendering and hit-testing rules that referenced fill_enabled now key on
+        fill_color alpha: greater than zero is filled, zero is transparent.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 19:19</td>
+        <td>14</td>
+        <td>Flagged</td>
+        <td>The current RectangleItem.shape() always returns the filled interior, so the
+        near-the-border selection rule for transparent fills (Section 5.6) is not yet
+        implemented. Recorded as an open issue; the gap predates this version.</td>
+      </tr>
+      <tr>
         <td class="nowrap">09-07-26 18:55</td>
         <td>2.6</td>
         <td>Changed</td>
@@ -118,7 +151,7 @@
         <td>2.2</td>
         <td>Flagged</td>
         <td>With transparent available as a fill color, the fill_enabled property may
-        be redundant. Left as written and flagged as an open issue.</td>
+        be redundant. Flagged as an open issue; resolved in version 1.4.</td>
       </tr>
       <tr>
         <td class="nowrap">09-07-26 15:40</td>
@@ -361,7 +394,6 @@ defines only the differences.</p>
     <tr><th>stroke_cap</th><td>enum</td><td>Round</td><td>Line cap style: Flat, Square, Round. Affects line endpoints and dash caps.</td></tr>
     <tr><th>stroke_join</th><td>enum</td><td>Round</td><td>Line join style: Miter, Bevel, Round. Affects corners of rectangles and polygons.</td></tr>
     <tr><th>fill_color</th><td>QColor</td><td>transparent</td><td>Interior fill color. Transparent is selected in the color picker like any other color (General UI PRD Section 11.1).</td></tr>
-    <tr><th>fill_enabled</th><td>bool</td><td>False</td><td>Whether the shape has a visible fill. When False, <code>fill_color</code> is ignored.</td></tr>
     <tr><th>fill_opacity</th><td>float</td><td>1.0</td><td>Fill opacity, 0.0 to 1.0. Controls fill and background transparency. Multiplied with layer opacity.</td></tr>
     <tr><th>stroke_opacity</th><td>float</td><td>1.0</td><td>Stroke opacity, 0.0 to 1.0. Controls stroke, border, and outline transparency. Multiplied with layer opacity.</td></tr>
     <tr><th>shadow_enabled</th><td>bool</td><td>False</td><td>Whether a drop shadow is rendered.</td></tr>
@@ -877,18 +909,17 @@ and the rectangle extends equally in all four directions to the cursor position.
   <li>Fill is rendered first, if enabled, then stroke on top.</li>
   <li>The fill area is inside the stroke boundary. The stroke straddles the geometric
   edge, with half inside and half outside.</li>
-  <li>When <code>fill_enabled</code> is True and <code>fill_color</code> is
-  semi-transparent, the fill renders behind the stroke correctly without overlap
-  artifacts.</li>
+  <li>When <code>fill_color</code> is semi-transparent (alpha between 0 and 255), the
+  fill renders behind the stroke correctly without overlap artifacts.</li>
 </ul>
 
 <h3 id="s5-6">shape() for Hit Testing</h3>
 
 <ul>
-  <li>If <code>fill_enabled</code> is True, <code>shape()</code> returns the filled
-  rectangle path, so clicking anywhere inside selects it.</li>
-  <li>If <code>fill_enabled</code> is False, <code>shape()</code> returns a
-  <code>QPainterPathStroker</code> result of the rectangle outline with
+  <li>If <code>fill_color</code> has an alpha greater than zero, <code>shape()</code>
+  returns the filled rectangle path, so clicking anywhere inside selects it.</li>
+  <li>If <code>fill_color</code> is transparent (alpha of zero), <code>shape()</code>
+  returns a <code>QPainterPathStroker</code> result of the rectangle outline with
   <code>stroke_width</code> plus 4 pixels of padding. Only clicking near the border
   selects it.</li>
   <li>This distinction matters for usability: filled shapes are easy to click, unfilled
@@ -984,10 +1015,11 @@ prominently placed.</p>
 <h3 id="s6-6">shape() for Hit Testing</h3>
 
 <ul>
-  <li>If <code>fill_enabled</code> is True, <code>shape()</code> returns a
-  <code>QPainterPath</code> with <code>addEllipse()</code> for the full ellipse area.</li>
-  <li>If <code>fill_enabled</code> is False, <code>shape()</code> returns a
-  <code>QPainterPathStroker</code> result of the ellipse outline with
+  <li>If <code>fill_color</code> has an alpha greater than zero, <code>shape()</code>
+  returns a <code>QPainterPath</code> with <code>addEllipse()</code> for the full ellipse
+  area.</li>
+  <li>If <code>fill_color</code> is transparent (alpha of zero), <code>shape()</code>
+  returns a <code>QPainterPathStroker</code> result of the ellipse outline with
   <code>stroke_width</code> plus 4 pixels of padding.</li>
 </ul>
 
@@ -1116,11 +1148,12 @@ distance from the chord midpoint to the arc peak.</p>
   <code>QPainterPath.quadTo(control_point, end_point)</code> starting from
   <code>start_point</code>.</li>
   <li>If <code>arc_type</code> is Chord, a closing straight line is drawn from
-  <code>end_point</code> back to <code>start_point</code>. If <code>fill_enabled</code>,
-  the enclosed area is filled.</li>
+  <code>end_point</code> back to <code>start_point</code>. The enclosed area is filled
+  with <code>fill_color</code>; a transparent <code>fill_color</code> renders no fill.</li>
   <li>If <code>arc_type</code> is Pie, lines are drawn from <code>start_point</code> and
-  <code>end_point</code> to the virtual center of the ellipse the arc belongs to. If
-  <code>fill_enabled</code>, the pie slice area is filled.</li>
+  <code>end_point</code> to the virtual center of the ellipse the arc belongs to. The pie
+  slice area is filled with <code>fill_color</code>; a transparent <code>fill_color</code>
+  renders no fill.</li>
   <li>Arrowheads, if configured, are oriented tangent to the curve at the respective
   endpoint.</li>
 </ul>
@@ -1278,8 +1311,9 @@ triangles, pentagons, hexagons, and stars.</p>
 
 <h3 id="s8-7">shape() for Hit Testing</h3>
 
-<p>Same logic as Rectangle. If <code>fill_enabled</code>, the shape is the filled polygon
-path. If not filled, the shape is a stroked version of the outline path with padding.</p>
+<p>Same logic as Rectangle. If <code>fill_color</code> has an alpha greater than zero,
+the shape is the filled polygon path. If <code>fill_color</code> is transparent, the shape
+is a stroked version of the outline path with padding.</p>
 
 <h3 id="s8-8">Status Bar Hints</h3>
 
@@ -1521,8 +1555,8 @@ pipeline controlled by the Smoothing slider, 0% to 100%.</p>
   last point to the first.</li>
   <li>If <code>shadow_enabled</code>, render the shadow: an offset, blurred duplicate of
   the path in <code>shadow_color</code>.</li>
-  <li>If <code>fill_enabled</code> and <code>is_closed</code>, fill the closed path with
-  <code>fill_color</code>.</li>
+  <li>If <code>is_closed</code>, fill the closed path with <code>fill_color</code>. A
+  transparent <code>fill_color</code> renders no fill.</li>
   <li>Stroke the path with the configured <code>QPen</code>: <code>stroke_color</code>,
   <code>stroke_width</code>, <code>stroke_style</code>, <code>stroke_cap</code>,
   <code>stroke_join</code>.</li>
@@ -1534,8 +1568,9 @@ pipeline controlled by the Smoothing slider, 0% to 100%.</p>
 <h3 id="s9-9">shape() for Hit Testing</h3>
 
 <ul>
-  <li>If <code>is_closed</code> and <code>fill_enabled</code>, <code>shape()</code>
-  returns the filled closed path, so a click anywhere inside selects it.</li>
+  <li>If <code>is_closed</code> and <code>fill_color</code> has an alpha greater than
+  zero, <code>shape()</code> returns the filled closed path, so a click anywhere inside
+  selects it.</li>
   <li>Otherwise, <code>shape()</code> returns a <code>QPainterPathStroker</code> result of
   the stroke path with <code>stroke_width</code> plus 4 pixels of padding.</li>
   <li>For thin strokes, under 4 pixels, the minimum hit area width is 8 pixels to ensure
@@ -1866,7 +1901,8 @@ field identifying the item class, and all properties listed in Section 10.</p>
   <li>Alt draws from center, where the origin is the center and the radius extends to the
   cursor.</li>
   <li>Fill and stroke render correctly.</li>
-  <li>Hit testing respects <code>fill_enabled</code> for the clickable area.</li>
+  <li>Hit testing uses whether <code>fill_color</code> is transparent to determine the
+  clickable area.</li>
   <li>The dimension tooltip shows width by height, or diameter for circles.</li>
 </ol>
 
@@ -1967,18 +2003,18 @@ requirement; each needs a decision before this document leaves draft.</p>
 
 <div class="note issue">
   <span class="note-label">Open — approval status never recorded</span>
-  <p>The original carried no approval record. Version 1.3 is shown as pending. Confirm
+  <p>The original carried no approval record. Version 1.4 is shown as pending. Confirm
   whether any earlier version was formally approved.</p>
 </div>
 
 <div class="note issue">
-  <span class="note-label">Open — fill_enabled may be redundant</span>
-  <p>General UI PRD v1.6 makes transparent a color picker option available in every
-  color context. A shape whose fill_color is transparent and a shape whose fill_enabled
-  is False render identically, so the fill_enabled property in Section 2.2 may no longer
-  be needed. Removing it changes the data model, serialization, and hit testing, and is
-  deferred to a separate decision. The Technical Architecture PRD v1.2 carries the same
-  question.</p>
+  <span class="note-label">Open — near-the-border selection for transparent fills is not implemented</span>
+  <p>Section 5.6 requires that a rectangle with a transparent fill be selectable only by
+  clicking near its border. The current <code>RectangleItem.shape()</code> always returns
+  the filled interior, so a click anywhere inside selects the rectangle regardless of fill.
+  The same check applies to Ellipse (Section 6.6), Polygon (Section 8.7), and closed
+  Freehand paths (Section 9.9). This gap predates version 1.4; the decision to key the rule
+  on <code>fill_color</code> alpha does not change what needs to be built.</p>
 </div>
 
 </main>
