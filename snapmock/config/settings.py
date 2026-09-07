@@ -14,6 +14,13 @@ from snapmock.config.constants import (
     ZOOM_DEFAULT,
 )
 
+# Global hotkey settings: action -> (settings key, default portable key sequence).
+CAPTURE_HOTKEY_KEYS: dict[str, tuple[str, str]] = {
+    "capture.region": ("capture/hotkeyRegion", "Print"),
+    "capture.window": ("capture/hotkeyWindow", "Alt+Print"),
+    "capture.full_screen": ("capture/hotkeyFullScreen", "Ctrl+Print"),
+}
+
 
 class AppSettings:
     """Thin wrapper around QSettings for typed access to application preferences."""
@@ -169,6 +176,90 @@ class AppSettings:
 
     def set_library_sort(self, sort_id: str) -> None:
         self._qs.setValue("library/sort", sort_id)
+
+    # --- capture (Screen Capture PRD 8.1, 12.2) ---
+
+    def capture_default_mode(self) -> str:
+        return str(self._qs.value("capture/defaultMode", "region"))
+
+    def set_capture_default_mode(self, mode: str) -> None:
+        self._qs.setValue("capture/defaultMode", mode)
+
+    def capture_hotkey(self, action: str) -> str:
+        """Portable-text key sequence for ``capture.region`` / ``.window`` / ``.full_screen``."""
+        key, default = CAPTURE_HOTKEY_KEYS[action]
+        return str(self._qs.value(key, default))
+
+    def set_capture_hotkey(self, action: str, key_sequence: str) -> None:
+        key, _default = CAPTURE_HOTKEY_KEYS[action]
+        self._qs.setValue(key, key_sequence)
+
+    def capture_delay_seconds(self) -> int:
+        return max(0, min(60, int(self._qs.value("capture/delaySeconds", 0))))
+
+    def set_capture_delay_seconds(self, seconds: int) -> None:
+        self._qs.setValue("capture/delaySeconds", max(0, min(60, seconds)))
+
+    def capture_include_cursor(self) -> bool:
+        return _as_bool(self._qs.value("capture/includeCursor", False))
+
+    def set_capture_include_cursor(self, enabled: bool) -> None:
+        self._qs.setValue("capture/includeCursor", enabled)
+
+    def capture_play_sound(self) -> bool:
+        return _as_bool(self._qs.value("capture/playSound", False))
+
+    def set_capture_play_sound(self, enabled: bool) -> None:
+        self._qs.setValue("capture/playSound", enabled)
+
+    def capture_hide_window(self) -> bool:
+        return _as_bool(self._qs.value("capture/hideWindow", True))
+
+    def set_capture_hide_window(self, enabled: bool) -> None:
+        self._qs.setValue("capture/hideWindow", enabled)
+
+    def capture_copy_to_clipboard(self) -> bool:
+        return _as_bool(self._qs.value("capture/copyToClipboard", False))
+
+    def set_capture_copy_to_clipboard(self, enabled: bool) -> None:
+        self._qs.setValue("capture/copyToClipboard", enabled)
+
+    def capture_full_screen_scope(self) -> str:
+        val = str(self._qs.value("capture/fullScreenScope", "monitor_under_cursor"))
+        return "all_monitors" if val == "all_monitors" else "monitor_under_cursor"
+
+    def set_capture_full_screen_scope(self, scope: str) -> None:
+        self._qs.setValue("capture/fullScreenScope", scope)
+
+    def capture_show_magnifier(self) -> bool:
+        return _as_bool(self._qs.value("capture/showMagnifier", True))
+
+    def set_capture_show_magnifier(self, enabled: bool) -> None:
+        self._qs.setValue("capture/showMagnifier", enabled)
+
+    def capture_tray_enabled(self) -> bool:
+        return _as_bool(self._qs.value("capture/trayEnabled", True))
+
+    def set_capture_tray_enabled(self, enabled: bool) -> None:
+        self._qs.setValue("capture/trayEnabled", enabled)
+
+    def capture_keep_running_in_tray(self) -> bool:
+        return _as_bool(self._qs.value("capture/keepRunningInTray", False))
+
+    def set_capture_keep_running_in_tray(self, enabled: bool) -> None:
+        self._qs.setValue("capture/keepRunningInTray", enabled)
+
+    def capture_onboarding_shown(self) -> bool:
+        return _as_bool(self._qs.value("capture/onboardingShown", False))
+
+    def set_capture_onboarding_shown(self, shown: bool) -> None:
+        self._qs.setValue("capture/onboardingShown", shown)
+
+    def capture_last_mode(self) -> str:
+        return str(self._qs.value("capture/lastMode", self.capture_default_mode()))
+
+    def set_capture_last_mode(self, mode: str) -> None:
+        self._qs.setValue("capture/lastMode", mode)
 
     # --- session (open tabs) ---
 
