@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import QApplication
 from snapmock.capture.backend import (
     UNSUPPORTED_PLATFORM_MESSAGE,
     CaptureBackend,
+    CaptureCancelledError,
     CaptureError,
     HotkeyBackend,
 )
@@ -370,6 +371,9 @@ class CaptureManager(QObject):
                     )
             want_cursor = request.include_cursor and self._capabilities.cursor
             grab = self._backend.grab_screens(want_cursor)
+        except CaptureCancelledError:
+            self._finish_cancelled()
+            return
         except CaptureError as e:
             self._finish_failed(str(e), e)
             return

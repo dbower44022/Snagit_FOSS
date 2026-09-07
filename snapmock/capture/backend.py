@@ -32,6 +32,10 @@ class CaptureError(Exception):
     """A capture failed; ``str(error)`` is the user-readable reason (PRD 7.4)."""
 
 
+class CaptureCancelledError(CaptureError):
+    """The user cancelled inside a platform dialog (for example the portal's consent)."""
+
+
 class CaptureBackend(ABC):
     """Platform-specific pixel reading (PRD 6.1). One instance per process."""
 

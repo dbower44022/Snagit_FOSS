@@ -17,6 +17,7 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import (
     QApplication,
+    QDialog,
     QFileDialog,
     QMainWindow,
     QMenu,
@@ -43,6 +44,7 @@ from snapmock.capture.models import (
     ORIGIN_TRAY,
     CaptureMetadata,
     CaptureMode,
+    CaptureRequest,
     CaptureResult,
 )
 from snapmock.capture.tray import make_tray_icon
@@ -301,6 +303,7 @@ class MainWindow(QMainWindow):
         self._update_title()
 
         if self._primary_capture:
+            self._capture.set_onboarding_gate(self._capture_onboarding_gate)
             self._capture.capture_completed.connect(self._on_capture_completed)
             self._capture.capture_failed.connect(self._on_capture_failed)
             self._capture.capture_refused.connect(self._on_capture_refused)
@@ -1130,6 +1133,21 @@ class MainWindow(QMainWindow):
     @property
     def tray_icon(self) -> QSystemTrayIcon | None:
         return self._tray
+
+    def _capture_onboarding_gate(self, request: CaptureRequest) -> bool:
+        """First-run onboarding on platforms that need setup (PRD 9). Runs once."""
+        if self._settings.capture_onboarding_shown():
+            return True
+        if self._capture.backend.name != "wayland_portal":
+            return True
+        from snapmock.capture.onboarding import WaylandOnboardingDialog
+
+        dlg = WaylandOnboardingDialog(self if self.isVisible() else None)
+        accepted = dlg.exec() == QDialog.DialogCode.Accepted
+        if dlg.dont_show.isChecked():
+            self._settings.set_capture_onboarding_shown(True)
+        dlg.deleteLater()
+        return accepted
 
     def _start_capture(self, mode: CaptureMode | None, origin: str) -> None:
         self._capture.start(self._capture.request_from_settings(mode, origin))

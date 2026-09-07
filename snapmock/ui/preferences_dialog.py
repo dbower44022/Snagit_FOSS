@@ -20,7 +20,6 @@ from PyQt6.QtWidgets import (
     QKeySequenceEdit,
     QLabel,
     QLineEdit,
-    QMessageBox,
     QPushButton,
     QSlider,
     QSpinBox,
@@ -54,19 +53,6 @@ HOTKEY_LABELS = {
     HOTKEY_ACTION_WINDOW: "Active window hotkey:",
     HOTKEY_ACTION_FULL_SCREEN: "Full screen hotkey:",
 }
-DESKTOP_SHORTCUT_HELP = (
-    "Wayland and macOS desktops do not let applications register their own keyboard "
-    "shortcuts. Bind a shortcut in your desktop's keyboard settings to one of these "
-    "commands:\n\n"
-    "    snapmock --capture region\n"
-    "    snapmock --capture window\n"
-    "    snapmock --capture full\n\n"
-    "GNOME: Settings > Keyboard > View and Customize Shortcuts > Custom Shortcuts.\n"
-    "KDE Plasma: System Settings > Shortcuts > Add Command.\n"
-    "macOS: the Shortcuts application, with a keyboard shortcut on a Run Shell Script "
-    "action.\n\n"
-    "The desktop's own PrintScreen binding must be removed or changed first."
-)
 
 
 class PreferencesDialog(QDialog):
@@ -416,7 +402,11 @@ class PreferencesDialog(QDialog):
 
     def show_desktop_shortcut_help(self) -> None:
         """The desktop-shortcut guidance (PRD 9.2), reachable at any time."""
-        QMessageBox.information(self, "Set Up a Desktop Shortcut", DESKTOP_SHORTCUT_HELP)
+        from snapmock.capture.onboarding import WaylandOnboardingDialog
+
+        dlg = WaylandOnboardingDialog(self, help_only=True)
+        dlg.exec()
+        dlg.deleteLater()
 
     def _browse_library_dir(self) -> None:
         chosen = QFileDialog.getExistingDirectory(
