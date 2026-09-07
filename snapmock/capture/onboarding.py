@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt
+from collections.abc import Callable
+
+from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -39,6 +42,14 @@ DESKTOP_NOTES = (
 MACOS_NOTE = (
     "macOS: the Shortcuts application, with a keyboard shortcut on a Run Shell Script action."
 )
+
+
+MACOS_PERMISSION_TEXT = (
+    "macOS asks you to allow SnapMock to record the screen before it can take screenshots. "
+    "Click Continue to see the system prompt. If you have already denied it, open System "
+    "Settings and enable SnapMock under Privacy & Security > Screen Recording."
+)
+MACOS_RESTART_TEXT = "Quit and reopen SnapMock to finish."
 
 
 def _copy_to_clipboard(text: str) -> None:
@@ -113,3 +124,64 @@ class WaylandOnboardingDialog(QDialog):
                 cont.setDefault(True)
         layout.addWidget(buttons)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
+
+
+class MacOSPermissionDialog(QDialog):
+    """Screen Recording permission onboarding (PRD 9.1).
+
+    ``request`` asks the platform for permission and returns True when granted.
+    Continue calls it; if permission is still missing the dialog moves to its
+    final state, which says to quit and reopen, with a Quit button.
+    """
+
+    def __init__(
+        self,
+        request: Callable[[], bool],
+        *,
+        settings_url: str,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self._request = request
+        self._settings_url = settings_url
+        self.granted = False
+        self.quit_requested = False
+        self.setWindowTitle("Screen Recording Permission")
+        self.setMinimumWidth(480)
+        layout = QVBoxLayout(self)
+        self.text = QLabel(MACOS_PERMISSION_TEXT)
+        self.text.setWordWrap(True)
+        layout.addWidget(self.text)
+        self.dont_show = QCheckBox("Don't show this again")
+        layout.addWidget(self.dont_show)
+        self.buttons = QDialogButtonBox()
+        self.continue_button = QPushButton("Continue")
+        self.buttons.addButton(self.continue_button, QDialogButtonBox.ButtonRole.AcceptRole)
+        self.settings_button = QPushButton("Open System Settings")
+        self.buttons.addButton(self.settings_button, QDialogButtonBox.ButtonRole.ActionRole)
+        self.quit_button = QPushButton("Quit")
+        self.buttons.addButton(self.quit_button, QDialogButtonBox.ButtonRole.ActionRole)
+        self.quit_button.setVisible(False)
+        self.buttons.addButton(QDialogButtonBox.StandardButton.Cancel)
+        self.buttons.accepted.connect(self._on_continue)
+        self.buttons.rejected.connect(self.reject)
+        self.settings_button.clicked.connect(self._open_settings)
+        self.quit_button.clicked.connect(self._on_quit)
+        layout.addWidget(self.buttons)
+
+    def _on_continue(self) -> None:
+        if self._request():
+            self.granted = True
+            self.accept()
+            return
+        # macOS applies the permission only after a restart (PRD 9.1).
+        self.text.setText(MACOS_RESTART_TEXT)
+        self.continue_button.setVisible(False)
+        self.quit_button.setVisible(True)
+
+    def _open_settings(self) -> None:
+        QDesktopServices.openUrl(QUrl(self._settings_url))
+
+    def _on_quit(self) -> None:
+        self.quit_requested = True
+        self.reject()

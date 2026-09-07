@@ -1136,9 +1136,12 @@ class MainWindow(QMainWindow):
 
     def _capture_onboarding_gate(self, request: CaptureRequest) -> bool:
         """First-run onboarding on platforms that need setup (PRD 9). Runs once."""
+        backend = self._capture.backend
+        if backend.name == "macos" and self._capture.capabilities.needs_permission:
+            return self._macos_permission_gate()
         if self._settings.capture_onboarding_shown():
             return True
-        if self._capture.backend.name != "wayland_portal":
+        if backend.name != "wayland_portal":
             return True
         from snapmock.capture.onboarding import WaylandOnboardingDialog
 
@@ -1148,6 +1151,30 @@ class MainWindow(QMainWindow):
             self._settings.set_capture_onboarding_shown(True)
         dlg.deleteLater()
         return accepted
+
+    def _macos_permission_gate(self) -> bool:
+        """Screen Recording onboarding (PRD 9.1): preflight, then the dialog if not granted."""
+        from snapmock.capture.models import PermissionState
+        from snapmock.capture.onboarding import MacOSPermissionDialog
+
+        backend = self._capture.backend
+        if backend.request_permission() is PermissionState.GRANTED:
+            return True
+        if self._settings.capture_onboarding_shown():
+            return True  # the capture then fails with the Section 6.5 message
+        dlg = MacOSPermissionDialog(
+            lambda: backend.request_permission() is PermissionState.GRANTED,
+            settings_url=str(getattr(backend, "settings_url", "")),
+            parent=self if self.isVisible() else None,
+        )
+        dlg.exec()
+        if dlg.dont_show.isChecked():
+            self._settings.set_capture_onboarding_shown(True)
+        granted, quit_requested = dlg.granted, dlg.quit_requested
+        dlg.deleteLater()
+        if quit_requested:
+            QTimer.singleShot(0, self.quit_application)
+        return granted
 
     def _start_capture(self, mode: CaptureMode | None, origin: str) -> None:
         self._capture.start(self._capture.request_from_settings(mode, origin))
