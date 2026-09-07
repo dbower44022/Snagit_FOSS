@@ -1,0 +1,1832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>General User Interface — SnapMock Product Requirements Document</title>
+<link rel="stylesheet" href="prd.css">
+</head>
+<body>
+<div class="doc">
+
+<header class="doc-head">
+  <h1>General User Interface</h1>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.6</span>
+  <dl class="doc-meta">
+    <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
+    <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
+    <dt>Document version</dt><dd>1.6</dd>
+    <dt>Last Updated</dt>    <dd>09-07-26 19:31</dd>
+    <dt>Author</dt>          <dd>Doug Bower</dd>
+    <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
+  </dl>
+</header>
+
+<section class="front-matter">
+
+  <h2 class="unnumbered">Revision control</h2>
+  <table>
+    <colgroup><col class="w-narrow"><col class="w-short"><col class="w-short"><col><col class="w-short"></colgroup>
+    <thead>
+      <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1.6</td>
+        <td class="nowrap">09-07-26 19:31</td>
+        <td>Doug Bower</td>
+        <td>Converted from Word to HTML. Content unchanged except for corrections
+        noted in the change log below.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
+      <tr>
+        <td>1.6</td>
+        <td class="nowrap">09-07-26 00:48</td>
+        <td>Doug Bower</td>
+        <td>Replaced the No-fill button in the Color Picker (Section 11.1) with a universal
+        “Transparent” option available in all color picker contexts (stroke, fill, text, etc.),
+        setting…</td>
+        <td><span class="status closed">Superseded by format conversion</span></td>
+      </tr>
+      <tr>
+        <td>1.5</td>
+        <td class="nowrap">March 2026</td>
+        <td>Doug Bower</td>
+        <td>Added Flip Horizontal and Flip Vertical to the Arrange menu (Section 3.6) with
+        separator, toggling the flip_horizontal and flip_vertical base class properties on
+        selected items.</td>
+        <td><span class="status closed">Superseded</span></td>
+      </tr>
+      <tr>
+        <td>1.4</td>
+        <td class="nowrap">March 2026</td>
+        <td>Doug Bower</td>
+        <td>Updated Section 8.1 (Purpose) and Section 8.5 to define Property Panel behavior when a
+        creation tool is active: displays the tool’s default properties instead of canvas…</td>
+        <td><span class="status closed">Superseded</span></td>
+      </tr>
+      <tr>
+        <td>1.3</td>
+        <td class="nowrap">March 2026</td>
+        <td>Doug Bower</td>
+        <td>Replaced single Opacity with Fill Opacity and Stroke Opacity in Property Panel (Section
+        5.2) and property panel fill/stroke section. Applies to vector items (shapes, text,…</td>
+        <td><span class="status closed">Superseded</span></td>
+      </tr>
+      <tr>
+        <td>1.2</td>
+        <td class="nowrap">February 2026</td>
+        <td>Doug Bower</td>
+        <td>Added Arc (O) and Polygon (G) to the Tools menu (Section 3.7) to match the Basic Shape
+        Annotation Tools PRD.</td>
+        <td><span class="status closed">Superseded</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note issue">
+    <span class="note-label">Open — incomplete revision history</span>
+    <p>The Word original recorded release months only for versions 1.5, 1.4, 1.3, 1.2, so
+    those dates do not meet the MM-DD-YY HH:MM standard. They are carried over as written
+    rather than invented. Supply the exact dates and they will be corrected.</p>
+  </div>
+
+  <h2 class="unnumbered">Change log</h2>
+  <table>
+    <colgroup><col class="w-short"><col class="w-short"><col class="w-short"><col></colgroup>
+    <thead>
+      <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="nowrap">09-07-26 19:31</td>
+        <td>All</td>
+        <td>Format</td>
+        <td>Converted from Word to HTML against the shared stylesheet. Revision control
+        and change log tables added to meet the output standard; the original had a
+        change log only. Open issues gathered in new Section 18.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 19:31</td>
+        <td>Front matter</td>
+        <td>Flagged</td>
+        <td>The title page carried September 2026 while the change log placed version 1.6 in
+        09-07-26 00:48. Left as written and flagged as an open issue.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 00:48</td>
+        <td>General</td>
+        <td>Changed</td>
+        <td>Replaced the No-fill button in the Color Picker (Section 11.1) with a universal
+        “Transparent” option available in all color picker contexts (stroke, fill, text, etc.),
+        setting the color to fully transparent (alpha = 0).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 00:48</td>
+        <td>General</td>
+        <td>Changed</td>
+        <td>Updated Stroke Color and Fill Color swatch descriptions to show diagonal-line indicator
+        when set to transparent.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 00:48</td>
+        <td>General</td>
+        <td>Removed</td>
+        <td>Removed no-fill toggle from Property Panel Fill Color control; transparent is now
+        selected via the color picker like any other color.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added Flip Horizontal and Flip Vertical to the Arrange menu (Section 3.6) with
+        separator, toggling the <code>flip_horizontal</code> and <code>flip_vertical</code> base
+        class properties on selected items.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added Flip Horizontal and Flip Vertical toggle buttons to the Property Panel Transform
+        section (Section 8.3).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added Flip Horizontal and Flip Vertical to the Item Context Menu (Section 10.2) between
+        Distribute and Properties.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>General</td>
+        <td>Changed</td>
+        <td>Updated Section 8.1 (Purpose) and Section 8.5 to define Property Panel behavior when a
+        creation tool is active: displays the tool’s default properties instead of canvas
+        properties, allowing users to configure settings before creating an item. Canvas
+        properties are now shown only when the Select tool is active and nothing is selected.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>General</td>
+        <td>Changed</td>
+        <td>Replaced single Opacity with Fill Opacity and Stroke Opacity in Property Panel (Section
+        5.2) and property panel fill/stroke section. Applies to vector items (shapes, text,
+        callout, numbered step). Non-vector items (Stamp, Emoji, Blur) retain single Opacity.
+        Highlighter controls transparency via <code>highlight_color</code> alpha channel.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>General</td>
+        <td>Changed</td>
+        <td>Fixed Highlighter Tool Options Bar entry (Section 5.3) to show Blend Mode instead of
+        incorrect Opacity slider.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added Arc (O) and Polygon (G) to the Tools menu (Section 3.7) to match the Basic Shape
+        Annotation Tools PRD.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added version number and changelog section.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added “Never-disabled controls” principle to Section 1.3 (UI Design Principles).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Changed</td>
+        <td>Renamed “Enabled When” column to “Requires” across all menu tables (Sections 3.1–3.6).
+        Added explanatory note at top of Section 3.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Changed</td>
+        <td>Replaced “disabled/grayed out” language in Section 4.3 (Button Specifications), Section
+        10 (Context Menus), and Section 17 (Acceptance Criteria) with never-disabled behavior.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added Arc to the Rectangle/Ellipse row and added Polygon as a new row in the Tool
+        Options Bar table (Section 5.3).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Changed</td>
+        <td>Updated theme color token descriptions (Sections 13.2, 13.3) to replace “disabled text”
+        with “placeholder text”.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Changed</td>
+        <td>Renamed “Show Guides” to “Show Crosshairs” in View menu (Section 3.3) with clarified
+        description.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added Show Guides (Ctrl+;), Snap to Guides, Lock Guides, and Clear All Guides to View
+        menu (Section 3.3).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added new Section 6.5 Guides defining guide creation, movement, deletion, snapping,
+        locking, appearance, and persistence. Renumbered Canvas Cursor Behavior to 6.6.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added Select All Text (Ctrl+T) to Edit menu (Section 3.2).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added Group (Ctrl+G) and Ungroup (Ctrl+Shift+G) to Arrange menu (Section 3.6).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added guide color and guide opacity preferences to Canvas &amp; Grid category (Section
+        11.3).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Changed</td>
+        <td>Split “Canvas Background Color” into two distinct settings: Canvas Color (fill color of
+        the working area, included in exports) and Pasteboard Color (surrounding area, UI-only).
+        Updated Sections 6.1, 6.2, 8.5, 11.3, and 11.4.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added Tool Themes... entry and Active Theme label to Tools menu (Section 3.7).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added Preset Dropdown specification to Tool Options Bar (Section 5.2) with Save as
+        Preset, Update Preset, Manage Presets, and Reset to Theme actions.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added Section 11.8 Tool Themes Dialog and Section 11.9 Manage Presets Dialog.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added Stroke Style to Freehand/Pen, Text, Callout, Highlighter, and Numbered Step tools
+        in Tool Options Bar (Section 5.3). Added Stroke Color and Stroke Width to Text and
+        Numbered Step. Aligned Stroke Style enum to Solid, Dashed, Dotted, DashDot, DashDotDot
+        across Sections 5.2 and 11.3.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 class="unnumbered">Contents</h2>
+  <ol class="toc">
+    <li><a href="#s1">Document Overview</a>
+      <ol>
+        <li><a href="#s1-1">Purpose</a></li>
+        <li><a href="#s1-2">Scope</a></li>
+        <li><a href="#s1-3">UI Design Principles</a></li>
+      </ol>
+    </li>
+    <li><a href="#s2">Main Window Layout</a>
+      <ol>
+        <li><a href="#s2-1">Window Structure</a></li>
+        <li><a href="#s2-2">Default Layout Proportions</a></li>
+        <li><a href="#s2-3">Docking Behavior</a></li>
+        <li><a href="#s2-4">Window Title</a></li>
+      </ol>
+    </li>
+    <li><a href="#s3">Menu Bar</a>
+      <ol>
+        <li><a href="#s3-1">File Menu</a></li>
+        <li><a href="#s3-2">Edit Menu</a></li>
+        <li><a href="#s3-3">View Menu</a></li>
+        <li><a href="#s3-4">Layer Menu</a></li>
+        <li><a href="#s3-5">Image Menu</a></li>
+        <li><a href="#s3-6">Arrange Menu</a></li>
+        <li><a href="#s3-7">Tools Menu</a></li>
+        <li><a href="#s3-8">Help Menu</a></li>
+      </ol>
+    </li>
+    <li><a href="#s4">Main Toolbar</a>
+      <ol>
+        <li><a href="#s4-1">Layout</a></li>
+        <li><a href="#s4-2">Button Groups</a></li>
+        <li><a href="#s4-3">Button Specifications</a></li>
+      </ol>
+    </li>
+    <li><a href="#s5">Tool Options Bar</a>
+      <ol>
+        <li><a href="#s5-1">Purpose</a></li>
+        <li><a href="#s5-2">Common Option Controls</a></li>
+        <li><a href="#s5-3">Tool-Specific Option Layouts</a></li>
+      </ol>
+    </li>
+    <li><a href="#s6">Canvas Area</a>
+      <ol>
+        <li><a href="#s6-1">Visual Layout</a></li>
+        <li><a href="#s6-2">Canvas Background</a></li>
+        <li><a href="#s6-3">Rulers</a></li>
+        <li><a href="#s6-4">Grid</a></li>
+        <li><a href="#s6-5">Guides</a></li>
+        <li><a href="#s6-6">Canvas Cursor Behavior</a></li>
+      </ol>
+    </li>
+    <li><a href="#s7">Layer Panel</a>
+      <ol>
+        <li><a href="#s7-1">Panel Structure</a></li>
+        <li><a href="#s7-2">Layer Row Layout</a></li>
+        <li><a href="#s7-3">Layer Row Interactions</a></li>
+        <li><a href="#s7-4">Bottom Action Bar</a></li>
+        <li><a href="#s7-5">Layer Types Visual Indicators</a></li>
+      </ol>
+    </li>
+    <li><a href="#s8">Property Panel</a>
+      <ol>
+        <li><a href="#s8-1">Purpose</a></li>
+        <li><a href="#s8-2">Panel Structure</a></li>
+        <li><a href="#s8-3">Sections (When a Single Vector Item is Selected)</a></li>
+        <li><a href="#s8-4">Sections (When a Text Item is Selected)</a></li>
+        <li><a href="#s8-5">Sections (When No Item is Selected)</a></li>
+        <li><a href="#s8-6">Multi-Selection Behavior</a></li>
+      </ol>
+    </li>
+    <li><a href="#s9">Status Bar</a></li>
+    <li><a href="#s10">Context Menus</a>
+      <ol>
+        <li><a href="#s10-1">Canvas Context Menu (Right-Click on Empty Canvas)</a></li>
+        <li><a href="#s10-2">Item Context Menu (Right-Click on a Selected Item)</a></li>
+        <li><a href="#s10-3">Layer Panel Context Menu (Right-Click on a Layer Row)</a></li>
+      </ol>
+    </li>
+    <li><a href="#s11">Dialogs</a>
+      <ol>
+        <li><a href="#s11-1">Color Picker</a></li>
+        <li><a href="#s11-2">Export Dialog</a></li>
+        <li><a href="#s11-3">Preferences Dialog</a></li>
+        <li><a href="#s11-4">Resize Canvas Dialog</a></li>
+        <li><a href="#s11-5">Resize Image Dialog</a></li>
+        <li><a href="#s11-6">About Dialog</a></li>
+        <li><a href="#s11-7">Unsaved Changes Dialog</a></li>
+        <li><a href="#s11-8">Tool Themes Dialog</a></li>
+        <li><a href="#s11-9">Manage Presets Dialog</a></li>
+      </ol>
+    </li>
+    <li><a href="#s12">Keyboard Shortcuts</a>
+      <ol>
+        <li><a href="#s12-1">Global Shortcuts</a></li>
+        <li><a href="#s12-2">Modifier Key Conventions</a></li>
+        <li><a href="#s12-3">Navigation Shortcuts</a></li>
+      </ol>
+    </li>
+    <li><a href="#s13">Theming &amp; Appearance</a>
+      <ol>
+        <li><a href="#s13-1">Theme System</a></li>
+        <li><a href="#s13-2">Light Theme (Default)</a></li>
+        <li><a href="#s13-3">Dark Theme</a></li>
+        <li><a href="#s13-4">Implementation</a></li>
+      </ol>
+    </li>
+    <li><a href="#s14">Accessibility</a></li>
+    <li><a href="#s15">Responsive Behavior &amp; Window Management</a>
+      <ol>
+        <li><a href="#s15-1">Minimum Window Size</a></li>
+        <li><a href="#s15-2">Panel Collapse Behavior</a></li>
+        <li><a href="#s15-3">Multi-Monitor Support</a></li>
+        <li><a href="#s15-4">Session Persistence</a></li>
+      </ol>
+    </li>
+    <li><a href="#s16">First-Run Experience</a>
+      <ol>
+        <li><a href="#s16-1">Welcome Panel Content</a></li>
+        <li><a href="#s16-2">Default Tool Configuration</a></li>
+      </ol>
+    </li>
+    <li><a href="#s17">Acceptance Criteria</a>
+      <ol>
+        <li><a href="#s17-1">Window &amp; Layout</a></li>
+        <li><a href="#s17-2">Menu Bar</a></li>
+        <li><a href="#s17-3">Toolbars</a></li>
+        <li><a href="#s17-4">Canvas</a></li>
+        <li><a href="#s17-5">Panels</a></li>
+        <li><a href="#s17-6">Theming</a></li>
+        <li><a href="#s17-7">Dialogs</a></li>
+        <li><a href="#s17-8">Accessibility</a></li>
+      </ol>
+    </li>
+    <li><a href="#s18">Open Issues</a></li>
+  </ol>
+
+</section>
+
+<main>
+
+<h2 id="s1">Document Overview</h2>
+
+<h3 id="s1-1">Purpose</h3>
+
+<p>This document defines the user interface layout, behavior, and interaction patterns for
+SnapMock. It covers the main window structure, all panels and widgets, menu and toolbar
+organization, keyboard shortcuts, theming, context menus, dialogs, and accessibility
+requirements. This PRD is a companion to the Technical Architecture PRD and is intended
+to be consumed by Claude Code to produce a detailed implementation plan.</p>
+
+<h3 id="s1-2">Scope</h3>
+
+<p>This document covers all UI chrome surrounding the canvas: window layout, panels, menus,
+toolbars, status bar, dialogs, and keyboard shortcuts. Individual annotation tool
+interaction behaviors (how the arrow tool works, how the text tool handles editing,
+etc.) are covered in separate per-tool PRDs. The canvas rendering behavior is covered in
+the Technical Architecture PRD.</p>
+
+<h3 id="s1-3">UI Design Principles</h3>
+
+<ul>
+  <li>Familiar and discoverable: follow established conventions from tools like Snagit, GIMP,
+  and Figma. Users should feel at home immediately.</li>
+  <li>Canvas-first: maximize canvas real estate. All panels are dockable and collapsible. The
+  canvas should occupy at least 60% of the window area in the default layout.</li>
+  <li>Non-modal workflow: avoid modal dialogs wherever possible. Use inline editing, dockable
+  panels, and transient popups instead.</li>
+  <li>Keyboard-driven efficiency: every frequent operation has a keyboard shortcut. Power
+  users should be able to work without touching the mouse for most operations.</li>
+  <li>Visual consistency: use a cohesive icon set, consistent spacing, and uniform control
+  sizes across all panels and toolbars.</li>
+  <li>Responsive: the UI adapts gracefully from 1280x720 minimum resolution to ultrawide
+  5120x1440 displays.</li>
+  <li>Never-disabled controls: controls are never grayed out or disabled. If an action cannot
+  be performed because its requirements are not met, clicking the control displays an
+  informative message explaining exactly which requirements are unmet. This keeps the
+  interface explorable and self-documenting at all times.</li>
+</ul>
+
+<h2 id="s2">Main Window Layout</h2>
+
+<h3 id="s2-1">Window Structure</h3>
+
+<p>The main window is a QMainWindow subclass with the following structural zones, listed
+from top to bottom and left to right:</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Zone</th><th>Widget Type</th><th>Position</th><th>Default Visibility</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Title Bar</th><td>OS-native</td><td>Top (OS-managed)</td><td>Always visible</td></tr>
+    <tr><th>Menu Bar</th><td>QMenuBar</td><td>Below title bar</td><td>Always visible</td></tr>
+    <tr><th>Main Toolbar</th><td>QToolBar</td><td>Below menu bar</td><td>Visible (toggleable)</td></tr>
+    <tr><th>Tool Options Bar</th><td>QToolBar</td><td>Below main toolbar</td><td>Visible (toggleable)</td></tr>
+    <tr><th>Left Tool Palette</th><td>QToolBar (vertical)</td><td>Left edge</td><td>Visible (toggleable)</td></tr>
+    <tr><th>Canvas Area</th><td>SnapView (QGraphicsView)</td><td>Center</td><td>Always visible</td></tr>
+    <tr><th>Layer Panel</th><td>QDockWidget</td><td>Right side</td><td>Visible (toggleable)</td></tr>
+    <tr><th>Property Panel</th><td>QDockWidget</td><td>Right side, below Layer Panel</td><td>Visible (toggleable)</td></tr>
+    <tr><th>Status Bar</th><td>QStatusBar</td><td>Bottom edge</td><td>Visible (toggleable)</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s2-2">Default Layout Proportions</h3>
+
+<p>At a 1920x1080 window size, the default layout allocates space approximately as follows:</p>
+
+<ul>
+  <li>Left Tool Palette: 48px wide (single column of 32x32 icon buttons with 8px padding).</li>
+  <li>Canvas Area: remaining center space (approximately 1520px wide x 870px tall).</li>
+  <li>Right Panel Stack (Layer + Property): 300px wide. The Layer Panel takes the top 50% and
+  the Property Panel the bottom 50%, adjustable via a drag splitter.</li>
+  <li>Main Toolbar: 40px tall.</li>
+  <li>Tool Options Bar: 36px tall.</li>
+  <li>Status Bar: 24px tall.</li>
+</ul>
+
+<h3 id="s2-3">Docking Behavior</h3>
+
+<p>The Layer Panel and Property Panel are QDockWidgets with the following behaviors:</p>
+
+<ul>
+  <li>Dockable to left, right, or bottom edges of the main window.</li>
+  <li>Can be floated as independent windows (undocked).</li>
+  <li>Can be tabbed together (stacked as tabs in the same dock area).</li>
+  <li>Can be closed (hidden) via the panel's close button or the View menu. Re-opened via View
+  menu.</li>
+  <li>Dragging a panel near a dock edge shows a blue highlight indicator of the dock target
+  area.</li>
+  <li>The application saves and restores panel positions and sizes across sessions using
+  QSettings.</li>
+  <li>A "Reset Layout" option in the View menu restores the default panel arrangement.</li>
+</ul>
+
+<h3 id="s2-4">Window Title</h3>
+
+<p>The window title follows the pattern: <strong>[Project Name] - SnapMock</strong>. When
+the document has unsaved changes, an asterisk is prepended: <strong>*[Project Name] -
+SnapMock</strong>. For a new unsaved project, the project name is "Untitled".</p>
+
+<h2 id="s3">Menu Bar</h2>
+
+<p><em>The “Requires” column in each menu table lists the conditions under which the action
+can be performed. Per the never-disabled controls principle (Section 1.3), menu items
+are never grayed out. If a user clicks a menu item whose requirements are not met, the
+system displays an informative message identifying exactly which requirements are
+unmet.</em></p>
+
+<h3 id="s3-1">File Menu</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Menu Item</th><th>Shortcut</th><th>Action</th><th>Requires</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>New</th><td>Ctrl+N</td><td>Create a new empty project. Prompts to save unsaved changes.</td><td>Always</td></tr>
+    <tr><th>Open...</th><td>Ctrl+O</td><td>Open a <code>.smk</code> project file via file dialog.</td><td>Always</td></tr>
+    <tr><th>Open Recent</th><td>(submenu)</td><td>List of 10 most recently opened files. "Clear Recent" at bottom.</td><td>Recent files exist</td></tr>
+    <tr><th>Save</th><td>Ctrl+S</td><td>Save the current project to its file path. If new/untitled, behave as Save As.</td><td>Always</td></tr>
+    <tr><th>Save As...</th><td>Ctrl+Shift+S</td><td>Save the current project to a new file path via file dialog.</td><td>Always</td></tr>
+    <tr><th>Import Image...</th><td>Ctrl+I</td><td>Import an image file as a new layer or onto the active layer.</td><td>Always</td></tr>
+    <tr><th>Export...</th><td>Ctrl+E</td><td>Open the Export dialog (format, DPI, quality options).</td><td>Always</td></tr>
+    <tr><th>Export Quick (PNG)</th><td>Ctrl+Shift+E</td><td>Export to PNG using the last-used export settings. If first export, open Export dialog.</td><td>Always</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Print...</th><td>Ctrl+P</td><td>Open the system print dialog with the flattened canvas.</td><td>Always</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Preferences...</th><td>Ctrl+,</td><td>Open the Preferences dialog.</td><td>Always</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Quit</th><td>Ctrl+Q</td><td>Close the application. Prompts to save unsaved changes.</td><td>Always</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s3-2">Edit Menu</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Menu Item</th><th>Shortcut</th><th>Action</th><th>Requires</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Undo [action]</th><td>Ctrl+Z</td><td>Undo the last command. Menu text shows the action name.</td><td>Undo stack non-empty</td></tr>
+    <tr><th>Redo [action]</th><td>Ctrl+Shift+Z</td><td>Redo the last undone command. Menu text shows the action name.</td><td>Redo stack non-empty</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Cut</th><td>Ctrl+X</td><td>Cut selected items or raster selection to clipboard.</td><td>Selection exists</td></tr>
+    <tr><th>Copy</th><td>Ctrl+C</td><td>Copy selected items or raster selection to clipboard.</td><td>Selection exists</td></tr>
+    <tr><th>Paste</th><td>Ctrl+V</td><td>Paste from clipboard onto active layer.</td><td>Clipboard has content</td></tr>
+    <tr><th>Paste in Place</th><td>Ctrl+Shift+V</td><td>Paste at the original source position rather than viewport center.</td><td>Clipboard has content</td></tr>
+    <tr><th>Duplicate</th><td>Ctrl+D</td><td>Duplicate selected items with a small offset.</td><td>Selection exists</td></tr>
+    <tr><th>Delete</th><td>Delete / Backspace</td><td>Remove selected items.</td><td>Selection exists</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Select All</th><td>Ctrl+A</td><td>Select all unlocked visible items on the active layer.</td><td>Items exist</td></tr>
+    <tr><th>Select All Layers</th><td>Ctrl+Shift+A</td><td>Select all unlocked visible items across all layers.</td><td>Items exist</td></tr>
+    <tr><th>Deselect</th><td>Escape</td><td>Deselect all items and cancel current tool operation.</td><td>Selection exists</td></tr>
+    <tr><th>Select All Text</th><td>Ctrl+T</td><td>Select the text content within all text-containing items (text boxes, callouts, numbered steps, stamps) across all visible unlocked layers. Enables batch changes to font, size, color, and other text properties.</td><td>Text-containing items exist</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Find/Replace Color...</th><td></td><td>Open a dialog to find and replace a color across all items.</td><td>Items exist</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s3-3">View Menu</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Menu Item</th><th>Shortcut</th><th>Action</th><th>Requires</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Zoom In</th><td>Ctrl++</td><td>Increase zoom by one step.</td><td>Zoom &lt; 3200%</td></tr>
+    <tr><th>Zoom Out</th><td>Ctrl+-</td><td>Decrease zoom by one step.</td><td>Zoom &gt; 10%</td></tr>
+    <tr><th>Zoom to 100%</th><td>Ctrl+1</td><td>Set zoom to exactly 100%.</td><td>Always</td></tr>
+    <tr><th>Fit to Window</th><td>Ctrl+0</td><td>Zoom to fit the entire canvas in the viewport.</td><td>Always</td></tr>
+    <tr><th>Zoom to Selection</th><td>Ctrl+Shift+0</td><td>Zoom to fit the selected items in the viewport.</td><td>Selection exists</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Show Grid</th><td>Ctrl+'</td><td>Toggle grid overlay on the canvas.</td><td>Always (checkbox)</td></tr>
+    <tr><th>Snap to Grid</th><td>Ctrl+Shift+'</td><td>Toggle grid snapping behavior.</td><td>Always (checkbox)</td></tr>
+    <tr><th>Show Rulers</th><td>Ctrl+R</td><td>Toggle pixel rulers on the viewport edges.</td><td>Always (checkbox)</td></tr>
+    <tr><th>Show Crosshairs</th><td></td><td>Toggle full-width horizontal and vertical crosshair lines that follow the cursor position for alignment assistance.</td><td>Always (checkbox)</td></tr>
+    <tr><th>Show Guides</th><td>Ctrl+;</td><td>Toggle visibility of user-placed guide lines. Guides remain in place when hidden.</td><td>Always (checkbox)</td></tr>
+    <tr><th>Snap to Guides</th><td></td><td>Toggle snapping behavior to guide lines.</td><td>Always (checkbox)</td></tr>
+    <tr><th>Lock Guides</th><td></td><td>Prevent guides from being moved or deleted by mouse interaction.</td><td>Always (checkbox)</td></tr>
+    <tr><th>Clear All Guides</th><td></td><td>Remove all guide lines from the canvas. Prompts for confirmation if guides exist.</td><td>Guides exist</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Show Main Toolbar</th><td></td><td>Toggle Main Toolbar visibility.</td><td>Always (checkbox)</td></tr>
+    <tr><th>Show Tool Options</th><td></td><td>Toggle Tool Options Bar visibility.</td><td>Always (checkbox)</td></tr>
+    <tr><th>Show Tool Palette</th><td></td><td>Toggle Left Tool Palette visibility.</td><td>Always (checkbox)</td></tr>
+    <tr><th>Show Layer Panel</th><td></td><td>Toggle Layer Panel dock widget.</td><td>Always (checkbox)</td></tr>
+    <tr><th>Show Property Panel</th><td></td><td>Toggle Property Panel dock widget.</td><td>Always (checkbox)</td></tr>
+    <tr><th>Show Status Bar</th><td></td><td>Toggle Status Bar visibility.</td><td>Always (checkbox)</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Reset Layout</th><td></td><td>Restore all panels and toolbars to their default positions and sizes.</td><td>Always</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Dark Mode</th><td></td><td>Toggle between light and dark theme.</td><td>Always (checkbox)</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s3-4">Layer Menu</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Menu Item</th><th>Shortcut</th><th>Action</th><th>Requires</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>New Layer</th><td>Ctrl+Shift+N</td><td>Create a new empty annotation layer above the active layer.</td><td>Always</td></tr>
+    <tr><th>Duplicate Layer</th><td></td><td>Duplicate the active layer and all its items.</td><td>Active layer exists</td></tr>
+    <tr><th>Delete Layer</th><td></td><td>Delete the active layer and all its items. Confirm if items exist.</td><td>More than one layer</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Merge Down</th><td>Ctrl+Shift+M</td><td>Merge the active layer into the layer directly below it.</td><td>Active layer is not bottom</td></tr>
+    <tr><th>Merge Visible</th><td></td><td>Merge all visible layers into one.</td><td>2+ visible layers</td></tr>
+    <tr><th>Flatten All</th><td>Ctrl+Shift+F</td><td>Flatten all layers into a single raster background layer.</td><td>2+ layers</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Rename Layer</th><td>F2</td><td>Inline edit the active layer name.</td><td>Active layer exists</td></tr>
+    <tr><th>Layer Properties...</th><td></td><td>Open a dialog showing layer name, opacity, blend mode.</td><td>Active layer exists</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Move Layer Up</th><td>Ctrl+]</td><td>Move the active layer one position up in the stack.</td><td>Not already at top</td></tr>
+    <tr><th>Move Layer Down</th><td>Ctrl+[</td><td>Move the active layer one position down in the stack.</td><td>Not already at bottom</td></tr>
+    <tr><th>Move Layer to Top</th><td>Ctrl+Shift+]</td><td>Move the active layer to the top of the stack.</td><td>Not already at top</td></tr>
+    <tr><th>Move Layer to Bottom</th><td>Ctrl+Shift+[</td><td>Move the active layer to the bottom of the stack.</td><td>Not already at bottom</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s3-5">Image Menu</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Menu Item</th><th>Shortcut</th><th>Action</th><th>Requires</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Crop to Canvas</th><td>Ctrl+Shift+C</td><td>Activate the crop tool to resize the canvas.</td><td>Always</td></tr>
+    <tr><th>Resize Canvas...</th><td></td><td>Open a dialog to set canvas dimensions numerically.</td><td>Always</td></tr>
+    <tr><th>Resize Image...</th><td></td><td>Open a dialog to scale the entire image (all layers) to new dimensions with interpolation.</td><td>Always</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Rotate Canvas 90° CW</th><td></td><td>Rotate the entire canvas and all items 90 degrees clockwise.</td><td>Always</td></tr>
+    <tr><th>Rotate Canvas 90° CCW</th><td></td><td>Rotate the entire canvas and all items 90 degrees counter-clockwise.</td><td>Always</td></tr>
+    <tr><th>Flip Canvas Horizontal</th><td></td><td>Mirror the canvas and all items horizontally.</td><td>Always</td></tr>
+    <tr><th>Flip Canvas Vertical</th><td></td><td>Mirror the canvas and all items vertically.</td><td>Always</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Auto-Trim</th><td></td><td>Automatically crop the canvas to the bounding box of all visible content, removing empty borders.</td><td>Always</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s3-6">Arrange Menu</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Menu Item</th><th>Shortcut</th><th>Action</th><th>Requires</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Bring to Front</th><td>Ctrl+Shift+Up</td><td>Move selected items to the top of their layer's z-order.</td><td>Selection exists</td></tr>
+    <tr><th>Bring Forward</th><td>Ctrl+Up</td><td>Move selected items one step up in their layer's z-order.</td><td>Selection exists</td></tr>
+    <tr><th>Send Backward</th><td>Ctrl+Down</td><td>Move selected items one step down in their layer's z-order.</td><td>Selection exists</td></tr>
+    <tr><th>Send to Back</th><td>Ctrl+Shift+Down</td><td>Move selected items to the bottom of their layer's z-order.</td><td>Selection exists</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Align Left</th><td></td><td>Align selected items to the leftmost edge.</td><td>2+ items selected</td></tr>
+    <tr><th>Align Center (H)</th><td></td><td>Align selected items to horizontal center.</td><td>2+ items selected</td></tr>
+    <tr><th>Align Right</th><td></td><td>Align selected items to the rightmost edge.</td><td>2+ items selected</td></tr>
+    <tr><th>Align Top</th><td></td><td>Align selected items to the topmost edge.</td><td>2+ items selected</td></tr>
+    <tr><th>Align Middle (V)</th><td></td><td>Align selected items to vertical center.</td><td>2+ items selected</td></tr>
+    <tr><th>Align Bottom</th><td></td><td>Align selected items to the bottommost edge.</td><td>2+ items selected</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Distribute Horizontally</th><td></td><td>Evenly space selected items horizontally.</td><td>3+ items selected</td></tr>
+    <tr><th>Distribute Vertically</th><td></td><td>Evenly space selected items vertically.</td><td>3+ items selected</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Align to Canvas Center</th><td></td><td>Center selected items on the canvas.</td><td>Selection exists</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Group</th><td>Ctrl+G</td><td>Combine selected items into a single group that moves, resizes, and transforms as one unit.</td><td>2+ items selected</td></tr>
+    <tr><th>Ungroup</th><td>Ctrl+Shift+G</td><td>Dissolve selected group(s) back into individual items, restoring their original positions and properties.</td><td>Group selected</td></tr>
+    <tr><th>---</th><td>---</td><td>Separator</td><td>---</td></tr>
+    <tr><th>Flip Horizontal</th><td></td><td>Toggle <code>flip_horizontal</code> on all selected items. Mirrors items horizontally around their individual bounding box centers.</td><td>Selection exists</td></tr>
+    <tr><th>Flip Vertical</th><td></td><td>Toggle <code>flip_vertical</code> on all selected items. Mirrors items vertically around their individual bounding box centers.</td><td>Selection exists</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s3-7">Tools Menu</h3>
+
+<p>The Tools menu provides an alternative way to activate tools (useful for
+discoverability). Each entry shows the tool name, icon, and keyboard shortcut. The
+currently active tool has a checkmark.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Menu Item</th><th>Shortcut</th><th>Tool ID</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Select / Move</th><td>V</td><td>select</td></tr>
+    <tr><th>Raster Selection (Rectangle)</th><td>M</td><td><code>raster_select</code></td></tr>
+    <tr><th>Raster Selection (Freeform)</th><td>L</td><td><code>freeform_select</code></td></tr>
+    <tr><th>Crop Canvas</th><td>C</td><td>crop</td></tr>
+    <tr><th>Arrow</th><td>A</td><td>arrow</td></tr>
+    <tr><th>Line</th><td>U</td><td>line</td></tr>
+    <tr><th>Rectangle</th><td>R</td><td>rectangle</td></tr>
+    <tr><th>Ellipse</th><td>E</td><td>ellipse</td></tr>
+    <tr><th>Arc</th><td>O</td><td>arc</td></tr>
+    <tr><th>Polygon</th><td>G</td><td>polygon</td></tr>
+    <tr><th>Freehand / Pen</th><td>P</td><td>freehand</td></tr>
+    <tr><th>Text Box</th><td>T</td><td>text</td></tr>
+    <tr><th>Callout Bubble</th><td>B</td><td>callout</td></tr>
+    <tr><th>Blur / Pixelate</th><td>Z</td><td>blur</td></tr>
+    <tr><th>Highlighter</th><td>H</td><td>highlight</td></tr>
+    <tr><th>Numbered Step</th><td>N</td><td><code>numbered_step</code></td></tr>
+    <tr><th>Stamp / Sticker</th><td>S</td><td>stamp</td></tr>
+    <tr><th>Eyedropper</th><td>I</td><td>eyedropper</td></tr>
+    <tr><th>Pan / Hand</th><td>Space (hold)</td><td>pan</td></tr>
+    <tr><th>Zoom</th><td>Ctrl+Space (hold)</td><td><code>zoom_tool</code></td></tr>
+  </tbody>
+</table>
+
+<p>Below the tool list, the Tools menu includes a separator followed by:</p>
+
+<ul>
+  <li><strong>Tool Themes... </strong>— Open the Tool Themes dialog to select, create, edit,
+  or delete system-wide tool themes. A tool theme saves every setting for every tool.
+  Selecting a new theme applies all settings at once and clears any per-tool preset
+  overrides.</li>
+  <li><strong>Active Theme: [theme name] </strong>— A read-only label showing the currently
+  active theme. Displays “(modified)” if any per-tool preset overrides have been applied
+  since the theme was selected.</li>
+</ul>
+
+<h3 id="s3-8">Help Menu</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Menu Item</th><th>Action</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Welcome / Getting Started</th><td>Open the first-run welcome panel with quick-start instructions.</td></tr>
+    <tr><th>Documentation</th><td>Open the project's online documentation in the default browser.</td></tr>
+    <tr><th>Keyboard Shortcuts</th><td>Open a searchable shortcut reference dialog.</td></tr>
+    <tr><th>Report a Bug</th><td>Open the GitHub issues page in the default browser.</td></tr>
+    <tr><th>---</th><td>Separator</td></tr>
+    <tr><th>Check for Updates</th><td>Check if a newer version is available (queries GitHub releases API).</td></tr>
+    <tr><th>About SnapMock</th><td>Show application version, license info, credits, and links.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s4">Main Toolbar</h2>
+
+<h3 id="s4-1">Layout</h3>
+
+<p>The Main Toolbar is a horizontal QToolBar positioned below the menu bar. It contains
+icon buttons for the most frequently used actions, organized in logical groups separated
+by vertical dividers.</p>
+
+<h3 id="s4-2">Button Groups</h3>
+
+<p><strong>Group 1 - File Operations:</strong></p>
+
+<ul>
+  <li>New (Ctrl+N), Open (Ctrl+O), Save (Ctrl+S), Export Quick (Ctrl+Shift+E)</li>
+</ul>
+
+<p><strong>Group 2 - Edit Operations:</strong></p>
+
+<ul>
+  <li>Undo (Ctrl+Z), Redo (Ctrl+Shift+Z) | Cut (Ctrl+X), Copy (Ctrl+C), Paste (Ctrl+V)</li>
+</ul>
+
+<p><strong>Group 3 - Clipboard &amp; Selection:</strong></p>
+
+<ul>
+  <li>Duplicate (Ctrl+D), Delete (Del)</li>
+</ul>
+
+<p><strong>Group 4 - Z-Order:</strong></p>
+
+<ul>
+  <li>Bring to Front, Send to Back</li>
+</ul>
+
+<p><strong>Group 5 - Alignment (visible when 2+ items selected):</strong></p>
+
+<ul>
+  <li>Align Left, Align Center, Align Right, Align Top, Align Middle, Align Bottom</li>
+</ul>
+
+<p><strong>Group 6 - Zoom:</strong></p>
+
+<ul>
+  <li>Zoom Out, Zoom Percentage Dropdown (editable combo box showing current zoom), Zoom In,
+  Fit to Window</li>
+</ul>
+
+<h3 id="s4-3">Button Specifications</h3>
+
+<ul>
+  <li>Icon size: 24x24 pixels within a 32x32 button area.</li>
+  <li>All buttons have tooltips showing the action name and keyboard shortcut (e.g., "Save
+  (Ctrl+S)").</li>
+  <li>Buttons that correspond to stateful toggles (grid, snap) show a pressed/highlighted
+  state when active.</li>
+  <li>Toolbar buttons are never visually disabled. If a button’s requirements are not met,
+  clicking it displays an informative message identifying exactly which requirements are
+  unmet.</li>
+  <li>The zoom dropdown is an editable QComboBox with preset values: 10%, 25%, 50%, 75%, 100%,
+  150%, 200%, 400%, 800%, 1600%, 3200%. Users can type a custom percentage.</li>
+</ul>
+
+<h2 id="s5">Tool Options Bar</h2>
+
+<h3 id="s5-1">Purpose</h3>
+
+<p>The Tool Options Bar is a horizontal toolbar positioned directly below the Main Toolbar.
+Its content changes dynamically based on the currently active tool. It provides quick
+access to the most important options for the active tool without requiring the Property
+Panel.</p>
+
+<h3 id="s5-2">Common Option Controls</h3>
+
+<p>The following control types are used across multiple tools:</p>
+
+<p><strong>Preset Dropdown (leftmost control on every tool): </strong>A dropdown at the
+left end of the Tool Options Bar that displays the name of the currently active preset
+for the tool, or “Custom” if the tool’s settings have been modified since the last
+preset or theme was applied. The dropdown contains:</p>
+
+<ul>
+  <li>A list of saved presets for the current tool (alphabetically sorted). Selecting one
+  applies all saved settings immediately.</li>
+  <li><strong>Save as Preset... </strong>— Save the tool’s current settings as a new named
+  preset. Prompts for a name.</li>
+  <li><strong>Update Preset </strong>— Overwrite the currently active preset with the tool’s
+  current settings. Only shown when a named preset is active and settings have been
+  modified.</li>
+  <li><strong>Manage Presets... </strong>— Open the Manage Presets dialog to rename,
+  duplicate, or delete presets for the current tool.</li>
+  <li><strong>Reset to Theme </strong>— Revert the tool’s settings to the values defined by
+  the currently active Tool Theme, clearing any per-tool preset overrides.</li>
+</ul>
+
+<p>Applying a Tool Preset to any tool constitutes a per-tool override of the active Tool
+Theme. These overrides persist across sessions and are saved with the project. Selecting
+a new Tool Theme (via Tools &gt; Tool Themes...) clears all per-tool overrides and
+resets every tool to the new theme’s settings.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Control</th><th>Widget</th><th>Behavior</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Stroke Color</th><td>Color swatch button (24x24)</td><td>Click opens a color picker popover. Shows the current stroke color as a filled square. A small diagonal line through the swatch indicates the color is set to transparent. Right-click opens recent colors.</td></tr>
+    <tr><th>Fill Color</th><td>Color swatch button (24x24)</td><td>Same as stroke color but for fill. A small diagonal line through the swatch indicates the color is set to transparent.</td></tr>
+    <tr><th>Stroke Width</th><td>QSpinBox with slider</td><td>Range: 0.5 to 50px, step 0.5. Default varies by tool.</td></tr>
+    <tr><th>Stroke Style</th><td>QComboBox dropdown</td><td>Options: Solid, Dashed, Dotted, DashDot, DashDotDot. Shows a visual preview of each style.</td></tr>
+    <tr><th>Font Family</th><td>QFontComboBox</td><td>System font list with preview rendering.</td></tr>
+    <tr><th>Font Size</th><td>QSpinBox</td><td>Range: 6 to 200pt, step 1.</td></tr>
+    <tr><th>Bold / Italic / Underline</th><td>Toggle buttons (B, I, U)</td><td>Standard text formatting toggles.</td></tr>
+    <tr><th>Fill Opacity</th><td>QSlider + QSpinBox</td><td>Range: 0% to 100%. Shown for vector items (shapes, text, callout, numbered step).</td></tr>
+    <tr><th>Stroke Opacity</th><td>QSlider + QSpinBox</td><td>Range: 0% to 100%. Shown for vector items. Non-vector items (Stamp, Emoji, Blur) show a single Opacity slider instead. Highlighter controls transparency via <code>highlight_color</code> alpha channel.</td></tr>
+    <tr><th>Shadow Toggle</th><td>QCheckBox</td><td>Enable/disable drop shadow on the current tool's items.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s5-3">Tool-Specific Option Layouts</h3>
+
+<p>Each tool declares its options bar contents. Here is a summary of what appears for each
+tool category:</p>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Tool(s)</th><th>Options Bar Contents</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Select / Move</th><td>No tool-specific options. Bar shows "Selection: N items" and quick alignment buttons if 2+ items selected.</td></tr>
+    <tr><th>Arrow, Line</th><td>Stroke Color | Stroke Width | Stroke Style | Arrow Head Style (dropdown: none, single, double) | Arrow Head Size | Shadow Toggle</td></tr>
+    <tr><th>Rectangle, Ellipse, Arc</th><td>Stroke Color | Fill Color | Stroke Width | Stroke Style | Corner Radius (rectangle only) | Shadow Toggle</td></tr>
+    <tr><th>Polygon</th><td>Stroke Color | Fill Color | Stroke Width | Stroke Style | Mode toggle (Freeform / Regular) | Sides spinbox (3–64, Regular mode) | Star checkbox (Regular mode) | Star Indent slider (Regular mode, when Star checked) | Closed/Open toggle (Freeform mode) | Shadow Toggle</td></tr>
+    <tr><th>Freehand / Pen</th><td>Stroke Color | Stroke Width | Stroke Style | Smoothing slider (0-100%, controls path simplification)</td></tr>
+    <tr><th>Text</th><td>Font Family | Font Size | Bold/Italic/Underline | Text Color | Text Alignment (L/C/R) | Background Color (for text box fill) | Stroke Color | Stroke Width | Stroke Style</td></tr>
+    <tr><th>Callout</th><td>Font Family | Font Size | Text Color | Bubble Fill Color | Stroke Color | Stroke Width | Stroke Style | Tail Style (straight, curved, elbow)</td></tr>
+    <tr><th>Blur / Pixelate</th><td>Mode toggle (Blur / Pixelate) | Intensity slider (1-50) | Region shape (rectangle, ellipse)</td></tr>
+    <tr><th>Highlighter</th><td>Highlight Color | Width slider | Blend Mode | Stroke Style</td></tr>
+    <tr><th>Numbered Step</th><td>Badge Color | Badge Size | Font Size | Starting Number | Text Color | Stroke Color | Stroke Width | Stroke Style</td></tr>
+    <tr><th>Stamp / Sticker</th><td>Stamp Library dropdown | Size slider | Opacity slider</td></tr>
+    <tr><th>Raster Selection</th><td>Feather slider (0-20px) | Anti-alias checkbox</td></tr>
+    <tr><th>Crop</th><td>Aspect Ratio lock toggle | Preset Ratios dropdown (Free, 16:9, 4:3, 1:1, Custom) | Rule of Thirds checkbox</td></tr>
+    <tr><th>Eyedropper</th><td>Display: picked color swatch, hex value, RGB values. Button: "Apply to Stroke" / "Apply to Fill"</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s6">Canvas Area</h2>
+
+<h3 id="s6-1">Visual Layout</h3>
+
+<p>The canvas area occupies the central region of the main window. It consists of the
+SnapView (QGraphicsView) rendering the SnapScene. The canvas is surrounded by the
+pasteboard area that extends infinitely in all directions (users can pan beyond the
+canvas bounds). The pasteboard color is configurable (default: neutral gray #808080) to
+provide contrast against the canvas color.</p>
+
+<h3 id="s6-2">Canvas Background</h3>
+
+<ul>
+  <li>When no image is loaded, the canvas shows the canvas color (default: white) and a
+  centered prompt: "Drag an image here, paste from clipboard (Ctrl+V), or go to File &gt;
+  Import Image" in gray text. The canvas color is the fill color of the working area and
+  is included in exports behind any transparent content.</li>
+  <li>When an image is loaded as the background layer, it fills the canvas exactly.</li>
+  <li>Transparent areas are rendered as a checkerboard pattern (alternating light gray and
+  white 8x8 pixel squares) to visually distinguish transparency from white.</li>
+  <li>The canvas boundary is indicated by a subtle 1px dark gray border and a drop shadow
+  against the pasteboard.</li>
+</ul>
+
+<h3 id="s6-3">Rulers</h3>
+
+<ul>
+  <li>When enabled (View &gt; Show Rulers), horizontal and vertical rulers are drawn along the
+  top and left edges of the viewport.</li>
+  <li>Rulers show pixel measurements relative to the canvas origin (0,0 at top-left of
+  canvas).</li>
+  <li>Ruler tick marks adapt to the zoom level: at low zoom, major ticks every 100px; at high
+  zoom, major ticks every 10px or 1px.</li>
+  <li>The current cursor position is indicated on both rulers by a small triangular marker.</li>
+  <li>Ruler background: light gray (light theme) or dark gray (dark theme). Text: dark gray or
+  light gray respectively.</li>
+</ul>
+
+<h3 id="s6-4">Grid</h3>
+
+<ul>
+  <li>When enabled (View &gt; Show Grid), a grid overlay is drawn on the canvas.</li>
+  <li>Grid lines are rendered as 1px lines at 20% opacity (subtle enough to not distract).</li>
+  <li>Grid size matches the snap grid size (default 10px), configurable in Preferences.</li>
+  <li>At zoom levels below 200%, minor grid lines are hidden and only major grid lines (every
+  5 grid units) are shown to avoid visual clutter.</li>
+</ul>
+
+<h3 id="s6-5">Guides</h3>
+
+<p>Guides are user-placed horizontal or vertical reference lines that span the full width
+or height of the canvas. They assist with aligning items across the composition. Guides
+are non-printing and are excluded from all exports.</p>
+
+<ul>
+  <li><strong>Creating guides: </strong>Click and drag from the horizontal ruler to place a
+  horizontal guide, or from the vertical ruler to place a vertical guide. A preview line
+  follows the cursor during the drag. Release to place the guide at the current position.</li>
+  <li><strong>Moving guides: </strong>Hover over a guide line until the cursor changes to a
+  double-headed resize arrow. Click and drag to reposition. Shift+drag constrains movement
+  to whole pixel values.</li>
+  <li><strong>Deleting guides: </strong>Drag a guide back onto its originating ruler to remove
+  it. Alternatively, use View &gt; Clear All Guides to remove all guides at once.</li>
+  <li><strong>Snapping: </strong>When View &gt; Snap to Guides is enabled, item edges and
+  centers snap to nearby guide lines during move, resize, and creation operations. The
+  snap tolerance is the same as grid snap tolerance (configurable in Preferences, default
+  5px).</li>
+  <li><strong>Locking: </strong>When View &gt; Lock Guides is enabled, guides cannot be moved
+  or deleted by mouse interaction. They can still be cleared via the Clear All Guides menu
+  command.</li>
+  <li><strong>Appearance: </strong>Guides render as 1px lines in the accent color (default:
+  cyan #00BFFF) at 70% opacity. Guide color is configurable in Preferences. Guides render
+  above the canvas content but below selection handles and tool overlays.</li>
+  <li><strong>Persistence: </strong>Guide positions are saved with the project file
+  (<code>.smk</code>) and restored when the project is reopened.</li>
+</ul>
+
+<h3 id="s6-6">Canvas Cursor Behavior</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Context</th><th>Cursor</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Default (no tool active)</th><td>Arrow</td></tr>
+    <tr><th>Select tool, hovering over empty canvas</th><td>Arrow</td></tr>
+    <tr><th>Select tool, hovering over selectable item</th><td>Open hand (grab)</td></tr>
+    <tr><th>Select tool, dragging item</th><td>Closed hand (grabbing)</td></tr>
+    <tr><th>Select tool, hovering over resize handle</th><td>Directional resize arrow (per handle direction)</td></tr>
+    <tr><th>Select tool, hovering over rotate handle</th><td>Rotation cursor (circular arrow)</td></tr>
+    <tr><th>Any drawing tool (arrow, rect, etc.)</th><td>Crosshair</td></tr>
+    <tr><th>Text tool, hovering over canvas</th><td>I-beam / text cursor</td></tr>
+    <tr><th>Text tool, hovering over existing text item</th><td>I-beam with highlight</td></tr>
+    <tr><th>Raster selection tool</th><td>Crosshair with dotted square</td></tr>
+    <tr><th>Crop tool</th><td>Crosshair</td></tr>
+    <tr><th>Eyedropper</th><td>Eyedropper icon</td></tr>
+    <tr><th>Pan tool (or spacebar held)</th><td>Open hand</td></tr>
+    <tr><th>Pan tool dragging</th><td>Closed hand</td></tr>
+    <tr><th>Zoom tool</th><td>Magnifying glass with +</td></tr>
+    <tr><th>Zoom tool + Alt</th><td>Magnifying glass with -</td></tr>
+    <tr><th>Tool over locked layer item</th><td>No-entry / forbidden</td></tr>
+    <tr><th>Drag and drop (hovering with external file)</th><td>Copy cursor (arrow + green +)</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s7">Layer Panel</h2>
+
+<h3 id="s7-1">Panel Structure</h3>
+
+<p>The Layer Panel is a QDockWidget with a fixed minimum width of 200px and a default width
+of 300px. It contains a scrollable list of layer rows and a bottom action bar.</p>
+
+<h3 id="s7-2">Layer Row Layout</h3>
+
+<p>Each layer row is approximately 48px tall and contains, from left to right:</p>
+
+<ol>
+  <li>Visibility Toggle: 20x20 eye icon. Click to toggle. Open eye = visible, closed eye =
+  hidden. Dimmed when hidden.</li>
+  <li>Lock Toggle: 20x20 lock icon. Click to toggle. Open lock = unlocked, closed lock =
+  locked.</li>
+  <li>Thumbnail Preview: 40x40 pixel preview of the layer contents, rendered at the current
+  state. Updated when items in the layer change. Shows a checkerboard background for
+  transparent areas.</li>
+  <li>Layer Name: text label, truncated with ellipsis if too long. Double-click to enter
+  inline edit mode (QLineEdit).</li>
+  <li>Opacity Indicator: small text showing the opacity percentage (e.g., "100%"). Clicking
+  opens a slider popover for quick adjustment.</li>
+</ol>
+
+<h3 id="s7-3">Layer Row Interactions</h3>
+
+<ul>
+  <li>Single click: make this layer the active layer. The row is highlighted with the accent
+  color.</li>
+  <li>Double-click on name: enter inline rename mode.</li>
+  <li>Right-click: open the layer context menu (see Section 10).</li>
+  <li>Drag and drop: reorder layers by dragging a row up or down. A blue insertion line
+  indicates the drop target position.</li>
+  <li>Ctrl+click: add/remove this layer from a multi-layer selection (for batch operations
+  like merge, delete, lock).</li>
+  <li>Hovering over a layer row briefly highlights items belonging to that layer on the canvas
+  with a subtle outline (optional, can be disabled in Preferences).</li>
+</ul>
+
+<h3 id="s7-4">Bottom Action Bar</h3>
+
+<p>A row of small icon buttons at the bottom of the Layer Panel:</p>
+
+<ul>
+  <li>New Layer (+): create a new layer above the active layer.</li>
+  <li>Delete Layer (trash can): delete the active layer (with confirmation if items exist).</li>
+  <li>Duplicate Layer (copy icon): duplicate the active layer.</li>
+  <li>Merge Down (down-arrow icon): merge the active layer into the one below it.</li>
+  <li>Layer Blend Mode: a small dropdown (QComboBox) for quickly changing the active layer's
+  blend mode. Options: Normal, Multiply, Screen, Overlay, Darken, Lighten, Difference.</li>
+</ul>
+
+<h3 id="s7-5">Layer Types Visual Indicators</h3>
+
+<ul>
+  <li>Background layers show a small "BG" badge on their thumbnail.</li>
+  <li>Raster Region layers show a small raster grid icon badge.</li>
+  <li>Annotation layers (default) show no special badge.</li>
+  <li>Locked layers have their entire row at 70% opacity with a lock icon overlay.</li>
+</ul>
+
+<h2 id="s8">Property Panel</h2>
+
+<h3 id="s8-1">Purpose</h3>
+
+<p>The Property Panel is a context-sensitive inspector that shows and allows editing of the
+properties of the currently selected item(s). When a creation tool is active but no item
+is selected, it shows the tool’s default properties. When the Select tool is active and
+nothing is selected, it shows canvas/project properties. When multiple items of
+different types are selected, it shows only the properties they share in common.</p>
+
+<h3 id="s8-2">Panel Structure</h3>
+
+<p>The Property Panel is organized into collapsible sections. Each section has a header
+that can be clicked to expand/collapse it. Section collapse states are persisted across
+sessions.</p>
+
+<h3 id="s8-3">Sections (When a Single Vector Item is Selected)</h3>
+
+<p><strong>Transform Section:</strong></p>
+
+<ul>
+  <li>X Position: QSpinBox (pixels, relative to canvas origin)</li>
+  <li>Y Position: QSpinBox</li>
+  <li>Width: QSpinBox (with chain-link icon to lock aspect ratio)</li>
+  <li>Height: QSpinBox</li>
+  <li>Rotation: QSpinBox (degrees, -360 to 360)</li>
+  <li>Flip Horizontal: toggle button (mirror icon). Toggles the <code>flip_horizontal</code>
+  property on the selected item.</li>
+  <li>Flip Vertical: toggle button. Toggles the <code>flip_vertical</code> property on the
+  selected item.</li>
+  <li>A small chain-link toggle between Width and Height constrains proportions when resizing.</li>
+</ul>
+
+<p><strong>Appearance Section:</strong></p>
+
+<ul>
+  <li>Stroke Color: color swatch + hex input</li>
+  <li>Stroke Width: slider + spinbox</li>
+  <li>Stroke Style: dropdown (Solid, Dashed, Dotted, DashDot, DashDotDot)</li>
+  <li>Fill Color: color swatch + hex input</li>
+  <li>Fill Opacity: slider (0-100%). Stroke Opacity: slider (0-100%). Non-vector items (Stamp,
+  Emoji, Blur) show a single Opacity slider instead.</li>
+  <li>Blend Mode: dropdown</li>
+</ul>
+
+<p><strong>Shadow Section:</strong></p>
+
+<ul>
+  <li>Enabled: checkbox</li>
+  <li>Color: color swatch</li>
+  <li>Offset X: spinbox</li>
+  <li>Offset Y: spinbox</li>
+  <li>Blur Radius: slider</li>
+</ul>
+
+<p><strong>Item Info Section:</strong></p>
+
+<ul>
+  <li>Item Type: read-only label (e.g., "Arrow", "Rectangle")</li>
+  <li>Layer: dropdown to move item to a different layer</li>
+  <li>Item Lock: checkbox to lock this specific item (independent of layer lock)</li>
+</ul>
+
+<h3 id="s8-4">Sections (When a Text Item is Selected)</h3>
+
+<p>In addition to Transform, Appearance, and Shadow sections, a Text section appears:</p>
+
+<ul>
+  <li>Font Family: QFontComboBox</li>
+  <li>Font Size: QSpinBox</li>
+  <li>Font Weight: dropdown (Regular, Bold, etc.)</li>
+  <li>Font Style: dropdown (Normal, Italic)</li>
+  <li>Text Color: color swatch</li>
+  <li>Text Alignment: toggle group (Left, Center, Right)</li>
+  <li>Line Spacing: spinbox (multiplier, default 1.2)</li>
+  <li>Background Fill: color swatch (for text box background)</li>
+</ul>
+
+<h3 id="s8-5">Sections (When No Item is Selected)</h3>
+
+<p><strong>When a creation tool is active (any tool other than Select/Move):</strong></p>
+
+<p>The Property Panel displays the tool-specific property sections populated with the
+tool’s current default values. This allows the user to review and configure settings
+such as stroke color, fill, font, or other tool-specific properties before creating an
+item. Changes made in this state update the tool defaults, which are applied to the next
+item created with that tool. Individual tool PRDs may specify additional behavior, such
+as which control receives initial focus.</p>
+
+<p><strong>When the Select tool is active (or no tool is active):</strong></p>
+
+<p>When nothing is selected, the Property Panel shows project/canvas properties:</p>
+
+<ul>
+  <li>Canvas Width x Height (editable)</li>
+  <li>Canvas Color</li>
+  <li>Pasteboard Color</li>
+  <li>Grid Size</li>
+  <li>Snap to Grid toggle</li>
+  <li>Canvas DPI</li>
+</ul>
+
+<h3 id="s8-6">Multi-Selection Behavior</h3>
+
+<p>When multiple items are selected, the Property Panel shows only shared properties. If
+the selected items have different values for a property, the control shows a "mixed"
+indicator (e.g., a dash in a spinbox, a half-filled color swatch). Changing a shared
+property applies the new value to all selected items as a single undoable command.</p>
+
+<h2 id="s9">Status Bar</h2>
+
+<p>The Status Bar is a QStatusBar at the bottom of the main window. It displays contextual
+information across several zones, from left to right:</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Zone</th><th>Width</th><th>Content</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Tool Hint</th><td>Flexible (takes remaining space)</td><td>A brief description of the active tool's current state. Examples: "Click and drag to draw a rectangle" (when rectangle tool is active). "3 items selected - drag to move, Shift+drag to constrain" (when items selected). "Click to set first point, Shift+click for straight line" (for arrow tool).</td></tr>
+    <tr><th>Cursor Position</th><td>120px fixed</td><td>"X: 1234  Y: 567" showing the cursor position in canvas pixels. Updates in real-time as the mouse moves.</td></tr>
+    <tr><th>Selection Size</th><td>120px fixed</td><td>"W: 200  H: 150" showing the width and height of the current selection or active item. Blank when nothing is selected.</td></tr>
+    <tr><th>Canvas Size</th><td>140px fixed</td><td>"Canvas: 1920 x 1080" showing the project canvas dimensions.</td></tr>
+    <tr><th>Zoom Level</th><td>80px fixed</td><td>"150%" showing the current zoom level. Clickable: opens a zoom dropdown.</td></tr>
+    <tr><th>Memory Usage</th><td>80px fixed</td><td>"128 MB" showing application memory consumption. Updates every 5 seconds. Turns orange above 500MB, red above 1GB.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s10">Context Menus</h2>
+
+<h3 id="s10-1">Canvas Context Menu (Right-Click on Empty Canvas)</h3>
+
+<ul>
+  <li>Paste (Ctrl+V) - requires clipboard content</li>
+  <li>Paste in Place (Ctrl+Shift+V)</li>
+  <li>---</li>
+  <li>Select All (Ctrl+A)</li>
+  <li>---</li>
+  <li>Canvas Properties... - opens canvas section of Property Panel</li>
+  <li>---</li>
+  <li>Zoom In / Zoom Out / Fit to Window / Zoom to 100%</li>
+</ul>
+
+<h3 id="s10-2">Item Context Menu (Right-Click on a Selected Item)</h3>
+
+<ul>
+  <li>Cut (Ctrl+X)</li>
+  <li>Copy (Ctrl+C)</li>
+  <li>Paste (Ctrl+V)</li>
+  <li>Duplicate (Ctrl+D)</li>
+  <li>Delete (Del)</li>
+  <li>---</li>
+  <li>Bring to Front / Bring Forward / Send Backward / Send to Back</li>
+  <li>---</li>
+  <li>Move to Layer &gt; (submenu listing all layers)</li>
+  <li>Lock Item / Unlock Item</li>
+  <li>---</li>
+  <li>Align &gt; (submenu with alignment options, requires 2+ items selected)</li>
+  <li>Distribute &gt; (submenu, requires 3+ items selected)</li>
+  <li>---</li>
+  <li>Flip Horizontal</li>
+  <li>Flip Vertical</li>
+  <li>Properties... (opens Property Panel and scrolls to relevant section)</li>
+</ul>
+
+<h3 id="s10-3">Layer Panel Context Menu (Right-Click on a Layer Row)</h3>
+
+<ul>
+  <li>New Layer Above</li>
+  <li>New Layer Below</li>
+  <li>---</li>
+  <li>Duplicate Layer</li>
+  <li>Delete Layer</li>
+  <li>---</li>
+  <li>Rename Layer (F2)</li>
+  <li>---</li>
+  <li>Merge Down</li>
+  <li>Merge Visible</li>
+  <li>Flatten All</li>
+  <li>---</li>
+  <li>Lock Layer / Unlock Layer</li>
+  <li>Hide Layer / Show Layer</li>
+  <li>---</li>
+  <li>Layer Properties...</li>
+</ul>
+
+<h2 id="s11">Dialogs</h2>
+
+<h3 id="s11-1">Color Picker</h3>
+
+<p>The color picker is used throughout the application (stroke color, fill color, text
+color, etc.). It should be a custom popover widget (not a full modal dialog) that
+appears near the clicked color swatch.</p>
+
+<ul>
+  <li>Hue/Saturation square: a large (200x200) gradient square for picking hue (horizontal)
+  and saturation/value (vertical).</li>
+  <li>Hue slider: a vertical or horizontal rainbow bar for selecting the hue independently.</li>
+  <li>Opacity slider: a horizontal slider below the HS square for alpha channel (0-100%).</li>
+  <li>Hex input: a text field showing the hex color code (e.g., #FF5733). Editable - typing a
+  valid hex updates the picker.</li>
+  <li>RGB inputs: three spinboxes for Red, Green, Blue values (0-255).</li>
+  <li>HSL inputs: three spinboxes for Hue (0-360), Saturation (0-100), Lightness (0-100).</li>
+  <li>Recent colors: a row of 12 small swatches showing recently used colors.</li>
+  <li>Saved colors: a row of 12 small swatches for user-saved colors. Click a saved swatch to
+  apply. Right-click to save the current color to that slot.</li>
+  <li>Eyedropper button: activates the eyedropper tool to pick a color from anywhere on
+  screen.</li>
+  <li>Transparent option: a clearly labeled “Transparent” swatch or button that sets the color
+  to fully transparent (alpha = 0). This option is available in all color picker contexts
+  (stroke color, fill color, text color, etc.), providing a universal way to indicate no
+  stroke, no fill, or no color.</li>
+  <li>The popover closes when clicking outside it. The color is applied in real-time as the
+  user adjusts the picker (live preview on the selected item).</li>
+</ul>
+
+<h3 id="s11-2">Export Dialog</h3>
+
+<p>A modal dialog for configuring export settings.</p>
+
+<ul>
+  <li>Format selector: radio buttons or tabs for PNG, JPEG, SVG, PDF.</li>
+  <li>PNG options: DPI dropdown (72, 150, 300, Custom), Transparency checkbox, Color depth
+  (8-bit, 16-bit).</li>
+  <li>JPEG options: Quality slider (1-100, default 90), DPI dropdown.</li>
+  <li>SVG options: Embed raster images checkbox, Viewbox size display.</li>
+  <li>PDF options: DPI dropdown, Page size dropdown (match canvas, A4, Letter), Orientation
+  auto-detect.</li>
+  <li>Preview: a thumbnail preview of the export output, updating in real-time as settings
+  change.</li>
+  <li>File size estimate: displayed below the preview.</li>
+  <li>Export region: radio buttons for "Entire Canvas", "Selection Only", "Visible Area Only".</li>
+  <li>Output path: text field with Browse button. Remembers last-used directory per format.</li>
+  <li>Buttons: Export, Cancel.</li>
+</ul>
+
+<h3 id="s11-3">Preferences Dialog</h3>
+
+<p>A modal dialog with a left sidebar for category navigation and a right content area for
+settings.</p>
+
+<p><strong>General Category:</strong></p>
+
+<ul>
+  <li>Language: dropdown (English initially, prepared for i18n).</li>
+  <li>Auto-save interval: spinbox (0 = disabled, 1-30 minutes, default 2).</li>
+  <li>Recent files count: spinbox (1-20, default 10).</li>
+  <li>Default canvas size: width and height spinboxes.</li>
+  <li>Default canvas color: color swatch.</li>
+  <li>Default pasteboard color: color swatch (default: #808080 neutral gray).</li>
+  <li>Confirm before deleting layers: checkbox (default: on).</li>
+</ul>
+
+<p><strong>Appearance Category:</strong></p>
+
+<ul>
+  <li>Theme: dropdown (Light, Dark, System).</li>
+  <li>Icon size: dropdown (Small 16px, Medium 24px, Large 32px).</li>
+  <li>Canvas checkerboard size: dropdown (Small 4px, Medium 8px, Large 16px).</li>
+  <li>Canvas checkerboard colors: two color swatches.</li>
+  <li>UI font size: dropdown (Small, Medium, Large).</li>
+</ul>
+
+<p><strong>Canvas &amp; Grid Category:</strong></p>
+
+<ul>
+  <li>Default grid size: spinbox (1-100px, default 10).</li>
+  <li>Grid color: color swatch.</li>
+  <li>Grid opacity: slider (1-100%, default 20%).</li>
+  <li>Snap tolerance: spinbox (1-20px, default 5).</li>
+  <li>Show pixel grid at zoom above: spinbox (100-3200%, default 800%).</li>
+  <li>Guide color: color swatch (default: #00BFFF cyan).</li>
+  <li>Guide opacity: slider (1-100%, default 70%).</li>
+</ul>
+
+<p><strong>Tools Category:</strong></p>
+
+<ul>
+  <li>Default stroke color: color swatch.</li>
+  <li>Default stroke width: spinbox.</li>
+  <li>Default fill color: color swatch.</li>
+  <li>Default font: font combo box.</li>
+  <li>Default font size: spinbox.</li>
+  <li>Freehand smoothing default: slider.</li>
+  <li>Numbered step starting number default: spinbox.</li>
+</ul>
+
+<p><strong>Performance Category:</strong></p>
+
+<ul>
+  <li>Undo history limit: spinbox (10-1000, default 200).</li>
+  <li>Thumbnail update delay: spinbox (100-2000ms, default 500ms).</li>
+  <li>Hardware acceleration: checkbox (enable/disable OpenGL rendering).</li>
+</ul>
+
+<h3 id="s11-4">Resize Canvas Dialog</h3>
+
+<ul>
+  <li>Width and Height spinboxes (pixels).</li>
+  <li>Lock aspect ratio toggle.</li>
+  <li>Anchor position: a 3x3 grid of radio buttons indicating which corner/edge the canvas
+  expands from (default: center).</li>
+  <li>Preview showing the current canvas outline and the new size overlay.</li>
+  <li>Fill color for new canvas area: color swatch (default: canvas color).</li>
+  <li>Buttons: OK, Cancel.</li>
+</ul>
+
+<h3 id="s11-5">Resize Image Dialog</h3>
+
+<ul>
+  <li>Width and Height spinboxes (pixels), with lock aspect ratio toggle.</li>
+  <li>Percentage mode toggle: switch between pixel values and percentage scaling.</li>
+  <li>Interpolation method: dropdown (Nearest Neighbor, Bilinear, Bicubic, Lanczos). Default:
+  Bicubic.</li>
+  <li>"Resize all layers" checkbox (default: on).</li>
+  <li>Preview of the result.</li>
+  <li>Buttons: OK, Cancel.</li>
+</ul>
+
+<h3 id="s11-6">About Dialog</h3>
+
+<ul>
+  <li>Application icon and name.</li>
+  <li>Version number and build date.</li>
+  <li>License information (MIT or Apache 2.0).</li>
+  <li>"Built with PyQt6" acknowledgment.</li>
+  <li>Links: Project website, GitHub repository, Issue tracker.</li>
+  <li>Credits: contributors list.</li>
+  <li>Buttons: Close, Copy Version Info (copies version string to clipboard for bug reports).</li>
+</ul>
+
+<h3 id="s11-7">Unsaved Changes Dialog</h3>
+
+<p>Shown when closing the application or opening a new project with unsaved changes:</p>
+
+<ul>
+  <li>Message: "You have unsaved changes to [Project Name]. Do you want to save before
+  closing?"</li>
+  <li>Buttons: Save, Don't Save, Cancel.</li>
+  <li>The dialog shows a small preview of the current canvas state.</li>
+</ul>
+
+<h3 id="s11-8">Tool Themes Dialog</h3>
+
+<p>Opened via Tools &gt; Tool Themes... This dialog manages system-wide tool themes. A tool
+theme is a named snapshot of every setting for every tool. Selecting a new theme applies
+all settings across all tools simultaneously and clears any per-tool preset overrides.</p>
+
+<p><strong>Dialog Layout:</strong></p>
+
+<ul>
+  <li><strong>Theme List (left panel): </strong>A scrollable list of all saved themes,
+  alphabetically sorted. The currently active theme is highlighted with a checkmark icon.
+  A built-in “Default” theme ships with the application and cannot be deleted or renamed
+  (but can be duplicated).</li>
+  <li><strong>Preview (right panel): </strong>When a theme is selected in the list, the right
+  panel shows a summary of the theme’s settings organized by tool, displaying key
+  properties (colors, stroke widths, font families) in a compact read-only view.</li>
+  <li><strong>Action Buttons: </strong>Below the theme list: New (save current tool settings
+  as a new theme, prompts for name), Duplicate (copy selected theme with “[name] Copy”
+  suffix), Rename, Delete (with confirmation), Import (load a .smktheme file), Export
+  (save selected theme as a .smktheme file for sharing).</li>
+  <li><strong>Apply / Cancel: </strong>Apply activates the selected theme, resetting all tool
+  settings and clearing per-tool preset overrides. Cancel closes the dialog without
+  changes.</li>
+</ul>
+
+<p><strong>Storage: </strong>Themes are stored as JSON files in the user’s application data
+directory (e.g., ~/.config/snapmock/themes/). Each theme file contains a complete map of
+tool IDs to their property dictionaries. The .smktheme extension is used for
+import/export.</p>
+
+<h3 id="s11-9">Manage Presets Dialog</h3>
+
+<p>Opened via the Preset Dropdown &gt; Manage Presets... in the Tool Options Bar. This
+dialog manages named presets for a single tool. A tool preset saves all settings for
+that specific tool.</p>
+
+<p><strong>Dialog Layout:</strong></p>
+
+<ul>
+  <li><strong>Title Bar: </strong>“Manage [Tool Name] Presets” (e.g., “Manage Arrow Presets”).</li>
+  <li><strong>Preset List: </strong>A scrollable list of all saved presets for the tool,
+  alphabetically sorted. Each row shows the preset name and a compact summary of key
+  properties (e.g., stroke color swatch, stroke width, fill swatch).</li>
+  <li><strong>Action Buttons: </strong>Rename (inline edit of selected preset name), Duplicate
+  (copy with “[name] Copy” suffix), Delete (with confirmation). No “New” button — presets
+  are created via the Preset Dropdown &gt; Save as Preset... action.</li>
+  <li><strong>Close: </strong>Closes the dialog. All changes (renames, deletions) are applied
+  immediately and are undoable.</li>
+</ul>
+
+<p><strong>Storage: </strong>Presets are stored per-tool as JSON files in the user’s
+application data directory (e.g., ~/.config/snapmock/presets/arrow/,
+~/.config/snapmock/presets/rectangle/). Each preset file contains the tool ID and its
+complete property dictionary.</p>
+
+<h2 id="s12">Keyboard Shortcuts</h2>
+
+<h3 id="s12-1">Global Shortcuts</h3>
+
+<p>Global shortcuts work regardless of the active tool or focused panel. All shortcuts
+listed in the menu tables (Sections 3.1-3.8) are global. The complete shortcut map is
+defined in config/<code>shortcuts.py</code> and is user-customizable in a future
+release.</p>
+
+<h3 id="s12-2">Modifier Key Conventions</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Modifier</th><th>Convention</th><th>Examples</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Shift (while drawing)</th><td>Constrain proportions or angles</td><td>Shift+draw rectangle = square. Shift+draw ellipse = circle. Shift+draw line = constrain to 0/45/90 degrees. Shift+resize = maintain aspect ratio. Shift+rotate = snap to 15-degree increments. Shift+move = constrain to horizontal or vertical axis.</td></tr>
+    <tr><th>Alt (while drawing)</th><td>Draw from center</td><td>Alt+draw rectangle = draw from center point outward instead of corner to corner.</td></tr>
+    <tr><th>Ctrl (while drawing)</th><td>Special modifier per tool</td><td>Ctrl+drag edge handle = skew transform.</td></tr>
+    <tr><th>Shift (while selecting)</th><td>Add to selection</td><td>Shift+click adds the clicked item to the current selection.</td></tr>
+    <tr><th>Ctrl (while selecting)</th><td>Toggle selection</td><td>Ctrl+click toggles the clicked item in/out of the selection.</td></tr>
+    <tr><th>Space (held)</th><td>Temporary pan tool</td><td>Hold Space and drag to pan the canvas. Releases back to previous tool.</td></tr>
+    <tr><th>Alt (momentary)</th><td>Temporary eyedropper</td><td>Hold Alt to temporarily activate eyedropper. Click to pick color. Release returns to previous tool.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s12-3">Navigation Shortcuts</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Shortcut</th><th>Action</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Ctrl + Mouse Wheel</th><td>Zoom in/out centered on cursor position</td></tr>
+    <tr><th>Middle Mouse Button + Drag</th><td>Pan the canvas</td></tr>
+    <tr><th>Space + Left Mouse Drag</th><td>Pan the canvas (temporary hand tool)</td></tr>
+    <tr><th>Home</th><td>Pan to canvas origin (0,0)</td></tr>
+    <tr><th>End</th><td>Pan to bottom-right corner of canvas</td></tr>
+    <tr><th>Arrow Keys</th><td>Nudge selected items 1px in arrow direction</td></tr>
+    <tr><th>Shift + Arrow Keys</th><td>Nudge selected items 10px in arrow direction</td></tr>
+    <tr><th>Tab</th><td>Cycle selection to next item on active layer</td></tr>
+    <tr><th>Shift + Tab</th><td>Cycle selection to previous item on active layer</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s13">Theming &amp; Appearance</h2>
+
+<h3 id="s13-1">Theme System</h3>
+
+<p>SnapMock supports two built-in themes: Light and Dark. The active theme is set in
+Preferences and persisted across sessions. A "System" option follows the OS dark/light
+mode preference (via Qt's style hint detection).</p>
+
+<h3 id="s13-2">Light Theme (Default)</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Element</th><th>Color</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Window Background</th><td>#F5F5F5</td><td>Main window and panel backgrounds.</td></tr>
+    <tr><th>Panel Background</th><td>#FFFFFF</td><td>Layer Panel, Property Panel interiors.</td></tr>
+    <tr><th>Canvas Pasteboard</th><td>#E0E0E0</td><td>Area surrounding the canvas.</td></tr>
+    <tr><th>Text (Primary)</th><td>#1A1A1A</td><td>Labels, menu text, property values.</td></tr>
+    <tr><th>Text (Secondary)</th><td>#666666</td><td>Hints, descriptions, placeholder text.</td></tr>
+    <tr><th>Accent Color</th><td>#2B579A</td><td>Active tool highlight, active layer highlight, selection handles, focused controls.</td></tr>
+    <tr><th>Selection Handles</th><td>#2B579A</td><td>Transform handle squares.</td></tr>
+    <tr><th>Selection Outline</th><td>#2B579A dashed</td><td>Bounding box of selected items.</td></tr>
+    <tr><th>Toolbar Background</th><td>#EEEEEE</td><td>Main Toolbar, Tool Options Bar.</td></tr>
+    <tr><th>Toolbar Separator</th><td>#CCCCCC</td><td>Vertical dividers between button groups.</td></tr>
+    <tr><th>Button Hover</th><td>#D8D8D8</td><td>Background on toolbar button hover.</td></tr>
+    <tr><th>Button Active/Pressed</th><td>#C0C0C0</td><td>Background on active toggle button.</td></tr>
+    <tr><th>Error/Warning</th><td>#D32F2F / #F57C00</td><td>Validation errors, memory warning.</td></tr>
+    <tr><th>Grid Lines</th><td>#000000 at 20% opacity</td><td>Canvas grid overlay.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s13-3">Dark Theme</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Element</th><th>Color</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Window Background</th><td>#2D2D2D</td><td>Main window and panel backgrounds.</td></tr>
+    <tr><th>Panel Background</th><td>#353535</td><td>Layer Panel, Property Panel interiors.</td></tr>
+    <tr><th>Canvas Pasteboard</th><td>#1E1E1E</td><td>Area surrounding the canvas.</td></tr>
+    <tr><th>Text (Primary)</th><td>#E0E0E0</td><td>Labels, menu text, property values.</td></tr>
+    <tr><th>Text (Secondary)</th><td>#999999</td><td>Hints, descriptions, placeholder text.</td></tr>
+    <tr><th>Accent Color</th><td>#5B9BD5</td><td>Active tool highlight, selection handles, focused controls.</td></tr>
+    <tr><th>Selection Handles</th><td>#5B9BD5</td><td>Transform handle squares.</td></tr>
+    <tr><th>Selection Outline</th><td>#5B9BD5 dashed</td><td>Bounding box of selected items.</td></tr>
+    <tr><th>Toolbar Background</th><td>#383838</td><td>Main Toolbar, Tool Options Bar.</td></tr>
+    <tr><th>Toolbar Separator</th><td>#505050</td><td>Vertical dividers between button groups.</td></tr>
+    <tr><th>Button Hover</th><td>#454545</td><td>Background on toolbar button hover.</td></tr>
+    <tr><th>Button Active/Pressed</th><td>#505050</td><td>Background on active toggle button.</td></tr>
+    <tr><th>Error/Warning</th><td>#EF5350 / #FFB74D</td><td>Validation errors, memory warning.</td></tr>
+    <tr><th>Grid Lines</th><td>#FFFFFF at 15% opacity</td><td>Canvas grid overlay.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s13-4">Implementation</h3>
+
+<ul>
+  <li>Themes are implemented as Qt Style Sheets (QSS) stored in resources/themes/light.qss and
+  resources/themes/dark.qss.</li>
+  <li>All colors are defined as named constants in the QSS files for easy customization.</li>
+  <li>Icons use SVG format and include both light and dark variants (or use a single SVG with
+  CSS-controllable fill colors).</li>
+  <li>Theme switching is live (no restart required). Changing the theme re-applies the QSS and
+  refreshes all widgets.</li>
+  <li>Canvas-specific rendering (selection handles, grid, ruler colors) reads theme values
+  from a central ThemeManager class, not from QSS directly.</li>
+</ul>
+
+<h2 id="s14">Accessibility</h2>
+
+<ul>
+  <li>All interactive controls have accessible names and descriptions set via QAccessible or
+  <code>setAccessibleName()</code>/<code>setAccessibleDescription()</code>.</li>
+  <li>All toolbar buttons and menu items have text labels accessible to screen readers, even
+  when only icons are visually displayed.</li>
+  <li>Tab order is logical: Menu Bar &gt; Main Toolbar &gt; Tool Options Bar &gt; Left Tool
+  Palette &gt; Canvas &gt; Layer Panel &gt; Property Panel.</li>
+  <li>Focus indicators are visible: a 2px accent-colored outline around the focused control.</li>
+  <li>Color is not the only indicator of state: selected items have both a color change and a
+  pattern (dashed outline). Locked layers show both a lock icon and reduced opacity.</li>
+  <li>All text meets WCAG 2.1 AA contrast ratio (4.5:1 for normal text, 3:1 for large text) in
+  both light and dark themes.</li>
+  <li>Canvas zoom supports users with low vision. The pixel grid at high zoom aids precise
+  work.</li>
+  <li>Status bar messages are announced to screen readers when they change.</li>
+  <li>All keyboard shortcuts are documented and accessible via the Help &gt; Keyboard
+  Shortcuts dialog.</li>
+  <li>In a future phase, support high-contrast mode for users who need it.</li>
+</ul>
+
+<h2 id="s15">Responsive Behavior &amp; Window Management</h2>
+
+<h3 id="s15-1">Minimum Window Size</h3>
+
+<p>The minimum window size is 1024x600 pixels. Below this, the window cannot be resized
+further. At this size, the Right Panel stack auto-collapses to icon-only mode (small
+icons for layer visibility/lock only) and the Tool Options Bar collapses into an
+overflow menu.</p>
+
+<h3 id="s15-2">Panel Collapse Behavior</h3>
+
+<ul>
+  <li>When the window width drops below 1280px, the Layer Panel and Property Panel
+  automatically collapse to a narrow mode (200px) with abbreviated controls.</li>
+  <li>When the window width drops below 1024px, right panels collapse to icon-strip mode
+  (48px) showing only layer thumbnails. Clicking a thumbnail opens a floating popover with
+  full controls.</li>
+  <li>The Left Tool Palette always remains as a single column of icons (48px wide) and does
+  not collapse further.</li>
+  <li>All collapse thresholds are configurable in Preferences.</li>
+</ul>
+
+<h3 id="s15-3">Multi-Monitor Support</h3>
+
+<ul>
+  <li>Floating panels (undocked QDockWidgets) can be moved to a second monitor.</li>
+  <li>The application remembers the monitor and position of floating panels across sessions.</li>
+  <li>If a saved panel position refers to a monitor that is no longer connected, the panel is
+  moved to the primary monitor.</li>
+</ul>
+
+<h3 id="s15-4">Session Persistence</h3>
+
+<p>The following UI state is saved and restored across application sessions via QSettings:</p>
+
+<ul>
+  <li>Window position, size, and maximized/fullscreen state.</li>
+  <li>Panel dock positions, sizes, and visibility states.</li>
+  <li>Active theme (Light/Dark/System).</li>
+  <li>Last-used export settings per format.</li>
+  <li>Recent file list.</li>
+  <li>Toolbar and panel visibility toggles.</li>
+  <li>Grid/snap/ruler toggle states.</li>
+  <li>Last-used tool and its option values.</li>
+  <li>Zoom level per recently opened project (stored in recent file metadata).</li>
+</ul>
+
+<h2 id="s16">First-Run Experience</h2>
+
+<p>On the very first launch (no QSettings found), SnapMock displays a Welcome panel instead
+of the empty canvas:</p>
+
+<h3 id="s16-1">Welcome Panel Content</h3>
+
+<ol>
+  <li>Application logo and tagline: "SnapMock - Screenshot Annotation &amp; UI Mockup Tool".</li>
+  <li>Quick Start section with three large clickable cards: "Open an Image" (opens file dialog
+  for image import), "Paste from Clipboard" (pastes clipboard content as background), "New
+  Blank Canvas" (opens canvas size dialog).</li>
+  <li>"Getting Started" tips: a brief 4-step visual guide: (1) Import or paste a screenshot,
+  (2) Use annotation tools to mark up the image, (3) Cut and rearrange screen regions for
+  mockups, (4) Export or save your work.</li>
+  <li>"Don't show this again" checkbox at the bottom.</li>
+  <li>The Welcome panel is also accessible from Help &gt; Welcome / Getting Started.</li>
+</ol>
+
+<h3 id="s16-2">Default Tool Configuration</h3>
+
+<p>On first launch, the following defaults are applied:</p>
+
+<ul>
+  <li>Active tool: Select / Move</li>
+  <li>Stroke color: #FF0000 (red) - highly visible for annotations</li>
+  <li>Fill color: transparent</li>
+  <li>Stroke width: 2px</li>
+  <li>Font: system default sans-serif, 14pt</li>
+  <li>Grid: hidden, snap enabled, grid size 10px</li>
+  <li>Rulers: hidden</li>
+  <li>Theme: System (follows OS preference)</li>
+</ul>
+
+<h2 id="s17">Acceptance Criteria</h2>
+
+<h3 id="s17-1">Window &amp; Layout</h3>
+
+<ol>
+  <li>The main window opens at a reasonable default size (80% of screen) with all panels in
+  their default positions.</li>
+  <li>All panels can be docked, undocked, tabbed, closed, and re-opened via the View menu.</li>
+  <li>Panel positions and sizes are saved and restored across sessions.</li>
+  <li>"Reset Layout" restores the default arrangement.</li>
+  <li>The window title updates correctly with the project name and dirty flag asterisk.</li>
+</ol>
+
+<h3 id="s17-2">Menu Bar</h3>
+
+<ol>
+  <li>All menus listed in Section 3 are present with all specified items.</li>
+  <li>Keyboard shortcuts work as specified.</li>
+  <li>Menu items are never disabled. Clicking a menu item whose requirements are not met
+  displays an informative message identifying the unmet requirements.</li>
+  <li>Menu items that are toggles (checkmarks) accurately reflect the current state.</li>
+</ol>
+
+<h3 id="s17-3">Toolbars</h3>
+
+<ol>
+  <li>The Main Toolbar shows all button groups with correct icons and tooltips.</li>
+  <li>The Tool Options Bar dynamically updates when the active tool changes.</li>
+  <li>The Left Tool Palette shows all 18 tools with correct icons.</li>
+  <li>The active tool is visually highlighted in the tool palette.</li>
+  <li>Toolbar buttons are never disabled. Clicking a toolbar button whose requirements are not
+  met displays an informative message identifying the unmet requirements.</li>
+</ol>
+
+<h3 id="s17-4">Canvas</h3>
+
+<ol>
+  <li>The empty canvas prompt is shown when no image is loaded.</li>
+  <li>Drag-and-drop of image files onto the canvas creates a background layer.</li>
+  <li>Rulers display correctly when enabled and track cursor position.</li>
+  <li>Grid displays correctly when enabled and respects zoom level.</li>
+  <li>Canvas background shows checkerboard for transparent areas.</li>
+  <li>All cursor changes listed in Section 6.5 work correctly.</li>
+</ol>
+
+<h3 id="s17-5">Panels</h3>
+
+<ol>
+  <li>Layer Panel correctly shows all layers with thumbnails, names, visibility, and lock
+  state.</li>
+  <li>Layer drag-and-drop reordering works smoothly.</li>
+  <li>Property Panel updates in real-time when items are selected, deselected, or modified.</li>
+  <li>Property changes in the panel are immediately reflected on the canvas.</li>
+  <li>Status Bar shows correct values for all zones and updates in real-time.</li>
+</ol>
+
+<h3 id="s17-6">Theming</h3>
+
+<ol>
+  <li>Light and Dark themes render correctly with no visual glitches.</li>
+  <li>Theme switching is instant with no restart required.</li>
+  <li>All text meets WCAG 2.1 AA contrast requirements in both themes.</li>
+  <li>Icons are legible in both themes.</li>
+</ol>
+
+<h3 id="s17-7">Dialogs</h3>
+
+<ol>
+  <li>Color picker popover opens near the clicked swatch, shows correct color, and applies
+  changes live.</li>
+  <li>Export dialog shows correct options per format and produces valid output.</li>
+  <li>Preferences dialog saves all settings and they take effect immediately.</li>
+  <li>Unsaved changes dialog appears when appropriate and all three buttons work correctly.</li>
+</ol>
+
+<h3 id="s17-8">Accessibility</h3>
+
+<ol>
+  <li>All controls are reachable via Tab key navigation.</li>
+  <li>Screen reader announces control names and states correctly.</li>
+  <li>Focus indicators are visible on all interactive controls.</li>
+</ol>
+
+<h2 id="s18">Open Issues</h2>
+
+<p>These items were raised by the conversion from Word. None of them changes a
+requirement; each needs a decision before this document leaves draft.</p>
+
+<div class="note issue">
+  <span class="note-label">Open — The title page carried September 2026 while the change log placed vers</span>
+  <p>The title page carried September 2026 while the change log placed version 1.6 in 09-07-26 00:48. Carried over as written.</p>
+</div>
+
+<div class="note issue">
+  <span class="note-label">Open — approval status never recorded</span>
+  <p>The original carried no approval record. Version 1.6 is shown as pending. Confirm
+  whether any earlier version was formally approved.</p>
+</div>
+
+</main>
+
+</div>
+</body>
+</html>
