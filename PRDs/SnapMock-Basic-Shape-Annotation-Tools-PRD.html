@@ -1,0 +1,1939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Basic Shape Annotation Tools — SnapMock Product Requirements Document</title>
+<link rel="stylesheet" href="prd.css">
+</head>
+<body>
+<div class="doc">
+
+<header class="doc-head">
+  <h1>Basic Shape Annotation Tools</h1>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.2</span>
+  <dl class="doc-meta">
+    <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
+    <dt>Covers</dt>          <dd>Line · Arrow · Rectangle · Ellipse · Arc · Polygon · Freehand / Pen</dd>
+    <dt>Document version</dt><dd>1.2</dd>
+    <dt>Last Updated</dt>    <dd>09-07-26 15:40</dd>
+    <dt>Author</dt>          <dd>Doug Bower</dd>
+    <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
+  </dl>
+</header>
+
+<section class="front-matter">
+
+  <h2 class="unnumbered">Revision control</h2>
+  <table>
+    <colgroup><col class="w-narrow"><col class="w-short"><col class="w-short"><col><col class="w-short"></colgroup>
+    <thead>
+      <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1.2</td>
+        <td class="nowrap">09-07-26 15:40</td>
+        <td>Doug Bower</td>
+        <td>Converted from Word to HTML. Content unchanged except for corrections
+        noted in the change log below.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
+      <tr>
+        <td>1.2</td>
+        <td class="nowrap">March 2026</td>
+        <td>Doug Bower</td>
+        <td>Added the shared flip rendering note to Section 2.6.</td>
+        <td><span class="status closed">Superseded by format conversion</span></td>
+      </tr>
+      <tr>
+        <td>1.1</td>
+        <td class="nowrap">March 2026</td>
+        <td>Doug Bower</td>
+        <td>Replaced the single opacity property with separate fill and stroke opacity
+        properties.</td>
+        <td><span class="status closed">Superseded</span></td>
+      </tr>
+      <tr>
+        <td>1.0</td>
+        <td class="nowrap">February 2026</td>
+        <td>Doug Bower</td>
+        <td>Initial document.</td>
+        <td><span class="status closed">Superseded</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note issue">
+    <span class="note-label">Open — incomplete revision history</span>
+    <p>The Word original recorded release months only, so the dates for versions 1.0
+    through 1.2 do not meet the MM-DD-YY HH:MM standard. They are carried over as
+    written rather than invented. Supply the exact dates and they will be corrected.</p>
+    <p>The original also carried two conflicting dates: the title page said February
+    2026 while the change log placed both version 1.1 and version 1.2 in March 2026.
+    Version 1.0 has been assigned the February date on the reading that it was the
+    title page's original value.</p>
+  </div>
+
+  <h2 class="unnumbered">Change log</h2>
+  <table>
+    <colgroup><col class="w-short"><col class="w-short"><col class="w-short"><col></colgroup>
+    <thead>
+      <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="nowrap">09-07-26 15:40</td>
+        <td>All</td>
+        <td>Format</td>
+        <td>Converted from Word to HTML against the shared stylesheet. Revision control
+        and change log tables added to meet the output standard; the original had a
+        change log only.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 15:40</td>
+        <td>13.7</td>
+        <td>Corrected</td>
+        <td>Acceptance criteria for the Freehand / Pen tool were numbered 7 through 16
+        in the original, an artifact of Word list numbering. Renumbered 1 through 10.
+        No criteria were added, removed, or reworded.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 15:40</td>
+        <td>2</td>
+        <td>Flagged</td>
+        <td>The section text says six shape tools and cross-references Sections 3 to 8.
+        Seven tools are specified, across Sections 3 to 9. Left as written and flagged
+        as an open issue.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>2.6</td>
+        <td>Added</td>
+        <td>Shared flip rendering note describing the inherited flip_horizontal and
+        flip_vertical properties, the rendering transform order, and the points in the
+        interface that toggle them.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>2.2, 2.6, 12</td>
+        <td>Changed</td>
+        <td>Replaced the single opacity property with fill_opacity and stroke_opacity,
+        enabling independent control of fill and stroke transparency.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 class="unnumbered">Contents</h2>
+  <ol class="toc">
+    <li><a href="#s1">Document Overview</a>
+      <ol>
+        <li><a href="#s1-1">Purpose</a></li>
+        <li><a href="#s1-2">Scope</a></li>
+        <li><a href="#s1-3">Dependencies</a></li>
+      </ol>
+    </li>
+    <li><a href="#s2">Shared Shape Behavior</a>
+      <ol>
+        <li><a href="#s2-1">Common Drawing Workflow</a></li>
+        <li><a href="#s2-2">Shared Properties (VectorItem Base)</a></li>
+        <li><a href="#s2-3">Modifier Key Conventions</a></li>
+        <li><a href="#s2-4">Visual Feedback During Drawing</a></li>
+        <li><a href="#s2-5">Post-Creation Behavior</a></li>
+        <li><a href="#s2-6">Shared Tool Options Bar Controls</a></li>
+      </ol>
+    </li>
+    <li><a href="#s3">Line Tool</a></li>
+    <li><a href="#s4">Arrow Tool</a></li>
+    <li><a href="#s5">Rectangle Tool</a></li>
+    <li><a href="#s6">Ellipse Tool</a></li>
+    <li><a href="#s7">Arc Tool</a></li>
+    <li><a href="#s8">Polygon Tool</a></li>
+    <li><a href="#s9">Freehand / Pen Tool</a></li>
+    <li><a href="#s10">Shape Item Data Models</a></li>
+    <li><a href="#s11">Command Definitions</a></li>
+    <li><a href="#s12">Serialization</a></li>
+    <li><a href="#s13">Acceptance Criteria</a></li>
+    <li><a href="#s14">Open Issues</a></li>
+  </ol>
+
+</section>
+
+<main>
+
+<h2 id="s1">Document Overview</h2>
+
+<h3 id="s1-1">Purpose</h3>
+
+<p>This document defines the detailed functional requirements for the seven basic shape
+and drawing annotation tools in SnapMock: Line, Arrow, Rectangle, Ellipse, Arc, Polygon,
+and Freehand / Pen. These tools share substantial common behavior — drawing workflow,
+modifier keys, shared vector properties — so they are covered together in a single
+product requirements document. Each tool section specifies only the behavior unique to
+that tool.</p>
+
+<h3 id="s1-2">Scope</h3>
+
+<p>This document covers the drawing interaction for each shape, tool-specific properties,
+modifier key behavior, visual feedback during creation, the resulting scene item data
+model, serialization format, and acceptance criteria.</p>
+
+<p>Post-creation editing — selection, move, resize, rotate — is handled by the Select /
+Move tool defined in the Navigation and Raster Operations product requirements
+document.</p>
+
+<h3 id="s1-3">Dependencies</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Document</th><th>What is depended on</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Technical Architecture</th>
+      <td>
+        <ul>
+          <li><code>SnapGraphicsItem</code> base class (Section 3.1.4)</li>
+          <li><code>VectorItem</code> abstract base (Section 4.2)</li>
+          <li>Common vector properties (Section 4.3)</li>
+          <li><code>BaseTool</code> interface (Section 3.3.2)</li>
+          <li><code>ToolManager</code> (Section 3.3.1)</li>
+          <li><code>CommandStack</code> (Section 3.7)</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <th>General UI</th>
+      <td>Tool Options Bar layout (Section 5), Main Toolbar integration (Section 4),
+      Left Tool Palette (Section 2).</td>
+    </tr>
+    <tr>
+      <th>Navigation and Raster Operations</th>
+      <td>The Select / Move tool handles all post-creation interaction with shape
+      items.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="s2">Shared Shape Behavior</h2>
+
+<p>All six shape tools follow a common drawing workflow and share a base set of vector
+properties. This section defines the shared behavior; each tool section (Sections 3 to 8)
+defines only the differences.</p>
+
+<div class="note issue">
+  <span class="note-label">Open — count and cross-reference disagree with the document</span>
+  <p>The paragraph above is carried over unchanged from the Word original. Seven tools are
+  specified in this document, not six, and the tool sections run from Section 3 to
+  Section 9, not Section 3 to Section 8. Confirm the intended wording and the correction
+  will be applied.</p>
+</div>
+
+<h3 id="s2-1">Common Drawing Workflow</h3>
+
+<h5>State machine</h5>
+
+<p>Every shape tool follows this three-state lifecycle.</p>
+
+<table>
+  <colgroup><col class="w-short"><col class="w-wide"><col></colgroup>
+  <thead>
+    <tr><th>State</th><th>Description</th><th>Transitions</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Idle</th>
+      <td>Tool is active, waiting for the user to begin drawing.</td>
+      <td>Mouse press on canvas → Drawing.</td>
+    </tr>
+    <tr>
+      <th>Drawing</th>
+      <td>User is actively defining the shape by dragging, or clicking for polygon.</td>
+      <td>
+        <p>Mouse release → Created, for drag-based tools.</p>
+        <p>Double-click or Enter → Created, for polygon.</p>
+      </td>
+    </tr>
+    <tr>
+      <th>Created</th>
+      <td>The shape item has been added to the scene. Tool returns to Idle, ready for
+      the next shape.</td>
+      <td>Automatic transition back to Idle.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h5>Mouse press (Idle → Drawing)</h5>
+
+<ol>
+  <li>Verify the active layer is visible and unlocked. If not, show a status bar warning
+  ("Cannot draw on a locked/hidden layer") and ignore the press.</li>
+  <li>Record the press position in canvas coordinates as <code>origin_point</code>.</li>
+  <li>Create a temporary preview item, not yet added to the scene's item collection, to
+  provide real-time visual feedback.</li>
+  <li>Transition to the Drawing state.</li>
+</ol>
+
+<h5>Mouse move (during Drawing)</h5>
+
+<ol>
+  <li>Calculate the shape geometry from <code>origin_point</code> to the current mouse
+  position, applying any active modifier constraints.</li>
+  <li>Update the preview item's geometry in real time.</li>
+  <li>Display dimensions near the cursor. These are tool-specific: length for lines,
+  width by height for rectangles, radius for circles.</li>
+  <li>If Snap to Grid is enabled, snap the endpoint to the nearest grid intersection.</li>
+</ol>
+
+<h5>Mouse release (Drawing → Created)</h5>
+
+<ol>
+  <li>If the resulting shape is too small — bounding box area under 4 square pixels, or
+  line length under 2 pixels — discard the preview and return to Idle, treating it as an
+  accidental click.</li>
+  <li>Finalize the shape item with current properties from the Tool Options Bar: stroke
+  color, width, fill, and the rest.</li>
+  <li>Assign the item a new universally unique identifier (<code>item_id</code>) and
+  associate it with the active layer (<code>layer_id</code>).</li>
+  <li>Add the item to the scene and to the active layer's item list.</li>
+  <li>Push an <code>AddItemCommand</code> to the <code>CommandStack</code>.</li>
+  <li>Remove the preview item and replace it with the finalized item.</li>
+  <li>Transition back to Idle. The tool remains active, so the user can immediately draw
+  another shape.</li>
+  <li>The newly created item is not automatically selected, because that would interfere
+  with rapid drawing of multiple shapes. The user must switch to the Select tool (V) to
+  select and edit it.</li>
+</ol>
+
+<h3 id="s2-2">Shared Properties (VectorItem Base)</h3>
+
+<p>All shape items inherit from <code>VectorItem</code>, which inherits from
+<code>SnapGraphicsItem</code>. The shared editable properties are as follows.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>stroke_color</th><td>QColor</td><td>#FF0000 (red)</td><td>Stroke and outline color.</td></tr>
+    <tr><th>stroke_width</th><td>float</td><td>2.0</td><td>Stroke width in pixels. Range 0.5 to 50.0, step 0.5.</td></tr>
+    <tr><th>stroke_style</th><td>enum</td><td>Solid</td><td>Solid, Dashed, Dotted, DashDot, DashDotDot.</td></tr>
+    <tr><th>stroke_cap</th><td>enum</td><td>Round</td><td>Line cap style: Flat, Square, Round. Affects line endpoints and dash caps.</td></tr>
+    <tr><th>stroke_join</th><td>enum</td><td>Round</td><td>Line join style: Miter, Bevel, Round. Affects corners of rectangles and polygons.</td></tr>
+    <tr><th>fill_color</th><td>QColor</td><td>transparent</td><td>Interior fill color. Transparent means no fill.</td></tr>
+    <tr><th>fill_enabled</th><td>bool</td><td>False</td><td>Whether the shape has a visible fill. When False, <code>fill_color</code> is ignored.</td></tr>
+    <tr><th>fill_opacity</th><td>float</td><td>1.0</td><td>Fill opacity, 0.0 to 1.0. Controls fill and background transparency. Multiplied with layer opacity.</td></tr>
+    <tr><th>stroke_opacity</th><td>float</td><td>1.0</td><td>Stroke opacity, 0.0 to 1.0. Controls stroke, border, and outline transparency. Multiplied with layer opacity.</td></tr>
+    <tr><th>shadow_enabled</th><td>bool</td><td>False</td><td>Whether a drop shadow is rendered.</td></tr>
+    <tr><th>shadow_color</th><td>QColor</td><td>#00000080</td><td>Shadow color with alpha.</td></tr>
+    <tr><th>shadow_offset_x</th><td>float</td><td>3.0</td><td>Shadow horizontal offset in pixels.</td></tr>
+    <tr><th>shadow_offset_y</th><td>float</td><td>3.0</td><td>Shadow vertical offset in pixels.</td></tr>
+    <tr><th>shadow_blur</th><td>float</td><td>5.0</td><td>Shadow gaussian blur radius in pixels.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s2-3">Modifier Key Conventions</h3>
+
+<p>These modifier behaviors apply during the Drawing state for all shape tools unless
+overridden in the tool-specific section.</p>
+
+<table>
+  <colgroup><col class="w-short"><col><col class="w-medium"></colgroup>
+  <thead>
+    <tr><th>Modifier</th><th>Behavior</th><th>Applies to</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Shift</th>
+      <td>Constrain proportions. Rectangles become squares. Ellipses become circles.
+      Lines and arrows constrain to 0°, 15°, 30°, 45°, 60°, 75°, 90° and their
+      reflections.</td>
+      <td>All tools</td>
+    </tr>
+    <tr>
+      <th>Alt</th>
+      <td>Draw from center. The <code>origin_point</code> becomes the center of the shape
+      instead of a corner or endpoint.</td>
+      <td>Rectangle, Ellipse, Arc</td>
+    </tr>
+    <tr>
+      <th>Shift + Alt</th>
+      <td>Constrain proportions and draw from center together.</td>
+      <td>Rectangle, Ellipse</td>
+    </tr>
+    <tr>
+      <th>Ctrl</th>
+      <td>Reserved for future use, such as snapping to item edges. Currently no effect
+      during drawing.</td>
+      <td>All tools</td>
+    </tr>
+    <tr>
+      <th>Escape</th>
+      <td>Cancel the current drawing operation. Remove the preview item. Return to
+      Idle.</td>
+      <td>All tools</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="s2-4">Visual Feedback During Drawing</h3>
+
+<ul>
+  <li>The preview shape is drawn with the current stroke and fill properties from the
+  Tool Options Bar, at 70% opacity to distinguish it from finalized items.</li>
+  <li>A dimension tooltip follows the cursor at a 15 by 15 pixel offset from the mouse
+  position. It displays tool-specific measurements, given in each tool section.</li>
+  <li>If Shift is held, a small constrain icon appears near the tooltip to indicate the
+  constraint is active.</li>
+  <li>If Alt is held, a small crosshair marker is drawn at the <code>origin_point</code>
+  to indicate center-draw mode.</li>
+  <li>Guide lines — dashed, 1 pixel, 30% opacity accent color — extend from the shape
+  edges to the rulers, when rulers are visible, to help with alignment.</li>
+</ul>
+
+<h3 id="s2-5">Post-Creation Behavior</h3>
+
+<ul>
+  <li>After a shape is created, the tool immediately returns to Idle and is ready for the
+  next shape. The user does not need to re-select the tool.</li>
+  <li>To edit the shape's properties after creation, the user switches to the Select tool
+  (V), selects the shape, and modifies properties in the Property Panel or Tool Options
+  Bar.</li>
+  <li>To edit the shape's geometry directly, such as moving an endpoint of a line, the
+  user selects the shape and uses TransformHandles. For shapes with control points — arc
+  and polygon — double-clicking enters point-editing mode.</li>
+  <li>Rapid drawing: users can draw multiple shapes in quick succession without any
+  intermediate steps. Each shape is a separate undo step.</li>
+</ul>
+
+<h3 id="s2-6">Shared Tool Options Bar Controls</h3>
+
+<p>All shape tools show the following controls in the Tool Options Bar, in this order
+from left to right.</p>
+
+<ol>
+  <li>Stroke Color swatch button, 24 by 24 pixels. Click for a color picker popover.</li>
+  <li>Fill Color swatch button, 24 by 24 pixels. Shows a diagonal line for no fill. Click
+  for a color picker popover.</li>
+  <li>Stroke Width spin box and slider, 0.5 to 50.0, step 0.5.</li>
+  <li>Stroke Style dropdown: Solid, Dashed, Dotted, DashDot, DashDotDot.</li>
+  <li>Fill Opacity slider and spin box, 0% to 100%. Controls fill transparency.</li>
+  <li>Stroke Opacity slider and spin box, 0% to 100%. Controls stroke transparency.</li>
+  <li>Shadow toggle checkbox.</li>
+  <li>Tool-specific controls, detailed in each tool section.</li>
+</ol>
+
+<p>Changing a value in the Tool Options Bar while no item is selected updates the default
+for the next shape drawn. Changing a value while a shape of the matching type is selected
+applies the change to the selected shape, through a
+<code>ModifyPropertyCommand</code>.</p>
+
+<h5>Shared rendering note — flip transforms</h5>
+
+<p>All shape items inherit <code>flip_horizontal</code> and <code>flip_vertical</code>
+boolean properties from the <code>SnapGraphicsItem</code> base class, defined in the
+Technical Architecture product requirements document, Section 3.1.4. When either property
+is True, the item's <code>paint()</code> applies <code>QPainter scale(-1, 1)</code> or
+<code>scale(1, -1)</code> respectively around the bounding box center.</p>
+
+<p>The rendering transform order is: translate to scene position, apply rotation, apply
+flip, then render content. These properties are toggled through the Arrange menu, the
+Property Panel Transform section, or the item context menu, all defined in the General UI
+product requirements document.</p>
+
+<h2 id="s3">Line Tool</h2>
+
+<h3 id="s3-1">Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead><tr><th>Property</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><th>Tool ID</th><td><code>line</code></td></tr>
+    <tr><th>Display Name</th><td>Line</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>U</td></tr>
+    <tr><th>Default Cursor</th><td>Crosshair</td></tr>
+    <tr><th>Category</th><td>Annotation</td></tr>
+    <tr><th>Item Class</th><td><code>LineItem</code> (extends <code>VectorItem</code>)</td></tr>
+  </tbody>
+</table>
+
+<p>The Line tool draws a straight line segment between two points.</p>
+
+<h3 id="s3-2">Drawing Behavior</h3>
+
+<h5>Geometry definition</h5>
+
+<ul>
+  <li>The line is defined by two points: <code>start_point</code>, the
+  <code>origin_point</code> where the mouse was pressed, and <code>end_point</code>,
+  where the mouse currently is or was released.</li>
+  <li>The line is rendered as a <code>QPainterPath</code> from <code>start_point</code>
+  to <code>end_point</code> with the configured stroke properties.</li>
+</ul>
+
+<h5>Shift constraint</h5>
+
+<ul>
+  <li>When Shift is held during drawing, the line angle is snapped to the nearest
+  multiple of 15 degrees: 0°, 15°, 30°, 45°, 60°, 75°, 90°, 105°, 120°, 135°, 150°, 165°,
+  180°, and their reflections.</li>
+  <li>The constrained angle is calculated from the <code>origin_point</code>. The endpoint
+  is projected onto the constrained angle ray at the distance of the current mouse
+  position from origin.</li>
+  <li>The most common use is Shift for perfectly horizontal, vertical, or 45-degree
+  diagonal lines.</li>
+</ul>
+
+<h5>Alt modifier</h5>
+
+<p>Alt has no effect on lines, because there is no meaningful draw-from-center for a line
+segment. Alt is ignored.</p>
+
+<h5>Dimension tooltip</h5>
+
+<p>During drawing, display <code>L: 245px ∠ 32.5°</code> — length in pixels and angle in
+degrees from horizontal.</p>
+
+<h5>Minimum size</h5>
+
+<p>Lines shorter than 2 pixels on release are discarded, treated as an accidental
+click.</p>
+
+<h3 id="s3-3">Tool-Specific Properties</h3>
+
+<p><code>LineItem</code> has no additional properties beyond the shared
+<code>VectorItem</code> properties. Its geometry is fully defined by
+<code>start_point</code> and <code>end_point</code>.</p>
+
+<h3 id="s3-4">Tool Options Bar (Additional Controls)</h3>
+
+<p>No additional controls beyond the shared set in Section 2.6.</p>
+
+<h3 id="s3-5">Point Editing Mode</h3>
+
+<ul>
+  <li>When a <code>LineItem</code> is selected with the Select tool and double-clicked, it
+  enters point-editing mode.</li>
+  <li>In point-editing mode, the <code>start_point</code> and <code>end_point</code> are
+  shown as draggable control point handles: 8 by 8 pixel filled circles in the accent
+  color.</li>
+  <li>Dragging a control point moves that endpoint independently, changing the line's
+  angle and length.</li>
+  <li>Shift constrains the drag to 15-degree angle increments, the same as during
+  creation.</li>
+  <li>Clicking outside the item or pressing Escape exits point-editing mode.</li>
+  <li>Moving a control point pushes a <code>ModifyPropertyCommand</code> storing the old
+  and new point positions.</li>
+</ul>
+
+<h3 id="s3-6">Rendering</h3>
+
+<ul>
+  <li>The line is rendered using <code>QPainter.drawLine()</code> or
+  <code>QPainterPath</code> with the configured <code>QPen</code>: color, width, style,
+  cap.</li>
+  <li><code>stroke_cap</code> is particularly important for lines. A Flat cap ends the
+  line exactly at the endpoints. A Round cap extends a half-circle beyond each endpoint. A
+  Square cap extends a half-square beyond each endpoint.</li>
+  <li>When <code>shadow_enabled</code> is True, the shadow is rendered as a duplicate of
+  the line offset by <code>shadow_offset_x</code> and <code>shadow_offset_y</code>,
+  blurred by <code>shadow_blur</code>, and colored with <code>shadow_color</code>. The
+  shadow is drawn first, behind the line.</li>
+</ul>
+
+<h3 id="s3-7">shape() for Hit Testing</h3>
+
+<p>The <code>shape()</code> method returns a <code>QPainterPath</code> representing the
+line stroke area, not just the mathematical line. It is created using
+<code>QPainterPathStroker</code> with the <code>stroke_width</code> plus a hit-test
+padding of 4 pixels, so thin lines are still easy to click. This ensures users can click
+anywhere near the line to select it, not only exactly on the 2-pixel-wide stroke.</p>
+
+<h3 id="s3-8">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead><tr><th>State</th><th>Status bar text</th></tr></thead>
+  <tbody>
+    <tr><th>Idle</th><td>Click and drag to draw a line. Shift: constrain angle.</td></tr>
+    <tr><th>Drawing</th><td>L: 245px ∠ 32.5° | Shift: snap to 15° | Release to confirm.</td></tr>
+    <tr><th>Point editing mode</th><td>Drag endpoints to reshape. Shift: constrain angle. Escape: exit.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s4">Arrow Tool</h2>
+
+<h3 id="s4-1">Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead><tr><th>Property</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><th>Tool ID</th><td><code>arrow</code></td></tr>
+    <tr><th>Display Name</th><td>Arrow</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>A</td></tr>
+    <tr><th>Default Cursor</th><td>Crosshair</td></tr>
+    <tr><th>Category</th><td>Annotation</td></tr>
+    <tr><th>Item Class</th><td><code>ArrowItem</code> (extends <code>VectorItem</code>)</td></tr>
+  </tbody>
+</table>
+
+<p>The Arrow tool draws a straight line with one or more arrowheads. It is the most
+commonly used annotation tool for pointing out interface elements, and is functionally a
+Line with arrowhead decorations.</p>
+
+<h3 id="s4-2">Drawing Behavior</h3>
+
+<p>Identical to the Line tool, Section 3.2. The arrow is drawn from
+<code>start_point</code>, the tail, to <code>end_point</code>, the head. The arrowhead is
+rendered at <code>end_point</code> by default.</p>
+
+<h3 id="s4-3">Tool-Specific Properties</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>head_style</th><td>enum</td><td>Open</td>
+      <td>Arrowhead style at the <code>end_point</code>. Options: None, Open (two lines),
+      Filled (solid triangle), Diamond (filled diamond), Circle (filled circle), Square
+      (filled square).</td>
+    </tr>
+    <tr>
+      <th>tail_style</th><td>enum</td><td>None</td>
+      <td>Arrowhead style at the <code>start_point</code>. Same options as
+      <code>head_style</code>.</td>
+    </tr>
+    <tr>
+      <th>head_size</th><td>enum</td><td>Medium</td>
+      <td>Size of arrowheads. Options: Small (8px), Medium (12px), Large (18px), XLarge
+      (24px). The actual pixel size scales with <code>stroke_width</code>.</td>
+    </tr>
+    <tr>
+      <th>head_size_custom</th><td>float</td><td>0</td>
+      <td>Custom arrowhead size in pixels. Overrides the <code>head_size</code> enum when
+      non-zero. Range 4 to 60.</td>
+    </tr>
+    <tr>
+      <th>line_style</th><td>enum</td><td>Straight</td>
+      <td>Line path type. Options: Straight (direct line), Curved (single bezier curve
+      with one control point), Elbow (right-angle connector with one bend point).</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="s4-4">Arrowhead Geometry</h3>
+
+<h5>Open arrowhead</h5>
+
+<ul>
+  <li>Two lines extending from the endpoint at 30 degrees on each side of the line
+  direction.</li>
+  <li>Line length is determined by <code>head_size</code>. The lines use the same
+  <code>stroke_width</code> and <code>stroke_color</code> as the shaft.</li>
+  <li><code>stroke_cap</code> on the arrowhead lines is always Round for a clean look.</li>
+</ul>
+
+<h5>Filled arrowhead</h5>
+
+<ul>
+  <li>An isosceles triangle with its tip at the endpoint, centered on the line
+  direction.</li>
+  <li>The triangle base width is twice the <code>head_size</code>. The triangle height,
+  from tip to base, equals <code>head_size</code>.</li>
+  <li>The triangle is filled with <code>stroke_color</code>, not <code>fill_color</code>,
+  which controls the line's body fill.</li>
+  <li>The line shaft ends at the base of the triangle, not at the endpoint, so there is no
+  overlap.</li>
+</ul>
+
+<h5>Diamond arrowhead</h5>
+
+<ul>
+  <li>A diamond, a rotated square, centered at the endpoint.</li>
+  <li>Width and height equal <code>head_size</code>.</li>
+  <li>Filled with <code>stroke_color</code>.</li>
+</ul>
+
+<h5>Circle arrowhead</h5>
+
+<ul>
+  <li>A circle centered at the endpoint, with diameter equal to <code>head_size</code>.</li>
+  <li>Filled with <code>stroke_color</code>.</li>
+</ul>
+
+<h5>Square arrowhead</h5>
+
+<ul>
+  <li>A square centered at the endpoint, with side length equal to
+  <code>head_size</code>.</li>
+  <li>Rotated to align with the line direction.</li>
+  <li>Filled with <code>stroke_color</code>.</li>
+</ul>
+
+<h3 id="s4-5">Curved Arrow</h3>
+
+<ul>
+  <li>When <code>line_style</code> is Curved, the line is rendered as a quadratic Bezier
+  curve.</li>
+  <li>During initial drawing by drag, the curve is a straight line. After creation, the
+  user can enter point-editing mode by double-clicking to adjust the curve.</li>
+  <li>In point-editing mode, a single control point is shown at the midpoint of the line.
+  Dragging the control point adjusts the curve's curvature.</li>
+  <li>The control point is rendered as a 10 by 10 pixel circle in a different color,
+  green, to distinguish it from endpoint handles.</li>
+  <li>Dashed guide lines connect the control point to the start and end points.</li>
+  <li>The arrowheads are oriented tangent to the curve at the endpoint, not along the
+  straight-line direction between start and end.</li>
+</ul>
+
+<h3 id="s4-6">Elbow Arrow (Right-Angle Connector)</h3>
+
+<ul>
+  <li>When <code>line_style</code> is Elbow, the line consists of two or three segments
+  meeting at right angles.</li>
+  <li>The bend point is automatically calculated. By default the horizontal segment
+  extends from <code>start_point</code> to the midpoint X, then a vertical segment
+  connects to the <code>end_point</code> Y, then a horizontal segment reaches
+  <code>end_point</code>, creating an L or Z shape depending on relative positions.</li>
+  <li>In point-editing mode, the bend point can be dragged to adjust the position of the
+  right-angle turn.</li>
+  <li>The bend point is constrained to maintain right angles in all segments.</li>
+  <li>Arrowheads orient along the direction of the terminal segment.</li>
+</ul>
+
+<h3 id="s4-7">Tool Options Bar (Additional Controls)</h3>
+
+<p>In addition to the shared controls in Section 2.6:</p>
+
+<ul>
+  <li>Head Style dropdown with visual icons for each option: None, Open, Filled, Diamond,
+  Circle, Square.</li>
+  <li>Tail Style dropdown, same options.</li>
+  <li>Head Size dropdown — Small, Medium, Large, XLarge — or a custom spin box.</li>
+  <li>Line Style toggle buttons with icons: Straight, Curved, Elbow.</li>
+</ul>
+
+<h3 id="s4-8">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead><tr><th>State</th><th>Status bar text</th></tr></thead>
+  <tbody>
+    <tr><th>Idle</th><td>Click and drag to draw an arrow. Shift: constrain angle.</td></tr>
+    <tr><th>Drawing</th><td>L: 245px ∠ 32.5° | Shift: snap to 15° | Release to confirm.</td></tr>
+    <tr><th>Point editing (straight)</th><td>Drag endpoints to reshape. Shift: constrain angle. Escape: exit.</td></tr>
+    <tr><th>Point editing (curved)</th><td>Drag endpoints or control point to reshape. Escape: exit.</td></tr>
+    <tr><th>Point editing (elbow)</th><td>Drag endpoints or bend point to reshape. Escape: exit.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s5">Rectangle Tool</h2>
+
+<h3 id="s5-1">Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead><tr><th>Property</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><th>Tool ID</th><td><code>rectangle</code></td></tr>
+    <tr><th>Display Name</th><td>Rectangle</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>R</td></tr>
+    <tr><th>Default Cursor</th><td>Crosshair</td></tr>
+    <tr><th>Category</th><td>Annotation</td></tr>
+    <tr><th>Item Class</th><td><code>RectangleItem</code> (extends <code>VectorItem</code>)</td></tr>
+  </tbody>
+</table>
+
+<p>The Rectangle tool draws rectangles and squares with optional rounded corners and
+fill.</p>
+
+<h3 id="s5-2">Drawing Behavior</h3>
+
+<h5>Geometry definition</h5>
+
+<ul>
+  <li>The rectangle is defined by two diagonal corners: <code>origin_point</code>, where
+  the mouse was pressed, and the current mouse position.</li>
+  <li>The rectangle is always axis-aligned during drawing, with no rotation. Rotation is
+  applied post-creation through TransformHandles.</li>
+</ul>
+
+<h5>Shift constraint</h5>
+
+<p>Shift constrains the rectangle to a perfect square. The side length equals the larger
+of the width or height from the unconstrained rectangle.</p>
+
+<h5>Alt modifier</h5>
+
+<p>Alt draws from center: <code>origin_point</code> becomes the center of the rectangle,
+and the rectangle extends equally in all four directions to the cursor position.</p>
+
+<h5>Shift + Alt</h5>
+
+<p>Constrains to a square drawn from center.</p>
+
+<h5>Dimension tooltip</h5>
+
+<p>During drawing, display <code>W: 320 H: 240</code> — width and height in pixels.</p>
+
+<h5>Minimum size</h5>
+
+<p>Rectangles with area less than 4 square pixels are discarded on release.</p>
+
+<h3 id="s5-3">Tool-Specific Properties</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>corner_radius</th><td>float</td><td>0.0</td>
+      <td>Border radius for rounded rectangles, in pixels. Range 0 to the smaller of
+      half the width and half the height. Zero produces sharp corners.</td>
+    </tr>
+    <tr>
+      <th>corner_radius_mode</th><td>enum</td><td>Uniform</td>
+      <td>Uniform: all four corners use the same radius. Individual: each corner has its
+      own radius, set by <code>corner_radius_tl</code>, <code>_tr</code>,
+      <code>_bl</code>, <code>_br</code>.</td>
+    </tr>
+    <tr><th>corner_radius_tl</th><td>float</td><td>0.0</td><td>Top-left corner radius, when mode is Individual.</td></tr>
+    <tr><th>corner_radius_tr</th><td>float</td><td>0.0</td><td>Top-right corner radius.</td></tr>
+    <tr><th>corner_radius_bl</th><td>float</td><td>0.0</td><td>Bottom-left corner radius.</td></tr>
+    <tr><th>corner_radius_br</th><td>float</td><td>0.0</td><td>Bottom-right corner radius.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s5-4">Tool Options Bar (Additional Controls)</h3>
+
+<p>In addition to the shared controls in Section 2.6:</p>
+
+<ul>
+  <li>Corner Radius slider and spin box, 0 to 200 pixels, step 1. A small toggle button
+  switches between Uniform and Individual mode.</li>
+  <li>When Individual mode is active, four small spin boxes appear — top-left, top-right,
+  bottom-left, bottom-right — replacing the single slider.</li>
+  <li>The Fill Enabled toggle is prominently placed, since rectangles frequently use
+  fills.</li>
+</ul>
+
+<h3 id="s5-5">Rendering</h3>
+
+<ul>
+  <li>When <code>corner_radius</code> is 0, render using
+  <code>QPainter.drawRect()</code>.</li>
+  <li>When <code>corner_radius</code> is greater than 0, render using
+  <code>QPainter.drawRoundedRect()</code> with the specified radii.</li>
+  <li>When individual corner radii are set, construct a <code>QPainterPath</code> manually
+  with <code>arcTo()</code> for each corner.</li>
+  <li>Fill is rendered first, if enabled, then stroke on top.</li>
+  <li>The fill area is inside the stroke boundary. The stroke straddles the geometric
+  edge, with half inside and half outside.</li>
+  <li>When <code>fill_enabled</code> is True and <code>fill_color</code> is
+  semi-transparent, the fill renders behind the stroke correctly without overlap
+  artifacts.</li>
+</ul>
+
+<h3 id="s5-6">shape() for Hit Testing</h3>
+
+<ul>
+  <li>If <code>fill_enabled</code> is True, <code>shape()</code> returns the filled
+  rectangle path, so clicking anywhere inside selects it.</li>
+  <li>If <code>fill_enabled</code> is False, <code>shape()</code> returns a
+  <code>QPainterPathStroker</code> result of the rectangle outline with
+  <code>stroke_width</code> plus 4 pixels of padding. Only clicking near the border
+  selects it.</li>
+  <li>This distinction matters for usability: filled shapes are easy to click, unfilled
+  shapes require clicking near the edge.</li>
+</ul>
+
+<h3 id="s5-7">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead><tr><th>State</th><th>Status bar text</th></tr></thead>
+  <tbody>
+    <tr><th>Idle</th><td>Click and drag to draw a rectangle. Shift: square. Alt: from center.</td></tr>
+    <tr><th>Drawing</th><td>W: 320 H: 240 | Shift: square | Alt: from center | Release to confirm.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s6">Ellipse Tool</h2>
+
+<h3 id="s6-1">Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead><tr><th>Property</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><th>Tool ID</th><td><code>ellipse</code></td></tr>
+    <tr><th>Display Name</th><td>Ellipse</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>E</td></tr>
+    <tr><th>Default Cursor</th><td>Crosshair</td></tr>
+    <tr><th>Category</th><td>Annotation</td></tr>
+    <tr><th>Item Class</th><td><code>EllipseItem</code> (extends <code>VectorItem</code>)</td></tr>
+  </tbody>
+</table>
+
+<p>The Ellipse tool draws ellipses and circles with optional fill. The ellipse is defined
+by its bounding rectangle.</p>
+
+<h3 id="s6-2">Drawing Behavior</h3>
+
+<h5>Geometry definition</h5>
+
+<ul>
+  <li>The ellipse is inscribed within a bounding rectangle defined by two diagonal
+  corners: <code>origin_point</code> and the current mouse position.</li>
+  <li>The ellipse center is at the center of this bounding rectangle. Its horizontal
+  radius is half the width and its vertical radius is half the height.</li>
+</ul>
+
+<h5>Shift constraint</h5>
+
+<p>Shift constrains the bounding rectangle to a square, producing a perfect circle.</p>
+
+<h5>Alt modifier</h5>
+
+<p>Alt draws from center: <code>origin_point</code> becomes the center of the ellipse.</p>
+
+<h5>Shift + Alt</h5>
+
+<p>A perfect circle drawn from center. The origin is the center and the radius extends to
+the cursor distance.</p>
+
+<h5>Dimension tooltip</h5>
+
+<p>During drawing, display <code>W: 320 H: 240</code>, the bounding box dimensions. When
+Shift is held and the shape is a circle, display <code>D: 320</code> for diameter or
+<code>R: 160</code> for radius.</p>
+
+<h5>Minimum size</h5>
+
+<p>Ellipses with a bounding box area of less than 4 square pixels are discarded on
+release.</p>
+
+<h3 id="s6-3">Tool-Specific Properties</h3>
+
+<p><code>EllipseItem</code> has no additional properties beyond the shared
+<code>VectorItem</code> properties. Its geometry is defined by the bounding rectangle,
+which determines center and radii.</p>
+
+<h3 id="s6-4">Tool Options Bar (Additional Controls)</h3>
+
+<p>No additional controls beyond the shared set in Section 2.6. The Fill Enabled toggle is
+prominently placed.</p>
+
+<h3 id="s6-5">Rendering</h3>
+
+<ul>
+  <li>Render using <code>QPainter.drawEllipse()</code> within the bounding rectangle.</li>
+  <li>Fill is rendered first, stroke on top, the same as the rectangle.</li>
+  <li>For a circle, where the radii are equal, <code>QPainter</code> handles this
+  correctly and automatically.</li>
+</ul>
+
+<h3 id="s6-6">shape() for Hit Testing</h3>
+
+<ul>
+  <li>If <code>fill_enabled</code> is True, <code>shape()</code> returns a
+  <code>QPainterPath</code> with <code>addEllipse()</code> for the full ellipse area.</li>
+  <li>If <code>fill_enabled</code> is False, <code>shape()</code> returns a
+  <code>QPainterPathStroker</code> result of the ellipse outline with
+  <code>stroke_width</code> plus 4 pixels of padding.</li>
+</ul>
+
+<h3 id="s6-7">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead><tr><th>State</th><th>Status bar text</th></tr></thead>
+  <tbody>
+    <tr><th>Idle</th><td>Click and drag to draw an ellipse. Shift: circle. Alt: from center.</td></tr>
+    <tr><th>Drawing</th><td>W: 320 H: 240 | Shift: circle | Alt: from center | Release to confirm.</td></tr>
+    <tr><th>Drawing (circle, Shift held)</th><td>D: 320 | Alt: from center | Release to confirm.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s7">Arc Tool</h2>
+
+<h3 id="s7-1">Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead><tr><th>Property</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><th>Tool ID</th><td><code>arc</code></td></tr>
+    <tr><th>Display Name</th><td>Arc</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>Shift+A</td></tr>
+    <tr><th>Default Cursor</th><td>Crosshair</td></tr>
+    <tr><th>Category</th><td>Annotation</td></tr>
+    <tr><th>Item Class</th><td><code>ArcItem</code> (extends <code>VectorItem</code>)</td></tr>
+  </tbody>
+</table>
+
+<p>The Arc tool draws a curved arc segment, a portion of an ellipse. Arcs are useful for
+annotation callouts, curved connectors, brackets, and indicating rotation or motion in
+interface mockups.</p>
+
+<h3 id="s7-2">Drawing Behavior (Three-Step Creation)</h3>
+
+<p>Unlike the other shape tools, which use a simple click-and-drag, the Arc tool uses a
+three-step creation process.</p>
+
+<h5>Step 1 — define the chord (click and drag)</h5>
+
+<ul>
+  <li>Mouse press defines the arc start point. Drag to define the arc end point.</li>
+  <li>During drag, a straight line preview is drawn between start and end points: the
+  chord.</li>
+  <li>Shift constrains the chord angle to 15-degree increments.</li>
+  <li>On mouse release, the chord is established. The preview shows a straight line. The
+  tool transitions to Step 2.</li>
+</ul>
+
+<h5>Step 2 — define the curvature (move mouse, no button held)</h5>
+
+<ul>
+  <li>After releasing the mouse, moving the cursor perpendicular to the chord adjusts the
+  arc's curvature.</li>
+  <li>Moving the cursor away from the chord increases the arc's bulge. Moving back toward
+  the chord decreases it.</li>
+  <li>The arc is previewed in real time as a quadratic Bezier curve or elliptical arc.</li>
+  <li>The curvature can go in either direction, above or below the chord.</li>
+  <li>Click to confirm the curvature, finalizing the arc. The tool transitions to the
+  Created state.</li>
+  <li>Alternatively, pressing Enter or double-clicking confirms with the current
+  curvature.</li>
+  <li>Escape cancels the entire arc and returns to Idle.</li>
+</ul>
+
+<h5>Dimension tooltip</h5>
+
+<p>Step 1 displays <code>L: 245px ∠ 32.5°</code>, the chord length and angle. Step 2
+displays <code>Arc: 315px Bulge: 45px</code>, the arc length and the perpendicular
+distance from the chord midpoint to the arc peak.</p>
+
+<h3 id="s7-3">Tool-Specific Properties</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>start_point</th><td>QPointF</td><td>set by drawing</td><td>Arc start point in scene coordinates.</td></tr>
+    <tr><th>end_point</th><td>QPointF</td><td>set by drawing</td><td>Arc end point in scene coordinates.</td></tr>
+    <tr><th>control_point</th><td>QPointF</td><td>set by drawing</td><td>Bezier control point defining the arc curvature.</td></tr>
+    <tr>
+      <th>arc_type</th><td>enum</td><td>Open</td>
+      <td>Open: just the arc curve. Chord: arc plus a straight line closing the chord.
+      Pie: arc plus two lines to the virtual ellipse center, producing a pie slice.</td>
+    </tr>
+    <tr><th>head_style</th><td>enum</td><td>None</td><td>Optional arrowhead at <code>end_point</code>. Same options as <code>ArrowItem</code>.</td></tr>
+    <tr><th>tail_style</th><td>enum</td><td>None</td><td>Optional arrowhead at <code>start_point</code>.</td></tr>
+    <tr><th>head_size</th><td>enum</td><td>Medium</td><td>Arrowhead size. Same options as <code>ArrowItem</code>.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s7-4">Tool Options Bar (Additional Controls)</h3>
+
+<p>In addition to the shared controls:</p>
+
+<ul>
+  <li>Arc Type toggle buttons with icons: Open, Chord, Pie.</li>
+  <li>Head Style and Tail Style dropdowns, the same as the Arrow tool but defaulting to
+  None.</li>
+  <li>Head Size dropdown.</li>
+</ul>
+
+<h3 id="s7-5">Point Editing Mode</h3>
+
+<ul>
+  <li>Double-clicking a selected <code>ArcItem</code> enters point-editing mode.</li>
+  <li>Three control point handles are shown: <code>start_point</code> as a blue circle,
+  <code>end_point</code> as a blue circle, and <code>control_point</code> as a green
+  circle.</li>
+  <li>Dragging <code>start_point</code> or <code>end_point</code> moves that endpoint.</li>
+  <li>Dragging <code>control_point</code> adjusts the curvature.</li>
+  <li>Dashed guide lines connect the control point to the start and end points.</li>
+  <li>Shift on endpoint drag constrains the chord angle to 15-degree increments.</li>
+  <li>Escape exits point-editing mode.</li>
+</ul>
+
+<h3 id="s7-6">Rendering</h3>
+
+<ul>
+  <li>The arc is rendered as a quadratic Bezier curve using
+  <code>QPainterPath.quadTo(control_point, end_point)</code> starting from
+  <code>start_point</code>.</li>
+  <li>If <code>arc_type</code> is Chord, a closing straight line is drawn from
+  <code>end_point</code> back to <code>start_point</code>. If <code>fill_enabled</code>,
+  the enclosed area is filled.</li>
+  <li>If <code>arc_type</code> is Pie, lines are drawn from <code>start_point</code> and
+  <code>end_point</code> to the virtual center of the ellipse the arc belongs to. If
+  <code>fill_enabled</code>, the pie slice area is filled.</li>
+  <li>Arrowheads, if configured, are oriented tangent to the curve at the respective
+  endpoint.</li>
+</ul>
+
+<h3 id="s7-7">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead><tr><th>State</th><th>Status bar text</th></tr></thead>
+  <tbody>
+    <tr><th>Idle</th><td>Click and drag to define the arc chord. Then move to set curvature.</td></tr>
+    <tr><th>Step 1 (drawing chord)</th><td>L: 245px ∠ 32.5° | Shift: constrain angle | Release to set chord.</td></tr>
+    <tr><th>Step 2 (setting curvature)</th><td>Move mouse to adjust curvature. Click to confirm. Escape to cancel.</td></tr>
+    <tr><th>Point editing mode</th><td>Drag endpoints or control point to reshape. Escape: exit.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s8">Polygon Tool</h2>
+
+<h3 id="s8-1">Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead><tr><th>Property</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><th>Tool ID</th><td><code>polygon</code></td></tr>
+    <tr><th>Display Name</th><td>Polygon</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>G</td></tr>
+    <tr><th>Default Cursor</th><td>Crosshair</td></tr>
+    <tr><th>Category</th><td>Annotation</td></tr>
+    <tr><th>Item Class</th><td><code>PolygonItem</code> (extends <code>VectorItem</code>)</td></tr>
+  </tbody>
+</table>
+
+<p>The Polygon tool draws arbitrary closed polygons by clicking to place vertices. It
+supports both freeform polygons of any shape and regular polygons such as equilateral
+triangles, pentagons, hexagons, and stars.</p>
+
+<h3 id="s8-2">Drawing Modes</h3>
+
+<p>The Polygon tool has two drawing modes, selectable in the Tool Options Bar.</p>
+
+<h5>Freeform polygon mode</h5>
+
+<ul>
+  <li>Each left-click places a vertex at the cursor position.</li>
+  <li>A preview line is drawn from the last placed vertex to the current cursor
+  position.</li>
+  <li>A closing preview line — dashed, low opacity — is drawn from the current cursor
+  position back to the first vertex, showing what the polygon would look like if closed
+  now.</li>
+  <li>Shift constrains the preview line to 15-degree angle increments from the last
+  vertex.</li>
+  <li>Double-click places the final vertex and closes the polygon. Alternatively, clicking
+  on or within 10 pixels of the first vertex closes the polygon.</li>
+  <li>Pressing Enter closes the polygon using the last-placed vertex, without adding a new
+  one at the current cursor position.</li>
+  <li>Right-click removes the last-placed vertex. Repeated right-clicks undo multiple
+  vertices.</li>
+  <li>Escape cancels the entire polygon, removing all vertices and returning to Idle.</li>
+  <li>A minimum of 3 vertices is required. If the user tries to close with fewer than 3
+  vertices, the polygon is canceled.</li>
+</ul>
+
+<h5>Regular polygon mode</h5>
+
+<ul>
+  <li>The user clicks to define the center and drags to define the radius and initial
+  rotation.</li>
+  <li>The number of sides is set in the Tool Options Bar, 3 to 64, default 5.</li>
+  <li>During drag, the regular polygon is previewed with the configured number of sides,
+  centered on the click position, with one vertex pointing toward the cursor.</li>
+  <li>Shift constrains the rotation to 15-degree increments.</li>
+  <li>Release finalizes the polygon.</li>
+  <li>The Star option indents alternate vertices to create star shapes.</li>
+</ul>
+
+<h3 id="s8-3">Tool-Specific Properties</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>vertices</th><td>list[QPointF]</td><td>set by drawing</td><td>Ordered list of vertex positions in scene coordinates. Minimum 3.</td></tr>
+    <tr><th>polygon_mode</th><td>enum</td><td>Freeform</td><td>Freeform: arbitrary vertices. Regular: computed equilateral polygon.</td></tr>
+    <tr><th>sides</th><td>int</td><td>5</td><td>Number of sides for regular polygons. Range 3 to 64.</td></tr>
+    <tr><th>star_enabled</th><td>bool</td><td>False</td><td>When True, alternate vertices are indented to create a star shape.</td></tr>
+    <tr>
+      <th>star_indent</th><td>float</td><td>0.5</td>
+      <td>Indent ratio for star inner vertices. 0.0 is no indent, giving a regular
+      polygon; 1.0 is maximum indent, where star points touch the center. Range 0.1 to
+      0.95.</td>
+    </tr>
+    <tr>
+      <th>closed</th><td>bool</td><td>True</td>
+      <td>Whether the polygon path is closed. Always True for standard polygons. Can be
+      set to False for open polyline shapes.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="s8-4">Tool Options Bar (Additional Controls)</h3>
+
+<p>In addition to the shared controls:</p>
+
+<ul>
+  <li>Mode toggle: Freeform or Regular.</li>
+  <li>Sides spin box, 3 to 64, visible in Regular mode.</li>
+  <li>Star checkbox, visible in Regular mode.</li>
+  <li>Star Indent slider, 0.1 to 0.95, visible when Star is checked.</li>
+  <li>Closed / Open toggle for freeform mode, which allows creating open polylines.</li>
+</ul>
+
+<h3 id="s8-5">Point Editing Mode</h3>
+
+<h5>Freeform polygon</h5>
+
+<ul>
+  <li>Double-clicking a selected <code>PolygonItem</code> enters point-editing mode.</li>
+  <li>All vertices are shown as draggable control point handles: 8 by 8 pixel filled
+  circles.</li>
+  <li>Dragging a vertex moves it. Shift constrains to a 15-degree angle from the previous
+  vertex.</li>
+  <li>Double-clicking on a segment between two vertices inserts a new vertex at that
+  point.</li>
+  <li>Right-clicking on a vertex deletes it, if more than 3 vertices remain.</li>
+  <li>Escape exits point-editing mode.</li>
+</ul>
+
+<h5>Regular polygon</h5>
+
+<ul>
+  <li>Point-editing mode shows the center point and one radius and rotation handle.</li>
+  <li>Dragging the center moves the entire polygon.</li>
+  <li>Dragging the radius handle changes the size and rotation.</li>
+  <li>Individual vertex editing is not available for regular polygons, because the shape
+  is defined by sides, center, radius, and rotation.</li>
+</ul>
+
+<h3 id="s8-6">Rendering</h3>
+
+<ul>
+  <li>Freeform: construct a <code>QPainterPath</code> using <code>moveTo()</code> for the
+  first vertex and <code>lineTo()</code> for each subsequent vertex. If closed, call
+  <code>closeSubpath()</code>.</li>
+  <li>Regular: compute vertex positions using trigonometry, where the angle is 2π times
+  the index divided by the number of sides, starting from the rotation angle. For stars,
+  alternate between the outer radius and the inner radius, which is the outer radius times
+  <code>star_indent</code>.</li>
+  <li>Fill, stroke, and shadow rendering follow the same rules as Rectangle and
+  Ellipse.</li>
+</ul>
+
+<h3 id="s8-7">shape() for Hit Testing</h3>
+
+<p>Same logic as Rectangle. If <code>fill_enabled</code>, the shape is the filled polygon
+path. If not filled, the shape is a stroked version of the outline path with padding.</p>
+
+<h3 id="s8-8">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead><tr><th>State</th><th>Status bar text</th></tr></thead>
+  <tbody>
+    <tr><th>Idle (Freeform)</th><td>Click to place vertices. Double-click or click first vertex to close.</td></tr>
+    <tr><th>Drawing (Freeform)</th><td>Vertices: 4 | Click: add vertex | Right-click: undo | Enter: close | Escape: cancel</td></tr>
+    <tr><th>Idle (Regular)</th><td>Click and drag to draw a regular polygon. Shift: constrain rotation.</td></tr>
+    <tr><th>Drawing (Regular)</th><td>Sides: 5 | R: 120px | Shift: constrain rotation | Release to confirm.</td></tr>
+    <tr><th>Point editing</th><td>Drag vertices to reshape. Double-click segment: insert vertex. Right-click vertex: delete. Escape: exit.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s9">Freehand / Pen Tool</h2>
+
+<h3 id="s9-1">Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead><tr><th>Property</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><th>Tool ID</th><td><code>freehand</code></td></tr>
+    <tr><th>Display Name</th><td>Freehand / Pen</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>P</td></tr>
+    <tr><th>Default Cursor</th><td>Crosshair, small dot variant</td></tr>
+    <tr><th>Category</th><td>Annotation</td></tr>
+    <tr><th>Item Class</th><td><code>FreehandItem</code> (extends <code>VectorItem</code>)</td></tr>
+  </tbody>
+</table>
+
+<p>The Freehand / Pen tool draws smooth, free-form strokes by tracking the mouse path. It
+is used for hand-drawn annotations, circling areas of interest, underlining text in
+screenshots, sketching rough outlines, and any annotation that benefits from a natural,
+hand-drawn appearance.</p>
+
+<h3 id="s9-2">Drawing Behavior</h3>
+
+<h5>Mouse press</h5>
+
+<ul>
+  <li>Verify the active layer is visible and unlocked. If not, show a status bar warning
+  and ignore.</li>
+  <li>Record the press position as the first point in the path.</li>
+  <li>Begin capturing mouse move events to build the stroke path.</li>
+  <li>Change the cursor to a small filled circle — diameter equal to
+  <code>stroke_width</code>, colored with <code>stroke_color</code> — to provide a brush
+  tip visual.</li>
+</ul>
+
+<h5>Mouse move (drawing)</h5>
+
+<ul>
+  <li>Append the current mouse position to the raw path point list.</li>
+  <li>Points are sampled at the mouse event rate, typically 60 to 120 Hz depending on the
+  platform and input device.</li>
+  <li>Render the stroke in real time from the first point through all recorded points
+  using the current stroke properties.</li>
+  <li>The stroke is rendered as a <code>QPainterPath</code> using quadratic Bezier curves
+  between consecutive points, not straight line segments, for inherent smoothness even
+  before post-processing.</li>
+  <li>If pressure-sensitive input is detected from a tablet or stylus, record pressure
+  values alongside each point for future pressure-width mapping. Version 1.0 uses uniform
+  width; pressure support is a future enhancement.</li>
+</ul>
+
+<h5>Mouse release</h5>
+
+<ul>
+  <li>Stop capturing points. The raw path is complete.</li>
+  <li>Apply path simplification, described in Section 9.3, based on the smoothing
+  setting.</li>
+  <li>If the resulting path has fewer than 2 points, or a bounding box area under 4 square
+  pixels, discard the stroke as an accidental click.</li>
+  <li>Finalize the <code>FreehandItem</code> with the simplified path and current stroke
+  properties.</li>
+  <li>Add to the scene and active layer. Push an <code>AddItemCommand</code>.</li>
+  <li>Return to Idle. The tool remains active for the next stroke.</li>
+</ul>
+
+<h3 id="s9-3">Path Smoothing and Simplification</h3>
+
+<p>Raw mouse input produces jagged, noisy paths. SnapMock applies a two-stage smoothing
+pipeline controlled by the Smoothing slider, 0% to 100%.</p>
+
+<h5>Stage 1 — Ramer-Douglas-Peucker simplification</h5>
+
+<ul>
+  <li>Reduces the number of points by eliminating points within a tolerance distance of
+  the simplified line.</li>
+  <li>Tolerance is calculated from the smoothing value: tolerance equals smoothing times
+  0.01 times 5.0 pixels. At 0% smoothing the tolerance is 0 pixels and no points are
+  removed; at 100% the tolerance is 5 pixels.</li>
+  <li>This removes redundant points on straight-ish segments while preserving sharp
+  direction changes.</li>
+  <li>Typical reduction: a raw stroke of 500 points may reduce to 50 to 100 points at
+  moderate smoothing.</li>
+</ul>
+
+<h5>Stage 2 — cubic Bezier curve fitting</h5>
+
+<ul>
+  <li>The simplified point set is converted to a series of cubic Bezier curves using a
+  least-squares curve fitting algorithm.</li>
+  <li>The maximum fitting error is controlled by smoothing: the error threshold equals
+  smoothing times 0.01 times 3.0 pixels.</li>
+  <li>At 0% smoothing, the Bezier curves closely follow the original points, giving a
+  nearly raw path.</li>
+  <li>At 100% smoothing, the Bezier curves produce very smooth, flowing lines that may
+  deviate noticeably from the raw input.</li>
+  <li>The result is stored as a list of cubic Bezier segments, each defined by four
+  control points: start, cp1, cp2, end.</li>
+</ul>
+
+<h5>Real-time versus post-processing</h5>
+
+<ul>
+  <li>During drawing, while the mouse is held, the stroke is rendered using the raw points
+  connected by quadratic Bezier interpolation. This provides a smooth real-time preview
+  without the computational cost of full curve fitting.</li>
+  <li>On mouse release, the full two-stage smoothing pipeline runs and replaces the raw
+  path with the optimized Bezier path.</li>
+  <li>There may be a subtle visual snap as the raw path is replaced by the smoothed path.
+  At moderate smoothing levels, 30% to 60%, this is barely perceptible. At high smoothing,
+  80% to 100%, the path may visibly simplify on release. This is expected behavior.</li>
+</ul>
+
+<h3 id="s9-4">Tool-Specific Properties</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>path_points</th><td>list[QPointF]</td><td>from drawing</td><td>The raw sampled points before smoothing. Stored for potential re-smoothing.</td></tr>
+    <tr>
+      <th>bezier_segments</th><td>list[BezierSegment]</td><td>computed</td>
+      <td>The smoothed path as cubic Bezier segments. Each segment is start, cp1, cp2,
+      end. This is the primary rendering data.</td>
+    </tr>
+    <tr>
+      <th>smoothing</th><td>float</td><td>0.5</td>
+      <td>Smoothing level, 0.0 to 1.0. 0 is raw, 1 is maximum smoothing. Maps to the
+      Smoothing slider, 0% to 100%.</td>
+    </tr>
+    <tr><th>stroke_cap</th><td>enum</td><td>Round</td><td>Line cap: Flat, Square, Round. Round is the natural choice for freehand strokes.</td></tr>
+    <tr><th>stroke_join</th><td>enum</td><td>Round</td><td>Line join: Miter, Bevel, Round. Round produces smooth corners.</td></tr>
+    <tr>
+      <th>is_closed</th><td>bool</td><td>False</td>
+      <td>Whether the path forms a closed loop. If True, the last point connects back to
+      the first and fill can be applied.</td>
+    </tr>
+    <tr>
+      <th>pressure_data</th><td>list[float], optional</td><td>null</td>
+      <td>Per-point pressure values, 0.0 to 1.0, from a pressure-sensitive stylus.
+      Reserved for future use.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="s9-5">Modifier Keys</h3>
+
+<ul>
+  <li>Shift, held during drawing, constrains the stroke to straight line segments. As the
+  user drags, the stroke follows horizontal, vertical, or 45-degree diagonal lines from
+  the last direction change point. This allows mixing freehand curves with precise
+  straight segments in a single stroke.</li>
+  <li>Alt has no effect during freehand drawing.</li>
+  <li>Escape cancels the current stroke in progress, removes the preview, and returns to
+  Idle.</li>
+</ul>
+
+<h3 id="s9-6">Tool Options Bar</h3>
+
+<p>In addition to the shared shape controls in Section 2.6:</p>
+
+<ul>
+  <li>Smoothing slider, 0% to 100%, default 50%. A label shows the current value. The
+  slider has visual tick marks at 0%, 25%, 50%, 75%, and 100%.</li>
+  <li>Stroke Cap visual toggle group — Flat, Round, Square — with small icons showing the
+  cap style.</li>
+  <li>Close Path toggle button. When enabled, the stroke auto-closes on release, so the
+  last point connects to the first point. Useful for freehand-drawn enclosed regions that
+  should be fillable.</li>
+</ul>
+
+<h3 id="s9-7">Post-Creation Editing</h3>
+
+<h5>Select tool</h5>
+
+<ul>
+  <li>Click to select. TransformHandles appear around the bounding box.</li>
+  <li>Resize scales the entire path uniformly, with all points scaled relative to the
+  bounding box center.</li>
+  <li>Rotate rotates all points around the bounding box center.</li>
+  <li>Move translates all points by the drag delta.</li>
+</ul>
+
+<h5>Point editing mode (double-click)</h5>
+
+<ul>
+  <li>Double-clicking a selected <code>FreehandItem</code> enters point-editing mode.</li>
+  <li>The Bezier control points are displayed: on-curve points, the segment endpoints, as
+  blue 6 by 6 pixel filled circles, and off-curve control points, the cp1 and cp2 handles,
+  as green 5 by 5 pixel hollow circles connected to their on-curve point by dashed
+  lines.</li>
+  <li>Dragging an on-curve point moves that point. Adjacent Bezier segments adjust to
+  maintain continuity, giving a smooth transition. Holding Alt while dragging breaks the
+  continuity, creating a corner or cusp.</li>
+  <li>Dragging a control handle adjusts the curvature of that segment.</li>
+  <li>Double-clicking on a path segment between two on-curve points inserts a new on-curve
+  point, splitting the Bezier segment into two.</li>
+  <li>Right-clicking an on-curve point deletes it, with a minimum of 2 points remaining.
+  Adjacent segments are merged.</li>
+  <li>Escape exits point-editing mode.</li>
+</ul>
+
+<h5>Re-smoothing</h5>
+
+<ul>
+  <li>When a <code>FreehandItem</code> is selected and the Smoothing slider in the Tool
+  Options Bar is changed, the path is re-smoothed from the original raw
+  <code>path_points</code> using the new smoothing value.</li>
+  <li>This pushes a <code>ModifyPropertyCommand</code> storing both the old and new
+  <code>bezier_segments</code>.</li>
+  <li>Re-smoothing is non-destructive: the original <code>path_points</code> are always
+  preserved, allowing the user to increase or decrease smoothing after the fact.</li>
+</ul>
+
+<h3 id="s9-8">Rendering</h3>
+
+<ol>
+  <li>Construct a <code>QPainterPath</code> from the <code>bezier_segments</code> using
+  <code>moveTo()</code> for the first point and <code>cubicTo()</code> for each
+  segment.</li>
+  <li>If <code>is_closed</code> is True, call <code>closeSubpath()</code> to connect the
+  last point to the first.</li>
+  <li>If <code>shadow_enabled</code>, render the shadow: an offset, blurred duplicate of
+  the path in <code>shadow_color</code>.</li>
+  <li>If <code>fill_enabled</code> and <code>is_closed</code>, fill the closed path with
+  <code>fill_color</code>.</li>
+  <li>Stroke the path with the configured <code>QPen</code>: <code>stroke_color</code>,
+  <code>stroke_width</code>, <code>stroke_style</code>, <code>stroke_cap</code>,
+  <code>stroke_join</code>.</li>
+  <li>During drawing, before release, render from the raw point list using
+  <code>QPainterPath</code> with <code>quadTo()</code> for smooth interpolation between
+  consecutive point triplets.</li>
+</ol>
+
+<h3 id="s9-9">shape() for Hit Testing</h3>
+
+<ul>
+  <li>If <code>is_closed</code> and <code>fill_enabled</code>, <code>shape()</code>
+  returns the filled closed path, so a click anywhere inside selects it.</li>
+  <li>Otherwise, <code>shape()</code> returns a <code>QPainterPathStroker</code> result of
+  the stroke path with <code>stroke_width</code> plus 4 pixels of padding.</li>
+  <li>For thin strokes, under 4 pixels, the minimum hit area width is 8 pixels to ensure
+  clickability.</li>
+</ul>
+
+<h3 id="s9-10">Performance Considerations</h3>
+
+<ul>
+  <li>Raw point capture must not drop events. Use a high-priority event handler to ensure
+  all mouse move events are recorded.</li>
+  <li>Real-time rendering during drawing must maintain 60 frames per second. For very long
+  strokes, over 2000 raw points, render only the most recent 500 points during drawing and
+  render the full path on release.</li>
+  <li>Path simplification and Bezier fitting on release should complete within 50
+  milliseconds for strokes up to 5000 raw points.</li>
+  <li>Bezier path rendering is efficient: <code>QPainter</code> handles cubic Bezier paths
+  natively with hardware acceleration.</li>
+  <li>Storing both <code>path_points</code>, raw, and <code>bezier_segments</code>,
+  smoothed, doubles the data per item. For memory optimization in projects with many
+  freehand items, the raw <code>path_points</code> could be discarded after the user
+  confirms they are satisfied with the smoothing. This is a future enhancement.</li>
+</ul>
+
+<h3 id="s9-11">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead><tr><th>State</th><th>Status bar text</th></tr></thead>
+  <tbody>
+    <tr><th>Idle</th><td>Click and drag to draw a freehand stroke. Shift: constrain to straight segments.</td></tr>
+    <tr><th>Drawing</th><td>Drawing… Shift: straight segments. Release to finish.</td></tr>
+    <tr><th>Point editing</th><td>Drag points to reshape. Alt+drag: corner. Double-click segment: insert. Right-click: delete. Escape: exit.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s10">Shape Item Data Models</h2>
+
+<p>This section summarizes the complete data model for each shape item type. All items
+extend <code>VectorItem</code>, which extends <code>SnapGraphicsItem</code>. Properties
+inherited from parent classes are listed in the Technical Architecture product
+requirements document, Sections 3.1.4 and 4.3. Only item-type-specific properties are
+listed here.</p>
+
+<h3 id="s10-1">LineItem</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead><tr><th>Property</th><th>Type</th><th>Serialization key</th></tr></thead>
+  <tbody>
+    <tr><th>start_point</th><td>QPointF</td><td><code>"start_point": {"x": float, "y": float}</code></td></tr>
+    <tr><th>end_point</th><td>QPointF</td><td><code>"end_point": {"x": float, "y": float}</code></td></tr>
+  </tbody>
+</table>
+
+<h3 id="s10-2">ArrowItem</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead><tr><th>Property</th><th>Type</th><th>Serialization key</th></tr></thead>
+  <tbody>
+    <tr><th>start_point</th><td>QPointF</td><td><code>"start_point": {"x": float, "y": float}</code></td></tr>
+    <tr><th>end_point</th><td>QPointF</td><td><code>"end_point": {"x": float, "y": float}</code></td></tr>
+    <tr><th>control_point</th><td>QPointF, nullable</td><td><code>"control_point": {"x": float, "y": float} | null</code></td></tr>
+    <tr><th>bend_point</th><td>QPointF, nullable</td><td><code>"bend_point": {"x": float, "y": float} | null</code></td></tr>
+    <tr><th>head_style</th><td>str</td><td><code>"head_style": "open" | "filled" | "diamond" | "circle" | "square" | "none"</code></td></tr>
+    <tr><th>tail_style</th><td>str</td><td><code>"tail_style":</code> same options</td></tr>
+    <tr><th>head_size</th><td>str</td><td><code>"head_size": "small" | "medium" | "large" | "xlarge"</code></td></tr>
+    <tr><th>head_size_custom</th><td>float</td><td><code>"head_size_custom": float</code></td></tr>
+    <tr><th>line_style</th><td>str</td><td><code>"line_style": "straight" | "curved" | "elbow"</code></td></tr>
+  </tbody>
+</table>
+
+<h3 id="s10-3">RectangleItem</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead><tr><th>Property</th><th>Type</th><th>Serialization key</th></tr></thead>
+  <tbody>
+    <tr><th>rect</th><td>QRectF</td><td><code>"rect": {"x": float, "y": float, "w": float, "h": float}</code></td></tr>
+    <tr><th>corner_radius</th><td>float</td><td><code>"corner_radius": float</code></td></tr>
+    <tr><th>corner_radius_mode</th><td>str</td><td><code>"corner_radius_mode": "uniform" | "individual"</code></td></tr>
+    <tr><th>corner_radius_tl</th><td>float</td><td><code>"corner_radius_tl": float</code></td></tr>
+    <tr><th>corner_radius_tr</th><td>float</td><td><code>"corner_radius_tr": float</code></td></tr>
+    <tr><th>corner_radius_bl</th><td>float</td><td><code>"corner_radius_bl": float</code></td></tr>
+    <tr><th>corner_radius_br</th><td>float</td><td><code>"corner_radius_br": float</code></td></tr>
+  </tbody>
+</table>
+
+<h3 id="s10-4">EllipseItem</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead><tr><th>Property</th><th>Type</th><th>Serialization key</th></tr></thead>
+  <tbody>
+    <tr><th>rect</th><td>QRectF</td><td><code>"rect": {"x": float, "y": float, "w": float, "h": float}</code></td></tr>
+  </tbody>
+</table>
+
+<p>The ellipse is fully defined by its bounding rectangle.</p>
+
+<h3 id="s10-5">ArcItem</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead><tr><th>Property</th><th>Type</th><th>Serialization key</th></tr></thead>
+  <tbody>
+    <tr><th>start_point</th><td>QPointF</td><td><code>"start_point": {"x": float, "y": float}</code></td></tr>
+    <tr><th>end_point</th><td>QPointF</td><td><code>"end_point": {"x": float, "y": float}</code></td></tr>
+    <tr><th>control_point</th><td>QPointF</td><td><code>"control_point": {"x": float, "y": float}</code></td></tr>
+    <tr><th>arc_type</th><td>str</td><td><code>"arc_type": "open" | "chord" | "pie"</code></td></tr>
+    <tr><th>head_style</th><td>str</td><td><code>"head_style":</code> same as <code>ArrowItem</code></td></tr>
+    <tr><th>tail_style</th><td>str</td><td><code>"tail_style":</code> same as <code>ArrowItem</code></td></tr>
+    <tr><th>head_size</th><td>str</td><td><code>"head_size":</code> same as <code>ArrowItem</code></td></tr>
+  </tbody>
+</table>
+
+<h3 id="s10-6">PolygonItem</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead><tr><th>Property</th><th>Type</th><th>Serialization key</th></tr></thead>
+  <tbody>
+    <tr><th>vertices</th><td>list[QPointF]</td><td><code>"vertices": [{"x": float, "y": float}, …]</code></td></tr>
+    <tr><th>polygon_mode</th><td>str</td><td><code>"polygon_mode": "freeform" | "regular"</code></td></tr>
+    <tr><th>sides</th><td>int</td><td><code>"sides": int</code></td></tr>
+    <tr><th>center</th><td>QPointF, nullable</td><td><code>"center": {"x": float, "y": float} | null</code>, regular mode</td></tr>
+    <tr><th>radius</th><td>float, nullable</td><td><code>"radius": float | null</code>, regular mode</td></tr>
+    <tr><th>rotation</th><td>float</td><td><code>"rotation": float</code>, degrees, regular mode</td></tr>
+    <tr><th>star_enabled</th><td>bool</td><td><code>"star_enabled": bool</code></td></tr>
+    <tr><th>star_indent</th><td>float</td><td><code>"star_indent": float</code></td></tr>
+    <tr><th>closed</th><td>bool</td><td><code>"closed": bool</code></td></tr>
+  </tbody>
+</table>
+
+<h3 id="s10-7">FreehandItem</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead><tr><th>Property</th><th>Type</th><th>Serialization key</th></tr></thead>
+  <tbody>
+    <tr><th>path_points</th><td>list[QPointF]</td><td><code>"path_points": [{"x": float, "y": float}, …]</code></td></tr>
+    <tr><th>bezier_segments</th><td>list[BezierSegment]</td><td><code>"bezier_segments": [{"start": {}, "cp1": {}, "cp2": {}, "end": {}}, …]</code></td></tr>
+    <tr><th>smoothing</th><td>float</td><td><code>"smoothing": float</code>, 0.0 to 1.0</td></tr>
+    <tr><th>is_closed</th><td>bool</td><td><code>"is_closed": bool</code></td></tr>
+    <tr><th>pressure_data</th><td>list[float], nullable</td><td><code>"pressure_data": [float, …] | null</code></td></tr>
+  </tbody>
+</table>
+
+<h2 id="s11">Command Definitions</h2>
+
+<p>All shape tools produce an <code>AddItemCommand</code> when a shape is created, defined
+in the Technical Architecture product requirements document. This section covers commands
+specific to shape editing.</p>
+
+<h3 id="s11-1">AddItemCommand (Shape Creation)</h3>
+
+<ul>
+  <li>Triggered on mouse release after drawing any shape, or on polygon close.</li>
+  <li>Stored data: complete serialized item state, <code>layer_id</code>.</li>
+  <li><code>redo()</code>: add the item to the scene and layer.</li>
+  <li><code>undo()</code>: remove the item from the scene and layer.</li>
+  <li><code>description()</code>: "Add [Shape Type]", for example "Add Rectangle" or "Add
+  Arrow".</li>
+</ul>
+
+<h3 id="s11-2">ModifyPropertyCommand (Property Edit)</h3>
+
+<ul>
+  <li>Triggered when any property is changed through the Property Panel, Tool Options Bar,
+  or point-editing mode.</li>
+  <li>Stored data: <code>item_id</code>, <code>property_name</code>,
+  <code>old_value</code>, <code>new_value</code>.</li>
+  <li><code>redo()</code>: set <code>item.property_name</code> to
+  <code>new_value</code>.</li>
+  <li><code>undo()</code>: set <code>item.property_name</code> to
+  <code>old_value</code>.</li>
+  <li><code>merge_with(other)</code>: if the other command has the same
+  <code>item_id</code> and <code>property_name</code>, and was created within 500
+  milliseconds, merge by replacing <code>new_value</code> with the other's
+  <code>new_value</code>. This coalesces rapid slider adjustments into a single undo
+  step.</li>
+  <li><code>description()</code>: "Change [Property Name] of [Shape Type]", for example
+  "Change Stroke Color of Arrow".</li>
+</ul>
+
+<h3 id="s11-3">ModifyGeometryCommand (Point Edit)</h3>
+
+<ul>
+  <li>Triggered when a control point is dragged in point-editing mode.</li>
+  <li>Stored data: <code>item_id</code>, <code>property_name</code> — for example
+  <code>start_point</code>, <code>control_point</code>, <code>vertices</code> —
+  <code>old_value</code>, <code>new_value</code>.</li>
+  <li><code>redo()</code>: set the geometry property to <code>new_value</code>.</li>
+  <li><code>undo()</code>: set the geometry property to <code>old_value</code>.</li>
+  <li><code>merge_with(other)</code>: merge consecutive point drags on the same item and
+  point within 300 milliseconds.</li>
+  <li><code>description()</code>: "Edit [Shape Type] geometry", for example "Edit Arc
+  geometry".</li>
+</ul>
+
+<h3 id="s11-4">InsertVertexCommand (Polygon)</h3>
+
+<ul>
+  <li>Triggered by double-clicking on a polygon segment in point-editing mode.</li>
+  <li>Stored data: <code>item_id</code>, <code>vertex_index</code>, the position in the
+  vertices list, and <code>vertex_position</code>.</li>
+  <li><code>redo()</code>: insert <code>vertex_position</code> into the vertices list at
+  <code>vertex_index</code>.</li>
+  <li><code>undo()</code>: remove the vertex at <code>vertex_index</code>.</li>
+  <li><code>description()</code>: "Insert polygon vertex".</li>
+</ul>
+
+<h3 id="s11-5">RemoveVertexCommand (Polygon)</h3>
+
+<ul>
+  <li>Triggered by right-clicking a vertex in point-editing mode. A minimum of 3 vertices
+  must remain.</li>
+  <li>Stored data: <code>item_id</code>, <code>vertex_index</code>,
+  <code>vertex_position</code>.</li>
+  <li><code>redo()</code>: remove the vertex at <code>vertex_index</code>.</li>
+  <li><code>undo()</code>: insert <code>vertex_position</code> at
+  <code>vertex_index</code>.</li>
+  <li><code>description()</code>: "Remove polygon vertex".</li>
+</ul>
+
+<h2 id="s12">Serialization</h2>
+
+<p>All shape items are serialized to JSON as part of the <code>.smk</code> project file,
+<code>items.json</code>. Each item is stored as a JSON object with a <code>type</code>
+field identifying the item class, and all properties listed in Section 10.</p>
+
+<h3 id="s12-1">Example: ArrowItem Serialization</h3>
+
+<p>The following is an example JSON representation of a serialized
+<code>ArrowItem</code>.</p>
+
+<pre><code>{
+  "type": "arrow",
+  "item_id": "a1b2c3d4-e5f6-…",
+  "layer_id": "f1e2d3c4-b5a6-…",
+  "start_point": {"x": 100.0, "y": 200.0},
+  "end_point": {"x": 400.0, "y": 150.0},
+  "control_point": null,
+  "head_style": "filled",
+  "tail_style": "none",
+  "head_size": "medium",
+  "line_style": "straight",
+  "stroke_color": "#FF0000",
+  "stroke_width": 2.0,
+  "stroke_style": "solid",
+  "fill_opacity": 1.0,
+  "stroke_opacity": 1.0,
+  "shadow_enabled": false,
+  "transform": {"m11": 1, "m12": 0, …}
+}</code></pre>
+
+<h3 id="s12-2">Deserialization</h3>
+
+<ul>
+  <li>On project load, the <code>type</code> field is used to select the correct item class
+  for instantiation.</li>
+  <li>Each item class implements a <code>from_dict(data)</code> class method that
+  constructs the item from the JSON dictionary.</li>
+  <li>Unknown properties in the JSON are silently ignored, for forward compatibility.</li>
+  <li>Missing properties use their default values, for backward compatibility.</li>
+  <li>Invalid values, such as a <code>stroke_width</code> below 0, are clamped to valid
+  ranges with a warning logged.</li>
+</ul>
+
+<h2 id="s13">Acceptance Criteria</h2>
+
+<h3 id="s13-1">Line Tool</h3>
+
+<ol>
+  <li>Click-and-drag draws a line between two points with the configured stroke
+  properties.</li>
+  <li>Shift constrains the angle to 15-degree increments. Perfectly horizontal, vertical,
+  and 45-degree lines are easily achievable.</li>
+  <li>Lines shorter than 2 pixels are discarded on release.</li>
+  <li>The dimension tooltip shows length and angle during drawing.</li>
+  <li>Point-editing mode, entered by double-click, allows dragging endpoints
+  independently.</li>
+  <li>All stroke properties — color, width, style, cap — render correctly.</li>
+  <li>Shadow renders correctly when enabled.</li>
+  <li>Hit testing selects the line when clicking within <code>stroke_width</code> plus 4
+  pixels of the line.</li>
+  <li>The item serializes to and deserializes from JSON with full fidelity.</li>
+</ol>
+
+<h3 id="s13-2">Arrow Tool</h3>
+
+<ol>
+  <li>Click-and-drag draws an arrow from tail to head with the configured arrowhead
+  style.</li>
+  <li>All six arrowhead styles — None, Open, Filled, Diamond, Circle, Square — render
+  correctly.</li>
+  <li>Arrowheads on both head and tail are independently configurable.</li>
+  <li>Arrowhead size scales proportionally with the <code>head_size</code> setting.</li>
+  <li>Curved arrow mode: after creation, the control point is editable in point-editing
+  mode. Arrowheads orient tangent to the curve.</li>
+  <li>Elbow arrow mode: the bend point auto-calculates and is editable in point-editing
+  mode. Right angles are maintained.</li>
+  <li>Shift constrains chord angle to 15-degree increments.</li>
+  <li>All stroke properties and shadow render correctly.</li>
+</ol>
+
+<h3 id="s13-3">Rectangle Tool</h3>
+
+<ol>
+  <li>Click-and-drag draws a rectangle with the configured stroke and fill.</li>
+  <li>Shift constrains to a perfect square.</li>
+  <li>Alt draws from center.</li>
+  <li>Corner radius produces smoothly rounded corners. Values above 0 produce visible
+  rounding.</li>
+  <li>Individual corner radii produce a different radius on each corner.</li>
+  <li>Fill renders correctly behind stroke with no overlap artifacts.</li>
+  <li>Empty rectangles, with no fill, can only be selected by clicking near the
+  border.</li>
+  <li>Filled rectangles can be selected by clicking anywhere inside.</li>
+</ol>
+
+<h3 id="s13-4">Ellipse Tool</h3>
+
+<ol>
+  <li>Click-and-drag draws an ellipse inscribed in the drag rectangle.</li>
+  <li>Shift constrains to a perfect circle.</li>
+  <li>Alt draws from center, where the origin is the center and the radius extends to the
+  cursor.</li>
+  <li>Fill and stroke render correctly.</li>
+  <li>Hit testing respects <code>fill_enabled</code> for the clickable area.</li>
+  <li>The dimension tooltip shows width by height, or diameter for circles.</li>
+</ol>
+
+<h3 id="s13-5">Arc Tool</h3>
+
+<ol>
+  <li>The three-step creation process works correctly: drag for chord, move for curvature,
+  click to confirm.</li>
+  <li>Arc preview updates in real time during curvature adjustment.</li>
+  <li>All three arc types — Open, Chord, Pie — render correctly.</li>
+  <li>Optional arrowheads orient tangent to the curve at endpoints.</li>
+  <li>Point-editing mode allows adjusting start, end, and control points.</li>
+  <li>Shift constrains the chord angle during Step 1.</li>
+  <li>Escape cancels at any step.</li>
+</ol>
+
+<h3 id="s13-6">Polygon Tool</h3>
+
+<ol>
+  <li>Freeform mode: click to place vertices, double-click to close. A minimum of 3
+  vertices is enforced.</li>
+  <li>The closing preview line shows the polygon shape before closing.</li>
+  <li>Right-click removes the last vertex during drawing.</li>
+  <li>Regular polygon mode: click-and-drag defines center and radius. The configured
+  number of sides renders correctly for values 3 through 64.</li>
+  <li>Star mode produces correct star shapes with a configurable indent ratio.</li>
+  <li>Point-editing mode allows vertex manipulation for freeform polygons: drag to move,
+  double-click a segment to insert, right-click to delete, with a minimum of 3
+  remaining.</li>
+  <li>Fill and stroke render correctly for all polygon configurations.</li>
+  <li>Open polylines, where <code>closed</code> is False, render as an open path.</li>
+</ol>
+
+<h3 id="s13-7">Freehand / Pen Tool</h3>
+
+<ol>
+  <li>Click-and-drag draws a freehand stroke that follows the mouse path with real-time
+  visual feedback.</li>
+  <li>Path smoothing produces visibly smoother strokes at higher smoothing values. At 0%
+  the stroke closely matches the raw mouse path. At 100% the stroke is noticeably
+  smoothed.</li>
+  <li>The Smoothing slider in the Tool Options Bar adjusts the smoothing level. Changing
+  the slider on a selected <code>FreehandItem</code> re-smooths non-destructively from the
+  original raw points.</li>
+  <li>Shift during drawing constrains to straight horizontal, vertical, or 45-degree
+  segments.</li>
+  <li>Strokes shorter than 2 pixels, from accidental clicks, are discarded.</li>
+  <li>The Close Path toggle correctly closes the path on release and enables fill.</li>
+  <li>Point-editing mode, entered by double-click, displays on-curve and off-curve Bezier
+  control points. Dragging adjusts the path. Alt+drag creates corners. Double-clicking a
+  segment inserts a point. Right-click deletes a point, with a minimum of 2 remaining.</li>
+  <li>Stroke properties — color, width, style, cap, join — render correctly on freehand
+  paths.</li>
+  <li>Shadow renders correctly when enabled.</li>
+  <li>Performance: real-time drawing maintains 60 frames per second for strokes up to 5000
+  raw points. Path smoothing completes within 50 milliseconds on release.</li>
+</ol>
+
+<h3 id="s13-8">Shared Behavior</h3>
+
+<ol>
+  <li>All shape tools respect the active layer: they cannot draw on locked or hidden
+  layers. A status bar warning is shown.</li>
+  <li>The Tool Options Bar updates dynamically when switching between shape tools.</li>
+  <li>Changing Tool Options Bar values while a shape is selected applies the change to the
+  selected shape.</li>
+  <li>All shape creation operations produce an <code>AddItemCommand</code> and are fully
+  undoable.</li>
+  <li>Property changes produce a <code>ModifyPropertyCommand</code> and are undoable. Rapid
+  changes merge within 500 milliseconds.</li>
+  <li>Point-editing geometry changes produce a <code>ModifyGeometryCommand</code> and are
+  undoable.</li>
+  <li>All shapes serialize and deserialize correctly with full property fidelity.</li>
+  <li>All shapes render correctly at zoom levels from 10% to 3200%.</li>
+  <li>Snap to grid works during shape drawing when enabled.</li>
+  <li>Shape creation at 4K resolution with 100 existing items maintains 60 frames per
+  second preview rendering.</li>
+</ol>
+
+<h2 id="s14">Open Issues</h2>
+
+<p>These items were raised by the conversion from Word. None of them changes a
+requirement; each needs a decision before this document leaves draft.</p>
+
+<div class="note issue">
+  <span class="note-label">Open — tool count and section range in Section 2</span>
+  <p>Section 2 states that six shape tools share the common workflow and cross-references
+  Sections 3 to 8. This document specifies seven tools across Sections 3 to 9. The likely
+  cause is that the Freehand / Pen tool was added after Section 2 was written.</p>
+</div>
+
+<div class="note issue">
+  <span class="note-label">Open — conflicting document dates</span>
+  <p>The Word title page carried February 2026 while the change log placed both version
+  1.1 and version 1.2 in March 2026. Exact dates are needed to bring the revision control
+  table up to the MM-DD-YY HH:MM standard.</p>
+</div>
+
+<div class="note issue">
+  <span class="note-label">Open — approval status never recorded</span>
+  <p>The original carried no approval record. Version 1.2 is shown as pending. Confirm
+  whether any earlier version was formally approved.</p>
+</div>
+
+</main>
+
+</div>
+</body>
+</html>
