@@ -305,11 +305,19 @@ class TextItem(RichTextMixin, SnapGraphicsItem):
             else:
                 path.addRect(frame)
         else:
-            # Only the text content area is clickable
+            # Only the text content area is clickable.
+            # Must incorporate vertical alignment offset per PRD Section 3.8.
             w = self._item_width()
             content_w = max(1.0, w - 2 * self._padding)
             doc_h = self.document_height(content_w)
-            text_rect = QRectF(self._padding, self._padding, content_w, doc_h)
+            frame_h = self._frame_height()
+            inner_h = frame_h - 2 * self._padding
+            y_offset = self._padding
+            if self._vertical_align == VerticalAlign.CENTER:
+                y_offset += max(0.0, (inner_h - doc_h) / 2)
+            elif self._vertical_align == VerticalAlign.BOTTOM:
+                y_offset += max(0.0, inner_h - doc_h)
+            text_rect = QRectF(self._padding, y_offset, content_w, doc_h)
             path.addRect(text_rect)
         return path
 

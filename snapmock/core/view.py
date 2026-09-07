@@ -633,7 +633,12 @@ class SnapView(QGraphicsView):
         if self._panning:
             self._panning = False
             self._apply_tool_cursor()
-        if self._tool_manager is not None and not focus_to_child:
+        # Check if a mouse button is held — indicates a drag in progress.
+        # Transient focus loss (e.g. QToolTip on Linux) should not cancel the drag;
+        # the drag will complete normally via mouse_release.
+        mouse_held = QApplication.mouseButtons() != Qt.MouseButton.NoButton
+
+        if self._tool_manager is not None and not focus_to_child and not mouse_held:
             # Restore space-bar temporary pan if active
             if self._tool_manager._previous_tool_id is not None:  # noqa: SLF001
                 self._tool_manager.restore_previous()

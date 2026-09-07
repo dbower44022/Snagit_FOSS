@@ -607,6 +607,10 @@ class TextTool(BaseTool):
         editor = _RichTextEditor(viewport)
         self._editor = editor
 
+        # Hide scrollbars — the text box auto-sizes, so scrollbars are never needed
+        editor.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        editor.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
         # Share the item's document — edits go directly to the item
         editor.setDocument(item.text_document)
 
@@ -735,9 +739,12 @@ class TextTool(BaseTool):
         item.setOpacity(1.0)
         item.is_editing = False
 
-        # Lock in the current dimensions — auto_width is only active during editing
+        # Lock in the current dimensions — auto_width is only active during editing.
+        # Must call prepareGeometryChange() since we bypass the property setter.
         if isinstance(item, TextItem) and item.auto_width:
+            item.prepareGeometryChange()
             item._auto_width = False
+            item.update()
 
         if self._scene is not None:
             # If text is empty, remove the item

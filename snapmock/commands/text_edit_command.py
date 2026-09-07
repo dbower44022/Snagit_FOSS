@@ -57,10 +57,20 @@ class TextEditCommand(BaseCommand):
         self._timestamp = time.monotonic()
 
     def redo(self) -> None:
+        # set_html changes document content which can change the item's bounding rect.
+        # Notify Qt's scene index so hit testing stays accurate.
+        if hasattr(self._item, "prepareGeometryChange"):
+            self._item.prepareGeometryChange()
         self._item.set_html(self._new_html)
+        if hasattr(self._item, "update"):
+            self._item.update()
 
     def undo(self) -> None:
+        if hasattr(self._item, "prepareGeometryChange"):
+            self._item.prepareGeometryChange()
         self._item.set_html(self._old_html)
+        if hasattr(self._item, "update"):
+            self._item.update()
 
     @property
     def description(self) -> str:

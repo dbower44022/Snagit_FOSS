@@ -11,7 +11,7 @@ from PyQt6.QtGui import QBrush, QColor, QKeyEvent, QMouseEvent, QPen, QTransform
 from PyQt6.QtWidgets import QGraphicsRectItem, QLabel, QToolBar, QToolTip
 
 from snapmock.commands.move_items import MoveItemsCommand
-from snapmock.config.constants import DRAG_THRESHOLD
+from snapmock.config.constants import DRAG_THRESHOLD, MIN_TEXT_BOX_HEIGHT
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.callout_item import CalloutItem
 from snapmock.items.text_item import TextItem
@@ -188,6 +188,9 @@ class SelectTool(BaseTool):
                     if isinstance(it, TextItem):
                         self._text_originals[id(it)] = {
                             "width": it._width,
+                            "height": it._height,
+                            "frame_height": it._frame_height(),
+                            "auto_size": it._auto_size,
                             "font_size": it.text_document.defaultFont().pointSize(),
                         }
                     elif isinstance(it, CalloutItem):
@@ -200,6 +203,21 @@ class SelectTool(BaseTool):
 
         # Check for item under cursor
         item = self._item_at(scene_pos)
+
+        # If no item's shape was hit but the click is inside the selection bounding
+        # rect (where handles are drawn), allow drag of the current selection.
+        # This is essential for text items with transparent bg/no border whose
+        # shape() only covers the text content area, not the full frame.
+        if item is None and self._handles is not None and self._selection_manager is not None:
+            sel_rect = self._handles.current_rect
+            if not sel_rect.isEmpty() and sel_rect.contains(scene_pos):
+                self._drag_start = scene_pos
+                self._drag_items = [
+                    i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)
+                ]
+                if self._drag_items:
+                    self._state = _State.DRAGGING
+                    return True
 
         if item is not None:
             shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
@@ -631,6 +649,11 @@ class SelectTool(BaseTool):
             item.prepareGeometryChange()
             if isinstance(item, TextItem):
                 item._width = max(20.0, orig["width"] * sx)  # noqa: SLF001
+                # Handle vertical resize: disable auto_size and set explicit height
+                if sy != 1.0:
+                    new_h = max(MIN_TEXT_BOX_HEIGHT, orig["frame_height"] * sy)
+                    item._auto_size = False  # noqa: SLF001
+                    item._height = new_h  # noqa: SLF001
             elif isinstance(item, CalloutItem):
                 orig_rect: QRectF = orig["rect"]
                 orig_tail: QPointF = orig["tail"]
@@ -710,14 +733,25 @@ class SelectTool(BaseTool):
         sub: list[Any] = []
         if isinstance(item, TextItem):
             new_width = item._width  # noqa: SLF001
+            new_auto_size = item._auto_size  # noqa: SLF001
+            new_height = item._height  # noqa: SLF001
             old_width: float = orig["width"]
+            old_auto_size: bool = orig["auto_size"]
+            old_height = orig["height"]
+            # Revert to original state
             item.setPos(orig_pos)
             item.prepareGeometryChange()
             item._width = old_width  # noqa: SLF001
+            item._auto_size = old_auto_size  # noqa: SLF001
+            item._height = old_height  # noqa: SLF001
             if new_pos != orig_pos:
                 sub.append(TransformItemCommand(item, orig_pos, new_pos, orig_xform, orig_xform))
             if new_width != old_width:
                 sub.append(ModifyPropertyCommand(item, "text_width", old_width, new_width))
+            if new_auto_size != old_auto_size:
+                sub.append(ModifyPropertyCommand(item, "auto_size", old_auto_size, new_auto_size))
+            if new_height != old_height:
+                sub.append(ModifyPropertyCommand(item, "text_height", old_height, new_height))
         elif isinstance(item, CalloutItem):
             new_rect = QRectF(item._rect)  # noqa: SLF001
             new_tail = QPointF(item._tail_tip)  # noqa: SLF001
