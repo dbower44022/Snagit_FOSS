@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Technical Architecture — SnapMock Product Requirements Document</title>
+<link rel="stylesheet" href="prd.css">
+</head>
+<body>
+<div class="doc">
+
+<header class="doc-head">
+  <h1>Technical Architecture</h1>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.3</span>
+  <dl class="doc-meta">
+    <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
+    <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
+    <dt>Document version</dt><dd>1.3</dd>
+    <dt>Last Updated</dt>    <dd>09-07-26 19:19</dd>
+    <dt>Author</dt>          <dd>Doug Bower</dd>
+    <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
+  </dl>
+</header>
+
+<section class="front-matter">
+
+  <h2 class="unnumbered">Revision control</h2>
+  <table>
+    <colgroup><col class="w-narrow"><col class="w-short"><col class="w-short"><col><col class="w-short"></colgroup>
+    <thead>
+      <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1.3</td>
+        <td class="nowrap">09-07-26 19:19</td>
+        <td>Doug Bower</td>
+        <td>fill_enabled removed from Common Vector Properties: a vector item has no fill
+        exactly when its fill color is transparent. Converted from Word to HTML in the
+        same revision.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
+      <tr>
+        <td>1.2</td>
+        <td class="nowrap">09-07-26 12:01</td>
+        <td>Doug Bower</td>
+        <td>fill_color description reworded for the universal Transparent color option
+        (General UI PRD v1.6, Section 11.1).</td>
+        <td><span class="status closed">Superseded</span></td>
+      </tr>
+      <tr>
+        <td>1.1</td>
+        <td class="nowrap">March 2026</td>
+        <td>Doug Bower</td>
+        <td>Added fill_opacity and stroke_opacity to Common Vector Properties; clarified
+        SnapGraphicsItem opacity; added DashDotDot stroke style.</td>
+        <td><span class="status closed">Superseded</span></td>
+      </tr>
+      <tr>
+        <td>1.0</td>
+        <td class="nowrap">February 2026</td>
+        <td>Doug Bower</td>
+        <td>Initial document.</td>
+        <td><span class="status closed">Superseded</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note issue">
+    <span class="note-label">Open — incomplete revision history</span>
+    <p>The Word original recorded release months only for versions 1.0 and 1.1, so those
+    dates do not meet the MM-DD-YY HH:MM standard. They are carried over as written rather
+    than invented. Supply the exact dates and they will be corrected.</p>
+  </div>
+
+  <h2 class="unnumbered">Change log</h2>
+  <table>
+    <colgroup><col class="w-short"><col class="w-short"><col class="w-short"><col></colgroup>
+    <thead>
+      <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="nowrap">09-07-26 19:19</td>
+        <td>All</td>
+        <td>Format</td>
+        <td>Converted from Word to HTML against the shared stylesheet. Revision control
+        and change log tables added to meet the output standard; the original had a
+        change log only. Open issues gathered in new Section 12.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 19:19</td>
+        <td>4.3</td>
+        <td>Removed</td>
+        <td>fill_enabled removed from Common Vector Properties. A vector item has no fill
+        exactly when its fill_color is transparent. Decision recorded in Basic Shape
+        Annotation Tools PRD v1.4; matches the implementation, which has never carried
+        fill_enabled.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 19:19</td>
+        <td>10</td>
+        <td>Flagged</td>
+        <td>The directory structure no longer matches the repository. Left as written
+        and flagged as an open issue.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 12:01</td>
+        <td>4.3</td>
+        <td>Changed</td>
+        <td>fill_color description reworded to remove "Transparent means no fill";
+        transparent is a color picker option like any other color (General UI PRD v1.6,
+        Section 11.1). Open question raised on fill_enabled; resolved in version 1.3.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>4.3</td>
+        <td>Added</td>
+        <td>fill_opacity and stroke_opacity added to Common Vector Properties. VectorItem
+        subclasses use these instead of the base opacity property, enabling independent
+        control of fill and stroke transparency.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>3.1.4</td>
+        <td>Changed</td>
+        <td>SnapGraphicsItem opacity description clarified to apply to non-vector items
+        only.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>4.3</td>
+        <td>Added</td>
+        <td>DashDotDot added to the stroke_style enumeration.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 class="unnumbered">Contents</h2>
+<ol class="toc">
+    <li><a href="#s1">Document Overview</a>
+      <ol>
+        <li><a href="#s1-1">Purpose</a></li>
+        <li><a href="#s1-2">Scope</a></li>
+        <li><a href="#s1-3">Design Principles</a></li>
+        <li><a href="#s1-4">Working Project Name</a></li>
+      </ol>
+    </li>
+    <li><a href="#s2">System Architecture Overview</a>
+      <ol>
+        <li><a href="#s2-1">Architectural Pattern</a></li>
+        <li><a href="#s2-2">High-Level Component Map</a></li>
+        <li><a href="#s2-3">Dependency Flow</a></li>
+      </ol>
+    </li>
+    <li><a href="#s3">Core Subsystems</a>
+      <ol>
+        <li><a href="#s3-1">Scene Graph Engine</a></li>
+        <li><a href="#s3-2">Layer Management System</a></li>
+        <li><a href="#s3-3">Tool Engine &amp; Registry</a></li>
+        <li><a href="#s3-4">Selection &amp; Transform System</a></li>
+        <li><a href="#s3-5">Raster Operations Pipeline</a></li>
+        <li><a href="#s3-6">Clipboard &amp; Drag-Drop System</a></li>
+        <li><a href="#s3-7">Command / Undo-Redo System</a></li>
+        <li><a href="#s3-8">File I/O &amp; Serialization</a></li>
+        <li><a href="#s3-9">Rendering Pipeline</a></li>
+      </ol>
+    </li>
+    <li><a href="#s4">Data Models</a>
+      <ol>
+        <li><a href="#s4-1">Project Model</a></li>
+        <li><a href="#s4-2">Annotation Item Type Hierarchy</a></li>
+        <li><a href="#s4-3">Common Vector Properties</a></li>
+      </ol>
+    </li>
+    <li><a href="#s5">Signal &amp; Event Architecture</a>
+      <ol>
+        <li><a href="#s5-1">Signal Bus</a></li>
+        <li><a href="#s5-2">Key Signal Definitions</a></li>
+        <li><a href="#s5-3">Event Routing Order</a></li>
+      </ol>
+    </li>
+    <li><a href="#s6">Plugin &amp; Extension Architecture</a>
+      <ol>
+        <li><a href="#s6-1">Design Goal</a></li>
+        <li><a href="#s6-2">Tool Plugin Interface</a></li>
+        <li><a href="#s6-3">Export Plugin Interface</a></li>
+        <li><a href="#s6-4">Future: External Plugin Loading</a></li>
+      </ol>
+    </li>
+    <li><a href="#s7">Cross-Platform Considerations</a>
+      <ol>
+        <li><a href="#s7-1">Target Platforms</a></li>
+        <li><a href="#s7-2">Platform Abstraction</a></li>
+        <li><a href="#s7-3">Packaging &amp; Distribution</a></li>
+      </ol>
+    </li>
+    <li><a href="#s8">Performance Requirements</a></li>
+    <li><a href="#s9">Technology Stack &amp; Dependencies</a>
+      <ol>
+        <li><a href="#s9-1">Dependency Policy</a></li>
+      </ol>
+    </li>
+    <li><a href="#s10">Directory Structure</a></li>
+    <li><a href="#s11">Acceptance Criteria</a>
+      <ol>
+        <li><a href="#s11-1">Scene Graph</a></li>
+        <li><a href="#s11-2">Layers</a></li>
+        <li><a href="#s11-3">Tools &amp; Items</a></li>
+        <li><a href="#s11-4">Raster Operations</a></li>
+        <li><a href="#s11-5">File I/O</a></li>
+        <li><a href="#s11-6">Cross-Platform</a></li>
+        <li><a href="#s11-7">Performance</a></li>
+      </ol>
+    </li>
+    <li><a href="#s12">Open Issues</a></li>
+  </ol>
+
+</section>
+
+<main>
+
+<p>1. Document Overview</p>
+
+<p>2. System Architecture Overview</p>
+
+<p>3. Core Subsystems</p>
+
+<p>3.1 Scene Graph Engine</p>
+
+<p>3.2 Layer Management System</p>
+
+<p>3.3 Tool Engine &amp; Registry</p>
+
+<p>3.4 Selection &amp; Transform System</p>
+
+<p>3.5 Raster Operations Pipeline</p>
+
+<p>3.6 Clipboard &amp; Drag-Drop System</p>
+
+<p>3.7 Command / Undo-Redo System</p>
+
+<p>3.8 File I/O &amp; Serialization</p>
+
+<p>3.9 Rendering Pipeline</p>
+
+<p>4. Data Models</p>
+
+<p>5. Signal &amp; Event Architecture</p>
+
+<p>6. Plugin &amp; Extension Architecture</p>
+
+<p>7. Cross-Platform Considerations</p>
+
+<p>8. Performance Requirements</p>
+
+<p>9. Technology Stack &amp; Dependencies</p>
+
+<p>10. Directory Structure</p>
+
+<p>11. Acceptance Criteria</p>
+
+<h2 id="s1">Document Overview</h2>
+
+<h3 id="s1-1">Purpose</h3>
+
+<p>This document defines the technical architecture for SnapMock, an open-source,
+cross-platform screenshot annotation and UI mockup tool. It serves as the authoritative
+reference for all implementation decisions and is intended to be consumed by Claude Code
+(or equivalent AI coding agents) to produce detailed implementation plans.</p>
+
+<h3 id="s1-2">Scope</h3>
+
+<p>SnapMock provides layered vector and raster annotation capabilities on top of imported
+raster images (screenshots or loaded files). The primary use case is rapid UI mockup
+creation: users capture or import a screenshot, then cut, paste, move, and annotate
+screen regions to prototype interface changes. This PRD covers the internal software
+architecture only. UI layout, individual annotation tool behaviors, and screen capture
+are covered in separate PRDs.</p>
+
+<h3 id="s1-3">Design Principles</h3>
+
+<ul>
+  <li>Layered, non-destructive editing: all annotations and raster selections remain
+  independently editable until explicitly flattened.</li>
+  <li>Cross-platform first: Linux (primary), Windows, and macOS from a single codebase using
+  PyQt6.</li>
+  <li>Open source friendly: clear module boundaries, minimal coupling, well-documented
+  interfaces, permissive licensing (MIT or Apache 2.0).</li>
+  <li>Performance: smooth interaction at 4K resolution with 100+ annotation objects and
+  multiple raster layers.</li>
+  <li>Extensibility: new annotation tools can be added without modifying core subsystems.</li>
+</ul>
+
+<h3 id="s1-4">Working Project Name</h3>
+
+<p>The project is tentatively named SnapMock. This name is subject to change pending
+trademark verification. All code references should use a configurable application name
+constant.</p>
+
+<h2 id="s2">System Architecture Overview</h2>
+
+<h3 id="s2-1">Architectural Pattern</h3>
+
+<p>SnapMock uses a Model-View-Controller (MVC) variant built on top of Qt's
+QGraphicsScene/QGraphicsView framework. The scene graph serves as both the model (object
+storage and spatial indexing) and the view coordination layer. A separate document model
+tracks layer ordering, metadata, and project state.</p>
+
+<h3 id="s2-2">High-Level Component Map</h3>
+
+<p>The system is composed of the following major subsystems, each of which is detailed in
+Section 3:</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Subsystem</th><th>Responsibility</th><th>Key Classes</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Scene Graph Engine</th><td>Manages all visual objects, spatial indexing, hit testing, z-ordering, and rendering delegation.</td><td>SnapScene (QGraphicsScene), SnapView (QGraphicsView)</td></tr>
+    <tr><th>Layer Management</th><td>Maintains ordered list of layers with visibility, locking, opacity, blend mode, and grouping.</td><td>LayerManager, Layer, LayerPanel (UI)</td></tr>
+    <tr><th>Tool Engine &amp; Registry</th><td>Manages active tool state, dispatches mouse/keyboard events to the current tool handler.</td><td>ToolManager, BaseTool, and per-tool subclasses</td></tr>
+    <tr><th>Selection &amp; Transform</th><td>Multi-object selection, bounding box handles, move, resize, rotate, skew transforms.</td><td>SelectionManager, TransformHandles, SelectionGroup</td></tr>
+    <tr><th>Raster Operations</th><td>Rectangular and freeform raster selection, cut/copy/paste of pixel regions, crop.</td><td>RasterSelectionTool, RasterClipboard, CropTool</td></tr>
+    <tr><th>Clipboard &amp; Drag-Drop</th><td>System clipboard integration (copy/paste images and objects), internal drag-drop.</td><td>ClipboardManager</td></tr>
+    <tr><th>Command / Undo-Redo</th><td>Records all state-changing operations as undoable commands. Supports macro commands.</td><td>CommandStack, BaseCommand, and per-operation subclasses</td></tr>
+    <tr><th>File I/O &amp; Serialization</th><td>Save/load project files (<code>.smk</code>), export to PNG/JPG/SVG/PDF, import images.</td><td>ProjectSerializer, Exporter, Importer</td></tr>
+    <tr><th>Rendering Pipeline</th><td>Composites layers in order with opacity and blend modes for display and export.</td><td>RenderEngine, ExportRenderer</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s2-3">Dependency Flow</h3>
+
+<p>Dependencies flow downward. UI widgets depend on managers, managers depend on the scene
+graph and data models, and data models have no upward dependencies. Communication from
+lower layers to upper layers uses Qt signals exclusively.</p>
+
+<ul>
+  <li>UI Widgets (Toolbar, LayerPanel, PropertyPanel) depend on ToolManager, LayerManager,
+  SelectionManager</li>
+  <li>ToolManager depends on SnapScene, CommandStack, SelectionManager</li>
+  <li>LayerManager depends on SnapScene, CommandStack</li>
+  <li>SelectionManager depends on SnapScene</li>
+  <li>CommandStack depends on Data Models only</li>
+  <li>Data Models (Layer, AnnotationItem, Project) have zero upward dependencies</li>
+</ul>
+
+<h2 id="s3">Core Subsystems</h2>
+
+<h3 id="s3-1">Scene Graph Engine</h3>
+
+<h4 id="s3-1-1">Overview</h4>
+
+<p>The scene graph is the backbone of SnapMock. It is built on
+QGraphicsScene/QGraphicsView, which provides hardware-accelerated rendering, spatial
+indexing via BSP trees, built-in hit testing, and z-value ordering. SnapMock extends
+these classes to add layer-aware rendering, tool event routing, and custom item types.</p>
+
+<h4 id="s3-1-2">SnapScene (extends QGraphicsScene)</h4>
+
+<p>Functional requirements:</p>
+
+<ul>
+  <li>Maintain a background raster layer (the imported screenshot or blank canvas) rendered as
+  a QGraphicsPixmapItem at z-value 0.</li>
+  <li>Support adding, removing, and reordering QGraphicsItem subclasses that represent
+  annotation objects.</li>
+  <li>Route all mouse press, move, release, and key events to ToolManager before default
+  handling.</li>
+  <li>Provide a canvasSize property (QSizeF) that defines the document bounds, independent of
+  the viewport.</li>
+  <li>Emit signals: itemAdded(item), itemRemoved(item), itemModified(item),
+  sceneRectChanged(rect).</li>
+  <li>Support scene-level grid snapping with configurable grid size (default 10px,
+  toggleable).</li>
+  <li>Provide a method to flatten all visible layers to a single QImage for export.</li>
+</ul>
+
+<h4 id="s3-1-3">SnapView (extends QGraphicsView)</h4>
+
+<p>Functional requirements:</p>
+
+<ul>
+  <li>Zoom: ctrl+scroll wheel zoom from 10% to 3200%, with smooth animated transitions.
+  Display current zoom level in status bar.</li>
+  <li>Pan: middle-mouse-button drag for panning, or spacebar+left-click drag. Support
+  two-finger trackpad pan on macOS.</li>
+  <li>Fit-to-window: keyboard shortcut (Ctrl+0) to fit the entire canvas in the current
+  viewport.</li>
+  <li>Pixel-level zoom: at zoom levels above 800%, render a pixel grid overlay.</li>
+  <li>Cursor: update cursor icon based on the active tool and hover context (resize handles,
+  move, crosshair, etc.).</li>
+  <li>Rulers: optional horizontal and vertical pixel rulers along the edges of the viewport,
+  toggled via View menu.</li>
+  <li>Crosshair guides: optional crosshair lines following the cursor, toggled via View menu.</li>
+</ul>
+
+<h4 id="s3-1-4">Item Base Class (SnapGraphicsItem)</h4>
+
+<p>All annotation objects inherit from SnapGraphicsItem, which is a QGraphicsItem subclass
+(or QGraphicsObject for signal support). It adds the following properties and behaviors
+to every item in the scene:</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>layer_id</code></th><td>UUID</td><td>Reference to the Layer this item belongs to. Used by LayerManager for visibility and lock state.</td></tr>
+    <tr><th><code>item_id</code></th><td>UUID</td><td>Globally unique identifier for this item. Used for serialization and command references.</td></tr>
+    <tr><th>locked</th><td>bool</td><td>If True, item cannot be selected, moved, or edited. Mirrors the parent layer lock state OR per-item lock.</td></tr>
+    <tr><th>visible</th><td>bool</td><td>If False, item is not rendered. Mirrors the parent layer visibility OR per-item visibility.</td></tr>
+    <tr><th>opacity</th><td>float (0.0-1.0)</td><td>Item-level opacity, multiplied with layer opacity during rendering. Used by non-vector items (Blur, Highlighter, Stamp, Emoji). VectorItem subclasses use <code>fill_opacity</code> and <code>stroke_opacity</code> instead (see Section 4.3).</td></tr>
+    <tr><th><code>blend_mode</code></th><td>enum</td><td>Blend mode for compositing (Normal, Multiply, Screen, Overlay, etc.). Default: Normal.</td></tr>
+    <tr><th>metadata</th><td>dict</td><td>Extensible key-value store for tool-specific properties (stroke color, font, arrow style, etc.).</td></tr>
+    <tr><th><code>creation_order</code></th><td>int</td><td>Monotonically increasing integer assigned at creation. Used as tiebreaker for z-ordering within a layer.</td></tr>
+  </tbody>
+</table>
+
+<p>Functional requirements:</p>
+
+<ul>
+  <li>Override <code>boundingRect()</code> and <code>paint()</code> per item type.</li>
+  <li>Override <code>shape()</code> to return an accurate QPainterPath for hit testing (not
+  just bounding rect).</li>
+  <li>Implement <code>serialize()</code> and deserialize(data) for project save/load.
+  Serialization format is JSON.</li>
+  <li>Implement <code>clone()</code> for copy/paste operations that returns a deep copy with a
+  new <code>item_id</code>.</li>
+  <li>Respect layer lock and visibility states: if the parent layer is locked, ignore all
+  interactive events.</li>
+  <li>Support interactive property editing: when selected, emit a signal with the item's
+  editable properties so the PropertyPanel can display appropriate controls.</li>
+</ul>
+
+<h3 id="s3-2">Layer Management System</h3>
+
+<h4 id="s3-2-1">Layer Data Model</h4>
+
+<p>Each Layer is a lightweight data object (not a QGraphicsItem) that groups items and
+controls their collective rendering behavior.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>layer_id</code></th><td>UUID</td><td>auto-generated</td><td>Unique identifier.</td></tr>
+    <tr><th>name</th><td>str</td><td>"Layer N"</td><td>User-editable display name.</td></tr>
+    <tr><th>visible</th><td>bool</td><td>True</td><td>Toggles rendering of all items in this layer.</td></tr>
+    <tr><th>locked</th><td>bool</td><td>False</td><td>Prevents selection, movement, or editing of any item in this layer.</td></tr>
+    <tr><th>opacity</th><td>float</td><td>1.0</td><td>Layer-level opacity (0.0 to 1.0). Applied multiplicatively with item opacity.</td></tr>
+    <tr><th><code>blend_mode</code></th><td>enum</td><td>Normal</td><td>Compositing blend mode for the entire layer.</td></tr>
+    <tr><th><code>layer_type</code></th><td>enum</td><td>Annotation</td><td>One of: Background, Annotation, RasterRegion. Background is always at z-index 0.</td></tr>
+    <tr><th>order</th><td>int</td><td>auto</td><td>Position in the layer stack. Lower = rendered first (behind). Managed by LayerManager.</td></tr>
+    <tr><th>items</th><td>list[UUID]</td><td>[]</td><td>Ordered list of <code>item_ids</code> belonging to this layer.</td></tr>
+  </tbody>
+</table>
+
+<h4 id="s3-2-2">LayerManager</h4>
+
+<p>The LayerManager is a singleton that owns the ordered list of Layer objects and
+synchronizes layer state with the scene graph.</p>
+
+<p>Functional requirements:</p>
+
+<ul>
+  <li>Create layer: add a new layer at a specified position in the stack (or top by default).
+  Assign unique name. Emit layerAdded(layer) signal.</li>
+  <li>Delete layer: remove a layer and all its items from the scene. Must not allow deletion
+  of the last remaining layer. Emit layerRemoved(<code>layer_id</code>) signal. This
+  operation is undoable.</li>
+  <li>Reorder layers: move a layer to a new position in the stack. Update z-values of all
+  affected items in the scene. Emit <code>layersReordered()</code> signal.</li>
+  <li>Duplicate layer: deep-copy a layer and all its items (with new UUIDs). Insert the
+  duplicate directly above the source layer.</li>
+  <li>Merge layers: flatten two or more selected layers into one. Vector items from upper
+  layers are rasterized onto the lower layer's composite. This is destructive and
+  undoable.</li>
+  <li>Toggle visibility: set layer.visible and update all child items' visibility in the
+  scene. Emit layerVisibilityChanged(<code>layer_id</code>, visible).</li>
+  <li>Toggle lock: set layer.locked and update all child items' lock state. Emit
+  layerLockChanged(<code>layer_id</code>, locked).</li>
+  <li>Set opacity: update layer.opacity and trigger scene repaint. Emit
+  layerOpacityChanged(<code>layer_id</code>, opacity).</li>
+  <li>Active layer: track which layer is currently active (receives new annotation items).
+  Only one layer can be active at a time. Emit activeLayerChanged(<code>layer_id</code>).</li>
+  <li>Flatten all: composite all visible layers into a single raster image, replacing all
+  layers with one Background layer containing the result. Destructive and undoable.</li>
+  <li>Z-value management: maintain a mapping from layer order to z-value ranges. Each layer is
+  allocated a range of 10,000 z-values (layer 0 = 0-9999, layer 1 = 10000-19999, etc.).
+  Items within a layer use their <code>creation_order</code> as offset within the range.</li>
+</ul>
+
+<h4 id="s3-2-3">Layer Panel (UI Contract)</h4>
+
+<p>The Layer Panel is a dockable widget. Its visual design is covered in the UI PRD, but
+its functional contract with LayerManager is defined here:</p>
+
+<ul>
+  <li>Display all layers in stack order (top layer at top of panel).</li>
+  <li>Each layer row shows: visibility eye icon (toggle), lock icon (toggle), thumbnail
+  preview (48x48, updated on item changes), layer name (double-click to rename), opacity
+  slider (on hover or expand).</li>
+  <li>Support drag-and-drop reordering of layers within the panel.</li>
+  <li>Right-click context menu: Duplicate Layer, Delete Layer, Merge Down, Merge Visible,
+  Flatten All, Layer Properties.</li>
+  <li>Active layer is highlighted. Clicking a layer row makes it active.</li>
+  <li>Multi-select layers with Ctrl+click for batch operations (delete, merge, lock, hide).</li>
+</ul>
+
+<h3 id="s3-3">Tool Engine &amp; Registry</h3>
+
+<h4 id="s3-3-1">ToolManager</h4>
+
+<p>The ToolManager is a singleton that manages the currently active tool, routes input
+events from SnapScene to the active tool, and maintains the tool registry.</p>
+
+<p>Functional requirements:</p>
+
+<ul>
+  <li>Maintain a registry of all available tools, keyed by <code>tool_id</code> string.</li>
+  <li>Activate a tool by <code>tool_id</code>. Deactivate the previous tool (calling its
+  <code>deactivate()</code> method) before activating the new one. Emit
+  toolChanged(<code>tool_id</code>) signal.</li>
+  <li>Route mouse events (press, move, release, double-click) and key events from SnapScene to
+  the active tool's corresponding handler methods.</li>
+  <li>Provide the active tool with references to: SnapScene, SelectionManager, LayerManager,
+  CommandStack, and the PropertyPanel interface.</li>
+  <li>Support tool-specific cursors: when a tool is activated, set the viewport cursor to the
+  tool's declared cursor.</li>
+  <li>Support tool-specific options: each tool declares a list of configurable options (e.g.,
+  stroke color, line width, font). These are displayed in a ToolOptionsBar below the main
+  toolbar.</li>
+  <li>Support temporary tool override: holding a modifier key (e.g., Space for pan, Alt for
+  eyedropper) temporarily switches tools without changing the toolbar selection. Releasing
+  the modifier returns to the previous tool.</li>
+</ul>
+
+<h4 id="s3-3-2">BaseTool (Abstract Base Class)</h4>
+
+<p>All tools inherit from BaseTool and must implement the following interface:</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Method</th><th>Parameters</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>activate()</code></th><td>none</td><td>Called when tool becomes active. Set up cursors, overlays, and option defaults.</td></tr>
+    <tr><th><code>deactivate()</code></th><td>none</td><td>Called when tool is replaced. Clean up any temporary graphics, selection state, or overlays.</td></tr>
+    <tr><th><code>mouse_press</code>(event)</th><td>QGraphicsSceneMouseEvent</td><td>Handle mouse button press. Return True if the event was consumed (prevents default scene handling).</td></tr>
+    <tr><th><code>mouse_move</code>(event)</th><td>QGraphicsSceneMouseEvent</td><td>Handle mouse move (with or without button held). Update preview graphics.</td></tr>
+    <tr><th><code>mouse_release</code>(event)</th><td>QGraphicsSceneMouseEvent</td><td>Handle mouse button release. Finalize the operation and push a command to the CommandStack.</td></tr>
+    <tr><th><code>mouse_double_click</code>(event)</th><td>QGraphicsSceneMouseEvent</td><td>Handle double-click. Used for inline text editing, etc.</td></tr>
+    <tr><th><code>key_press</code>(event)</th><td>QKeyEvent</td><td>Handle key press. Used for tool-specific shortcuts, text input, constraint modifiers (Shift for straight lines).</td></tr>
+    <tr><th><code>key_release</code>(event)</th><td>QKeyEvent</td><td>Handle key release. Release constraint modifiers.</td></tr>
+    <tr><th><code>get_cursor</code>()</th><td>none</td><td>Return the QCursor to display when this tool is active.</td></tr>
+    <tr><th><code>get_options</code>()</th><td>none</td><td>Return a list of ToolOption descriptors for the ToolOptionsBar.</td></tr>
+    <tr><th><code>get_tool_id</code>()</th><td>none</td><td>Return the unique string identifier for this tool.</td></tr>
+    <tr><th><code>get_display_name</code>()</th><td>none</td><td>Return the human-readable name for the toolbar tooltip.</td></tr>
+    <tr><th><code>get_icon</code>()</th><td>none</td><td>Return the QIcon for the toolbar button.</td></tr>
+  </tbody>
+</table>
+
+<h4 id="s3-3-3">Tool Registry</h4>
+
+<p>Tools are registered at application startup. The initial tool set (detailed in separate
+per-tool PRDs) includes:</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>tool_id</th><th>Display Name</th><th>Category</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>select</th><td>Select / Move</td><td>Selection</td></tr>
+    <tr><th><code>raster_select</code></th><td>Raster Selection (Rectangle)</td><td>Selection</td></tr>
+    <tr><th><code>freeform_select</code></th><td>Raster Selection (Freeform / Lasso)</td><td>Selection</td></tr>
+    <tr><th>crop</th><td>Crop Canvas</td><td>Canvas</td></tr>
+    <tr><th>arrow</th><td>Arrow</td><td>Annotation</td></tr>
+    <tr><th>line</th><td>Line</td><td>Annotation</td></tr>
+    <tr><th>rectangle</th><td>Rectangle</td><td>Annotation</td></tr>
+    <tr><th>ellipse</th><td>Ellipse</td><td>Annotation</td></tr>
+    <tr><th>freehand</th><td>Freehand / Pen</td><td>Annotation</td></tr>
+    <tr><th>text</th><td>Text Box</td><td>Annotation</td></tr>
+    <tr><th>callout</th><td>Callout Bubble</td><td>Annotation</td></tr>
+    <tr><th>blur</th><td>Blur / Pixelate Region</td><td>Annotation</td></tr>
+    <tr><th>highlight</th><td>Highlighter</td><td>Annotation</td></tr>
+    <tr><th><code>numbered_step</code></th><td>Numbered Step</td><td>Annotation</td></tr>
+    <tr><th>stamp</th><td>Stamp / Sticker</td><td>Annotation</td></tr>
+    <tr><th>eyedropper</th><td>Eyedropper (Color Picker)</td><td>Utility</td></tr>
+    <tr><th>pan</th><td>Pan / Hand</td><td>Navigation</td></tr>
+    <tr><th><code>zoom_tool</code></th><td>Zoom In/Out</td><td>Navigation</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s3-4">Selection &amp; Transform System</h3>
+
+<h4 id="s3-4-1">SelectionManager</h4>
+
+<p>The SelectionManager tracks which items are currently selected and provides operations
+on the selection set.</p>
+
+<p>Functional requirements:</p>
+
+<ul>
+  <li>Single select: clicking an item with the Select tool selects it and deselects all
+  others. Emit selectionChanged(<code>selected_ids</code>) signal.</li>
+  <li>Multi-select: Shift+click adds/removes an item from the selection. Ctrl+click toggles.
+  Rubber band selection (drag on empty canvas) selects all items whose shapes intersect
+  the rubber band rectangle.</li>
+  <li>Select all: Ctrl+A selects all unlocked, visible items on the active layer. Ctrl+Shift+A
+  selects all unlocked, visible items across all layers.</li>
+  <li>Deselect: Escape or clicking empty canvas deselects all. Emit
+  <code>selectionCleared()</code> signal.</li>
+  <li>Selection filtering: only items on unlocked, visible layers can be selected.</li>
+  <li>Selection info: provide methods to query the selection: <code>count()</code>,
+  <code>items()</code>, <code>boundingRect()</code>, containsType(type).</li>
+  <li>Group operations: move, delete, copy, cut, align, distribute operations can be applied
+  to the entire selection set.</li>
+</ul>
+
+<h4 id="s3-4-2">TransformHandles</h4>
+
+<p>When one or more items are selected, a TransformHandles overlay is drawn around the
+collective bounding box. This overlay provides interactive resize, rotate, and skew
+operations.</p>
+
+<p>Handle layout:</p>
+
+<ul>
+  <li>Eight resize handles: four corners and four edge midpoints. Corner handles maintain
+  aspect ratio when Shift is held; edge midpoints resize in one axis only.</li>
+  <li>Rotate handle: a circular handle connected by a line above the top-center of the
+  bounding box. Dragging rotates all selected items around the bounding box center. Shift
+  constrains rotation to 15-degree increments.</li>
+  <li>Move: dragging anywhere inside the bounding box (but not on a handle) moves all selected
+  items. Shift constrains movement to horizontal or vertical axis.</li>
+  <li>Skew: holding Ctrl while dragging an edge midpoint handle applies a skew transform.</li>
+  <li>All transforms are previewed in real-time during drag and committed as a single undoable
+  command on mouse release.</li>
+</ul>
+
+<h4 id="s3-4-3">Alignment &amp; Distribution</h4>
+
+<p>When multiple items are selected, alignment and distribution operations are available
+via the toolbar or context menu:</p>
+
+<ul>
+  <li>Align: left, center, right, top, middle, bottom. Aligns to the bounding box of the
+  selection set or to the canvas.</li>
+  <li>Distribute: horizontal spacing, vertical spacing. Evenly distributes items across the
+  selection bounding box.</li>
+  <li>All alignment/distribution operations are single undoable commands.</li>
+</ul>
+
+<h3 id="s3-5">Raster Operations Pipeline</h3>
+
+<h4 id="s3-5-1">Purpose</h4>
+
+<p>Raster operations enable the core UI mockup workflow: selecting pixel regions from the
+background screenshot (or any raster layer), cutting or copying them, and pasting them
+as independent, movable raster layer items. This is the primary differentiator from
+simple annotation tools.</p>
+
+<h4 id="s3-5-2">Raster Selection Tool (Rectangle)</h4>
+
+<p>Functional requirements:</p>
+
+<ul>
+  <li>Draw a rectangular marching-ants selection on the canvas by click-and-drag.</li>
+  <li>The selection is pixel-based and operates on the composite raster of all visible layers
+  below the active layer (or a configurable source: active layer only, all visible layers,
+  or a specific layer).</li>
+  <li>Once a selection is drawn, the user can: Move the selection marquee (click inside and
+  drag). Resize the selection marquee (drag handles). Copy the selected pixels to
+  clipboard (Ctrl+C). Cut the selected pixels (Ctrl+X): removes pixels from the source and
+  places them on clipboard. Paste as new layer item (Ctrl+V): creates a new
+  RasterRegionItem from clipboard content, positioned at the original selection location
+  or at canvas center.</li>
+  <li>Pressing Enter or double-clicking inside the selection confirms it and creates a
+  RasterRegionItem on the active layer.</li>
+  <li>Pressing Escape cancels the selection.</li>
+  <li>Shift constrains the selection to a square. Alt draws the selection from center.</li>
+  <li>Display selection dimensions (width x height in pixels) near the selection marquee.</li>
+</ul>
+
+<h4 id="s3-5-3">Raster Selection Tool (Freeform / Lasso)</h4>
+
+<p>Functional requirements:</p>
+
+<ul>
+  <li>Draw a freeform closed path by click-and-drag. The path auto-closes on mouse release.</li>
+  <li>All other behaviors are identical to the rectangle raster selection, except the
+  selection mask is the filled freeform path rather than a rectangle.</li>
+  <li>The resulting RasterRegionItem stores both the pixel data and an alpha mask derived from
+  the freeform path.</li>
+</ul>
+
+<h4 id="s3-5-4">RasterRegionItem (extends SnapGraphicsItem)</h4>
+
+<p>A RasterRegionItem is a scene item that holds a raster pixel region extracted from
+another layer. It is the result of a raster cut/copy/paste operation.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>pixmap</th><td>QPixmap</td><td>The pixel data of the extracted region.</td></tr>
+    <tr><th><code>alpha_mask</code></th><td>QBitmap (optional)</td><td>For freeform selections, the mask that defines the non-rectangular boundary.</td></tr>
+    <tr><th><code>source_rect</code></th><td>QRectF</td><td>The original location and size in scene coordinates where the pixels were extracted from.</td></tr>
+    <tr><th><code>source_layer_id</code></th><td>UUID</td><td>The layer from which the pixels were extracted (for potential undo reconstruction).</td></tr>
+  </tbody>
+</table>
+
+<p>Functional requirements:</p>
+
+<ul>
+  <li>Renders the pixmap (with optional alpha mask) at its scene position.</li>
+  <li>Supports all standard transforms: move, resize (with interpolation), rotate.</li>
+  <li>Supports opacity and blend mode (inherited from SnapGraphicsItem).</li>
+  <li>Serializable: on save, the pixmap is stored as an embedded PNG in the project file.</li>
+  <li>On cut: the source pixels in the source layer are replaced with transparency (or
+  configurable fill color). This modification is recorded as part of the undoable cut
+  command.</li>
+</ul>
+
+<h4 id="s3-5-5">Crop Tool</h4>
+
+<p>Functional requirements:</p>
+
+<ul>
+  <li>Displays a resizable crop overlay on the canvas. Area outside the crop is dimmed with a
+  semi-transparent overlay.</li>
+  <li>Crop handles on all four edges and corners. Shift constrains to original aspect ratio.</li>
+  <li>Rule-of-thirds grid overlay inside the crop area (toggleable).</li>
+  <li>Pressing Enter confirms the crop: the canvas size is reduced, and all items are
+  repositioned relative to the new origin. This is a single undoable command.</li>
+  <li>Pressing Escape cancels the crop.</li>
+  <li>Display crop dimensions in pixels near the crop area.</li>
+</ul>
+
+<h3 id="s3-6">Clipboard &amp; Drag-Drop System</h3>
+
+<h4 id="s3-6-1">ClipboardManager</h4>
+
+<p>The ClipboardManager handles both internal (within SnapMock) and external (system
+clipboard) copy/paste operations.</p>
+
+<p>Functional requirements:</p>
+
+<ul>
+  <li>Copy vector items: serialize selected SnapGraphicsItems to an internal MIME type
+  (application/x-snapmock-items) containing JSON. Also place a rasterized PNG on the
+  system clipboard for interoperability with other applications.</li>
+  <li>Copy raster selection: place the selected pixel region on the system clipboard as a PNG
+  image. Also store internally with metadata (source layer, source rect) for richer paste
+  behavior.</li>
+  <li>Paste from internal clipboard: deserialize items from the internal MIME type. Place them
+  at the center of the current viewport with a small offset from the original position
+  (cascade paste). Assign new UUIDs. Add to the active layer.</li>
+  <li>Paste from system clipboard: if the system clipboard contains an image, create a new
+  RasterRegionItem from it and add to the active layer at viewport center. If it contains
+  text, create a TextItem.</li>
+  <li>Cut: copy (as above) then delete the selected items. For raster selections, copy the
+  pixels then replace the source with transparency. Both operations are recorded as a
+  single undoable command.</li>
+  <li>Duplicate (Ctrl+D): shortcut that copies and immediately pastes with a small (10px,
+  10px) offset. Single undoable command.</li>
+</ul>
+
+<h4 id="s3-6-2">Drag and Drop</h4>
+
+<p>Functional requirements:</p>
+
+<ul>
+  <li>Accept image files (PNG, JPG, BMP, GIF, WebP, SVG) dragged from the OS file manager.
+  Create a RasterRegionItem (or SVG item) on the active layer at the drop position.</li>
+  <li>Accept images dragged from web browsers (URL or inline image data).</li>
+  <li>Support internal drag-and-drop of items between layers (drag from canvas, drop on layer
+  panel row).</li>
+  <li>Support dragging items from the stamp/sticker library onto the canvas.</li>
+</ul>
+
+<h3 id="s3-7">Command / Undo-Redo System</h3>
+
+<h4 id="s3-7-1">CommandStack</h4>
+
+<p>All state-changing operations are recorded as Command objects on the CommandStack,
+enabling unlimited undo/redo.</p>
+
+<p>Functional requirements:</p>
+
+<ul>
+  <li>Push a command: execute the command's <code>redo()</code> method and add it to the
+  stack. Clear the redo history (any commands after the current position).</li>
+  <li>Undo: call the current command's <code>undo()</code> method. Move the stack pointer
+  back. Emit undoPerformed(<code>command_description</code>) signal.</li>
+  <li>Redo: call the next command's <code>redo()</code> method. Move the stack pointer
+  forward. Emit redoPerformed(<code>command_description</code>) signal.</li>
+  <li>Macro commands: support grouping multiple commands into a single undoable unit (e.g.,
+  cut = copy + delete). MacroCommand.undo() calls each sub-command's <code>undo()</code>
+  in reverse order.</li>
+  <li>Dirty flag: track whether the document has been modified since last save. The dirty flag
+  is set when a command is pushed and cleared when the document is saved.</li>
+  <li>Memory management: optionally cap the undo history at a configurable maximum (default:
+  200 commands). When the cap is reached, the oldest command is dropped.</li>
+  <li>Emit signals: canUndoChanged(bool), canRedoChanged(bool), undoTextChanged(str),
+  redoTextChanged(str) for UI binding.</li>
+  <li>Keyboard shortcuts: Ctrl+Z for undo, Ctrl+Shift+Z (or Ctrl+Y) for redo.</li>
+</ul>
+
+<h4 id="s3-7-2">Command Interface</h4>
+
+<p>Every command implements:</p>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Method</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>redo()</code></th><td>Execute (or re-execute) the operation. Must be idempotent.</td></tr>
+    <tr><th><code>undo()</code></th><td>Reverse the operation, restoring previous state exactly.</td></tr>
+    <tr><th><code>description()</code></th><td>Return a human-readable string (e.g., "Move 3 items", "Add Arrow") for display in Edit menu.</td></tr>
+    <tr><th><code>merge_with</code>(other)</th><td>Optional. If the new command can be merged with the previous (e.g., incremental text typing), return True and absorb the other command. Used to coalesce rapid small edits.</td></tr>
+  </tbody>
+</table>
+
+<h4 id="s3-7-3">Command Types</h4>
+
+<p>The following command types are required at minimum:</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Command</th><th>Redo Action</th><th>Undo Action</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>AddItemCommand</th><td>Add item to scene and layer</td><td>Remove item from scene and layer</td></tr>
+    <tr><th>RemoveItemCommand</th><td>Remove item from scene and layer</td><td>Re-add item at original position</td></tr>
+    <tr><th>MoveItemsCommand</th><td>Move items by delta</td><td>Move items by negative delta</td></tr>
+    <tr><th>TransformItemCommand</th><td>Apply new transform matrix</td><td>Restore previous transform matrix</td></tr>
+    <tr><th>ModifyPropertyCommand</th><td>Set property to new value</td><td>Set property to old value</td></tr>
+    <tr><th>AddLayerCommand</th><td>Add layer to stack</td><td>Remove layer from stack</td></tr>
+    <tr><th>RemoveLayerCommand</th><td>Remove layer and items</td><td>Re-add layer and items</td></tr>
+    <tr><th>ReorderLayerCommand</th><td>Move layer to new position</td><td>Move layer to old position</td></tr>
+    <tr><th>RasterCutCommand</th><td>Cut pixels, create region item</td><td>Restore source pixels, remove region item</td></tr>
+    <tr><th>CropCanvasCommand</th><td>Resize canvas, reposition items</td><td>Restore original canvas and positions</td></tr>
+    <tr><th>MergeLayersCommand</th><td>Composite layers into one</td><td>Restore original layers and items</td></tr>
+    <tr><th>MacroCommand</th><td>Execute all sub-commands</td><td>Undo all sub-commands in reverse</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s3-8">File I/O &amp; Serialization</h3>
+
+<h4 id="s3-8-1">Project File Format (.smk)</h4>
+
+<p>The SnapMock project file is a ZIP archive with the following internal structure:</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Path</th><th>Format</th><th>Contents</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>manifest.json</th><td>JSON</td><td>Project metadata: version, canvas size, creation date, last modified, application version.</td></tr>
+    <tr><th>layers.json</th><td>JSON</td><td>Ordered array of Layer objects with all properties.</td></tr>
+    <tr><th>items.json</th><td>JSON</td><td>Array of all SnapGraphicsItem objects, serialized with their full property sets, keyed by <code>item_id</code>.</td></tr>
+    <tr><th>raster/</th><td>Directory</td><td>Contains raster data files (PNG) for RasterRegionItems and background layers, named by <code>item_id</code>.</td></tr>
+    <tr><th>thumbnails/</th><td>Directory</td><td>Contains layer thumbnail PNGs for fast preview loading.</td></tr>
+    <tr><th>fonts/</th><td>Directory</td><td>Embedded font files used by text annotations (optional, for portability).</td></tr>
+  </tbody>
+</table>
+
+<p>Functional requirements:</p>
+
+<ul>
+  <li>Save: serialize all project state to the <code>.smk</code> ZIP archive. Raster data is
+  stored as PNG files in the raster/ directory. References between items and raster files
+  use <code>item_id</code>-based filenames.</li>
+  <li>Load: deserialize the <code>.smk</code> archive, reconstruct the scene graph, layer
+  stack, and all items. Validate manifest version compatibility.</li>
+  <li>Auto-save: optionally save a recovery copy at a configurable interval (default: 2
+  minutes) to a temporary location. On crash recovery, prompt the user to restore from
+  auto-save.</li>
+  <li>File versioning: the manifest includes a <code>format_version</code> field. The loader
+  must handle backward compatibility with older format versions. Unknown future fields are
+  ignored gracefully.</li>
+</ul>
+
+<h4 id="s3-8-2">Export Formats</h4>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Format</th><th>Extension</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>PNG</th><td>.png</td><td>Flattened raster export with configurable DPI (72, 150, 300). Supports alpha transparency. Default export format.</td></tr>
+    <tr><th>JPEG</th><td>.jpg</td><td>Flattened raster export with configurable quality (1-100, default 90). No alpha.</td></tr>
+    <tr><th>SVG</th><td>.svg</td><td>Vector export of annotation items only (raster items are embedded as base64 images). Useful for scalable output.</td></tr>
+    <tr><th>PDF</th><td>.pdf</td><td>Single-page PDF export at configurable DPI. Vector items remain vector; raster items are embedded.</td></tr>
+    <tr><th>Clipboard</th><td>n/a</td><td>Copy flattened image to system clipboard.</td></tr>
+  </tbody>
+</table>
+
+<h4 id="s3-8-3">Import Formats</h4>
+
+<p>SnapMock can import the following image formats as background layers or raster region
+items: PNG, JPEG, BMP, GIF (first frame), WebP, SVG (rasterized at specified DPI), TIFF.
+Import is also the mechanism for loading a screenshot captured by the (future) screen
+capture module.</p>
+
+<h3 id="s3-9">Rendering Pipeline</h3>
+
+<h4 id="s3-9-1">Display Rendering</h4>
+
+<p>For on-screen display, QGraphicsView handles rendering via its built-in scene traversal.
+SnapMock augments this with:</p>
+
+<ul>
+  <li>Layer opacity: before rendering, each item's effective opacity is computed as
+  item.opacity * layer.opacity (for non-vector items) or item.fill_opacity /
+  item.stroke_opacity * layer.opacity (for vector items). This is applied via QPainter
+  alpha modulation during the item's <code>paint()</code> call.</li>
+  <li>Layer visibility: invisible layers have all their items hidden via
+  QGraphicsItem.setVisible(False).</li>
+  <li>Blend modes: for Normal blend mode, Qt's default compositing is used. For non-Normal
+  blend modes, the layer is rendered to an offscreen QImage first, then composited onto
+  the below layers using QPainter.setCompositionMode().</li>
+  <li>Selection overlay: selected items are drawn with a dashed blue outline and resize
+  handles on top of normal rendering.</li>
+  <li>Tool overlays: active tools may draw temporary overlays (selection marquee, crop region,
+  guide lines) on a dedicated overlay layer that is always on top.</li>
+</ul>
+
+<h4 id="s3-9-2">Export Rendering</h4>
+
+<p>For file export, the ExportRenderer composites all visible layers into a final QImage
+(for raster formats) or QPainter-based output (for vector formats).</p>
+
+<p>Functional requirements:</p>
+
+<ol>
+  <li>Create a QImage at the target DPI and canvas size.</li>
+  <li>For each visible layer in bottom-to-top order: if the layer has Normal blend mode,
+  render all its items directly onto the QImage using QPainter. If the layer has a
+  non-Normal blend mode, render the layer to a temporary QImage, then composite it using
+  the specified blend mode.</li>
+  <li>For vector export (SVG/PDF), render vector items using their native QPainter paths.
+  Raster items are embedded as images.</li>
+  <li>Selection overlays, guides, grid, and other UI elements are excluded from export.</li>
+</ol>
+
+<h2 id="s4">Data Models</h2>
+
+<h3 id="s4-1">Project Model</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>project_id</code></th><td>UUID</td><td>Unique project identifier.</td></tr>
+    <tr><th>name</th><td>str</td><td>Project name (derived from filename).</td></tr>
+    <tr><th><code>canvas_width</code></th><td>int</td><td>Canvas width in pixels.</td></tr>
+    <tr><th><code>canvas_height</code></th><td>int</td><td>Canvas height in pixels.</td></tr>
+    <tr><th><code>canvas_dpi</code></th><td>int</td><td>Canvas resolution (default: 72).</td></tr>
+    <tr><th><code>background_color</code></th><td>QColor</td><td>Canvas background color (default: white). Transparent is supported for PNG export.</td></tr>
+    <tr><th><code>format_version</code></th><td>str</td><td>Project file format version (semver, e.g., "1.0.0").</td></tr>
+    <tr><th><code>created_at</code></th><td>datetime</td><td>Creation timestamp (ISO 8601).</td></tr>
+    <tr><th><code>modified_at</code></th><td>datetime</td><td>Last modification timestamp.</td></tr>
+    <tr><th><code>app_version</code></th><td>str</td><td>Application version that last saved this project.</td></tr>
+    <tr><th>layers</th><td>list[Layer]</td><td>Ordered list of layers (managed by LayerManager).</td></tr>
+    <tr><th><code>grid_size</code></th><td>int</td><td>Grid snap size in pixels (default: 10).</td></tr>
+    <tr><th><code>grid_visible</code></th><td>bool</td><td>Whether the grid is displayed.</td></tr>
+    <tr><th><code>snap_to_grid</code></th><td>bool</td><td>Whether items snap to grid.</td></tr>
+    <tr><th><code>rulers_visible</code></th><td>bool</td><td>Whether rulers are displayed.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s4-2">Annotation Item Type Hierarchy</h3>
+
+<p>All annotation items inherit from SnapGraphicsItem (Section 3.1.4). The type hierarchy
+is:</p>
+
+<ul>
+  <li><code>SnapGraphicsItem</code> (abstract base)</li>
+  <ul>
+    <li><code>VectorItem</code> (abstract) - items defined by vector paths</li>
+    <ul>
+      <li><code>ArrowItem</code> - line with arrowhead(s)</li>
+      <li><code>LineItem</code> - straight line</li>
+      <li><code>RectangleItem</code> - rectangle/square with optional rounded corners</li>
+      <li><code>EllipseItem</code> - ellipse/circle</li>
+      <li><code>FreehandItem</code> - freehand drawn path</li>
+      <li><code>HighlightItem</code> - semi-transparent wide stroke</li>
+    </ul>
+    <li><code>TextItem</code> - editable rich text box</li>
+    <li><code>CalloutItem</code> - text box with a pointer/tail shape</li>
+    <li><code>BlurItem</code> - region that applies blur/pixelate effect to layers below</li>
+    <li><code>NumberedStepItem</code> - circled number with optional label</li>
+    <li><code>StampItem</code> - pre-defined or custom image stamp</li>
+    <li><code>RasterRegionItem</code> - extracted pixel region from raster selection/cut/paste</li>
+  </ul>
+</ul>
+
+<h3 id="s4-3">Common Vector Properties</h3>
+
+<p>Shared by all VectorItem subclasses:</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>stroke_color</code></th><td>QColor</td><td>#FF0000 (red)</td><td>Stroke/outline color.</td></tr>
+    <tr><th><code>stroke_width</code></th><td>float</td><td>2.0</td><td>Stroke width in pixels.</td></tr>
+    <tr><th><code>stroke_style</code></th><td>enum</td><td>Solid</td><td>One of: Solid, Dashed, Dotted, DashDot, DashDotDot.</td></tr>
+    <tr><th><code>fill_color</code></th><td>QColor</td><td>transparent</td><td>Fill color. Transparent is selected in the color picker like any other color (General UI PRD Section 11.1).</td></tr>
+    <tr><th><code>fill_opacity</code></th><td>float (0.0-1.0)</td><td>1.0</td><td>Opacity of fill and background areas. Multiplied with layer opacity during rendering. Replaces the base opacity property for vector items.</td></tr>
+    <tr><th><code>stroke_opacity</code></th><td>float (0.0-1.0)</td><td>1.0</td><td>Opacity of strokes, borders, and outlines. Multiplied with layer opacity during rendering. Replaces the base opacity property for vector items.</td></tr>
+    <tr><th><code>shadow_enabled</code></th><td>bool</td><td>False</td><td>Whether to render a drop shadow.</td></tr>
+    <tr><th><code>shadow_color</code></th><td>QColor</td><td>#00000080</td><td>Drop shadow color with alpha.</td></tr>
+    <tr><th><code>shadow_offset</code></th><td>QPointF</td><td>(3, 3)</td><td>Shadow offset in pixels.</td></tr>
+    <tr><th><code>shadow_blur</code></th><td>float</td><td>5.0</td><td>Shadow blur radius.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s5">Signal &amp; Event Architecture</h2>
+
+<h3 id="s5-1">Signal Bus</h3>
+
+<p>SnapMock uses Qt's built-in signal/slot mechanism for all inter-component communication.
+There is no custom event bus. All managers are QObject subclasses and define their
+signals using pyqtSignal.</p>
+
+<h3 id="s5-2">Key Signal Definitions</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Emitter</th><th>Signal</th><th>Parameters</th><th>Consumers</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>ToolManager</th><td>toolChanged</td><td><code>tool_id</code>: str</td><td>Toolbar (highlight active), ToolOptionsBar (update options), SnapView (update cursor)</td></tr>
+    <tr><th>SelectionManager</th><td>selectionChanged</td><td><code>selected_ids</code>: list[UUID]</td><td>PropertyPanel (show properties), TransformHandles (update overlay), Toolbar (enable/disable actions)</td></tr>
+    <tr><th>SelectionManager</th><td>selectionCleared</td><td>(none)</td><td>PropertyPanel (clear), TransformHandles (hide)</td></tr>
+    <tr><th>LayerManager</th><td>activeLayerChanged</td><td><code>layer_id</code>: UUID</td><td>LayerPanel (highlight), StatusBar (show name)</td></tr>
+    <tr><th>LayerManager</th><td>layerAdded</td><td>layer: Layer</td><td>LayerPanel (insert row)</td></tr>
+    <tr><th>LayerManager</th><td>layerRemoved</td><td><code>layer_id</code>: UUID</td><td>LayerPanel (remove row)</td></tr>
+    <tr><th>LayerManager</th><td>layersReordered</td><td>(none)</td><td>LayerPanel (refresh), SnapScene (update z-values)</td></tr>
+    <tr><th>LayerManager</th><td>layerVisibilityChanged</td><td><code>layer_id</code>: UUID, visible: bool</td><td>LayerPanel (update icon), SnapScene (show/hide items)</td></tr>
+    <tr><th>LayerManager</th><td>layerLockChanged</td><td><code>layer_id</code>: UUID, locked: bool</td><td>LayerPanel (update icon)</td></tr>
+    <tr><th>CommandStack</th><td>canUndoChanged</td><td><code>can_undo</code>: bool</td><td>Edit menu (enable/disable Undo)</td></tr>
+    <tr><th>CommandStack</th><td>canRedoChanged</td><td><code>can_redo</code>: bool</td><td>Edit menu (enable/disable Redo)</td></tr>
+    <tr><th>CommandStack</th><td>undoTextChanged</td><td>text: str</td><td>Edit menu (update "Undo &lt;action&gt;" label)</td></tr>
+    <tr><th>SnapScene</th><td>itemAdded</td><td>item: SnapGraphicsItem</td><td>LayerPanel (update thumbnail)</td></tr>
+    <tr><th>SnapScene</th><td>itemModified</td><td>item: SnapGraphicsItem</td><td>PropertyPanel (refresh values), LayerPanel (update thumbnail)</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s5-3">Event Routing Order</h3>
+
+<p>Mouse and keyboard events from QGraphicsView follow this routing chain:</p>
+
+<ol>
+  <li>SnapView receives the raw QEvent and translates to scene coordinates.</li>
+  <li>SnapScene.event() passes the event to ToolManager.handleEvent().</li>
+  <li>ToolManager passes the event to the active tool's corresponding handler
+  (<code>mouse_press</code>, etc.).</li>
+  <li>If the tool returns True (consumed), event propagation stops.</li>
+  <li>If the tool returns False (not consumed), default QGraphicsScene behavior applies (item
+  selection, item drag, etc.).</li>
+</ol>
+
+<h2 id="s6">Plugin &amp; Extension Architecture</h2>
+
+<h3 id="s6-1">Design Goal</h3>
+
+<p>New annotation tools and export formats should be addable without modifying core code.
+The plugin system is designed for internal extensibility first (adding tools in the main
+repo) and external plugin loading second (future phase).</p>
+
+<h3 id="s6-2">Tool Plugin Interface</h3>
+
+<p>Any class that inherits from BaseTool and implements the required interface (Section
+3.3.2) can be registered with ToolManager. The registration process is:</p>
+
+<ol>
+  <li>Create a new Python module in the tools/ package (e.g.,
+  tools/<code>my_custom_tool</code>.py).</li>
+  <li>Define a class that inherits from BaseTool and implements all abstract methods.</li>
+  <li>In the module's <code>register()</code> function, call
+  ToolManager.register_tool(MyCustomTool).</li>
+  <li>Add the module to the tool loading list in config/tools.json or by placing it in a
+  plugins/tools/ directory that is auto-scanned at startup.</li>
+</ol>
+
+<h3 id="s6-3">Export Plugin Interface</h3>
+
+<p>Export formats follow a similar pattern. An export plugin implements a BaseExporter
+class with methods: export(scene, layers, filepath, options) and
+<code>get_format_info</code>() returning supported extensions and descriptions.
+Exporters are registered with the Exporter registry and automatically appear in the File
+&gt; Export menu.</p>
+
+<h3 id="s6-4">Future: External Plugin Loading</h3>
+
+<p>In a future phase, SnapMock will support loading plugins from a configurable directory
+(default: ~/.snapmock/plugins/). Each plugin is a Python package with a manifest.json
+describing its entry points, minimum application version, and dependencies. This is
+deferred to a post-1.0 release.</p>
+
+<h2 id="s7">Cross-Platform Considerations</h2>
+
+<h3 id="s7-1">Target Platforms</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Platform</th><th>Minimum Version</th><th>Priority</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Linux</th><td>Ubuntu 22.04+ / equivalent</td><td>Primary</td><td>Primary development and testing platform. X11 and Wayland support required.</td></tr>
+    <tr><th>Windows</th><td>Windows 10+</td><td>Secondary</td><td>Must work without modification from the same codebase.</td></tr>
+    <tr><th>macOS</th><td>macOS 12+</td><td>Secondary</td><td>Must work without modification. Retina/HiDPI support required.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s7-2">Platform Abstraction</h3>
+
+<ul>
+  <li>File paths: use pathlib.Path everywhere. Never hardcode path separators.</li>
+  <li>Keyboard shortcuts: use QKeySequence.StandardKey where available (e.g.,
+  QKeySequence.Undo). For custom shortcuts, define platform-specific mappings in a config
+  file (Ctrl on Linux/Windows = Cmd on macOS).</li>
+  <li>Clipboard: QClipboard handles platform differences. Test with both image and text MIME
+  types on all platforms.</li>
+  <li>High DPI: enable Qt's high-DPI scaling
+  (QApplication.setHighDpiScaleFactorRoundingPolicy). Test at 100%, 150%, and 200%
+  scaling.</li>
+  <li>Font rendering: use system-default sans-serif font for UI. For annotation text, embed or
+  reference specific fonts and test rendering on all platforms.</li>
+  <li>File dialogs: use QFileDialog, which provides native dialogs on each platform.</li>
+  <li>Tray/dock integration: not required for v1.0.</li>
+  <li>System theme: respect the system dark/light mode where possible. Provide a manual
+  dark/light toggle.</li>
+</ul>
+
+<h3 id="s7-3">Packaging &amp; Distribution</h3>
+
+<ul>
+  <li>Linux: AppImage (primary), Flatpak (secondary), pip install from PyPI.</li>
+  <li>Windows: MSI installer (via <code>cx_Freeze</code> or PyInstaller), portable ZIP.</li>
+  <li>macOS: DMG with .app bundle (via py2app or PyInstaller).</li>
+  <li>All platforms: pip install from source as a fallback.</li>
+</ul>
+
+<h2 id="s8">Performance Requirements</h2>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Metric</th><th>Target</th><th>Measurement Method</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Application startup</th><td>&lt; 2 seconds to interactive</td><td>Time from process start to main window visible and responsive.</td></tr>
+    <tr><th>Canvas interaction (pan/zoom)</th><td>60 FPS</td><td>Measured at 4K resolution with 100 annotation items and a 4K background image.</td></tr>
+    <tr><th>Item creation (single annotation)</th><td>&lt; 50ms from mouse release to rendered</td><td>Time from <code>mouse_release</code> event to <code>paint()</code> completion.</td></tr>
+    <tr><th>Undo/Redo</th><td>&lt; 100ms per operation</td><td>Time from Ctrl+Z to screen update.</td></tr>
+    <tr><th>Project save (50 items, 4K background)</th><td>&lt; 2 seconds</td><td>Time from Ctrl+S to file write completion.</td></tr>
+    <tr><th>Project load (50 items, 4K background)</th><td>&lt; 3 seconds</td><td>Time from file open to fully rendered canvas.</td></tr>
+    <tr><th>Export PNG (4K, 300 DPI)</th><td>&lt; 5 seconds</td><td>Time from export initiation to file write completion.</td></tr>
+    <tr><th>Memory usage (idle, 4K background)</th><td>&lt; 200 MB</td><td>Resident set size with one 4K image loaded and no annotations.</td></tr>
+    <tr><th>Memory usage (heavy, 100 items)</th><td>&lt; 500 MB</td><td>Resident set size with 4K background + 100 mixed annotation items.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s9">Technology Stack &amp; Dependencies</h2>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Component</th><th>Technology</th><th>Version</th><th>Justification</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Language</th><td>Python</td><td>3.10+</td><td>Cross-platform, large ecosystem, low barrier to open source contribution.</td></tr>
+    <tr><th>GUI Framework</th><td>PyQt6</td><td>6.5+</td><td>Mature, cross-platform, native look and feel, powerful QGraphicsScene/QGraphicsView framework.</td></tr>
+    <tr><th>Image Processing</th><td>Pillow (PIL)</td><td>10.0+</td><td>Used for raster operations beyond what Qt provides (e.g., advanced filters, format conversion).</td></tr>
+    <tr><th>Raster Effects</th><td>NumPy</td><td>1.24+</td><td>High-performance pixel manipulation for blur, pixelate, and other raster effects.</td></tr>
+    <tr><th>SVG Export</th><td>svgwrite</td><td>1.4+</td><td>Clean SVG file generation for vector export.</td></tr>
+    <tr><th>PDF Export</th><td>ReportLab or QPrinter</td><td>Latest</td><td>PDF generation. QPrinter (built into Qt) is the primary option; ReportLab as fallback.</td></tr>
+    <tr><th>Packaging</th><td>PyInstaller / <code>cx_Freeze</code></td><td>Latest</td><td>Cross-platform binary packaging.</td></tr>
+    <tr><th>Testing</th><td>pytest + pytest-qt</td><td>Latest</td><td>Unit and integration testing with Qt widget testing support.</td></tr>
+    <tr><th>Linting</th><td>ruff</td><td>Latest</td><td>Fast Python linter and formatter.</td></tr>
+    <tr><th>Type Checking</th><td>mypy</td><td>Latest</td><td>Static type analysis for catching bugs early.</td></tr>
+    <tr><th>Serialization</th><td>json (stdlib)</td><td>n/a</td><td>Project file serialization. Msgpack considered for future perf optimization.</td></tr>
+    <tr><th>Compression</th><td>zipfile (stdlib)</td><td>n/a</td><td>ZIP archive handling for <code>.smk</code> project files.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s9-1">Dependency Policy</h3>
+
+<p>Core functionality must depend only on PyQt6, Pillow, and NumPy. All other dependencies
+are optional or used only for packaging/testing. This keeps the install footprint small
+and reduces supply chain risk for an open source project.</p>
+
+<h2 id="s10">Directory Structure</h2>
+
+<p>The following is the target source directory layout:</p>
+
+<pre><code>snapmock/
+    __init__.py
+    app.py                    # Application entry point, QApplication setup
+    main_window.py            # QMainWindow subclass, menu bar, toolbar, dock layout
+    config/
+        settings.py           # Application settings (QSettings wrapper)
+        shortcuts.py          # Keyboard shortcut definitions
+        constants.py          # Application constants (app name, version, default values)
+    core/
+        scene.py              # SnapScene (QGraphicsScene subclass)
+        view.py               # SnapView (QGraphicsView subclass)
+        layer.py              # Layer data model
+        layer_manager.py      # LayerManager singleton
+        selection_manager.py  # SelectionManager
+        command_stack.py      # CommandStack and BaseCommand
+        clipboard_manager.py  # ClipboardManager
+        render_engine.py      # Display and export rendering
+    items/
+        base_item.py          # SnapGraphicsItem base class
+        vector_item.py        # VectorItem abstract base
+        arrow_item.py         # ArrowItem
+        line_item.py          # LineItem
+        rectangle_item.py     # RectangleItem
+        ellipse_item.py       # EllipseItem
+        freehand_item.py      # FreehandItem
+        text_item.py          # TextItem
+        callout_item.py       # CalloutItem
+        blur_item.py          # BlurItem
+        highlight_item.py     # HighlightItem
+        numbered_step_item.py # NumberedStepItem
+        stamp_item.py         # StampItem
+        raster_region_item.py # RasterRegionItem
+    tools/
+        base_tool.py          # BaseTool abstract base class
+        tool_manager.py       # ToolManager singleton
+        select_tool.py        # Select / Move tool
+        raster_select_tool.py # Raster selection (rect + freeform)
+        crop_tool.py          # Crop tool
+        arrow_tool.py         # Arrow creation tool
+        line_tool.py          # Line creation tool
+        rectangle_tool.py     # Rectangle creation tool
+        ellipse_tool.py       # Ellipse creation tool
+        freehand_tool.py      # Freehand drawing tool
+        text_tool.py          # Text creation tool
+        callout_tool.py       # Callout creation tool
+        blur_tool.py          # Blur/Pixelate tool
+        highlight_tool.py     # Highlighter tool
+        numbered_step_tool.py # Numbered step tool
+        stamp_tool.py         # Stamp/Sticker tool
+        eyedropper_tool.py    # Color picker tool
+    commands/
+        add_item.py           # AddItemCommand
+        remove_item.py        # RemoveItemCommand
+        move_items.py         # MoveItemsCommand
+        transform_item.py     # TransformItemCommand
+        modify_property.py    # ModifyPropertyCommand
+        layer_commands.py     # Add/Remove/Reorder layer commands
+        raster_commands.py    # Raster cut, crop commands
+        macro_command.py      # MacroCommand
+    io/
+        project_serializer.py # Save/Load .smk files
+        exporter.py           # Export to PNG/JPG/SVG/PDF
+        importer.py           # Import images
+    ui/
+        toolbar.py            # Main toolbar
+        tool_options_bar.py   # Context-sensitive tool options
+        layer_panel.py        # Layer panel (dock widget)
+        property_panel.py     # Property inspector (dock widget)
+        status_bar.py         # Status bar (zoom, cursor pos, selection info)
+        color_picker.py       # Color picker dialog/widget
+    resources/
+        icons/                # SVG/PNG icons for tools and UI
+        stamps/               # Built-in stamp/sticker images
+        themes/               # Light and dark theme stylesheets
+tests/
+    test_scene.py
+    test_layer_manager.py
+    test_command_stack.py
+    test_tools/
+    test_io/</code></pre>
+
+<h2 id="s11">Acceptance Criteria</h2>
+
+<p>The technical architecture is considered complete and validated when the following
+criteria are met:</p>
+
+<h3 id="s11-1">Scene Graph</h3>
+
+<ol>
+  <li>A SnapScene can be instantiated with a configurable canvas size and background color.</li>
+  <li>A 4K PNG image can be loaded as the background layer and rendered in SnapView.</li>
+  <li>Zoom (10%-3200%), pan, and fit-to-window work smoothly at 60 FPS with a 4K background.</li>
+  <li>Pixel grid overlay appears at zoom levels above 800%.</li>
+  <li>Grid snapping constrains item positions to the configured grid size when enabled.</li>
+</ol>
+
+<h3 id="s11-2">Layers</h3>
+
+<ol>
+  <li>Layers can be created, deleted, reordered, duplicated, and merged.</li>
+  <li>Layer visibility toggle immediately shows/hides all items in the layer.</li>
+  <li>Layer lock toggle prevents selection and modification of all items in the layer.</li>
+  <li>Layer opacity slider smoothly adjusts the composite opacity of all items in the layer
+  from 0% to 100%.</li>
+  <li>Z-ordering correctly renders layers in stack order: items in higher layers always appear
+  above items in lower layers.</li>
+</ol>
+
+<h3 id="s11-3">Tools &amp; Items</h3>
+
+<p>All 18 tools listed in Section 3.3.3 are registered and selectable. Each tool creates
+its corresponding item type on the active layer. Items can be selected, moved, resized,
+and rotated using TransformHandles. All tool operations produce undoable commands.</p>
+
+<h3 id="s11-4">Raster Operations</h3>
+
+<p>A rectangular raster selection can be drawn on the canvas. The selected pixel region can
+be copied (Ctrl+C), cut (Ctrl+X), and pasted (Ctrl+V) as a new RasterRegionItem. The
+pasted item can be moved and resized independently. Cut operations leave transparency in
+the source area. All operations are undoable.</p>
+
+<h3 id="s11-5">File I/O</h3>
+
+<p>A project with 50 items across 5 layers and a 4K background can be saved to
+<code>.smk</code> format and reloaded with 100% fidelity (all item positions,
+properties, layer states, and raster data are preserved). Export to PNG and JPG produces
+correct flattened output. The dirty flag accurately tracks unsaved changes.</p>
+
+<h3 id="s11-6">Cross-Platform</h3>
+
+<p>The application launches and passes all acceptance tests on Ubuntu 22.04, Windows 10,
+and macOS 12 without any platform-specific code paths (beyond Qt's internal handling).</p>
+
+<h3 id="s11-7">Performance</h3>
+
+<p>All performance targets in Section 8 are met on a mid-range system (4-core CPU, 16 GB
+RAM, integrated GPU).</p>
+
+<h2 id="s12">Open Issues</h2>
+
+<p>These items were raised by the conversion from Word. None of them changes a
+requirement; each needs a decision before this document leaves draft.</p>
+
+<div class="note issue">
+  <span class="note-label">Open — directory structure has drifted from the implementation</span>
+  <p>Section 10 describes the target source layout as of version 1.0. The repository now
+  also contains a <code>library</code> package, a <code>capture</code> package, a Snagit
+  file reader under <code>io</code>, and a lasso selection tool, none of which appear in
+  Section 10. Inferred from the repository file listing, not from a design review. Decide
+  whether Section 10 is a target that the implementation should be brought back to, or a
+  record that should be updated to match the implementation.</p>
+</div>
+
+<div class="note issue">
+  <span class="note-label">Open — conflicting document dates</span>
+  <p>The Word title page carried February 2026 while the change log placed version 1.1 in
+  March 2026. Exact dates are needed to bring the revision control table up to the
+  MM-DD-YY HH:MM standard. Versions 1.0 and 1.1 are carried over as written.</p>
+</div>
+
+<div class="note issue">
+  <span class="note-label">Open — approval status never recorded</span>
+  <p>The original carried no approval record. Version 1.3 is shown as pending. Confirm
+  whether any earlier version was formally approved.</p>
+</div>
+
+</main>
+
+</div>
+</body>
+</html>
