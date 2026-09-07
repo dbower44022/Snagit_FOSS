@@ -1508,10 +1508,10 @@ class MainWindow(QMainWindow):
     ) -> None:
         from snapmock.ui.preferences_dialog import PreferencesDialog
 
-        dlg = PreferencesDialog(self._settings, self)
+        dlg = PreferencesDialog(self._settings, self, capture=self._capture)
         if focus_library:
             dlg.focus_library_section()
-        if focus_capture and hasattr(dlg, "focus_capture_section"):
+        if focus_capture:
             dlg.focus_capture_section()
         if dlg.exec() == PreferencesDialog.DialogCode.Accepted:
             self._apply_preference_changes(dlg.get_changes())
@@ -1588,6 +1588,47 @@ class MainWindow(QMainWindow):
             sort_id = str(changes["library_default_sort"][1])
             self._settings.set_library_default_sort(sort_id)
             self._library_panel.set_sort_id(sort_id)
+
+        self._apply_capture_preference_changes(changes)
+
+    def _apply_capture_preference_changes(self, changes: dict[str, tuple[object, object]]) -> None:
+        """Capture preferences (Screen Capture PRD 8.1) take effect immediately."""
+
+        def _int(val: object) -> int:
+            return val if isinstance(val, int) else int(str(val))
+
+        s = self._settings
+        if "capture_default_mode" in changes:
+            s.set_capture_default_mode(str(changes["capture_default_mode"][1]))
+        if "capture_delay_seconds" in changes:
+            s.set_capture_delay_seconds(_int(changes["capture_delay_seconds"][1]))
+        if "capture_include_cursor" in changes:
+            s.set_capture_include_cursor(bool(changes["capture_include_cursor"][1]))
+        if "capture_play_sound" in changes:
+            s.set_capture_play_sound(bool(changes["capture_play_sound"][1]))
+        if "capture_hide_window" in changes:
+            s.set_capture_hide_window(bool(changes["capture_hide_window"][1]))
+        if "capture_copy_to_clipboard" in changes:
+            s.set_capture_copy_to_clipboard(bool(changes["capture_copy_to_clipboard"][1]))
+        if "capture_full_screen_scope" in changes:
+            s.set_capture_full_screen_scope(str(changes["capture_full_screen_scope"][1]))
+        if "capture_show_magnifier" in changes:
+            s.set_capture_show_magnifier(bool(changes["capture_show_magnifier"][1]))
+        if "capture_keep_running_in_tray" in changes:
+            s.set_capture_keep_running_in_tray(bool(changes["capture_keep_running_in_tray"][1]))
+        if "capture_tray_enabled" in changes:
+            enabled = bool(changes["capture_tray_enabled"][1])
+            s.set_capture_tray_enabled(enabled)
+            if self._primary_capture:
+                if enabled and self._tray is None:
+                    self._setup_tray()
+                    if self._tray is None:
+                        self._toast.show_message(TRAY_UNAVAILABLE_MESSAGE)
+                elif not enabled and self._tray is not None:
+                    self._teardown_tray()
+        self._apply_quit_policy()
+        self._sync_capture_toggles()
+        self._sync_capture_shortcuts()
 
     # ---- library ----
 

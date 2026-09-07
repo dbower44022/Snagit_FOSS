@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -15,7 +17,10 @@ from PyQt6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
+    QKeySequenceEdit,
+    QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QSlider,
     QSpinBox,
@@ -23,18 +28,63 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from snapmock.capture.models import (
+    HOTKEY_ACTION_FULL_SCREEN,
+    HOTKEY_ACTION_REGION,
+    HOTKEY_ACTION_WINDOW,
+    CaptureMode,
+    FullScreenScope,
+)
 from snapmock.config.constants import LIBRARY_THUMBNAIL_MAX, LIBRARY_THUMBNAIL_MIN
 from snapmock.config.settings import AppSettings
 from snapmock.library.model import SORT_OPTIONS
+
+if TYPE_CHECKING:
+    from snapmock.capture.manager import CaptureManager
+
+HOTKEY_IN_USE = "In use by another application"
+CURSOR_UNAVAILABLE = "Not available on this desktop"
+COMMAND_LINE_FOR_ACTION = {
+    HOTKEY_ACTION_REGION: "snapmock --capture region",
+    HOTKEY_ACTION_WINDOW: "snapmock --capture window",
+    HOTKEY_ACTION_FULL_SCREEN: "snapmock --capture full",
+}
+HOTKEY_LABELS = {
+    HOTKEY_ACTION_REGION: "Region hotkey:",
+    HOTKEY_ACTION_WINDOW: "Active window hotkey:",
+    HOTKEY_ACTION_FULL_SCREEN: "Full screen hotkey:",
+}
+DESKTOP_SHORTCUT_HELP = (
+    "Wayland and macOS desktops do not let applications register their own keyboard "
+    "shortcuts. Bind a shortcut in your desktop's keyboard settings to one of these "
+    "commands:\n\n"
+    "    snapmock --capture region\n"
+    "    snapmock --capture window\n"
+    "    snapmock --capture full\n\n"
+    "GNOME: Settings > Keyboard > View and Customize Shortcuts > Custom Shortcuts.\n"
+    "KDE Plasma: System Settings > Shortcuts > Add Command.\n"
+    "macOS: the Shortcuts application, with a keyboard shortcut on a Run Shell Script "
+    "action.\n\n"
+    "The desktop's own PrintScreen binding must be removed or changed first."
+)
 
 
 class PreferencesDialog(QDialog):
     """Modal dialog for viewing and editing application preferences."""
 
-    def __init__(self, settings: AppSettings, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        settings: AppSettings,
+        parent: QWidget | None = None,
+        *,
+        capture: CaptureManager | None = None,
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Preferences")
         self.setMinimumWidth(350)
+        self._capture = capture
+        self._hotkey_edits: dict[str, QKeySequenceEdit] = {}
+        self._hotkey_status: dict[str, QLabel] = {}
 
         layout = QVBoxLayout(self)
 
@@ -136,6 +186,12 @@ class PreferencesDialog(QDialog):
         self._library_group.setLayout(lib_layout)
         layout.addWidget(self._library_group)
 
+        # --- Capture group (Screen Capture PRD 8.1) ---
+        self._capture_group: QGroupBox | None = None
+        if capture is not None:
+            self._capture_group = self._build_capture_group(settings, capture)
+            layout.addWidget(self._capture_group)
+
         # --- Snapshot original values ---
         self._orig: dict[str, Any] = {
             "autosave_enabled": settings.autosave_enabled(),
@@ -151,6 +207,21 @@ class PreferencesDialog(QDialog):
             "library_default_sort": settings.library_default_sort(),
             "library_toast_enabled": settings.library_toast_enabled(),
         }
+        if capture is not None:
+            self._orig.update(
+                {
+                    "capture_default_mode": settings.capture_default_mode(),
+                    "capture_delay_seconds": settings.capture_delay_seconds(),
+                    "capture_include_cursor": settings.capture_include_cursor(),
+                    "capture_play_sound": settings.capture_play_sound(),
+                    "capture_hide_window": settings.capture_hide_window(),
+                    "capture_copy_to_clipboard": settings.capture_copy_to_clipboard(),
+                    "capture_full_screen_scope": settings.capture_full_screen_scope(),
+                    "capture_show_magnifier": settings.capture_show_magnifier(),
+                    "capture_tray_enabled": settings.capture_tray_enabled(),
+                    "capture_keep_running_in_tray": settings.capture_keep_running_in_tray(),
+                }
+            )
 
         # --- Buttons ---
         buttons = QDialogButtonBox(
@@ -163,6 +234,189 @@ class PreferencesDialog(QDialog):
     def focus_library_section(self) -> None:
         """Bring the Library settings into view (Library > Library Preferences…)."""
         self._library_dir_edit.setFocus()
+
+    def focus_capture_section(self) -> None:
+        """Bring the Capture settings into view (Capture > Capture Preferences…)."""
+        if self._capture_group is not None:
+            self._capture_mode_combo.setFocus()
+
+    # --- Capture group (Screen Capture PRD 8.1, 6.7, 9.2, 9.3) ---
+
+    def _build_capture_group(self, settings: AppSettings, capture: CaptureManager) -> QGroupBox:
+        group = QGroupBox("Capture")
+        form = QFormLayout()
+        caps = capture.capabilities
+
+        self._capture_mode_combo = QComboBox()
+        self._capture_mode_combo.addItem("Region", CaptureMode.REGION.value)
+        self._capture_mode_combo.addItem("Active window", CaptureMode.ACTIVE_WINDOW.value)
+        self._capture_mode_combo.addItem("Full screen", CaptureMode.FULL_SCREEN.value)
+        self._capture_mode_combo.setCurrentIndex(
+            max(0, self._capture_mode_combo.findData(settings.capture_default_mode()))
+        )
+        form.addRow("Default capture mode:", self._capture_mode_combo)
+
+        hotkeys_supported = capture.hotkey_backend.supported
+        for action in (HOTKEY_ACTION_REGION, HOTKEY_ACTION_WINDOW, HOTKEY_ACTION_FULL_SCREEN):
+            if hotkeys_supported:
+                form.addRow(HOTKEY_LABELS[action], self._build_hotkey_row(capture, action))
+            else:
+                form.addRow(HOTKEY_LABELS[action], self._build_command_row(action))
+        if not hotkeys_supported:
+            help_link = QLabel('<a href="#">How to set up a desktop shortcut...</a>')
+            help_link.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
+            help_link.linkActivated.connect(lambda _href: self.show_desktop_shortcut_help())
+            form.addRow("", help_link)
+        else:
+            conflicts = QLabel(
+                "GNOME on X11 and Windows 11 with the Snipping Tool shortcut both claim "
+                "PrintScreen by default."
+            )
+            conflicts.setWordWrap(True)
+            conflicts.setStyleSheet("color: gray")
+            form.addRow("", conflicts)
+
+        self._capture_delay_spin = QSpinBox()
+        self._capture_delay_spin.setRange(0, 60)
+        self._capture_delay_spin.setSuffix(" s")
+        self._capture_delay_spin.setValue(settings.capture_delay_seconds())
+        form.addRow("Delay:", self._capture_delay_spin)
+
+        cursor_row = QHBoxLayout()
+        self._capture_cursor_cb = QCheckBox()
+        self._capture_cursor_cb.setChecked(settings.capture_include_cursor())
+        cursor_row.addWidget(self._capture_cursor_cb)
+        if not caps.cursor:
+            note = QLabel(CURSOR_UNAVAILABLE)
+            note.setStyleSheet("color: gray")
+            cursor_row.addWidget(note)
+        cursor_row.addStretch(1)
+        form.addRow("Include mouse cursor:", cursor_row)
+
+        self._capture_sound_cb = QCheckBox()
+        self._capture_sound_cb.setChecked(settings.capture_play_sound())
+        form.addRow("Play capture sound:", self._capture_sound_cb)
+
+        self._capture_hide_cb = QCheckBox()
+        self._capture_hide_cb.setChecked(settings.capture_hide_window())
+        form.addRow("Hide SnapMock window during capture:", self._capture_hide_cb)
+
+        self._capture_clipboard_cb = QCheckBox()
+        self._capture_clipboard_cb.setChecked(settings.capture_copy_to_clipboard())
+        form.addRow("Copy to clipboard:", self._capture_clipboard_cb)
+
+        self._capture_scope_combo = QComboBox()
+        self._capture_scope_combo.addItem(
+            "Monitor under cursor", FullScreenScope.MONITOR_UNDER_CURSOR.value
+        )
+        self._capture_scope_combo.addItem("All monitors", FullScreenScope.ALL_MONITORS.value)
+        self._capture_scope_combo.setCurrentIndex(
+            max(0, self._capture_scope_combo.findData(settings.capture_full_screen_scope()))
+        )
+        form.addRow("Full screen scope:", self._capture_scope_combo)
+
+        self._capture_magnifier_cb = QCheckBox()
+        self._capture_magnifier_cb.setChecked(settings.capture_show_magnifier())
+        form.addRow("Show magnifier:", self._capture_magnifier_cb)
+
+        self._capture_tray_cb = QCheckBox()
+        self._capture_tray_cb.setChecked(settings.capture_tray_enabled())
+        form.addRow("Show tray icon:", self._capture_tray_cb)
+
+        self._capture_keep_running_cb = QCheckBox()
+        self._capture_keep_running_cb.setChecked(settings.capture_keep_running_in_tray())
+        self._capture_keep_running_cb.setEnabled(settings.capture_tray_enabled())
+        self._capture_tray_cb.toggled.connect(self._capture_keep_running_cb.setEnabled)
+        form.addRow("Keep running in tray when window is closed:", self._capture_keep_running_cb)
+
+        self._capability_label = QLabel(capture.capability_summary())
+        self._capability_label.setWordWrap(True)
+        self._capability_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self._capability_label.setStyleSheet("color: gray")
+        form.addRow(self._capability_label)
+
+        group.setLayout(form)
+        return group
+
+    def _build_hotkey_row(self, capture: CaptureManager, action: str) -> QWidget:
+        """A key sequence editor that registers on change (PRD 3.1, 9.3)."""
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        edit = QKeySequenceEdit()
+        edit.setMaximumSequenceLength(1)
+        binding = capture.binding(action)
+        if binding is not None:
+            edit.setKeySequence(binding.key_sequence)
+        status = QLabel("")
+        status.setStyleSheet("color: #c0392b")
+        clear = QPushButton("Clear")
+        clear.clicked.connect(lambda: self._change_hotkey(action, QKeySequence()))
+        edit.editingFinished.connect(lambda: self._change_hotkey(action, edit.keySequence()))
+        layout.addWidget(edit, 1)
+        layout.addWidget(clear)
+        layout.addWidget(status)
+        self._hotkey_edits[action] = edit
+        self._hotkey_status[action] = status
+        self._refresh_hotkey_status(action)
+        return row
+
+    def _build_command_row(self, action: str) -> QWidget:
+        """Command-line guidance with a Copy button (PRD 6.7, Wayland and macOS)."""
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        command = COMMAND_LINE_FOR_ACTION[action]
+        field = QLineEdit(command)
+        field.setReadOnly(True)
+        field.setToolTip("Bind a desktop shortcut to this command")
+        copy = QPushButton("Copy")
+        copy.clicked.connect(lambda: self._copy_text(command))
+        layout.addWidget(QLabel("Bind a desktop shortcut to:"))
+        layout.addWidget(field, 1)
+        layout.addWidget(copy)
+        return row
+
+    @staticmethod
+    def _copy_text(text: str) -> None:
+        clipboard = QApplication.clipboard()
+        if clipboard is not None:
+            clipboard.setText(text)
+
+    def _change_hotkey(self, action: str, sequence: QKeySequence) -> None:
+        if self._capture is None:
+            return
+        text = sequence.toString(QKeySequence.SequenceFormat.PortableText)
+        ok = self._capture.set_hotkey(action, text)
+        binding = self._capture.binding(action)
+        edit = self._hotkey_edits.get(action)
+        if edit is not None and binding is not None:
+            edit.blockSignals(True)
+            edit.setKeySequence(binding.key_sequence)
+            edit.blockSignals(False)
+        self._refresh_hotkey_status(action, failed_now=not ok)
+
+    def _refresh_hotkey_status(self, action: str, *, failed_now: bool = False) -> None:
+        if self._capture is None:
+            return
+        binding = self._capture.binding(action)
+        label = self._hotkey_status.get(action)
+        if label is None or binding is None:
+            return
+        if failed_now or (binding.is_bound and not binding.registered):
+            label.setText(HOTKEY_IN_USE)
+        else:
+            label.setText("")
+
+    def hotkey_status_text(self, action: str) -> str:
+        label = self._hotkey_status.get(action)
+        return label.text() if label is not None else ""
+
+    def show_desktop_shortcut_help(self) -> None:
+        """The desktop-shortcut guidance (PRD 9.2), reachable at any time."""
+        QMessageBox.information(self, "Set Up a Desktop Shortcut", DESKTOP_SHORTCUT_HELP)
 
     def _browse_library_dir(self) -> None:
         chosen = QFileDialog.getExistingDirectory(
@@ -213,5 +467,22 @@ class PreferencesDialog(QDialog):
         for key, new_value in library_values.items():
             if new_value != self._orig[key]:
                 changes[key] = (self._orig[key], new_value)
+
+        if self._capture_group is not None:
+            capture_values: dict[str, object] = {
+                "capture_default_mode": self._capture_mode_combo.currentData(),
+                "capture_delay_seconds": self._capture_delay_spin.value(),
+                "capture_include_cursor": self._capture_cursor_cb.isChecked(),
+                "capture_play_sound": self._capture_sound_cb.isChecked(),
+                "capture_hide_window": self._capture_hide_cb.isChecked(),
+                "capture_copy_to_clipboard": self._capture_clipboard_cb.isChecked(),
+                "capture_full_screen_scope": self._capture_scope_combo.currentData(),
+                "capture_show_magnifier": self._capture_magnifier_cb.isChecked(),
+                "capture_tray_enabled": self._capture_tray_cb.isChecked(),
+                "capture_keep_running_in_tray": self._capture_keep_running_cb.isChecked(),
+            }
+            for key, new_value in capture_values.items():
+                if new_value != self._orig[key]:
+                    changes[key] = (self._orig[key], new_value)
 
         return changes
