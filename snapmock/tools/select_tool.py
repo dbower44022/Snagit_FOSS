@@ -944,8 +944,10 @@ class SelectTool(BaseTool):
             return False
 
         scene_pos = view.mapToScene(event.pos())
-        parent = view.parentWidget()
-        if parent is None:
+        # The view now lives inside the document tab stack, so its direct parent is a
+        # QStackedWidget; the context-menu builders need the MainWindow.
+        parent = view.window()
+        if parent is None or not hasattr(parent, "selection_manager"):
             return False
 
         # If right-click on an unselected item, select it first

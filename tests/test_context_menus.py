@@ -373,3 +373,41 @@ class TestMoveItemToLayerCommand:
         item = _make_rect(scene, 0, 0)
         cmd = MoveItemToLayerCommand(scene, [item], layer2.layer_id)
         assert cmd.description == "Move to layer"
+
+
+# ---- Regression: context menu through the view inside the tab stack ----
+
+
+class TestContextMenuThroughView:
+    def test_select_tool_resolves_main_window_from_view(
+        self, window: MainWindow, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Right-click on the canvas must find the MainWindow, not the tab stack.
+
+        The view's direct parent is a QStackedWidget since the tab work landed; the
+        select tool must walk up to the window before building the menu.
+        """
+        from PyQt6.QtCore import QPoint
+        from PyQt6.QtGui import QContextMenuEvent
+
+        from snapmock.tools import select_tool as select_tool_module
+
+        window.tool_manager.activate("select")
+        captured: list[object] = []
+
+        def fake_canvas_menu(parent: object) -> QMenu:
+            captured.append(parent)
+            return QMenu()
+
+        monkeypatch.setattr(
+            "snapmock.ui.context_menus.build_canvas_context_menu", fake_canvas_menu
+        )
+        monkeypatch.setattr(QMenu, "exec", lambda self, *_a, **_k: None)
+
+        event = QContextMenuEvent(
+            QContextMenuEvent.Reason.Mouse, QPoint(5, 5), window.view.mapToGlobal(QPoint(5, 5))
+        )
+        tool = window.tool_manager.active_tool
+        assert isinstance(tool, select_tool_module.SelectTool)
+        assert tool.context_menu(event) is True
+        assert captured == [window]
