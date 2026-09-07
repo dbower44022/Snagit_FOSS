@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text &amp; Callout Annotation Tools — SnapMock Product Requirements Document</title>
+<link rel="stylesheet" href="prd.css">
+</head>
+<body>
+<div class="doc">
+
+<header class="doc-head">
+  <h1>Text &amp; Callout Annotation Tools</h1>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.5</span>
+  <dl class="doc-meta">
+    <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
+    <dt>Covers</dt>          <dd>Text Box · Callout Bubble</dd>
+    <dt>Document version</dt><dd>1.5</dd>
+    <dt>Last Updated</dt>    <dd>09-07-26 19:31</dd>
+    <dt>Author</dt>          <dd>Doug Bower</dd>
+    <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
+  </dl>
+</header>
+
+<section class="front-matter">
+
+  <h2 class="unnumbered">Revision control</h2>
+  <table>
+    <colgroup><col class="w-narrow"><col class="w-short"><col class="w-short"><col><col class="w-short"></colgroup>
+    <thead>
+      <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1.5</td>
+        <td class="nowrap">09-07-26 19:31</td>
+        <td>Doug Bower</td>
+        <td>Converted from Word to HTML. Content unchanged except for corrections
+        noted in the change log below.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
+      <tr>
+        <td>1.5</td>
+        <td class="nowrap">March 2026</td>
+        <td>Doug Bower</td>
+        <td>Section 3.6 Property Panel Behavior: Expanded the “Text edit mode” item into five
+        detailed sub-items covering cursor-only positioning, partial selection with uniform…</td>
+        <td><span class="status closed">Superseded by format conversion</span></td>
+      </tr>
+      <tr>
+        <td>1.4</td>
+        <td class="nowrap">March 2026</td>
+        <td>Doug Bower</td>
+        <td>Section 3.8 Hit Testing: clarified that the text content bounding box for
+        invisible-background text boxes must incorporate the vertical alignment offset from
+        Section 3.7 step…</td>
+        <td><span class="status closed">Superseded</span></td>
+      </tr>
+      <tr>
+        <td>1.3</td>
+        <td class="nowrap">March 2026</td>
+        <td>Doug Bower</td>
+        <td>Replaced Section 3.4 (Auto-Size Behavior) with comprehensive Auto-Size and Resize
+        Behavior specification covering three modes: auto-sizing during text entry (edit mode),…</td>
+        <td><span class="status closed">Superseded</span></td>
+      </tr>
+      <tr>
+        <td>1.2</td>
+        <td class="nowrap">March 2026</td>
+        <td>Doug Bower</td>
+        <td>Updated serialization example to use fill_opacity and stroke_opacity instead of single
+        opacity, per VectorItem base class changes in Technical Architecture PRD v1.1.</td>
+        <td><span class="status closed">Superseded</span></td>
+      </tr>
+      <tr>
+        <td>1.1</td>
+        <td class="nowrap">February 2026</td>
+        <td>Doug Bower</td>
+        <td>Added DashDotDot to border_style enum for TextBoxItem (Section 3.3) to align with Basic
+        Shapes PRD.</td>
+        <td><span class="status closed">Superseded</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note issue">
+    <span class="note-label">Open — incomplete revision history</span>
+    <p>The Word original recorded release months only for versions 1.5, 1.4, 1.3, 1.2, 1.1, so
+    those dates do not meet the MM-DD-YY HH:MM standard. They are carried over as written
+    rather than invented. Supply the exact dates and they will be corrected.</p>
+  </div>
+
+  <h2 class="unnumbered">Change log</h2>
+  <table>
+    <colgroup><col class="w-short"><col class="w-short"><col class="w-short"><col></colgroup>
+    <thead>
+      <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="nowrap">09-07-26 19:31</td>
+        <td>All</td>
+        <td>Format</td>
+        <td>Converted from Word to HTML against the shared stylesheet. Revision control
+        and change log tables added to meet the output standard; the original had a
+        change log only. Open issues gathered in new Section 9.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 19:31</td>
+        <td>7.2</td>
+        <td>Flagged</td>
+        <td>The TextItem serialization example carries the border_style key twice. Left as written
+        and flagged as an open issue.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 19:31</td>
+        <td>Front matter</td>
+        <td>Flagged</td>
+        <td>The title page carried February 2026 while the change log placed version 1.5 in March
+        2026. Left as written and flagged as an open issue.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>3.6</td>
+        <td>Changed</td>
+        <td>Section 3.6 Property Panel Behavior: Expanded the “Text edit mode” item into five
+        detailed sub-items covering cursor-only positioning, partial selection with uniform
+        formatting, partial selection with mixed formatting (indeterminate/mixed state for each
+        property type), and real-time synchronization when formatting is applied via keyboard
+        shortcuts or Tool Options Bar.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>3.7</td>
+        <td>Added</td>
+        <td>Section 3.7 Rendering: Added flip transform rendering note for inherited
+        <code>flip_horizontal</code> and <code>flip_vertical</code> properties from
+        SnapGraphicsItem base class.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>3.8</td>
+        <td>Changed</td>
+        <td>Section 3.8 Hit Testing: clarified that the text content bounding box for
+        invisible-background text boxes must incorporate the vertical alignment offset from
+        Section 3.7 step 6, so that hit testing matches the rendered text position for Middle
+        and Bottom vertical alignment.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>General</td>
+        <td>Changed</td>
+        <td>Replaced Section 3.4 (Auto-Size Behavior) with comprehensive Auto-Size and Resize
+        Behavior specification covering three modes: auto-sizing during text entry (edit mode),
+        post-entry normal resize with text reflow, and post-entry Shift+resize with proportional
+        text scaling.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added <code>text_scale_factor</code>, <code>min_width</code>, and
+        <code>min_height</code> properties to TextItem. Removed <code>overflow_mode</code>
+        property.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>General</td>
+        <td>Changed</td>
+        <td>Changed <code>auto_width</code> default from False to True. Text boxes now auto-size in
+        both dimensions during edit mode.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>General</td>
+        <td>Changed</td>
+        <td>Eliminated all text clipping behavior. Text that overflows a box or callout bubble
+        boundary now renders visibly outside the boundary and is never hidden.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added scale factor reset behavior: selecting an explicit font size bakes the current
+        scale into all character sizes, resets <code>text_scale_factor</code> to 1.0, then
+        applies the chosen size to the selection.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added requirement that alignment settings are applied in real time during text entry for
+        WYSIWYG fidelity.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>General</td>
+        <td>Changed</td>
+        <td>Updated rendering pipelines (Sections 2.3, 3.7, 4.8) to remove clipping and overflow
+        indicators, add <code>text_scale_factor</code> rendering step.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>General</td>
+        <td>Changed</td>
+        <td>Updated creation workflows (Section 3.2), data models (Section 5.1), serialization
+        (Section 7.2), and acceptance criteria (Section 8.2) for consistency.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>General</td>
+        <td>Changed</td>
+        <td>Expanded Property Panel Editing subsection in Section 3.6 to define three-state
+        behavior: tool selected (shows defaults with Font Size focused), edit mode (reflects
+        cursor/selection formatting), and selected-not-editing (full property sections).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>General</td>
+        <td>Changed</td>
+        <td>Updated serialization example to use <code>fill_opacity</code> and
+        <code>stroke_opacity</code> instead of single opacity, per VectorItem base class changes
+        in Technical Architecture PRD v1.1.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added DashDotDot to <code>border_style</code> enum for TextBoxItem (Section 3.3) to
+        align with Basic Shapes PRD.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added <code>border_style</code> property to CalloutItem data model (Section 5.2) and
+        serialization example.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added Border Color, Border Width, and Border Style controls to Text Tool Options Bar
+        (Section 3.5).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">February 2026</td>
+        <td>General</td>
+        <td>Added</td>
+        <td>Added Border Style control to Callout Tool Options Bar (Section 4.6).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 class="unnumbered">Contents</h2>
+  <ol class="toc">
+    <li><a href="#s1">Document Overview</a>
+      <ol>
+        <li><a href="#s1-1">Purpose</a></li>
+        <li><a href="#s1-2">Scope</a></li>
+        <li><a href="#s1-3">Dependencies</a></li>
+      </ol>
+    </li>
+    <li><a href="#s2">Rich Text Engine</a>
+      <ol>
+        <li><a href="#s2-1">Text Model Architecture</a></li>
+        <li><a href="#s2-2">Supported Formatting</a></li>
+        <li><a href="#s2-3">Text Layout &amp; Rendering</a></li>
+        <li><a href="#s2-4">Inline Editing Mode</a></li>
+        <li><a href="#s2-5">Text Selection &amp; Cursor</a></li>
+        <li><a href="#s2-6">Keyboard Shortcuts (Text Editing)</a></li>
+        <li><a href="#s2-7">Clipboard Integration</a></li>
+        <li><a href="#s2-8">Find/Replace Within Text</a></li>
+      </ol>
+    </li>
+    <li><a href="#s3">Text Box Tool</a>
+      <ol>
+        <li><a href="#s3-1">Tool Overview</a></li>
+        <li><a href="#s3-2">Creation Workflow</a></li>
+        <li><a href="#s3-3">Tool-Specific Properties</a></li>
+        <li><a href="#s3-4">Auto-Size and Resize Behavior</a></li>
+        <li><a href="#s3-5">Tool Options Bar</a></li>
+        <li><a href="#s3-6">Post-Creation Editing</a></li>
+        <li><a href="#s3-7">Rendering</a></li>
+        <li><a href="#s3-8">Hit Testing</a></li>
+        <li><a href="#s3-9">Status Bar Hints</a></li>
+      </ol>
+    </li>
+    <li><a href="#s4">Callout Bubble Tool</a>
+      <ol>
+        <li><a href="#s4-1">Tool Overview</a></li>
+        <li><a href="#s4-2">Creation Workflow</a></li>
+        <li><a href="#s4-3">Tool-Specific Properties</a></li>
+        <li><a href="#s4-4">Bubble Shapes</a></li>
+        <li><a href="#s4-5">Tail Geometry</a></li>
+        <li><a href="#s4-6">Tool Options Bar</a></li>
+        <li><a href="#s4-7">Post-Creation Editing</a></li>
+        <li><a href="#s4-8">Rendering</a></li>
+        <li><a href="#s4-9">Hit Testing</a></li>
+        <li><a href="#s4-10">Status Bar Hints</a></li>
+      </ol>
+    </li>
+    <li><a href="#s5">Data Models</a>
+      <ol>
+        <li><a href="#s5-1">TextItem Data Model</a></li>
+        <li><a href="#s5-2">CalloutItem Data Model</a></li>
+      </ol>
+    </li>
+    <li><a href="#s6">Command Definitions</a>
+      <ol>
+        <li><a href="#s6-1">TextEditCommand</a></li>
+        <li><a href="#s6-2">TextFormatCommand</a></li>
+        <li><a href="#s6-3">MoveTailCommand (Callout-specific)</a></li>
+      </ol>
+    </li>
+    <li><a href="#s7">Serialization</a>
+      <ol>
+        <li><a href="#s7-1">Rich Text Serialization</a></li>
+        <li><a href="#s7-2">Full Item Serialization Example (TextItem)</a></li>
+        <li><a href="#s7-3">Font Portability</a></li>
+      </ol>
+    </li>
+    <li><a href="#s8">Acceptance Criteria</a>
+      <ol>
+        <li><a href="#s8-1">Rich Text Engine</a></li>
+        <li><a href="#s8-2">Text Box Tool</a></li>
+        <li><a href="#s8-3">Callout Bubble Tool</a></li>
+        <li><a href="#s8-4">Command &amp; Undo/Redo</a></li>
+        <li><a href="#s8-5">Performance</a></li>
+      </ol>
+    </li>
+    <li><a href="#s9">Open Issues</a></li>
+  </ol>
+
+</section>
+
+<main>
+
+<h2 id="s1">Document Overview</h2>
+
+<h3 id="s1-1">Purpose</h3>
+
+<p>This document defines the detailed functional requirements for the two text-bearing
+annotation tools in SnapMock: the Text Box tool and the Callout Bubble tool. Both tools
+share a common rich-text editing engine, so this PRD begins with a comprehensive
+specification of the shared text engine before covering each tool's unique behavior.</p>
+
+<h3 id="s1-2">Scope</h3>
+
+<p>This PRD covers: the rich-text data model and rendering engine, inline text editing
+(cursor, selection, keyboard input), text-specific clipboard behavior, the Text Box
+tool's creation and editing workflow, the Callout Bubble tool's creation and editing
+workflow including tail and bubble geometry, data models, command definitions,
+serialization, and acceptance criteria.</p>
+
+<h3 id="s1-3">Dependencies</h3>
+
+<ul>
+  <li>Technical Architecture PRD: SnapGraphicsItem, VectorItem base, CommandStack, BaseTool
+  interface.</li>
+  <li>General UI PRD: Tool Options Bar text controls (font, size, bold/italic/underline,
+  alignment, color).</li>
+  <li>Navigation &amp; Raster Operations PRD: Select / Move tool handles post-creation
+  selection, move, resize. TransformHandles for bounding box resize.</li>
+  <li>Basic Shape Annotation Tools PRD: Shared VectorItem properties (stroke, fill, opacity,
+  shadow) apply to the text box frame and callout bubble body.</li>
+</ul>
+
+<h2 id="s2">Rich Text Engine</h2>
+
+<p>Both TextItem and CalloutItem contain rich text content. Rather than implementing a
+custom text engine from scratch, SnapMock leverages Qt's QTextDocument and QTextEdit
+infrastructure. This section defines how that infrastructure is configured and
+integrated.</p>
+
+<h3 id="s2-1">Text Model Architecture</h3>
+
+<p><strong>QTextDocument as Data Model:</strong></p>
+
+<ul>
+  <li>Each TextItem and CalloutItem owns a QTextDocument instance that stores the text content
+  and formatting.</li>
+  <li>QTextDocument provides a block-based model: a document contains blocks (paragraphs),
+  each block contains text fragments with formatting (QTextCharFormat).</li>
+  <li>This model supports mixed formatting within a single text item (e.g., one word bold,
+  another italic, different colors).</li>
+  <li>QTextDocument handles all text layout, line wrapping, and measurement.</li>
+</ul>
+
+<p><strong>Integration with QGraphicsScene:</strong></p>
+
+<ul>
+  <li>Text items are NOT based on QGraphicsTextItem (which has limitations with custom
+  rendering and transforms). Instead, they are custom SnapGraphicsItems that own a
+  QTextDocument and render it via QPainter.</li>
+  <li>This gives full control over rendering (custom backgrounds, borders, shadows, callout
+  tails) while leveraging QTextDocument for text layout and editing.</li>
+  <li>For inline editing, a hidden QTextEdit (or its document interface via QTextCursor) is
+  used to handle keyboard input, cursor positioning, and text selection. The visual
+  rendering is performed by the item itself.</li>
+</ul>
+
+<h3 id="s2-2">Supported Formatting</h3>
+
+<p><strong>Character-Level Formatting (QTextCharFormat):</strong></p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Format</th><th>Type</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Font Family</th><td>str</td><td>System sans-serif</td><td>Any system-installed font. Displayed via QFontComboBox.</td></tr>
+    <tr><th>Font Size</th><td>float (pt)</td><td>14.0</td><td>Range: 6 to 200pt, step 0.5pt.</td></tr>
+    <tr><th>Font Weight</th><td>enum</td><td>Normal</td><td>Normal (400), Bold (700). Future: full weight range 100-900.</td></tr>
+    <tr><th>Italic</th><td>bool</td><td>False</td><td>Italic style.</td></tr>
+    <tr><th>Underline</th><td>bool</td><td>False</td><td>Underline decoration.</td></tr>
+    <tr><th>Strikethrough</th><td>bool</td><td>False</td><td>Strikethrough decoration.</td></tr>
+    <tr><th>Text Color</th><td>QColor</td><td>#000000 (black)</td><td>Foreground text color.</td></tr>
+    <tr><th>Background Highlight</th><td>QColor</td><td>transparent</td><td>Per-character highlight color (like a marker pen). Distinct from the text box background fill.</td></tr>
+    <tr><th>Superscript</th><td>bool</td><td>False</td><td>Superscript vertical alignment.</td></tr>
+    <tr><th>Subscript</th><td>bool</td><td>False</td><td>Subscript vertical alignment.</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Paragraph-Level Formatting (QTextBlockFormat):</strong></p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Format</th><th>Type</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Alignment</th><td>enum</td><td>Left</td><td>Left, Center, Right, Justify.</td></tr>
+    <tr><th>Line Spacing</th><td>float</td><td>1.2</td><td>Line height multiplier. Range: 0.5 to 5.0, step 0.1.</td></tr>
+    <tr><th>Space Before</th><td>float (px)</td><td>0</td><td>Space above the paragraph in pixels.</td></tr>
+    <tr><th>Space After</th><td>float (px)</td><td>4</td><td>Space below the paragraph in pixels.</td></tr>
+    <tr><th>Indent (First Line)</th><td>float (px)</td><td>0</td><td>First-line indent in pixels.</td></tr>
+    <tr><th>Indent (Left)</th><td>float (px)</td><td>0</td><td>Left indent for the entire paragraph.</td></tr>
+    <tr><th>List Style</th><td>enum</td><td>None</td><td>None, Bullet (•), Numbered (1. 2. 3.), Dash (–).</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s2-3">Text Layout &amp; Rendering</h3>
+
+<p><strong>Text Area Calculation:</strong></p>
+
+<ul>
+  <li>The text area is the interior of the text box or callout bubble, inset by padding on all
+  four sides.</li>
+  <li>Padding default: 8px on all sides. Configurable per item.</li>
+  <li>QTextDocument.setTextWidth() is called with the text area width to enable word wrapping.</li>
+  <li>If <code>auto_height</code> is enabled (default for TextItem), the text box height grows
+  to fit the content. QTextDocument.size().height() + <code>top_padding</code> +
+  <code>bottom_padding</code> determines the item height.</li>
+  <li>If <code>auto_height</code> is disabled (fixed-size mode) and text exceeds the box
+  height, the text overflows outside the box boundary but remains fully visible. Text is
+  never clipped or hidden.</li>
+</ul>
+
+<p><strong>Rendering Pipeline:</strong></p>
+
+<ol>
+  <li>Draw the item shadow (if enabled).</li>
+  <li>Draw the background fill (if enabled) clipped to the item's shape path.</li>
+  <li>Draw the border/stroke (if enabled) along the item's shape path.</li>
+  <li>If in edit mode, set the QPainter clip region to the text area (inset by padding from
+  the shape boundary). If not in edit mode, do not clip — text that overflows the boundary
+  renders visibly outside the box.</li>
+  <li>Call QTextDocument.drawContents(painter, <code>text_area_rect</code>) to render the
+  formatted text.</li>
+  <li>Draw any additional decorations (callout tail, resize handles when selected).</li>
+  <li>If <code>flip_horizontal</code> or <code>flip_vertical</code> is True (inherited from
+  SnapGraphicsItem base class): apply QPainter scale(-1, 1) or scale(1, -1) respectively
+  around the bounding box center. Flip transforms are applied after rotation in the
+  rendering transform order: translate to position, rotate, flip, then render content.</li>
+</ol>
+
+<p><strong>Anti-Aliasing:</strong></p>
+
+<p>Text is always rendered with QPainter.Antialiasing and QPainter.TextAntialiasing hints
+enabled for crisp rendering at all zoom levels. At zoom levels above 400%, sub-pixel
+text rendering may be disabled to show exact pixel boundaries.</p>
+
+<h3 id="s2-4">Inline Editing Mode</h3>
+
+<p><strong>Entering Edit Mode:</strong></p>
+
+<ul>
+  <li>Double-click a TextItem or CalloutItem with the Select tool to enter inline text editing
+  mode.</li>
+  <li>Alternatively, activating the Text tool (T) and clicking on an existing TextItem enters
+  edit mode for that item.</li>
+  <li>When the Text tool is active and the user clicks on empty canvas, a new TextItem is
+  created and immediately enters edit mode.</li>
+  <li>On entering edit mode: the item's appearance changes to show an editing state: the
+  border becomes a solid accent-color line (2px), the background becomes slightly
+  lighter/different to indicate editability, and a text cursor (blinking I-beam) appears
+  at the click position within the text.</li>
+</ul>
+
+<p><strong>Editing State:</strong></p>
+
+<ul>
+  <li>While in edit mode, all keyboard input is directed to the item's QTextDocument via a
+  QTextCursor.</li>
+  <li>The text cursor blinks at 500ms intervals (standard cursor blink rate).</li>
+  <li>Typing inserts characters at the cursor position.</li>
+  <li>Backspace deletes the character before the cursor. Delete removes the character after
+  the cursor.</li>
+  <li>Enter creates a new paragraph (new QTextBlock).</li>
+  <li>Shift+Enter creates a soft line break (QTextCursor.insertText("\n") within the same
+  block).</li>
+  <li>Tab inserts 4 spaces (not a tab character, to avoid rendering inconsistency).</li>
+  <li>All text modifications are recorded as TextEditCommand entries for undo/redo (see
+  Section 6).</li>
+</ul>
+
+<p><strong>Exiting Edit Mode:</strong></p>
+
+<ul>
+  <li>Click outside the text item (on canvas or another item).</li>
+  <li>Press Escape.</li>
+  <li>Switch to a different tool.</li>
+  <li>On exit: finalize any pending TextEditCommand, restore the item's normal appearance
+  (remove the editing border), deselect the text cursor. If the text content is completely
+  empty (no characters), remove the item entirely (treat as an abandoned creation) and
+  push a RemoveItemCommand.</li>
+</ul>
+
+<h3 id="s2-5">Text Selection &amp; Cursor</h3>
+
+<p><strong>Cursor Positioning:</strong></p>
+
+<ul>
+  <li>Clicking within the text area positions the text cursor at the nearest character
+  boundary.</li>
+  <li>The cursor position is determined by QTextDocument.documentLayout().hitTest(point,
+  Qt.FuzzyHit).</li>
+  <li>The cursor is rendered as a 2px wide vertical line, 1px taller than the line height,
+  colored with the accent color.</li>
+  <li>Home key: move cursor to the start of the current line. End key: move to the end of the
+  current line.</li>
+  <li>Ctrl+Home: move to the start of the document. Ctrl+End: move to the end.</li>
+</ul>
+
+<p><strong>Text Selection:</strong></p>
+
+<ul>
+  <li>Click and drag within the text area selects text between the press and release
+  positions.</li>
+  <li>Shift+click extends the selection from the current cursor position to the click
+  position.</li>
+  <li>Shift+arrow keys extend the selection character by character (or word by word with
+  Ctrl+Shift+arrow).</li>
+  <li>Ctrl+A selects all text within the item (not all items on the canvas; that shortcut is
+  overridden while in edit mode).</li>
+  <li>Double-click selects the word under the cursor.</li>
+  <li>Triple-click selects the entire paragraph (QTextBlock) under the cursor.</li>
+  <li>Selected text is highlighted with the system selection color (or a custom accent color
+  at 30% opacity).</li>
+  <li>While text is selected, typing replaces the selection. Backspace or Delete removes the
+  selection.</li>
+</ul>
+
+<h3 id="s2-6">Keyboard Shortcuts (Text Editing)</h3>
+
+<p>These shortcuts are active only while in inline text editing mode. They override the
+global shortcuts that normally control tools and menus.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Shortcut</th><th>Action</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Ctrl+B</th><td>Toggle bold on the selection or at the cursor position (affects subsequent typing).</td></tr>
+    <tr><th>Ctrl+I</th><td>Toggle italic.</td></tr>
+    <tr><th>Ctrl+U</th><td>Toggle underline.</td></tr>
+    <tr><th>Ctrl+Shift+X</th><td>Toggle strikethrough.</td></tr>
+    <tr><th>Ctrl+Shift+= (plus)</th><td>Toggle superscript.</td></tr>
+    <tr><th>Ctrl+= (equals)</th><td>Toggle subscript.</td></tr>
+    <tr><th>Ctrl+L</th><td>Set paragraph alignment to Left.</td></tr>
+    <tr><th>Ctrl+E</th><td>Set paragraph alignment to Center.</td></tr>
+    <tr><th>Ctrl+R</th><td>Set paragraph alignment to Right.</td></tr>
+    <tr><th>Ctrl+J</th><td>Set paragraph alignment to Justify.</td></tr>
+    <tr><th>Ctrl+Shift+. (period)</th><td>Increase font size by 1pt.</td></tr>
+    <tr><th>Ctrl+Shift+, (comma)</th><td>Decrease font size by 1pt.</td></tr>
+    <tr><th>Ctrl+A</th><td>Select all text in this item (overrides global Select All).</td></tr>
+    <tr><th>Ctrl+C</th><td>Copy selected text to clipboard.</td></tr>
+    <tr><th>Ctrl+X</th><td>Cut selected text to clipboard.</td></tr>
+    <tr><th>Ctrl+V</th><td>Paste text from clipboard (plain text only; formatting stripped).</td></tr>
+    <tr><th>Ctrl+Shift+V</th><td>Paste with formatting (attempt to preserve rich text from clipboard).</td></tr>
+    <tr><th>Ctrl+Z</th><td>Undo the last text edit (within the text editing session).</td></tr>
+    <tr><th>Ctrl+Shift+Z</th><td>Redo the last undone text edit.</td></tr>
+    <tr><th>Escape</th><td>Exit inline editing mode.</td></tr>
+    <tr><th>Enter</th><td>New paragraph.</td></tr>
+    <tr><th>Shift+Enter</th><td>Soft line break (same paragraph).</td></tr>
+    <tr><th>Tab</th><td>Insert 4 spaces.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s2-7">Clipboard Integration</h3>
+
+<p><strong>Copy from Text Item:</strong></p>
+
+<ul>
+  <li>When text is selected within an editing text item and Ctrl+C is pressed: place the
+  selected text on the system clipboard in both plain text and HTML format (preserving
+  formatting).</li>
+  <li>Also store the selected text on the internal clipboard as a "text/x-snapmock-richtext"
+  MIME type containing the QTextDocumentFragment serialized as HTML.</li>
+</ul>
+
+<p><strong>Paste into Text Item:</strong></p>
+
+<ul>
+  <li>Ctrl+V (plain paste): strip all formatting from the clipboard content and insert as
+  plain text using the current cursor format (font, size, color at the cursor position).</li>
+  <li>Ctrl+Shift+V (rich paste): attempt to preserve formatting. If the clipboard contains
+  HTML, parse it and convert to QTextCharFormat/QTextBlockFormat. If it contains the
+  internal "text/x-snapmock-richtext" format, use it directly.</li>
+  <li>If pasting from an external source (e.g., a web browser), sanitize the HTML: strip
+  scripts, iframes, images (images are not supported inline within text items), and limit
+  formatting to the supported character and paragraph formats listed in Section 2.2.</li>
+  <li>Pasting plain text respects line breaks: each \n creates a new QTextBlock.</li>
+</ul>
+
+<p><strong>Copy/Paste Priority (During Text Editing):</strong></p>
+
+<p>While in text editing mode, Ctrl+C and Ctrl+V operate on the text content (not on scene
+items). This overrides the global clipboard behavior defined in the Navigation &amp;
+Raster Operations PRD. When the user exits text editing mode, Ctrl+C/V return to their
+global behavior (copying/pasting scene items).</p>
+
+<h3 id="s2-8">Find/Replace Within Text</h3>
+
+<ul>
+  <li>When in text editing mode, Ctrl+F opens a small inline find bar at the top of the text
+  item (not a modal dialog).</li>
+  <li>The find bar contains: a search text field, Previous/Next buttons, a Case Sensitive
+  toggle, a Close button.</li>
+  <li>Matches are highlighted in yellow (background) within the text item.</li>
+  <li>Ctrl+H extends the find bar to include a Replace field and Replace/Replace All buttons.</li>
+  <li>Find/Replace operates only within the current text item, not across all items on the
+  canvas.</li>
+  <li>Replace All pushes a single TextEditCommand for the entire batch replacement.</li>
+  <li>Escape or the Close button dismisses the find bar.</li>
+</ul>
+
+<h2 id="s3">Text Box Tool</h2>
+
+<h3 id="s3-1">Tool Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Tool ID</th><td>text</td></tr>
+    <tr><th>Display Name</th><td>Text Box</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>T</td></tr>
+    <tr><th>Default Cursor</th><td>I-beam (Qt.IBeamCursor)</td></tr>
+    <tr><th>Category</th><td>Annotation</td></tr>
+    <tr><th>Item Class</th><td>TextItem (extends VectorItem)</td></tr>
+  </tbody>
+</table>
+
+<p>The Text Box tool creates rectangular text containers with optional background fill,
+border, and shadow. Text boxes are the primary way to add labels, annotations, notes,
+and descriptions to screenshots and mockups.</p>
+
+<h3 id="s3-2">Creation Workflow</h3>
+
+<p><strong>3.2.1 Click-to-Create (Quick Mode):</strong></p>
+
+<ol>
+  <li>With the Text tool active, click once on empty canvas.</li>
+  <li>A new TextItem is created at the click position with a minimum width of 200px. Both
+  <code>auto_width</code> and <code>auto_height</code> are enabled.</li>
+  <li>The item immediately enters inline editing mode with the cursor placed at position 0.</li>
+  <li>The user begins typing. The box auto-sizes in both width and height to fit the text
+  content. The width never shrinks below the 200px minimum. See Section 3.4.1.</li>
+  <li>If the user clicks and immediately presses Escape (without typing), the empty item is
+  removed.</li>
+</ol>
+
+<p><strong>3.2.2 Drag-to-Create (Sized Mode):</strong></p>
+
+<ol>
+  <li>With the Text tool active, click and drag on empty canvas.</li>
+  <li>A preview rectangle is drawn showing the text box dimensions (same visual as Rectangle
+  tool preview).</li>
+  <li>Shift constrains to a square. Alt draws from center.</li>
+  <li>On release, a TextItem is created. The drawn dimensions set the minimum width and
+  minimum height for the text box. Both <code>auto_width</code> and
+  <code>auto_height</code> are enabled. The box auto-sizes to fit text content but never
+  shrinks below the drawn dimensions. See Section 3.4.1.</li>
+  <li>The item immediately enters inline editing mode.</li>
+  <li>If the drawn area is less than 20x20 pixels, treat as a click-to-create instead.</li>
+</ol>
+
+<p><strong>3.2.3 Click on Existing TextItem:</strong></p>
+
+<ul>
+  <li>If the Text tool is active and the user clicks on an existing TextItem, enter inline
+  editing mode for that item at the click position.</li>
+  <li>This allows quick editing without switching to the Select tool first.</li>
+</ul>
+
+<h3 id="s3-3">Tool-Specific Properties</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>text_document</code></th><td>QTextDocument</td><td>(empty)</td><td>The rich text content. Serialized as HTML.</td></tr>
+    <tr><th><code>auto_height</code></th><td>bool</td><td>True</td><td>When True, the box height automatically adjusts to fit all text content. When False, height is fixed and text overflows with clipping.</td></tr>
+    <tr><th><code>auto_width</code></th><td>bool</td><td>True</td><td>When True, the box width automatically adjusts to fit the longest line (no word wrapping). Always True during edit mode. When False (set by normal resize after editing), width is fixed and text wraps/reflows.</td></tr>
+    <tr><th><code>padding_top</code></th><td>float</td><td>8.0</td><td>Internal padding from the top border to the text area in pixels.</td></tr>
+    <tr><th><code>padding_right</code></th><td>float</td><td>8.0</td><td>Internal padding from the right border.</td></tr>
+    <tr><th><code>padding_bottom</code></th><td>float</td><td>8.0</td><td>Internal padding from the bottom border.</td></tr>
+    <tr><th><code>padding_left</code></th><td>float</td><td>8.0</td><td>Internal padding from the left border.</td></tr>
+    <tr><th><code>background_color</code></th><td>QColor</td><td>transparent</td><td>Background fill color for the text box. Distinct from VectorItem.fill_color which controls the border fill in shapes. For TextItem, <code>background_color</code> is the primary fill.</td></tr>
+    <tr><th><code>background_enabled</code></th><td>bool</td><td>False</td><td>Whether the background is visible.</td></tr>
+    <tr><th><code>border_color</code></th><td>QColor</td><td>#000000</td><td>Border stroke color.</td></tr>
+    <tr><th><code>border_width</code></th><td>float</td><td>0.0</td><td>Border width in pixels. 0 = no border.</td></tr>
+    <tr><th><code>border_style</code></th><td>enum</td><td>Solid</td><td>Solid, Dashed, Dotted, DashDot, DashDotDot.</td></tr>
+    <tr><th><code>border_radius</code></th><td>float</td><td>0.0</td><td>Corner radius for rounded text box borders.</td></tr>
+    <tr><th><code>vertical_align</code></th><td>enum</td><td>Top</td><td>Vertical alignment of text within the box: Top, Middle, Bottom.</td></tr>
+    <tr><th><code>text_scale_factor</code></th><td>float</td><td>1.0</td><td>Render-time scale factor applied to all text content. Modified only by Shift+resize. See Section 3.4.3.</td></tr>
+    <tr><th><code>min_width</code></th><td>float</td><td>200.0</td><td>Minimum box width in pixels. Set to 200px for click-to-create, or the drawn width for drag-to-create.</td></tr>
+    <tr><th><code>min_height</code></th><td>float</td><td>(per line height)</td><td>Minimum box height in pixels. Set to one line of text + padding for click-to-create, or the drawn height for drag-to-create.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s3-4">Auto-Size and Resize Behavior</h3>
+
+<p><strong>3.4.1 During Text Entry (Edit Mode):</strong></p>
+
+<ul>
+  <li>While the text box is in edit mode, both width and height auto-size to fit the text
+  content at all times. All entered text is always fully visible.</li>
+  <li>Word wrapping is disabled during edit mode. Each line extends horizontally as far as the
+  user types. Lines only break on Enter (new paragraph) or pasted newlines.</li>
+  <li>After each keystroke or paste operation, the box dimensions are recalculated: width =
+  max(all line widths) + <code>padding_left</code> + <code>padding_right</code>; height =
+  QTextDocument.size().height() + <code>padding_top</code> + <code>padding_bottom</code>.</li>
+  <li>The box dimensions never shrink below the minimum size. For click-to-create, the minimum
+  width is 200px. For drag-to-create, the minimum width and height are the dimensions
+  drawn by the user. The minimum height for click-to-create is 1 line of text + padding.</li>
+  <li>Alignment settings from the Tool Options Bar are applied in real time during text entry.
+  The user always sees text positioned (Left, Center, Right, Justify; Top, Middle, Bottom)
+  as it will appear in the final result, consistent with WYSIWYG behavior.</li>
+  <li>If a <code>text_scale_factor</code> is applied (see Section 3.4.3), auto-sizing and
+  editing operate at the scaled visual size. The cursor, selection highlights, and newly
+  typed text all render at the scaled size to maintain WYSIWYG fidelity.</li>
+  <li>Auto-size growth anchors at the top-left corner: the top-left position stays fixed and
+  the right and bottom edges expand outward.</li>
+</ul>
+
+<p><strong>3.4.2 Post-Entry Normal Resize (No Modifier Key):</strong></p>
+
+<ul>
+  <li>When the user exits edit mode and selects the text box with the Select tool, dragging
+  any TransformHandle resizes the box freely in both width and height.</li>
+  <li>Text reflows (word wraps) to fit the new width. Line breaks change dynamically as the
+  width changes.</li>
+  <li>If the text box is resized smaller than the text content requires, the text overflows
+  outside the text box boundary but remains fully visible. Under no circumstance is
+  entered text hidden, clipped, or truncated.</li>
+  <li>If the text box is larger than the text content, the text is positioned within the box
+  according to the alignment settings: horizontal (Left, Center, Right, Justify) and
+  vertical (Top, Middle, Bottom).</li>
+  <li>Minimum resize dimensions: 20px width, 16px height.</li>
+</ul>
+
+<p><strong>3.4.3 Post-Entry Shift+Resize (Scale Mode):</strong></p>
+
+<ul>
+  <li>When the user holds Shift while dragging a TransformHandle, the text scales
+  proportionally to fit the new box dimensions. The text does not reflow — all existing
+  line breaks are preserved.</li>
+  <li>Scaling is implemented via a <code>text_scale_factor</code> property (float, default
+  1.0) applied at render time. The underlying QTextDocument font sizes are not modified.
+  The QPainter is scaled by <code>text_scale_factor</code> before drawing the text
+  content.</li>
+  <li>The scale factor preserves relative size ratios between differently-sized text. For
+  example, 14pt and 24pt text at scale 0.5 render at 7pt and 12pt visual sizes
+  respectively.</li>
+  <li>The <code>text_scale_factor</code> allows fractional rendering sizes that cannot be
+  achieved with integer or half-point font sizes alone.</li>
+  <li>The scale factor applies at all times, including during subsequent edit mode sessions,
+  ensuring WYSIWYG behavior.</li>
+  <li>The <code>text_scale_factor</code> is serialized as a property on the TextItem and
+  persists across save/load.</li>
+</ul>
+
+<p><strong>3.4.4 Scale Factor Reset on Explicit Font Size Selection:</strong></p>
+
+<ul>
+  <li>If the user enters edit mode on a text box that has a <code>text_scale_factor</code>
+  other than 1.0, selects any portion of text, and explicitly chooses a font size from the
+  Tool Options Bar, the following sequence occurs as a single undoable command:</li>
+  <li>Bake the current scale factor into all text in the box: every character’s font size is
+  multiplied by the current <code>text_scale_factor</code> (e.g., 14pt at scale 0.5
+  becomes 7pt).</li>
+  <li>Reset <code>text_scale_factor</code> to 1.0.</li>
+  <li>Apply the user’s chosen font size to the selected portion of text.</li>
+  <li>After this operation, all text displays at the same visual sizes as before the reset,
+  except the selected portion which displays at the explicitly chosen size. No visual
+  discontinuity occurs for the unselected text.</li>
+</ul>
+
+<h3 id="s3-5">Tool Options Bar</h3>
+
+<p>The Text tool's Tool Options Bar shows the following controls (left to right):</p>
+
+<ol>
+  <li>Font Family: QFontComboBox with font preview rendering. Shows the current font for the
+  selection or cursor position.</li>
+  <li>Font Size: editable QComboBox with common sizes (8, 9, 10, 11, 12, 14, 18, 24, 30, 36,
+  48, 60, 72) and free text entry. Shows the current size; "Mixed" if the selection spans
+  multiple sizes.</li>
+  <li>Bold (B): toggle button. Shows pressed state when the selection/cursor is bold.</li>
+  <li>Italic (I): toggle button.</li>
+  <li>Underline (U): toggle button.</li>
+  <li>Strikethrough (S with line): toggle button.</li>
+  <li>Text Color: color swatch button. Click for color picker popover.</li>
+  <li>Text Highlight: color swatch button with a small "marker" icon. Click for color picker
+  with a "No Highlight" option.</li>
+  <li>Text Alignment: toggle button group (Left, Center, Right, Justify). Shows the alignment
+  of the current paragraph.</li>
+  <li>Background Color: color swatch button for the text box background fill (not
+  per-character).</li>
+  <li>Vertical Alignment: dropdown (Top, Middle, Bottom).</li>
+  <li>Border Color: color swatch button for the text box border.</li>
+  <li>Border Width: spinbox (0 to 20px, step 0.5). 0 = no border.</li>
+  <li>Border Style: dropdown (Solid, Dashed, Dotted, DashDot, DashDotDot).</li>
+</ol>
+
+<p>When no text item is selected and the tool is active, changing Tool Options Bar values
+sets the defaults for the next created text box. When a text item is being edited,
+changes apply to the current selection or cursor position immediately.</p>
+
+<h3 id="s3-6">Post-Creation Editing</h3>
+
+<p><strong>Inline Text Editing:</strong></p>
+
+<p>As described in Section 2.4. Double-click with Select tool or click with Text tool to
+enter edit mode. All rich text editing capabilities apply.</p>
+
+<p><strong>Box Resize (Select Tool):</strong></p>
+
+<ul>
+  <li>Resize behavior follows the rules defined in Section 3.4. Without modifier keys: the box
+  resizes freely, text reflows to the new width, and text that exceeds the box boundary
+  overflows visibly and is never hidden. See Section 3.4.2.</li>
+  <li>With Shift held: the text scales proportionally to fit the new box dimensions without
+  reflowing. The <code>text_scale_factor</code> property is updated. See Section 3.4.3.</li>
+  <li>Dragging corner TransformHandles resizes both width and height simultaneously.</li>
+  <li>Dragging edge midpoint handles resizes only the corresponding dimension (left/right
+  midpoints change width only; top/bottom midpoints change height only).</li>
+  <li>Minimum resize dimensions: 20px width, 16px height.</li>
+</ul>
+
+<p><strong>Property Panel Behavior:</strong></p>
+
+<ul>
+  <li><strong>Tool selected, no item created: </strong>When the Text tool is selected but no
+  text box has been created or selected, the Property Panel displays the Text section (see
+  General UI PRD Section 8.4) populated with the tool’s default properties. This allows
+  the user to review and configure settings such as font family, font size, text color,
+  alignment, and background fill before creating a text box. The Font Size control
+  receives focus so the user can change it immediately without additional clicks.</li>
+  <li><strong>Text edit mode (actively typing): </strong>While in inline text editing mode,
+  the Property Panel continues to display the Text section. The displayed values depend on
+  the current cursor and selection state as described in the following items.</li>
+  <li><strong>Cursor positioned, no selection: </strong>The Property Panel reflects the
+  character formatting at the cursor’s insertion point (the format that will be applied to
+  newly typed text). All controls show definite values. Changes made via the Property
+  Panel apply to subsequently typed text at that position.</li>
+  <li><strong>Partial selection, uniform formatting: </strong>When the user selects a range of
+  text where all characters share the same value for a given property, the Property Panel
+  displays that value normally. For example, if the entire selection is Bold 12pt Arial,
+  the Bold button appears pressed, Font Size shows 12, and Font Family shows Arial.
+  Changes made via the Property Panel or keyboard shortcuts apply to the entire selection.</li>
+  <li><strong>Partial selection, mixed formatting: </strong>When the selected text contains
+  different values for a given property, the Property Panel shows an indeterminate (mixed)
+  state for that property. Toggle properties (Bold, Italic, Underline, Strikethrough): the
+  button renders in a mixed visual state (neither fully pressed nor unpressed). Value
+  properties (Font Family, Font Size, Text Color): the control displays blank/empty.
+  Alignment (Left, Center, Right, Justify): since alignment is paragraph-level, it
+  reflects the paragraph(s) containing the selection; if multiple paragraphs with
+  different alignments are selected, the alignment buttons show a mixed state. When the
+  user sets a value on a mixed-state property, the new value is applied uniformly to the
+  entire selection, and the control updates to show the definite value.</li>
+  <li><strong>Real-time synchronization: </strong>When the user applies formatting via
+  keyboard shortcuts (Ctrl+B, Ctrl+I, Ctrl+U, etc.) while text is selected, the Property
+  Panel must update immediately to reflect the new formatting state. The panel does not
+  wait for the user to deselect and reselect; the change is reflected in real time as the
+  shortcut is executed. This also applies to formatting applied via the Tool Options Bar.</li>
+  <li><strong>Text box selected, not editing: </strong>When a TextItem is selected with the
+  Select tool but not in edit mode, the Property Panel shows the full TextItem properties
+  (Transform, Appearance, Shadow, and Text sections). All properties from Section 3.3 are
+  editable. Changes are applied immediately and recorded as ModifyPropertyCommand entries.</li>
+</ul>
+
+<h3 id="s3-7">Rendering</h3>
+
+<ol>
+  <li>Construct the box shape path: a QRectF with optional <code>border_radius</code>.</li>
+  <li>If <code>shadow_enabled</code>: draw the shadow (offset, blurred copy of the shape in
+  <code>shadow_color</code>).</li>
+  <li>If <code>background_enabled</code>: fill the shape path with
+  <code>background_color</code>.</li>
+  <li>If <code>border_width</code> &gt; 0: stroke the shape path with
+  <code>border_color</code>, <code>border_width</code>, and <code>border_style</code>.</li>
+  <li>If in edit mode, set the QPainter clip to the text area (shape inset by padding). If not
+  in edit mode, do not clip — text that overflows the boundary renders visibly outside the
+  box.</li>
+  <li>If <code>vertical_align</code> is Middle or Bottom: calculate the vertical offset to
+  center or bottom-align the text block within the text area.</li>
+  <li>If <code>text_scale_factor</code> ≠ 1.0: apply
+  QPainter.scale(<code>text_scale_factor</code>) before drawing text content. Adjust the
+  text area rect accordingly to account for the scale transform.</li>
+  <li>Call QTextDocument.drawContents(painter, <code>text_area_rect</code>) with the
+  appropriate vertical offset.</li>
+</ol>
+
+<h3 id="s3-8">Hit Testing</h3>
+
+<ul>
+  <li>If <code>background_enabled</code> is True or <code>border_width</code> &gt; 0: the
+  <code>shape()</code> returns the full rectangle path (click anywhere inside to select).</li>
+  <li>If both background and border are invisible (transparent background, 0 border): the
+  <code>shape()</code> returns a path encompassing only the text content bounding box (so
+  the user clicks on the text itself to select). This prevents invisible text boxes from
+  intercepting clicks on items behind them. The text content bounding box must incorporate
+  the vertical alignment offset calculated in Section 3.7 step 6. For example, if
+  <code>vertical_align</code> is Bottom, the hit-test region is shifted downward to match
+  where the text is actually rendered. Without this offset, the clickable area would
+  remain at the top of the box while the visible text sits at the bottom, making the text
+  unclickable.</li>
+</ul>
+
+<h3 id="s3-9">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>State</th><th>Status Bar Text</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Tool active, idle</th><td>Click to create a text box. Drag to set dimensions. Click existing text to edit.</td></tr>
+    <tr><th>Drawing (drag-to-create)</th><td>W: 200  H: 80 | Shift: square | Alt: from center | Release to create.</td></tr>
+    <tr><th>Editing text</th><td>Type to insert text. Ctrl+B: bold. Ctrl+I: italic. Escape: exit editing.</td></tr>
+    <tr><th>Text selected</th><td>Selection: 24 chars. Ctrl+B/I/U: format. Ctrl+C: copy. Delete: remove.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s4">Callout Bubble Tool</h2>
+
+<h3 id="s4-1">Tool Overview</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Tool ID</th><td>callout</td></tr>
+    <tr><th>Display Name</th><td>Callout Bubble</td></tr>
+    <tr><th>Keyboard Shortcut</th><td>B</td></tr>
+    <tr><th>Default Cursor</th><td>Crosshair</td></tr>
+    <tr><th>Category</th><td>Annotation</td></tr>
+    <tr><th>Item Class</th><td>CalloutItem (extends VectorItem)</td></tr>
+  </tbody>
+</table>
+
+<p>The Callout Bubble tool creates speech-bubble-style annotations with a text body (the
+bubble) and a tail (pointer) that extends from the bubble to a target point. Callouts
+are used to annotate specific UI elements in screenshots with explanatory text.</p>
+
+<h3 id="s4-2">Creation Workflow</h3>
+
+<p><strong>Two-Step Creation:</strong></p>
+
+<ol>
+  <li>Mouse press: defines the tail tip position (the point being annotated, e.g., a button on
+  the screenshot).</li>
+  <li>Mouse drag: moves the cursor away from the tail tip to define the bubble position and
+  size. The bubble body expands from the point opposite the tail tip. The tail stretches
+  from the bubble to the original press position.</li>
+  <li>Mouse release: finalizes the callout. The bubble is created with default dimensions
+  (minimum 100x60px) at the release position. The tail connects from the nearest bubble
+  edge to the tail tip (press position).</li>
+  <li>Immediately enters inline text editing mode so the user can type the annotation.</li>
+  <li>Shift during drag: constrains the tail angle to 15-degree increments.</li>
+  <li>If the drag distance is less than 20px: create a default-sized callout (200x80px bubble)
+  with the tail tip at the press point and the bubble positioned 80px above and to the
+  right.</li>
+  <li>Escape during drag: cancel creation.</li>
+</ol>
+
+<p><strong>Alternative Quick Creation:</strong></p>
+
+<ul>
+  <li>Single click (no drag) on canvas: creates a default callout at the click position. The
+  bubble is 200x80px, positioned 80px above-right of the click point. The tail tip is at
+  the click point.</li>
+  <li>Immediately enters text editing mode.</li>
+</ul>
+
+<h3 id="s4-3">Tool-Specific Properties</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>text_document</code></th><td>QTextDocument</td><td>(empty)</td><td>Rich text content. Same engine as TextItem.</td></tr>
+    <tr><th><code>bubble_shape</code></th><td>enum</td><td>RoundedRect</td><td>Shape of the bubble body. See Section 4.4.</td></tr>
+    <tr><th><code>bubble_rect</code></th><td>QRectF</td><td>(set by drawing)</td><td>Bounding rectangle of the bubble body.</td></tr>
+    <tr><th><code>bubble_radius</code></th><td>float</td><td>12.0</td><td>Corner radius for RoundedRect and Cloud bubble shapes.</td></tr>
+    <tr><th><code>tail_tip</code></th><td>QPointF</td><td>(set by drawing)</td><td>The point where the tail ends (the annotation target). In scene coordinates.</td></tr>
+    <tr><th><code>tail_style</code></th><td>enum</td><td>Straight</td><td>Tail path type: Straight, Curved, Elbow (right-angle).</td></tr>
+    <tr><th><code>tail_width</code></th><td>float</td><td>20.0</td><td>Width of the tail at the base (where it meets the bubble). Range: 4 to 100px.</td></tr>
+    <tr><th><code>tail_base_position</code></th><td>float</td><td>0.5</td><td>Position of the tail base along the bubble edge (0.0 = start of edge, 1.0 = end). Auto-calculated but user-adjustable.</td></tr>
+    <tr><th><code>tail_base_edge</code></th><td>enum</td><td>Auto</td><td>Which edge of the bubble the tail originates from: Auto, Top, Right, Bottom, Left. Auto selects the edge closest to the tail tip.</td></tr>
+    <tr><th><code>background_color</code></th><td>QColor</td><td>#FFFFCC (light yellow)</td><td>Bubble fill color.</td></tr>
+    <tr><th><code>background_enabled</code></th><td>bool</td><td>True</td><td>Callout bubbles have visible backgrounds by default.</td></tr>
+    <tr><th><code>border_color</code></th><td>QColor</td><td>#333333</td><td>Bubble border color.</td></tr>
+    <tr><th><code>border_width</code></th><td>float</td><td>2.0</td><td>Bubble border width.</td></tr>
+    <tr><th><code>padding_top</code></th><td>float</td><td>10.0</td><td>Internal padding.</td></tr>
+    <tr><th><code>padding_right</code></th><td>float</td><td>12.0</td><td>Internal padding.</td></tr>
+    <tr><th><code>padding_bottom</code></th><td>float</td><td>10.0</td><td>Internal padding.</td></tr>
+    <tr><th><code>padding_left</code></th><td>float</td><td>12.0</td><td>Internal padding.</td></tr>
+    <tr><th><code>auto_height</code></th><td>bool</td><td>True</td><td>Auto-grow height to fit text content.</td></tr>
+    <tr><th><code>vertical_align</code></th><td>enum</td><td>Top</td><td>Vertical alignment of text within the bubble.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s4-4">Bubble Shapes</h3>
+
+<p>The callout bubble body can take one of several shapes:</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Shape</th><th>ID</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Rounded Rectangle</th><td><code>rounded_rect</code></td><td>A rectangle with configurable corner radius. The default and most common shape. The tail attaches to the nearest edge.</td></tr>
+    <tr><th>Rectangle</th><td>rect</td><td>A sharp-cornered rectangle. Simple and clean for technical annotations.</td></tr>
+    <tr><th>Ellipse</th><td>ellipse</td><td>An oval bubble. The tail attaches to the ellipse perimeter at the optimal angle. Text area is an inset rectangle within the ellipse.</td></tr>
+    <tr><th>Cloud</th><td>cloud</td><td>A cloud-shaped bubble made of overlapping circles along the perimeter. The tail is rendered as a series of decreasing circles ("thought bubble" style) instead of a solid tail.</td></tr>
+    <tr><th>Starburst</th><td>starburst</td><td>A starburst / explosion shape with jagged edges. Configurable number of points (8-24, default 12). Useful for "POW" style annotations.</td></tr>
+    <tr><th>Pill</th><td>pill</td><td>A rectangle where the left and right edges are perfect semicircles (<code>border_radius</code> = height/2). Useful for horizontal labels.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s4-5">Tail Geometry</h3>
+
+<p><strong>4.5.1 Tail Attachment Calculation:</strong></p>
+
+<ul>
+  <li>When <code>tail_base_edge</code> is "Auto" (default), the edge is selected based on the
+  angle from the bubble center to the <code>tail_tip</code>: if the <code>tail_tip</code>
+  is mostly below the bubble, the bottom edge is selected; if mostly to the right, the
+  right edge; etc.</li>
+  <li>The <code>tail_base_position</code> along the chosen edge is auto-calculated to create
+  the most natural look: the base is positioned where a line from the bubble center to
+  <code>tail_tip</code> intersects the edge.</li>
+  <li>The user can override both <code>tail_base_edge</code> and
+  <code>tail_base_position</code> in the Property Panel or by dragging the tail base
+  handle in point-editing mode.</li>
+</ul>
+
+<p><strong>4.5.2 Straight Tail:</strong></p>
+
+<ul>
+  <li>Two straight lines from the tail base (a segment of <code>tail_width</code> centered at
+  <code>tail_base_position</code> on the bubble edge) converging to <code>tail_tip</code>.</li>
+  <li>The tail is filled with <code>background_color</code> and stroked with
+  <code>border_color</code>/<code>border_width</code>, matching the bubble.</li>
+  <li>The tail integrates seamlessly with the bubble border: the bubble border is interrupted
+  where the tail meets it, and the tail border continues smoothly from the bubble border.</li>
+</ul>
+
+<p><strong>4.5.3 Curved Tail:</strong></p>
+
+<ul>
+  <li>Two Bezier curves from the tail base to <code>tail_tip</code>, creating a smooth tapered
+  shape.</li>
+  <li>The control points for the curves are automatically calculated to create a natural
+  S-curve or C-curve.</li>
+  <li>The curvature direction is based on the angle of the tail relative to the bubble edge.</li>
+  <li>The user can adjust the curvature in point-editing mode by dragging a control point on
+  the tail.</li>
+</ul>
+
+<p><strong>4.5.4 Elbow Tail:</strong></p>
+
+<ul>
+  <li>Two line segments meeting at a right angle, creating an L-shaped tail.</li>
+  <li>The first segment extends perpendicular to the bubble edge. The second segment turns 90
+  degrees toward <code>tail_tip</code>.</li>
+  <li>The tail maintains its tapered width (wider at the base, narrowing to
+  <code>tail_tip</code>).</li>
+  <li>The bend point is auto-calculated but can be adjusted by dragging in point-editing mode.</li>
+</ul>
+
+<p><strong>4.5.5 Cloud Tail (for Cloud bubble shape):</strong></p>
+
+<ul>
+  <li>Instead of a solid tail, the cloud bubble uses a series of 3-5 circles decreasing in
+  size from the bubble edge to the <code>tail_tip</code>.</li>
+  <li>The circles are filled with <code>background_color</code> and stroked with
+  <code>border_color</code>.</li>
+  <li>The circles are spaced evenly along the line from bubble edge to <code>tail_tip</code>.</li>
+  <li>Circle sizes: largest circle is <code>tail_width</code>/2, each subsequent circle is 60%
+  of the previous.</li>
+</ul>
+
+<h3 id="s4-6">Tool Options Bar</h3>
+
+<p>The Callout tool's Tool Options Bar shows:</p>
+
+<ol>
+  <li>Font Family: QFontComboBox.</li>
+  <li>Font Size: editable QComboBox.</li>
+  <li>Bold / Italic / Underline: toggle buttons.</li>
+  <li>Text Color: color swatch.</li>
+  <li>Text Alignment: toggle group (Left, Center, Right).</li>
+  <li>Bubble Fill Color: color swatch (default light yellow).</li>
+  <li>Border Color: color swatch.</li>
+  <li>Border Width: spinbox.</li>
+  <li>Border Style: dropdown (Solid, Dashed, Dotted, DashDot, DashDotDot).</li>
+  <li>Bubble Shape: dropdown with visual icons for each shape.</li>
+  <li>Tail Style: toggle group (Straight, Curved, Elbow).</li>
+  <li>Tail Width: spinbox (4-100px).</li>
+</ol>
+
+<h3 id="s4-7">Post-Creation Editing</h3>
+
+<p><strong>Inline Text Editing:</strong></p>
+
+<p>Same as TextItem (Section 2.4). Double-click the bubble body to enter edit mode. The
+full rich text engine is available.</p>
+
+<p><strong>Select Tool Interactions:</strong></p>
+
+<ul>
+  <li>Single click selects the entire callout (bubble + tail).</li>
+  <li>TransformHandles appear around the bounding box of the entire callout (bubble + tail
+  tip).</li>
+  <li>Dragging the callout moves both the bubble and the tail tip together (maintains relative
+  positions).</li>
+  <li>Resizing via corner handles resizes the bubble. The tail tip position remains fixed (the
+  tail stretches/shrinks to maintain its target).</li>
+  <li>Resizing via edge midpoint handles resizes the bubble on that axis.</li>
+</ul>
+
+<p><strong>Point Editing Mode:</strong></p>
+
+<p>Double-clicking the tail (not the bubble text) enters point-editing mode for the tail.
+The following handles are available:</p>
+
+<ul>
+  <li>Tail Tip handle (red circle, 10x10): drag to reposition where the callout points to.
+  This is the most commonly adjusted handle.</li>
+  <li>Tail Base handle (blue circle, 8x8): drag along the bubble edge to adjust where the tail
+  attaches. Constrained to the bubble perimeter.</li>
+  <li>Tail Curvature handle (green circle, 8x8, visible only for Curved tails): drag to adjust
+  the curve. Dashed guide lines connect to the base and tip.</li>
+  <li>Tail Bend handle (green circle, 8x8, visible only for Elbow tails): drag to adjust where
+  the right-angle bend occurs.</li>
+  <li>Escape exits point-editing mode.</li>
+</ul>
+
+<p><strong>Distinct Double-Click Targets:</strong></p>
+
+<ul>
+  <li>Double-click on the bubble body text area: enters text editing mode.</li>
+  <li>Double-click on the tail or bubble border: enters point-editing mode for the tail.</li>
+  <li>The cursor changes to indicate which mode will be entered: I-beam over text area,
+  crosshair over tail/border.</li>
+</ul>
+
+<h3 id="s4-8">Rendering</h3>
+
+<p>The rendering order for a callout is:</p>
+
+<ol>
+  <li>Shadow (if enabled): rendered for the combined bubble + tail shape.</li>
+  <li>Tail fill: the tail shape is filled with <code>background_color</code>.</li>
+  <li>Bubble fill: the bubble shape is filled with <code>background_color</code>.</li>
+  <li>Tail border: the outer edges of the tail are stroked (not the edges where the tail meets
+  the bubble).</li>
+  <li>Bubble border: the bubble outline is stroked, excluding the section where the tail
+  attaches.</li>
+  <li>Text: QTextDocument rendered inside the bubble text area (<code>bubble_rect</code> inset
+  by padding).</li>
+  <li>If text exceeds the bubble text area, the text overflows outside the bubble boundary but
+  remains fully visible. Text is never clipped or hidden.</li>
+</ol>
+
+<p><strong>Seamless Tail Integration:</strong></p>
+
+<p>The critical rendering challenge is making the tail and bubble appear as a single
+unified shape. This is achieved by constructing a single QPainterPath that combines the
+bubble outline and tail outline into one continuous path, with the shared edges (where
+tail meets bubble) omitted. This combined path is used for both filling and stroking,
+ensuring no visible seam or double-stroke at the junction.</p>
+
+<h3 id="s4-9">Hit Testing</h3>
+
+<ul>
+  <li>The <code>shape()</code> returns the combined path of the bubble body and the tail.
+  Clicking anywhere on the bubble or the tail selects the callout.</li>
+  <li>The tail hit area includes a 4px padding on each side to make thin tails easier to
+  click.</li>
+  <li>For Cloud bubble tails (circles), each circle in the tail chain is included in the hit
+  test path.</li>
+</ul>
+
+<h3 id="s4-10">Status Bar Hints</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>State</th><th>Status Bar Text</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Tool active, idle</th><td>Click to place callout tail tip, then drag to position the bubble.</td></tr>
+    <tr><th>Drawing (dragging)</th><td>Drag to position the bubble. Shift: constrain tail angle. Release to create.</td></tr>
+    <tr><th>Editing text</th><td>Type to insert text. Ctrl+B: bold. Escape: exit editing.</td></tr>
+    <tr><th>Point editing (tail)</th><td>Drag tail tip (red) to repoint. Drag base (blue) to reattach. Escape: exit.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s5">Data Models</h2>
+
+<h3 id="s5-1">TextItem Data Model</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Serialization Key</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>rect</th><td>QRectF</td><td>"rect": {"x": float, "y": float, "w": float, "h": float}</td></tr>
+    <tr><th><code>text_html</code></th><td>str</td><td>"<code>text_html</code>": "&lt;html&gt;...&lt;/html&gt;" (QTextDocument exported as HTML)</td></tr>
+    <tr><th><code>auto_height</code></th><td>bool</td><td>"<code>auto_height</code>": bool</td></tr>
+    <tr><th><code>auto_width</code></th><td>bool</td><td>"<code>auto_width</code>": bool</td></tr>
+    <tr><th><code>padding_top</code></th><td>float</td><td>"<code>padding_top</code>": float</td></tr>
+    <tr><th><code>padding_right</code></th><td>float</td><td>"<code>padding_right</code>": float</td></tr>
+    <tr><th><code>padding_bottom</code></th><td>float</td><td>"<code>padding_bottom</code>": float</td></tr>
+    <tr><th><code>padding_left</code></th><td>float</td><td>"<code>padding_left</code>": float</td></tr>
+    <tr><th><code>background_color</code></th><td>str</td><td>"<code>background_color</code>": "#RRGGBBAA"</td></tr>
+    <tr><th><code>background_enabled</code></th><td>bool</td><td>"<code>background_enabled</code>": bool</td></tr>
+    <tr><th><code>border_color</code></th><td>str</td><td>"<code>border_color</code>": "#RRGGBBAA"</td></tr>
+    <tr><th><code>border_width</code></th><td>float</td><td>"<code>border_width</code>": float</td></tr>
+    <tr><th><code>border_style</code></th><td>str</td><td>"<code>border_style</code>": "solid" | "dashed" | "dotted" | "dashdot" | "dashdotdot"</td></tr>
+    <tr><th><code>border_radius</code></th><td>float</td><td>"<code>border_radius</code>": float</td></tr>
+    <tr><th><code>vertical_align</code></th><td>str</td><td>"<code>vertical_align</code>": "top" | "middle" | "bottom"</td></tr>
+    <tr><th><code>text_scale_factor</code></th><td>float</td><td>"<code>text_scale_factor</code>": float</td></tr>
+    <tr><th><code>min_width</code></th><td>float</td><td>"<code>min_width</code>": float</td></tr>
+    <tr><th><code>min_height</code></th><td>float</td><td>"<code>min_height</code>": float</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s5-2">CalloutItem Data Model</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Serialization Key</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>bubble_rect</code></th><td>QRectF</td><td>"<code>bubble_rect</code>": {"x": float, "y": float, "w": float, "h": float}</td></tr>
+    <tr><th><code>text_html</code></th><td>str</td><td>"<code>text_html</code>": "&lt;html&gt;...&lt;/html&gt;"</td></tr>
+    <tr><th><code>bubble_shape</code></th><td>str</td><td>"<code>bubble_shape</code>": "<code>rounded_rect</code>" | "rect" | "ellipse" | "cloud" | "starburst" | "pill"</td></tr>
+    <tr><th><code>bubble_radius</code></th><td>float</td><td>"<code>bubble_radius</code>": float</td></tr>
+    <tr><th><code>tail_tip</code></th><td>QPointF</td><td>"<code>tail_tip</code>": {"x": float, "y": float}</td></tr>
+    <tr><th><code>tail_style</code></th><td>str</td><td>"<code>tail_style</code>": "straight" | "curved" | "elbow"</td></tr>
+    <tr><th><code>tail_width</code></th><td>float</td><td>"<code>tail_width</code>": float</td></tr>
+    <tr><th><code>tail_base_position</code></th><td>float</td><td>"<code>tail_base_position</code>": float (0.0-1.0)</td></tr>
+    <tr><th><code>tail_base_edge</code></th><td>str</td><td>"<code>tail_base_edge</code>": "auto" | "top" | "right" | "bottom" | "left"</td></tr>
+    <tr><th><code>tail_control_point</code></th><td>QPointF (nullable)</td><td>"<code>tail_control_point</code>": {"x": float, "y": float} | null</td></tr>
+    <tr><th><code>background_color</code></th><td>str</td><td>"<code>background_color</code>": "#RRGGBBAA"</td></tr>
+    <tr><th><code>background_enabled</code></th><td>bool</td><td>"<code>background_enabled</code>": bool</td></tr>
+    <tr><th><code>border_color</code></th><td>str</td><td>"<code>border_color</code>": "#RRGGBBAA"</td></tr>
+    <tr><th><code>border_width</code></th><td>float</td><td>"<code>border_width</code>": float</td></tr>
+    <tr><th><code>border_style</code></th><td>"<code>border_style</code>": "solid" | "dashed" | "dotted" | "dashdot" | "dashdotdot"</td></tr>
+    <tr><th><code>padding_top</code></th><td>float</td><td>"<code>padding_top</code>": float</td></tr>
+    <tr><th><code>padding_right</code></th><td>float</td><td>"<code>padding_right</code>": float</td></tr>
+    <tr><th><code>padding_bottom</code></th><td>float</td><td>"<code>padding_bottom</code>": float</td></tr>
+    <tr><th><code>padding_left</code></th><td>float</td><td>"<code>padding_left</code>": float</td></tr>
+    <tr><th><code>auto_height</code></th><td>bool</td><td>"<code>auto_height</code>": bool</td></tr>
+    <tr><th><code>vertical_align</code></th><td>str</td><td>"<code>vertical_align</code>": "top" | "middle" | "bottom"</td></tr>
+    <tr><th><code>starburst_points</code></th><td>int</td><td>"<code>starburst_points</code>": int (only for starburst shape)</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s6">Command Definitions</h2>
+
+<h3 id="s6-1">TextEditCommand</h3>
+
+<p>Records changes to a text item's QTextDocument content during an editing session.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>item_id</code></th><td>UUID</td><td>The text item being edited.</td></tr>
+    <tr><th><code>old_html</code></th><td>str</td><td>The complete QTextDocument HTML before the edit.</td></tr>
+    <tr><th><code>new_html</code></th><td>str</td><td>The complete QTextDocument HTML after the edit.</td></tr>
+    <tr><th><code>old_rect</code></th><td>QRectF</td><td>Item bounding rect before edit (may change due to auto-size).</td></tr>
+    <tr><th><code>new_rect</code></th><td>QRectF</td><td>Item bounding rect after edit.</td></tr>
+    <tr><th><code>cursor_position</code></th><td>int</td><td>Cursor position after the edit (for cursor restoration on undo/redo).</td></tr>
+  </tbody>
+</table>
+
+<p><strong><code>redo()</code>:</strong> Set <code>text_document</code> HTML to
+<code>new_html</code>. Set item rect to <code>new_rect</code>. Restore cursor to
+<code>cursor_position</code>.</p>
+
+<p><strong><code>undo()</code>:</strong> Set <code>text_document</code> HTML to
+<code>old_html</code>. Set item rect to <code>old_rect</code>.</p>
+
+<p><strong><code>merge_with</code>(other):</strong> If other is a TextEditCommand for the
+same <code>item_id</code> and was created within 1000ms, and the edit is a simple
+character insertion or deletion (not a formatting change), merge: keep this command's
+<code>old_html</code> and use other's <code>new_html</code>, <code>new_rect</code>, and
+<code>cursor_position</code>. Return True. This coalesces rapid keystrokes into single
+undo steps.</p>
+
+<p><strong><code>description()</code>:</strong> "Edit text"</p>
+
+<p><strong>Merge Boundaries:</strong></p>
+
+<p>The following events force a new TextEditCommand (prevent merging), ensuring granular
+undo steps at logical boundaries:</p>
+
+<ul>
+  <li>Formatting changes (bold, italic, font, size, color).</li>
+  <li>Paragraph operations (Enter, Shift+Enter).</li>
+  <li>Clipboard operations (paste, cut).</li>
+  <li>Selection replacements (typing while text is selected).</li>
+  <li>Find/Replace operations.</li>
+  <li>A pause of more than 1000ms between keystrokes.</li>
+</ul>
+
+<h3 id="s6-2">TextFormatCommand</h3>
+
+<p>Records a formatting change applied to a text selection within a text item.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>item_id</code></th><td>UUID</td><td>The text item.</td></tr>
+    <tr><th><code>selection_start</code></th><td>int</td><td>Character position where the selection begins.</td></tr>
+    <tr><th><code>selection_end</code></th><td>int</td><td>Character position where the selection ends.</td></tr>
+    <tr><th><code>format_property</code></th><td>str</td><td>The QTextCharFormat or QTextBlockFormat property name being changed.</td></tr>
+    <tr><th><code>old_values</code></th><td>dict</td><td>Map of character positions to old format values across the selection.</td></tr>
+    <tr><th><code>new_value</code></th><td>any</td><td>The new format value applied to the entire selection.</td></tr>
+  </tbody>
+</table>
+
+<p><strong><code>redo()</code>:</strong> Apply <code>new_value</code> to the
+<code>format_property</code> for the character range [<code>selection_start</code>,
+<code>selection_end</code>).</p>
+
+<p><strong><code>undo()</code>:</strong> Restore each character position to its original
+format value from <code>old_values</code>.</p>
+
+<p><strong><code>description()</code>:</strong> "Format text [property]" (e.g., "Format
+text Bold", "Format text Font Size")</p>
+
+<h3 id="s6-3">MoveTailCommand (Callout-specific)</h3>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>item_id</code></th><td>UUID</td><td>The callout item.</td></tr>
+    <tr><th><code>old_tail_tip</code></th><td>QPointF</td><td>Previous tail tip position.</td></tr>
+    <tr><th><code>new_tail_tip</code></th><td>QPointF</td><td>New tail tip position.</td></tr>
+    <tr><th><code>old_tail_base_position</code></th><td>float</td><td>Previous tail base position.</td></tr>
+    <tr><th><code>new_tail_base_position</code></th><td>float</td><td>New tail base position.</td></tr>
+    <tr><th><code>old_tail_base_edge</code></th><td>str</td><td>Previous tail base edge.</td></tr>
+    <tr><th><code>new_tail_base_edge</code></th><td>str</td><td>New tail base edge.</td></tr>
+    <tr><th><code>old_control_point</code></th><td>QPointF (nullable)</td><td>Previous curve control point.</td></tr>
+    <tr><th><code>new_control_point</code></th><td>QPointF (nullable)</td><td>New curve control point.</td></tr>
+  </tbody>
+</table>
+
+<p><strong><code>redo()</code>:</strong> Apply all new_ values to the callout item.</p>
+
+<p><strong><code>undo()</code>:</strong> Apply all old_ values to the callout item.</p>
+
+<p><strong><code>merge_with</code>(other):</strong> Merge consecutive tail drags on the
+same item within 300ms.</p>
+
+<p><strong><code>description()</code>:</strong> "Move callout tail"</p>
+
+<h2 id="s7">Serialization</h2>
+
+<h3 id="s7-1">Rich Text Serialization</h3>
+
+<p>The text content of both TextItem and CalloutItem is serialized as HTML using
+QTextDocument.toHtml(). This produces a self-contained HTML string with inline CSS
+styles for all formatting.</p>
+
+<p><strong>Example Serialized HTML:</strong></p>
+
+<pre><code>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta http-equiv=&quot;content-type&quot; content=&quot;text/html; charset=utf-8&quot;/&gt;&lt;/head&gt;
+&lt;body style=&quot;font-family:&#x27;Arial&#x27;; font-size:14pt; color:#000000;&quot;&gt;
+&lt;p&gt;This is &lt;span style=&quot;font-weight:700;&quot;&gt;bold&lt;/span&gt; and
+&lt;span style=&quot;font-style:italic; color:#ff0000;&quot;&gt;red italic&lt;/span&gt; text.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</code></pre>
+
+<p><strong>Deserialization:</strong></p>
+
+<ul>
+  <li>On project load, QTextDocument.setHtml(<code>html_string</code>) restores the full rich
+  text content with all formatting.</li>
+  <li>If the HTML references fonts not installed on the current system, Qt will use the
+  default fallback font. The font name is preserved in the HTML so it will render
+  correctly on systems where the font is available.</li>
+  <li>Invalid or corrupt HTML is handled gracefully: QTextDocument.setHtml() will display
+  whatever it can parse, and the rest is silently dropped.</li>
+</ul>
+
+<h3 id="s7-2">Full Item Serialization Example (TextItem)</h3>
+
+<pre><code>{
+  &quot;type&quot;: &quot;text&quot;,
+  &quot;item_id&quot;: &quot;a1b2c3d4-...&quot;,
+  &quot;layer_id&quot;: &quot;f1e2d3c4-...&quot;,
+  &quot;rect&quot;: {&quot;x&quot;: 100, &quot;y&quot;: 200, &quot;w&quot;: 300, &quot;h&quot;: 80},
+  &quot;text_html&quot;: &quot;&lt;html&gt;...&lt;p&gt;Hello &lt;b&gt;World&lt;/b&gt;&lt;/p&gt;...&lt;/html&gt;&quot;,
+  &quot;auto_height&quot;: true,
+  &quot;auto_width&quot;: true,
+  &quot;padding_top&quot;: 8, &quot;padding_right&quot;: 8,
+  &quot;padding_bottom&quot;: 8, &quot;padding_left&quot;: 8,
+  &quot;background_color&quot;: &quot;#FFFFFF00&quot;,
+  &quot;background_enabled&quot;: false,
+  &quot;border_color&quot;: &quot;#000000&quot;, &quot;border_width&quot;: 0,
+  &quot;border_style&quot;: &quot;solid&quot;,
+  &quot;border_style&quot;: &quot;solid&quot;, &quot;border_radius&quot;: 0,
+  &quot;vertical_align&quot;: &quot;top&quot;,
+  &quot;text_scale_factor&quot;: 1.0,
+  &quot;min_width&quot;: 200, &quot;min_height&quot;: 24,
+  &quot;fill_opacity&quot;: 1.0, &quot;stroke_opacity&quot;: 1.0, &quot;shadow_enabled&quot;: false,
+  &quot;transform&quot;: {&quot;m11&quot;: 1, &quot;m12&quot;: 0, ...}
+}</code></pre>
+
+<h3 id="s7-3">Font Portability</h3>
+
+<ul>
+  <li>Fonts are referenced by family name in the HTML. SnapMock does not embed font files in
+  the <code>.smk</code> project.</li>
+  <li>If a project is opened on a system missing a referenced font, the text renders with the
+  system fallback font (typically a sans-serif). The original font name is preserved in
+  the data so re-opening on the original system restores the correct font.</li>
+  <li>A future enhancement could embed font subsets in the <code>.smk</code> project for full
+  portability. The <code>.smk</code> ZIP format can accommodate font files in a fonts/
+  directory.</li>
+</ul>
+
+<h2 id="s8">Acceptance Criteria</h2>
+
+<h3 id="s8-1">Rich Text Engine</h3>
+
+<ol>
+  <li>All character formatting (bold, italic, underline, strikethrough, superscript,
+  subscript, color, highlight, font family, font size) can be applied to any text
+  selection and renders correctly.</li>
+  <li>All paragraph formatting (alignment, line spacing, space before/after, indents, list
+  styles) works correctly.</li>
+  <li>Mixed formatting within a single text item renders correctly (e.g., bold word, italic
+  word, different sizes in the same paragraph).</li>
+  <li>Inline text editing is responsive with no perceptible input lag for documents up to
+  10,000 characters.</li>
+  <li>Text cursor positions correctly on click, including within mixed-format text.</li>
+  <li>Text selection works correctly: click-drag, Shift+click, Shift+arrow, double-click
+  (word), triple-click (paragraph), Ctrl+A.</li>
+  <li>All keyboard shortcuts from Section 2.6 work correctly during text editing mode and do
+  not trigger global shortcuts.</li>
+  <li>Copy/paste preserves rich text formatting when copying between SnapMock text items.
+  Paste from external sources correctly strips unsupported formatting.</li>
+  <li>Find/Replace works correctly within a text item with correct highlighting of matches.</li>
+  <li>Text renders crisply at all zoom levels from 10% to 3200%.</li>
+</ol>
+
+<h3 id="s8-2">Text Box Tool</h3>
+
+<ol>
+  <li>Click-to-create produces a text box with a 200px minimum width that auto-sizes to fit
+  text content and enters edit mode.</li>
+  <li>Drag-to-create produces a text box with the drawn dimensions and enters edit mode.</li>
+  <li>Clicking on an existing TextItem with the Text tool enters edit mode for that item.</li>
+  <li>During edit mode, the box auto-sizes in both width and height to fit all text content.
+  The top-left corner remains anchored.</li>
+  <li>During edit mode, word wrapping is disabled. Lines only break on Enter or pasted
+  newlines.</li>
+  <li>Normal resize (no modifier) reflows text to the new width. Text that exceeds the box
+  boundary overflows visibly and is never hidden.</li>
+  <li>Background color, border, and border radius render correctly in all combinations.</li>
+  <li>Vertical alignment (Top, Middle, Bottom) positions text correctly within the box.</li>
+  <li>Shift+resize scales text proportionally via <code>text_scale_factor</code> without
+  reflowing. Relative font size ratios are preserved.</li>
+  <li>Empty text boxes (user creates and immediately exits without typing) are automatically
+  removed.</li>
+  <li>Hit testing respects visibility: transparent/borderless text boxes are only selectable
+  by clicking on the text content.</li>
+  <li>Selecting a font size on scaled text correctly bakes the scale factor into all character
+  font sizes, resets <code>text_scale_factor</code> to 1.0, and applies the chosen size to
+  the selection.</li>
+  <li>Drag-to-create drawn dimensions are preserved as minimum width and height that
+  auto-sizing never shrinks below.</li>
+  <li>Alignment settings (horizontal and vertical) are applied in real time during text entry,
+  maintaining WYSIWYG fidelity.</li>
+</ol>
+
+<h3 id="s8-3">Callout Bubble Tool</h3>
+
+<ol>
+  <li>Click-and-drag creation correctly places the tail tip at the press point and the bubble
+  at the release position.</li>
+  <li>Single-click creation produces a default-sized callout and enters edit mode.</li>
+  <li>All six bubble shapes (RoundedRect, Rect, Ellipse, Cloud, Starburst, Pill) render
+  correctly with proper text area calculation.</li>
+  <li>All three tail styles (Straight, Curved, Elbow) render correctly.</li>
+  <li>Cloud bubble uses the decreasing-circle tail style.</li>
+  <li>The tail integrates seamlessly with the bubble border (no visible seam or
+  double-stroke).</li>
+  <li>Moving the entire callout with the Select tool moves both bubble and tail together.</li>
+  <li>Resizing the bubble via TransformHandles resizes only the bubble while the tail tip
+  stays fixed.</li>
+  <li>Point-editing mode: tail tip handle allows repositioning the annotation target.</li>
+  <li>Point-editing mode: tail base handle allows sliding the attachment point along the
+  bubble edge.</li>
+  <li>Point-editing mode: curvature/bend handles adjust Curved and Elbow tails respectively.</li>
+  <li>Double-click on text area enters text editing. Double-click on tail/border enters point
+  editing.</li>
+  <li>Tail auto-calculates the optimal base edge and position when <code>tail_base_edge</code>
+  is "Auto".</li>
+  <li>Shadow renders correctly for the combined bubble + tail shape.</li>
+  <li>All callout properties serialize and deserialize correctly.</li>
+</ol>
+
+<h3 id="s8-4">Command &amp; Undo/Redo</h3>
+
+<ol>
+  <li>Text creation (AddItemCommand) is undoable: undo removes the item, redo re-adds it.</li>
+  <li>Text edits are undoable with appropriate granularity: rapid keystrokes merge within
+  1000ms, formatting changes are separate steps, paragraph operations are separate steps.</li>
+  <li>Formatting changes (TextFormatCommand) correctly restore previous per-character
+  formatting on undo.</li>
+  <li>Callout tail movements (MoveTailCommand) are undoable with correct merge behavior for
+  continuous drags.</li>
+  <li>Property changes via Tool Options Bar or Property Panel produce ModifyPropertyCommand
+  and are undoable.</li>
+  <li>Undo/redo during text editing mode works correctly within the editing session.</li>
+  <li>After exiting text editing mode, the full editing session is still undoable step by
+  step.</li>
+</ol>
+
+<h3 id="s8-5">Performance</h3>
+
+<ol>
+  <li>Text rendering for a 5000-character document with mixed formatting maintains 60 FPS at
+  100% zoom.</li>
+  <li>Entering text editing mode takes less than 100ms.</li>
+  <li>Auto-height recalculation on each keystroke takes less than 16ms (one frame at 60 FPS).</li>
+  <li>Callout tail rendering with curved paths maintains 60 FPS during tail tip drag.</li>
+  <li>Find/Replace highlighting across a 10,000-character document takes less than 200ms.</li>
+</ol>
+
+<p><em>--- End of Text &amp; Callout Annotation Tools PRD ---</em></p>
+
+<h2 id="s9">Open Issues</h2>
+
+<p>These items were raised by the conversion from Word. None of them changes a
+requirement; each needs a decision before this document leaves draft.</p>
+
+<div class="note issue">
+  <span class="note-label">Open — The title page carried February 2026 while the change log placed versi</span>
+  <p>The title page carried February 2026 while the change log placed version 1.5 in March 2026. Carried over as written.</p>
+</div>
+
+<div class="note issue">
+  <span class="note-label">Open — duplicate key in the TextItem serialization example</span>
+  <p>The JSON example in Section 7.2 lists <code>border_style</code> twice, once alone and once alongside <code>border_radius</code>. A JSON parser keeps the last value, so the example still loads, but one of the two lines should be removed. Carried over as written.</p>
+</div>
+
+<div class="note issue">
+  <span class="note-label">Open — approval status never recorded</span>
+  <p>The original carried no approval record. Version 1.5 is shown as pending. Confirm
+  whether any earlier version was formally approved.</p>
+</div>
+
+</main>
+
+</div>
+</body>
+</html>
