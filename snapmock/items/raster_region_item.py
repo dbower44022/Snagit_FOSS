@@ -50,13 +50,23 @@ class RasterRegionItem(SnapGraphicsItem):
         painter.drawPixmap(0, 0, self._pixmap)
         self._end_flip(painter)
 
+    def _encoded_png(self) -> str:
+        """Base64 PNG of the pixmap, cached until the pixmap changes."""
+        if self._pixmap.isNull():
+            return ""
+        key = self._pixmap.cacheKey()
+        cached = getattr(self, "_png_cache", None)
+        if cached is not None and cached[0] == key:
+            return str(cached[1])
+        buf = QBuffer()
+        buf.open(QIODevice.OpenModeFlag.WriteOnly)
+        self._pixmap.save(buf, "PNG")
+        encoded = base64.b64encode(buf.data().data()).decode("ascii")
+        self._png_cache: tuple[int, str] = (key, encoded)
+        return encoded
+
     def serialize(self) -> dict[str, Any]:
-        image_b64 = ""
-        if not self._pixmap.isNull():
-            buf = QBuffer()
-            buf.open(QIODevice.OpenModeFlag.WriteOnly)
-            self._pixmap.save(buf, "PNG")
-            image_b64 = base64.b64encode(buf.data().data()).decode("ascii")
+        image_b64 = self._encoded_png()
         return {
             "type": "RasterRegionItem",
             "item_id": self.item_id,

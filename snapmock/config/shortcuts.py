@@ -15,6 +15,7 @@ SHORTCUTS: dict[str, str] = {
     "file.export_quick_png": "Ctrl+Shift+E",
     "file.print": "Ctrl+P",
     "file.preferences": "Ctrl+,",
+    "file.close_tab": "Ctrl+W",
     # Edit
     "edit.undo": "Ctrl+Z",
     "edit.redo": "Ctrl+Shift+Z",
@@ -35,6 +36,8 @@ SHORTCUTS: dict[str, str] = {
     "view.toggle_rulers": "Ctrl+R",
     "view.zoom_to_selection": "Ctrl+Shift+0",
     "view.snap_to_grid": "Ctrl+Shift+'",
+    "view.next_tab": "Ctrl+Tab",
+    "view.previous_tab": "Ctrl+Shift+Tab",
     # Image
     "image.crop_to_canvas": "Ctrl+Shift+C",
     # Layers

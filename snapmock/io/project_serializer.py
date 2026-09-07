@@ -7,7 +7,10 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-from snapmock.config.constants import APP_VERSION, PROJECT_FORMAT_VERSION
+from PyQt6.QtCore import QBuffer, QIODevice, Qt
+from PyQt6.QtGui import QImage, QPixmap
+
+from snapmock.config.constants import APP_VERSION, PROJECT_FORMAT_VERSION, THUMBNAIL_MAX_SIZE
 from snapmock.core.layer import Layer
 from snapmock.core.scene import SnapScene
 from snapmock.items.arrow_item import ArrowItem
@@ -38,8 +41,44 @@ ITEM_REGISTRY: dict[str, type[SnapGraphicsItem]] = {
 }
 
 
-def save_project(scene: SnapScene, path: Path) -> None:
-    """Save the scene to a .smk ZIP archive."""
+THUMBNAIL_ENTRY = "thumbnails/thumb.png"
+
+
+def render_thumbnail(scene: SnapScene, max_size: int = THUMBNAIL_MAX_SIZE) -> QImage:
+    """Render a flattened preview of *scene* fitting within *max_size* pixels."""
+    from snapmock.core.render_engine import RenderEngine
+
+    image = RenderEngine(scene).render_to_image()
+    if image.width() > max_size or image.height() > max_size:
+        image = image.scaled(
+            max_size,
+            max_size,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+    return image
+
+
+def _encode_png(image: QImage) -> bytes:
+    buf = QBuffer()
+    buf.open(QIODevice.OpenModeFlag.WriteOnly)
+    image.save(buf, "PNG")
+    return bytes(buf.data().data())
+
+
+def save_project(
+    scene: SnapScene,
+    path: Path,
+    library_metadata: dict[str, Any] | None = None,
+    *,
+    write_thumbnail: bool = True,
+) -> None:
+    """Save the scene to a .smk ZIP archive.
+
+    *library_metadata* (display_name, captured_at, source) is stored in
+    manifest.json when given.  A flattened preview is written to
+    ``thumbnails/thumb.png`` unless *write_thumbnail* is False.
+    """
     manifest: dict[str, Any] = {
         "format_version": PROJECT_FORMAT_VERSION,
         "app_version": APP_VERSION,
@@ -48,6 +87,8 @@ def save_project(scene: SnapScene, path: Path) -> None:
             "height": scene.canvas_size.height(),
         },
     }
+    if library_metadata:
+        manifest["library_metadata"] = dict(library_metadata)
 
     layers_data: list[dict[str, Any]] = []
     items_data: list[dict[str, Any]] = []
@@ -69,10 +110,69 @@ def save_project(scene: SnapScene, path: Path) -> None:
         if isinstance(qitem, SnapGraphicsItem):
             items_data.append(qitem.serialize())
 
-    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
+    thumb_png = _encode_png(render_thumbnail(scene)) if write_thumbnail else b""
+
+    # Write to a sibling temp file then replace, so a crash mid-write never
+    # leaves a truncated archive behind (important for continuous write-back).
+    tmp_path = path.with_name(path.name + ".tmp")
+    with zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("manifest.json", json.dumps(manifest, indent=2))
         zf.writestr("layers.json", json.dumps(layers_data, indent=2))
         zf.writestr("items.json", json.dumps(items_data, indent=2))
+        if thumb_png:
+            zf.writestr(THUMBNAIL_ENTRY, thumb_png)
+    tmp_path.replace(path)
+
+
+def read_manifest(path: Path) -> dict[str, Any]:
+    """Return the parsed manifest.json of a .smk archive."""
+    with zipfile.ZipFile(path, "r") as zf:
+        data = json.loads(zf.read("manifest.json"))
+    return data if isinstance(data, dict) else {}
+
+
+def read_library_metadata(path: Path) -> dict[str, Any] | None:
+    """Return the optional ``library_metadata`` block of a .smk manifest."""
+    try:
+        meta = read_manifest(path).get("library_metadata")
+    except (OSError, zipfile.BadZipFile, KeyError, ValueError):
+        return None
+    return meta if isinstance(meta, dict) else None
+
+
+def read_thumbnail(path: Path) -> QPixmap | None:
+    """Return the stored thumbnail of a .smk archive, or None if absent."""
+    try:
+        with zipfile.ZipFile(path, "r") as zf:
+            if THUMBNAIL_ENTRY not in zf.namelist():
+                return None
+            data = zf.read(THUMBNAIL_ENTRY)
+    except (OSError, zipfile.BadZipFile):
+        return None
+    pix = QPixmap()
+    if not pix.loadFromData(data, "PNG"):
+        return None
+    return pix
+
+
+def read_project_summary(path: Path) -> dict[str, Any]:
+    """Return lightweight facts about a .smk file without building a scene.
+
+    Keys: canvas_width, canvas_height, layer_count, item_count, library_metadata.
+    """
+    with zipfile.ZipFile(path, "r") as zf:
+        manifest = json.loads(zf.read("manifest.json"))
+        layers = json.loads(zf.read("layers.json"))
+        items = json.loads(zf.read("items.json"))
+    canvas = manifest.get("canvas", {}) if isinstance(manifest, dict) else {}
+    meta = manifest.get("library_metadata") if isinstance(manifest, dict) else None
+    return {
+        "canvas_width": int(canvas.get("width", 0)),
+        "canvas_height": int(canvas.get("height", 0)),
+        "layer_count": len(layers) if isinstance(layers, list) else 0,
+        "item_count": len(items) if isinstance(items, list) else 0,
+        "library_metadata": meta if isinstance(meta, dict) else None,
+    }
 
 
 def load_project(path: Path) -> SnapScene:

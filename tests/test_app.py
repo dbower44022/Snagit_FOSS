@@ -26,6 +26,9 @@ def test_main_window_has_scene(main_window: MainWindow) -> None:
 
 
 def test_main_window_has_view(main_window: MainWindow) -> None:
-    """MainWindow should have a SnapView as central widget."""
+    """The active document's SnapView lives inside the central tab widget."""
     assert main_window.view is not None
-    assert main_window.centralWidget() is main_window.view
+    central = main_window.centralWidget()
+    assert central is not None
+    assert main_window.view.parent() is not None
+    assert central.isAncestorOf(main_window.view)

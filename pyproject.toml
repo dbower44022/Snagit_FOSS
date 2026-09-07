@@ -8,6 +8,7 @@ dependencies = [
     "PyQt6",
     "Pillow",
     "numpy",
+    "send2trash>=2.1.0",
 ]
 
 [dependency-groups]

@@ -28,6 +28,18 @@ class SnapStatusBar(QStatusBar):
 
         view.zoom_changed.connect(self._on_zoom_changed)
 
+    def set_view(self, view: SnapView) -> None:
+        """Track a different SnapView (e.g. after switching tabs)."""
+        if view is self._view:
+            return
+        try:
+            self._view.zoom_changed.disconnect(self._on_zoom_changed)
+        except (TypeError, RuntimeError):
+            pass
+        self._view = view
+        view.zoom_changed.connect(self._on_zoom_changed)
+        self._on_zoom_changed(view.zoom_percent)
+
     def _on_zoom_changed(self, percent: int) -> None:
         self._zoom_label.setText(f"Zoom: {percent}%")
 

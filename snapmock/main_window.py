@@ -21,12 +21,14 @@ from snapmock.config.constants import (
 from snapmock.config.settings import AppSettings
 from snapmock.config.shortcuts import SHORTCUTS
 from snapmock.core.clipboard_manager import ClipboardManager
+from snapmock.core.document import Document
+from snapmock.core.document_manager import DocumentManager
 from snapmock.core.scene import SnapScene
 from snapmock.core.selection_manager import SelectionManager
 from snapmock.core.view import SnapView
 from snapmock.io.exporter import export_jpg, export_pdf, export_png, export_svg
 from snapmock.io.importer import import_image
-from snapmock.io.project_serializer import load_project, save_project
+from snapmock.io.project_serializer import load_project, read_library_metadata, save_project
 from snapmock.io.snagit_reader import load_snagx
 from snapmock.io.snagit_writer import save_snagx
 from snapmock.items.base_item import SnapGraphicsItem
@@ -49,6 +51,7 @@ from snapmock.tools.stamp_tool import StampTool
 from snapmock.tools.text_tool import TextTool
 from snapmock.tools.tool_manager import ToolManager
 from snapmock.tools.zoom_tool import ZoomTool
+from snapmock.ui.document_tabs import DocumentTabs
 from snapmock.ui.layer_panel import LayerPanel
 from snapmock.ui.property_panel import PropertyPanel
 from snapmock.ui.status_bar import SnapStatusBar
@@ -61,32 +64,32 @@ MAX_RECENT_FILES = 10
 class MainWindow(QMainWindow):
     """Primary application window.
 
-    Owns the SnapScene, SnapView, SelectionManager, ToolManager,
-    ClipboardManager, and UI panels.
+    Owns the DocumentManager (one Document per open tab, each with its own
+    SnapScene, SnapView, SelectionManager and ClipboardManager), the shared
+    ToolManager, and the UI panels.  ``_scene``, ``_view``,
+    ``_selection_manager`` and ``_clipboard`` always refer to the active tab.
     """
 
     def __init__(self) -> None:
         super().__init__()
         self._settings = AppSettings()
-        self._current_file: Path | None = None
         self.setWindowTitle(APP_NAME)
         self.resize(1200, 800)
 
-        # Core subsystems
-        self._scene = SnapScene(parent=self)
-        self._view = SnapView(self._scene)
-        self._selection_manager = SelectionManager(self._scene, parent=self)
-        self._tool_manager = ToolManager(self._scene, self._selection_manager, parent=self)
-        self._clipboard = ClipboardManager(self._scene, parent=self)
+        # Documents (tabs): each owns a scene, view, selection and clipboard.
+        # There is always at least one document open.
+        self._documents = DocumentManager(self)
+        self._wired_docs: set[str] = set()
+        first = Document(SnapScene(), parent=self)
+        self._documents.add(first)
 
-        # Wire tool manager to view for mouse event delegation
-        self._view.set_tool_manager(self._tool_manager)
-
-        self.setCentralWidget(self._view)
-
-        # Register tools
+        # The tool manager is shared and rebound to the active document.
+        self._tool_manager = ToolManager(first.scene, first.selection_manager, parent=self)
         self._register_tools()
         self._tool_manager.activate("select")
+
+        self._tabs = DocumentTabs(self._documents, self)
+        self.setCentralWidget(self._tabs)
 
         # UI panels
         self._toolbar = SnapToolBar(self._tool_manager, self)
@@ -117,12 +120,19 @@ class MainWindow(QMainWindow):
 
         self._status_bar = SnapStatusBar(self._view)
         self.setStatusBar(self._status_bar)
-
-        # Wire cursor position tracking
-        self._view.cursor_moved.connect(self._status_bar.update_cursor_pos)
+        self._configure_view(first.view)
 
         # Wire tool hint to status bar
         self._tool_manager.tool_changed.connect(self._on_tool_changed_for_hint)
+
+        # Document / tab signals
+        self._documents.active_changed.connect(self._on_active_document_changed)
+        self._documents.document_title_changed.connect(lambda _d: self._update_title())
+        self._tabs.close_requested.connect(self._close_document)
+        self._tabs.close_others_requested.connect(self._close_other_documents)
+        self._tabs.close_all_requested.connect(self._close_all_documents)
+        self._tabs.close_right_requested.connect(self._close_documents_to_right)
+        self._tabs.reveal_in_file_manager_requested.connect(self._reveal_document_in_file_manager)
 
         # Menu bar
         self._recent_menu: QMenu | None = None
@@ -153,12 +163,8 @@ class MainWindow(QMainWindow):
         if self._settings.autosave_enabled():
             self._autosave_timer.start(self._settings.autosave_interval_minutes() * 60_000)
 
-        # Track dirty state for window title
-        self._scene.command_stack.stack_changed.connect(self._update_title)
-
-        # Layer state → deselect/cancel on lock/hide/switch
-        self._connect_layer_signals()
-        self._connect_menu_state_signals()
+        # Per-document signal wiring (title, layer state, menu state)
+        self._wire_document(first)
         self._update_menu_states()
 
         # Restore window geometry
@@ -231,6 +237,11 @@ class MainWindow(QMainWindow):
         if open_action is not None:
             open_action.setShortcut(QKeySequence(SHORTCUTS["file.open"]))
             open_action.triggered.connect(self._file_open)
+
+        close_action = file_menu.addAction("&Close")
+        if close_action is not None:
+            close_action.setShortcut(QKeySequence(SHORTCUTS["file.close_tab"]))
+            close_action.triggered.connect(self._file_close_tab)
 
         file_menu.addSeparator()
 
@@ -361,17 +372,17 @@ class MainWindow(QMainWindow):
         zoom_in = view_menu.addAction("Zoom &In")
         if zoom_in is not None:
             zoom_in.setShortcut(QKeySequence(SHORTCUTS["view.zoom_in"]))
-            zoom_in.triggered.connect(self._view.zoom_in)
+            zoom_in.triggered.connect(lambda: self._view.zoom_in())
 
         zoom_out = view_menu.addAction("Zoom &Out")
         if zoom_out is not None:
             zoom_out.setShortcut(QKeySequence(SHORTCUTS["view.zoom_out"]))
-            zoom_out.triggered.connect(self._view.zoom_out)
+            zoom_out.triggered.connect(lambda: self._view.zoom_out())
 
         fit_action = view_menu.addAction("&Fit to Window")
         if fit_action is not None:
             fit_action.setShortcut(QKeySequence(SHORTCUTS["view.fit_window"]))
-            fit_action.triggered.connect(self._view.fit_in_view_all)
+            fit_action.triggered.connect(lambda: self._view.fit_in_view_all())
 
         actual_action = view_menu.addAction("&Actual Size")
         if actual_action is not None:
@@ -432,6 +443,18 @@ class MainWindow(QMainWindow):
         if property_toggle is not None:
             property_toggle.setText("Show &Properties Panel")
             view_menu.addAction(property_toggle)
+
+        view_menu.addSeparator()
+
+        next_tab = view_menu.addAction("&Next Tab")
+        if next_tab is not None:
+            next_tab.setShortcut(QKeySequence(SHORTCUTS["view.next_tab"]))
+            next_tab.triggered.connect(self._documents.activate_next)
+
+        prev_tab = view_menu.addAction("Pre&vious Tab")
+        if prev_tab is not None:
+            prev_tab.setShortcut(QKeySequence(SHORTCUTS["view.previous_tab"]))
+            prev_tab.triggered.connect(self._documents.activate_previous)
 
     def _setup_image_menu(self, menu_bar: QMenuBar) -> None:
         image_menu = menu_bar.addMenu("&Image")
@@ -742,24 +765,6 @@ class MainWindow(QMainWindow):
 
     # ---- signals ----
 
-    def _connect_layer_signals(self) -> None:
-        lm = self._scene.layer_manager
-        lm.layer_lock_changed.connect(self._on_layer_lock_changed)
-        lm.layer_visibility_changed.connect(self._on_layer_visibility_changed)
-        lm.active_layer_changed.connect(self._on_active_layer_changed)
-
-    def _connect_menu_state_signals(self) -> None:
-        """Wire selection/layer signals to menu state updates."""
-        self._selection_manager.selection_changed.connect(
-            lambda _items: self._update_menu_states()
-        )
-        self._selection_manager.selection_cleared.connect(self._update_menu_states)
-        lm = self._scene.layer_manager
-        lm.active_layer_changed.connect(lambda _lid: self._update_menu_states())
-        lm.layers_reordered.connect(self._update_menu_states)
-        lm.layer_added.connect(lambda _l: self._update_menu_states())
-        lm.layer_removed.connect(lambda _lid: self._update_menu_states())
-
     def _update_menu_states(self) -> None:
         """Enable/disable arrange and layer actions based on current state."""
         sel_count = self._selection_manager.count
@@ -847,37 +852,11 @@ class MainWindow(QMainWindow):
     # ---- file operations ----
 
     def _file_new(self) -> None:
-        """Create a new empty project."""
-        if not self._confirm_discard():
-            return
-        # Deactivate current tool while old scene is still alive
-        prev_tool_id = self._tool_manager.active_tool_id or "select"
-        if self._tool_manager.active_tool is not None:
-            self._tool_manager.active_tool.cancel()
-            self._tool_manager.active_tool.deactivate()
-        old_scene = self._scene
-        self._scene = SnapScene(parent=self)
-        self._view.setScene(self._scene)
-        self._selection_manager = SelectionManager(self._scene, parent=self)
-        self._tool_manager._scene = self._scene  # noqa: SLF001
-        self._tool_manager._selection_manager = self._selection_manager  # noqa: SLF001
-        self._tool_manager.activate(prev_tool_id)
-        self._clipboard = ClipboardManager(self._scene, parent=self)
-        self._layer_panel.set_manager(self._scene.layer_manager)
-        self._property_panel.set_scene(self._scene)
-        self._property_panel.set_selection(self._selection_manager)
-        self._scene.command_stack.stack_changed.connect(self._update_title)
-        self._connect_layer_signals()
-        self._connect_menu_state_signals()
-        self._current_file = None
-        self._update_title()
-        self._update_menu_states()
-        old_scene.deleteLater()
+        """Open a new, empty, unsaved document in a new tab."""
+        self._add_document(Document(SnapScene(), parent=self))
 
     def _file_open(self) -> None:
-        """Open an existing .smk or .snagx project."""
-        if not self._confirm_discard():
-            return
+        """Open an existing .smk or .snagx project in a new tab."""
         path_str, _ = QFileDialog.getOpenFileName(
             self,
             "Open Project",
@@ -891,42 +870,32 @@ class MainWindow(QMainWindow):
             return
         self._open_project(Path(path_str))
 
-    def _open_project(self, path: Path) -> None:
-        """Load a project from *path* and replace the current scene."""
-        # Deactivate current tool while old scene is still alive
-        prev_tool_id = self._tool_manager.active_tool_id or "select"
-        if self._tool_manager.active_tool is not None:
-            self._tool_manager.active_tool.cancel()
-            self._tool_manager.active_tool.deactivate()
-        old_scene = self._scene
+    def _open_project(self, path: Path) -> Document | None:
+        """Open *path* in a new tab, or activate its tab if already open."""
+        existing = self._documents.find_by_path(path)
+        if existing is not None:
+            self._documents.set_active(existing)
+            return existing
         try:
             if path.suffix.lower() == SNAGIT_EXTENSION:
-                self._scene = load_snagx(path)
+                scene = load_snagx(path)
+                metadata = None
             else:
-                self._scene = load_project(path)
+                scene = load_project(path)
+                metadata = read_library_metadata(path)
         except Exception as e:  # noqa: BLE001
             QMessageBox.critical(self, "Open Error", f"Could not open project:\n{e}")
-            # Re-activate tool on old scene since load failed
-            self._tool_manager.activate(prev_tool_id)
-            return
-        self._scene.setParent(self)
-        self._view.setScene(self._scene)
-        self._selection_manager = SelectionManager(self._scene, parent=self)
-        self._tool_manager._scene = self._scene  # noqa: SLF001
-        self._tool_manager._selection_manager = self._selection_manager  # noqa: SLF001
-        self._tool_manager.activate(prev_tool_id)
-        self._clipboard = ClipboardManager(self._scene, parent=self)
-        self._layer_panel.set_manager(self._scene.layer_manager)
-        self._property_panel.set_scene(self._scene)
-        self._property_panel.set_selection(self._selection_manager)
-        self._scene.command_stack.stack_changed.connect(self._update_title)
-        self._connect_layer_signals()
-        self._connect_menu_state_signals()
-        self._current_file = path
+            return None
+        doc = Document(
+            scene,
+            file_path=path,
+            display_name=(metadata or {}).get("display_name"),
+            library_metadata=metadata,
+            parent=self,
+        )
+        self._add_document(doc)
         self._add_recent_file(path)
-        self._update_title()
-        self._update_menu_states()
-        old_scene.deleteLater()
+        return doc
 
     def _file_save(self) -> None:
         """Save the current project."""
@@ -968,7 +937,9 @@ class MainWindow(QMainWindow):
         except Exception as e:  # noqa: BLE001
             QMessageBox.critical(self, "Save Error", f"Could not save project:\n{e}")
             return
-        self._current_file = path
+        doc = self._active_document
+        doc.file_path = path
+        doc.display_name = None
         self._scene.command_stack.mark_clean()
         self._add_recent_file(path)
         self._update_title()
@@ -1715,32 +1686,188 @@ class MainWindow(QMainWindow):
     # ---- autosave ----
 
     def _autosave(self) -> None:
-        """Autosave the current project if it has a file and is dirty."""
-        if self._current_file is not None and self._scene.command_stack.is_dirty:
+        """Autosave every dirty non-library document that has a file."""
+        for doc in self._documents.documents:
+            if doc.is_library_file or doc.file_path is None or not doc.is_dirty:
+                continue
+            if doc.file_path.suffix.lower() != PROJECT_EXTENSION:
+                continue
             try:
-                save_project(self._scene, self._current_file)
+                save_project(doc.scene, doc.file_path)
             except Exception:  # noqa: BLE001
                 pass  # Silent failure for autosave
 
-    # ---- helpers ----
+    # ---- documents & tabs ----
 
-    def _confirm_discard(self) -> bool:
-        """If the project has unsaved changes, ask the user to confirm discarding."""
-        if not self._scene.command_stack.is_dirty:
+    @property
+    def _active_document(self) -> Document:
+        doc = self._documents.active
+        if doc is None:  # pragma: no cover - invariant: one document always open
+            doc = Document(SnapScene(), parent=self)
+            self._documents.add(doc)
+        return doc
+
+    @property
+    def _scene(self) -> SnapScene:
+        return self._active_document.scene
+
+    @property
+    def _view(self) -> SnapView:
+        return self._active_document.view
+
+    @property
+    def _selection_manager(self) -> SelectionManager:
+        return self._active_document.selection_manager
+
+    @property
+    def _clipboard(self) -> ClipboardManager:
+        return self._active_document.clipboard
+
+    @property
+    def _current_file(self) -> Path | None:
+        return self._active_document.file_path
+
+    def _configure_view(self, view: SnapView) -> None:
+        """Apply shared UI state to a document's view."""
+        view.set_tool_manager(self._tool_manager)
+        view.cursor_moved.connect(self._status_bar.update_cursor_pos)
+        view.set_grid_visible(self._settings.grid_visible())
+        view.set_grid_size(self._settings.grid_size())
+        view.set_rulers_visible(self._settings.rulers_visible())
+
+    def _wire_document(self, doc: Document) -> None:
+        """Connect a document's signals to the window (once per document)."""
+        if doc.tab_id in self._wired_docs:
+            return
+        self._wired_docs.add(doc.tab_id)
+        doc.scene.command_stack.stack_changed.connect(self._update_title)
+        lm = doc.scene.layer_manager
+        lm.layer_lock_changed.connect(self._on_layer_lock_changed)
+        lm.layer_visibility_changed.connect(self._on_layer_visibility_changed)
+        lm.active_layer_changed.connect(self._on_active_layer_changed)
+        doc.selection_manager.selection_changed.connect(lambda _items: self._update_menu_states())
+        doc.selection_manager.selection_cleared.connect(self._update_menu_states)
+        lm.active_layer_changed.connect(lambda _lid: self._update_menu_states())
+        lm.layers_reordered.connect(self._update_menu_states)
+        lm.layer_added.connect(lambda _l: self._update_menu_states())
+        lm.layer_removed.connect(lambda _lid: self._update_menu_states())
+
+    def _add_document(self, doc: Document, *, activate: bool = True) -> None:
+        """Register a new document, replacing a pristine Untitled tab if present."""
+        pristine = self._documents.active if self._is_pristine(self._documents.active) else None
+        self._configure_view(doc.view)
+        self._wire_document(doc)
+        self._documents.add(doc, activate=activate)
+        if pristine is not None and pristine is not doc and self._documents.count > 1:
+            self._documents.remove(pristine)
+            pristine.dispose()
+
+    @staticmethod
+    def _is_pristine(doc: Document | None) -> bool:
+        """An unsaved, untouched Untitled document that can be replaced silently."""
+        if doc is None:
+            return False
+        return (
+            doc.file_path is None
+            and not doc.is_library_file
+            and doc.scene.command_stack.count == 0
+            and not doc.scene.command_stack.is_dirty
+        )
+
+    def _on_active_document_changed(self, doc: Document | None) -> None:
+        """Rebind the shared tool manager, panels and status bar to *doc*."""
+        if doc is None:
+            return
+        prev_tool_id = self._tool_manager.active_tool_id or "select"
+        active_tool = self._tool_manager.active_tool
+        if active_tool is not None:
+            active_tool.cancel()
+            active_tool.deactivate()
+        self._tool_manager._scene = doc.scene  # noqa: SLF001
+        self._tool_manager._selection_manager = doc.selection_manager  # noqa: SLF001
+        self._tool_manager.activate(prev_tool_id)
+        # Panels are created after the first document; guard for construction order.
+        if hasattr(self, "_layer_panel"):
+            self._layer_panel.set_manager(doc.scene.layer_manager)
+        if hasattr(self, "_property_panel"):
+            self._property_panel.set_scene(doc.scene)
+            self._property_panel.set_selection(doc.selection_manager)
+        if hasattr(self, "_status_bar"):
+            self._status_bar.set_view(doc.view)
+        self._update_title()
+        if hasattr(self, "_bring_front_action"):
+            self._update_menu_states()
+
+    def _file_close_tab(self) -> None:
+        self._close_document(self._active_document)
+
+    def _close_document(self, doc: Document) -> bool:
+        """Close *doc*, prompting to save if it has unsaved changes.
+
+        Returns False if the user cancelled.
+        """
+        if not self._maybe_save_before_close(doc):
+            return False
+        if self._documents.count == 1:
+            # Keep one document open at all times
+            self._documents.add(Document(SnapScene(), parent=self))
+            self._configure_view(self._active_document.view)
+            self._wire_document(self._active_document)
+        self._documents.remove(doc)
+        self._wired_docs.discard(doc.tab_id)
+        doc.dispose()
+        return True
+
+    def _close_other_documents(self, keep: Document) -> None:
+        for doc in self._documents.documents:
+            if doc is not keep and not self._close_document(doc):
+                return
+
+    def _close_all_documents(self) -> None:
+        for doc in self._documents.documents:
+            if not self._close_document(doc):
+                return
+
+    def _close_documents_to_right(self, doc: Document) -> None:
+        docs = self._documents.documents
+        idx = self._documents.index_of(doc)
+        for other in docs[idx + 1 :]:
+            if not self._close_document(other):
+                return
+
+    def _maybe_save_before_close(self, doc: Document) -> bool:
+        """Prompt Save / Discard / Cancel for a dirty non-library document."""
+        if not doc.is_dirty:
             return True
         result = QMessageBox.question(
             self,
             "Unsaved Changes",
-            "You have unsaved changes. Do you want to discard them?",
-            QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Cancel,
+            f'Save changes to "{doc.display_name}" before closing?',
+            QMessageBox.StandardButton.Save
+            | QMessageBox.StandardButton.Discard
+            | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Save,
         )
-        return result == QMessageBox.StandardButton.Discard
+        if result == QMessageBox.StandardButton.Cancel:
+            return False
+        if result == QMessageBox.StandardButton.Save:
+            self._documents.set_active(doc)
+            self._file_save()
+            return not doc.is_dirty
+        return True
+
+    def _reveal_document_in_file_manager(self, doc: Document) -> None:
+        if doc.file_path is None:
+            QMessageBox.information(self, "Reveal", "This document has not been saved yet.")
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(doc.file_path.parent)))
+
+    # ---- helpers ----
 
     def _update_title(self) -> None:
-        dirty = "*" if self._scene.command_stack.is_dirty else ""
-        name = self._current_file.name if self._current_file else "Untitled"
-        self.setWindowTitle(f"{dirty}{name} — {APP_NAME}")
+        doc = self._active_document
+        dirty = "*" if doc.is_dirty else ""
+        self.setWindowTitle(f"{dirty}{doc.display_name} — {APP_NAME}")
 
     # ---- key event routing ----
 
@@ -1808,7 +1935,14 @@ class MainWindow(QMainWindow):
         super().keyReleaseEvent(event)
 
     def closeEvent(self, event: QCloseEvent | None) -> None:
-        """Save window geometry and state on close."""
+        """Prompt for unsaved documents, then save window geometry and state."""
+        for doc in self._documents.documents:
+            if doc.is_dirty:
+                self._documents.set_active(doc)
+                if not self._maybe_save_before_close(doc):
+                    if event is not None:
+                        event.ignore()
+                    return
         self._settings.save_window_geometry(self.saveGeometry().data())
         self._settings.save_window_state(self.saveState().data())
         super().closeEvent(event)
@@ -1834,3 +1968,11 @@ class MainWindow(QMainWindow):
     @property
     def clipboard(self) -> ClipboardManager:
         return self._clipboard
+
+    @property
+    def documents(self) -> DocumentManager:
+        return self._documents
+
+    @property
+    def active_document(self) -> Document:
+        return self._active_document

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Client Intake (MN-INTAKE) — Product Requirements Document</title>
+<link rel="stylesheet" href="prd.css">
+</head>
+<body>
+<div class="doc">
+
+<header class="doc-head">
+  <h1>Client Intake</h1>
+  <span class="doc-id">MN-INTAKE · Level 2 Product Requirements Document</span>
+  <dl class="doc-meta">
+    <dt>Domain</dt>          <dd>Mentee (MN)</dd>
+    <dt>Document version</dt><dd>0.1 — Draft</dd>
+    <dt>Last Updated</dt>    <dd>09-07-26 14:20</dd>
+    <dt>Author</dt>          <dd>Doug Bower</dd>
+    <dt>Approver</dt>        <dd>Cleveland Business Mentors</dd>
+    <dt>Status</dt>          <dd><span class="status open">Open — not approved</span></dd>
+  </dl>
+</header>
+
+<section class="front-matter">
+
+  <h2 class="unnumbered">Revision control</h2>
+  <table>
+    <colgroup>
+      <col class="w-narrow"><col class="w-short"><col class="w-medium"><col><col class="w-short">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>0.1</td>
+        <td class="nowrap">09-07-26 14:20</td>
+        <td>Doug Bower</td>
+        <td>Initial draft. Structure and section headings established; requirements not yet complete.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 class="unnumbered">Change log</h2>
+  <table>
+    <colgroup>
+      <col class="w-short"><col class="w-narrow"><col class="w-short"><col>
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Date</th><th>Section</th><th>Type</th><th>Detail</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="nowrap">09-07-26 14:20</td>
+        <td>All</td>
+        <td>Created</td>
+        <td>Document created from the standard template.</td>
+      </tr>
+    </tbody>
+  </table>
+
+</section>
+
+<main>
+
+<h2>Purpose</h2>
+
+<p>State in two or three sentences what this process is for and what changes when it
+works. Write it so a reader who has never seen the system can tell whether the
+requirements that follow actually serve the purpose.</p>
+
+<p>Client Intake (MN-INTAKE) captures a prospective mentee from first contact through
+to the point where the mentee is eligible to be matched with a mentor. It ends where
+Mentor Matching (MN-MATCH) begins.</p>
+
+<h2>Scope</h2>
+
+<h3>In scope</h3>
+
+<ul>
+  <li>Capture of a prospective mentee's contact and business details.</li>
+  <li>Eligibility screening against the published criteria.</li>
+  <li>Assignment of an intake owner and the record of that assignment.</li>
+</ul>
+
+<h3>Out of scope</h3>
+
+<ul>
+  <li>Mentor recruitment and vetting, covered by Mentor Onboarding (MR-ONBOARD).</li>
+  <li>Any matching logic, covered by Mentor Matching (MN-MATCH).</li>
+</ul>
+
+<div class="note">
+  <span class="note-label">Standard</span>
+  <p>Level 1 and Level 2 documents name no products. Describe the capability required,
+  not the system that provides it. Product names belong in implementation
+  documentation only.</p>
+</div>
+
+<h2>Definitions</h2>
+
+<dl class="doc-meta" style="max-width:40rem">
+  <dt>Prospective mentee</dt>
+  <dd>A business owner who has expressed interest but has not yet been screened.</dd>
+  <dt>Intake owner</dt>
+  <dd>The staff member accountable for completing screening for one prospective mentee.</dd>
+</dl>
+
+<h2>Actors</h2>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Actor</th><th>Role in this process</th><th>What they must be able to do</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Prospective mentee</th>
+      <td>Originates the record</td>
+      <td>Submit contact and business details without an account, and receive confirmation
+      that the submission was received.</td>
+    </tr>
+    <tr>
+      <th>Intake owner</th>
+      <td>Screens and progresses</td>
+      <td>
+        <p>See every prospective mentee assigned to them, ordered by how long the record
+        has been waiting.</p>
+        <p>Record a screening outcome and the reason for it.</p>
+      </td>
+    </tr>
+    <tr>
+      <th>Program director</th>
+      <td>Oversees</td>
+      <td>See intake volume and time-to-screen across all owners without opening
+      individual records.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Data requirements</h2>
+
+<p>The table below is the reason this document is HTML rather than Markdown: grouped
+column headers, controlled widths, and cells that hold more than one line.</p>
+
+<table>
+  <caption>Fields captured during Client Intake (MN-INTAKE)</caption>
+  <colgroup>
+    <col class="w-medium"><col class="w-short"><col class="w-narrow"><col class="w-narrow"><col>
+  </colgroup>
+  <thead>
+    <tr class="group">
+      <th></th><th></th><th colspan="2" class="center">Constraints</th><th></th>
+    </tr>
+    <tr>
+      <th>Field</th><th>Type</th><th class="center">Required</th><th class="center">Unique</th><th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Business name</th>
+      <td>Text</td>
+      <td class="center">Yes</td>
+      <td class="center">No</td>
+      <td>Two applicants may legitimately share a business name. Duplicate detection is a
+      review prompt, never a block.</td>
+    </tr>
+    <tr>
+      <th>Primary contact email</th>
+      <td>Email</td>
+      <td class="center">Yes</td>
+      <td class="center">Yes</td>
+      <td>
+        <p>Uniqueness is enforced across all prospective mentees, not only open ones.</p>
+        <p>A repeat submission from the same address updates the existing record rather
+        than creating a second one.</p>
+      </td>
+    </tr>
+    <tr>
+      <th>Years in operation</th>
+      <td>Whole number</td>
+      <td class="center">Yes</td>
+      <td class="center">No</td>
+      <td>Drives eligibility. Zero is a valid answer and must be distinguishable from
+      an unanswered field.</td>
+    </tr>
+    <tr>
+      <th>Areas of need</th>
+      <td>Multi-select</td>
+      <td class="center">Yes</td>
+      <td class="center">No</td>
+      <td>
+        At least one required. Values:
+        <ul>
+          <li>Financial management</li>
+          <li>Marketing and sales</li>
+          <li>Operations</li>
+          <li>Staffing</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <th>Intake owner</th>
+      <td>Staff reference</td>
+      <td class="center">No</td>
+      <td class="center">No</td>
+      <td>Empty until assignment. Becomes required before a screening outcome can be
+      recorded.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Process</h2>
+
+<table>
+  <colgroup><col class="w-narrow"><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Step</th><th>Action</th><th>Actor</th><th>Outcome and exit condition</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="num">1</td>
+      <td>Submit enquiry</td>
+      <td>Prospective mentee</td>
+      <td>Record created with status Received. Confirmation sent to the submitted address.</td>
+    </tr>
+    <tr>
+      <td class="num">2</td>
+      <td>Assign owner</td>
+      <td>Program director</td>
+      <td>Intake owner set. Status moves to In screening.</td>
+    </tr>
+    <tr>
+      <td class="num">3</td>
+      <td>Screen against criteria</td>
+      <td>Intake owner</td>
+      <td>
+        <p>Outcome recorded as Eligible, Not eligible, or Deferred, with a reason in
+        every case.</p>
+        <p>Eligible records exit this process into Mentor Matching (MN-MATCH).</p>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Business rules</h2>
+
+<table>
+  <colgroup><col class="w-short"><col><col class="w-short"></colgroup>
+  <thead>
+    <tr><th>Rule</th><th>Statement</th><th>Status</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="id">MN-INTAKE-R1</span></td>
+      <td>A screening outcome cannot be recorded while the intake owner field is empty.</td>
+      <td><span class="status agreed">Agreed</span></td>
+    </tr>
+    <tr>
+      <td><span class="id">MN-INTAKE-R2</span></td>
+      <td>A record left in Received for more than five business days is escalated to the
+      program director.</td>
+      <td><span class="status open">Open</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Open issues</h2>
+
+<div class="note issue">
+  <span class="note-label">Open — decision required</span>
+  <p>The escalation threshold in <span class="id">MN-INTAKE-R2</span> is a placeholder.
+  Five business days was assumed, not agreed. Confirm with the program director before
+  this document leaves draft.</p>
+</div>
+
+</main>
+
+</div>
+</body>
+</html>
