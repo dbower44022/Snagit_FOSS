@@ -1,6 +1,6 @@
 # Kickoff Prompt: Screen Capture Implementation
 
-Last Updated: 09-07-26 12:05 · Revision 1.0
+Last Updated: 09-07-26 12:12 · Revision 1.1
 
 Paste everything below the line into a new Claude Code session rooted in this repository.
 
@@ -12,11 +12,11 @@ Read the project `CLAUDE.md` at the repository root. No other repository is invo
 
 ## Task
 
-Implement the **SnapMock Screen Capture PRD** version 1.0 (`PRDs/SnapMock-Screen-Capture-PRD.docx`) on the Linux backends first, with the Windows and macOS backends stubbed behind the same interfaces. Write `docs/Screen-Capture-Implementation.md` when done, in the format of `docs/Library-Implementation.md`.
+Implement the **SnapMock Screen Capture PRD** version 1.0 (`PRDs/SnapMock-Screen-Capture-PRD.html`, the canonical copy; the `.docx` beside it is the Word original) on the Linux backends first, with the Windows and macOS backends stubbed behind the same interfaces. Write `docs/Screen-Capture-Implementation.md` when done, in the format of `docs/Library-Implementation.md`.
 
 ## Read first, in this order
 
-1. `PRDs/SnapMock-Screen-Capture-PRD.docx`, all sections. Extract text with `unzip -p file.docx word/document.xml | sed 's/<\/w:p>/\n/g; s/<[^>]*>//g'`.
+1. `PRDs/SnapMock-Screen-Capture-PRD.html`, all sections, including Section 15 Open Questions. Read it as text with `sed 's/<[^>]*>//g'` or open it in a browser.
 2. `docs/Screen-Capture-PRD-Summary.md`: the decisions and the open questions.
 3. `docs/Library-Implementation.md`: the entry point `MainWindow.add_to_library`, the toast, `LibraryManager.create_from_image`, and the settings and preferences patterns to follow.
 4. `snapmock/main_window.py`, `snapmock/config/settings.py`, `snapmock/config/shortcuts.py`, `snapmock/ui/preferences_dialog.py`, `snapmock/ui/toast.py`, `snapmock/app.py`.
@@ -65,4 +65,5 @@ State the next required step and write the next-action prompt for the Windows an
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 09-07-26 12:12 | Claude (Claude Code) | Point at the HTML PRD as the canonical copy; drop the Word extraction command. |
 | 1.0 | 09-07-26 12:05 | Claude (Claude Code) | Initial implementation kickoff prompt. |

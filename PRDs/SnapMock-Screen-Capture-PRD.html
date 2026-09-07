@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screen Capture — SnapMock Product Requirements Document</title>
+<link rel="stylesheet" href="prd.css">
+</head>
+<body>
+<div class="doc">
+
+<header class="doc-head">
+  <h1>Screen Capture</h1>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.0</span>
+  <dl class="doc-meta">
+    <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
+    <dt>Covers</dt>          <dd>Full Screen · Active Window · Region · Global Hotkeys · System Tray · Platform Backends</dd>
+    <dt>Document version</dt><dd>1.0</dd>
+    <dt>Last Updated</dt>    <dd>09-07-26 12:12</dd>
+    <dt>Author</dt>          <dd>Doug Bower</dd>
+    <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
+  </dl>
+</header>
+
+<section class="front-matter">
+
+  <h2 class="unnumbered">Revision control</h2>
+  <table>
+    <colgroup><col class="w-narrow"><col class="w-short"><col class="w-short"><col><col class="w-short"></colgroup>
+    <thead>
+      <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1.0</td><td class="nowrap">09-07-26 12:12</td><td>Doug Bower</td><td>Converted from Word to HTML against the shared stylesheet. Content unchanged except as noted in the change log.</td><td><span class="status open">Pending</span></td></tr>
+      <tr><td>1.0</td><td class="nowrap">09-07-26 12:05</td><td>Doug Bower</td><td>Initial document, authored in Word from the Screen Capture PRD kickoff prompt.</td><td><span class="status closed">Superseded by format conversion</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="unnumbered">Change log</h2>
+  <table>
+    <colgroup><col class="w-short"><col class="w-short"><col class="w-short"><col></colgroup>
+    <thead>
+      <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="nowrap">09-07-26 12:12</td><td>All</td><td>Format</td><td>Converted from Word to HTML against the shared stylesheet. Revision control and change log tables added to meet the output standard; the Word original carried a version, a date, and a changelog section.</td></tr>
+      <tr><td class="nowrap">09-07-26 12:12</td><td>15</td><td>Changed</td><td>Section 15 was Changelog in the Word original; its entries now live in this change log. Section 15 is now Open Questions, carrying the five questions from docs/Screen-Capture-PRD-Summary.md into the document itself.</td></tr>
+      <tr><td class="nowrap">09-07-26 12:12</td><td>Tables</td><td>Format</td><td>Menu tables render separator rows as a single spanning cell. Serialization examples are set as code.</td></tr>
+      <tr><td class="nowrap">09-07-26 12:05</td><td>All</td><td>Created</td><td>Initial release of the Screen Capture PRD covering: capture modes, entry points (global hotkeys, system tray, Main Toolbar button, Capture menu, command-line invocation with single instance), capture options, the region selection overlay, the capture backend abstraction and four platform backends, post-capture handoff to the Library, the Capture preferences category, permission onboarding on macOS and Wayland, data models, command definitions, serialization, keyboard shortcuts, and acceptance criteria.</td></tr>
+      <tr><td class="nowrap">09-07-26 12:05</td><td>3.2</td><td>Supersedes</td><td>Supersedes the Technical Architecture PRD Section 7.2 note "Tray/dock integration: not required for v1.0" for the capture feature; the tray icon is now a version 1 entry point.</td></tr>
+      <tr><td class="nowrap">09-07-26 12:05</td><td>3.3, 3.4</td><td>Added</td><td>Adds a Group 0 Capture to the Main Toolbar and a Capture menu to the menu bar defined in the General UI PRD; those documents should be revised to reference this PRD at their next version.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="unnumbered">Contents</h2>
+<ol class="toc">
+    <li><a href="#s1">Document Overview</a>
+      <ol>
+        <li><a href="#s1-1">Purpose</a></li>
+        <li><a href="#s1-2">Scope</a></li>
+        <li><a href="#s1-3">Dependencies</a></li>
+        <li><a href="#s1-4">Decisions Adopted</a></li>
+      </ol>
+    </li>
+    <li><a href="#s2">Capture Modes</a>
+      <ol>
+        <li><a href="#s2-1">Mode Summary</a></li>
+        <li><a href="#s2-2">Full Screen</a></li>
+        <li><a href="#s2-3">Active Window</a></li>
+        <li><a href="#s2-4">Region</a></li>
+        <li><a href="#s2-5">Scrolling Capture</a></li>
+        <li><a href="#s2-6">Freehand Region</a></li>
+      </ol>
+    </li>
+    <li><a href="#s3">Capture Entry Points</a>
+      <ol>
+        <li><a href="#s3-1">Global Hotkeys</a></li>
+        <li><a href="#s3-2">System Tray Icon and Menu</a></li>
+        <li><a href="#s3-3">Main Toolbar Capture Button</a></li>
+        <li><a href="#s3-4">Capture Menu</a></li>
+        <li><a href="#s3-5">Command-Line Invocation and Single Instance</a></li>
+        <li><a href="#s3-6">The SnapMock Window During Capture</a></li>
+      </ol>
+    </li>
+    <li><a href="#s4">Capture Options</a>
+      <ol>
+        <li><a href="#s4-1">Delay Timer</a></li>
+        <li><a href="#s4-2">Mouse Cursor</a></li>
+        <li><a href="#s4-3">Capture Sound</a></li>
+        <li><a href="#s4-4">Multi-Monitor Behavior</a></li>
+        <li><a href="#s4-5">High-DPI Scaling</a></li>
+        <li><a href="#s4-6">Clipboard Copy</a></li>
+      </ol>
+    </li>
+    <li><a href="#s5">Region Selection Overlay</a>
+      <ol>
+        <li><a href="#s5-1">Overlay Model</a></li>
+        <li><a href="#s5-2">Appearance</a></li>
+        <li><a href="#s5-3">Mouse Interaction</a></li>
+        <li><a href="#s5-4">Keyboard Modifiers and Keys</a></li>
+        <li><a href="#s5-5">Magnifier and Dimensions Label</a></li>
+        <li><a href="#s5-6">Cancel and Escape</a></li>
+        <li><a href="#s5-7">Behavior Across Monitors</a></li>
+      </ol>
+    </li>
+    <li><a href="#s6">Platform Backends</a>
+      <ol>
+        <li><a href="#s6-1">The Capture Backend Abstraction</a></li>
+        <li><a href="#s6-2">Backend Selection</a></li>
+        <li><a href="#s6-3">Linux X11</a></li>
+        <li><a href="#s6-4">Linux Wayland</a></li>
+        <li><a href="#s6-5">macOS</a></li>
+        <li><a href="#s6-6">Windows</a></li>
+        <li><a href="#s6-7">Global Hotkey Backends</a></li>
+        <li><a href="#s6-8">Graceful Degradation</a></li>
+      </ol>
+    </li>
+    <li><a href="#s7">Post-Capture Flow</a>
+      <ol>
+        <li><a href="#s7-1">Handoff to the Library</a></li>
+        <li><a href="#s7-2">Auto-Open and Toast</a></li>
+        <li><a href="#s7-3">Capture While a Non-Library Document Is Active</a></li>
+        <li><a href="#s7-4">Capture Failure</a></li>
+      </ol>
+    </li>
+    <li><a href="#s8">Preferences Integration</a>
+      <ol>
+        <li><a href="#s8-1">Capture Category</a></li>
+      </ol>
+    </li>
+    <li><a href="#s9">First-Run and Permission Onboarding</a>
+      <ol>
+        <li><a href="#s9-1">macOS Screen Recording Permission</a></li>
+        <li><a href="#s9-2">Wayland Portal and Desktop Shortcut</a></li>
+        <li><a href="#s9-3">Hotkey Conflicts</a></li>
+      </ol>
+    </li>
+    <li><a href="#s10">Data Models</a>
+      <ol>
+        <li><a href="#s10-1">CaptureMode</a></li>
+        <li><a href="#s10-2">CaptureRequest</a></li>
+        <li><a href="#s10-3">ScreenGrab</a></li>
+        <li><a href="#s10-4">MonitorInfo</a></li>
+        <li><a href="#s10-5">CaptureMetadata</a></li>
+        <li><a href="#s10-6">BackendCapabilities</a></li>
+        <li><a href="#s10-7">HotkeyBinding</a></li>
+        <li><a href="#s10-8">CaptureResult</a></li>
+      </ol>
+    </li>
+    <li><a href="#s11">Command Definitions</a></li>
+    <li><a href="#s12">Serialization</a>
+      <ol>
+        <li><a href="#s12-1">manifest.json Extension</a></li>
+        <li><a href="#s12-2">Settings</a></li>
+        <li><a href="#s12-3">Session Persistence</a></li>
+      </ol>
+    </li>
+    <li><a href="#s13">Keyboard Shortcuts</a>
+      <ol>
+        <li><a href="#s13-1">Global Hotkeys</a></li>
+        <li><a href="#s13-2">Application Shortcuts</a></li>
+        <li><a href="#s13-3">Overlay Keys</a></li>
+        <li><a href="#s13-4">Countdown Keys</a></li>
+      </ol>
+    </li>
+    <li><a href="#s14">Acceptance Criteria</a>
+      <ol>
+        <li><a href="#s14-1">Capture Modes</a></li>
+        <li><a href="#s14-2">Entry Points</a></li>
+        <li><a href="#s14-3">Capture Options</a></li>
+        <li><a href="#s14-4">Region Selection Overlay</a></li>
+        <li><a href="#s14-5">Platform Backends</a></li>
+        <li><a href="#s14-6">Post-Capture Flow</a></li>
+        <li><a href="#s14-7">Preferences and Onboarding</a></li>
+        <li><a href="#s14-8">Serialization</a></li>
+      </ol>
+    </li>
+    <li><a href="#s15">Open Questions</a></li>
+</ol>
+
+</section>
+
+<main>
+
+<h2 id="s1">Document Overview</h2>
+
+<h3 id="s1-1">Purpose</h3>
+<p>This document defines the functional requirements for the SnapMock Screen Capture feature. Screen Capture takes an image of the screen, a window, or a user-drawn region and hands that image to the Library, where it becomes a .smk file ready for annotation. The feature is the front door of the capture-to-library workflow defined in the Library PRD (Section 2.1): the user presses a key, draws a region, and the result appears in the Library without a file dialog.</p>
+<p>Two terms are used throughout. A screen capture is the act of reading pixels from the display into an image. A capture backend is the platform-specific code that performs that read; the rest of the application never talks to a platform directly.</p>
+
+<h3 id="s1-2">Scope</h3>
+<p>This PRD covers: the three capture modes (full screen, active window, region); the entry points that start a capture (global hotkeys, system tray, Main Toolbar button, Capture menu, command-line invocation); capture options (delay, cursor, sound, multi-monitor, high-DPI, clipboard); the region selection overlay; the capture backend abstraction and the four platform backends (Linux X11, Linux Wayland, macOS, Windows); the post-capture handoff to the Library; a Capture category in the Preferences dialog; permission onboarding on macOS and Wayland; data models; serialization; keyboard shortcuts; and acceptance criteria.</p>
+<p>This document does not redefine the Library, the .smk format, or the Preferences dialog frame. Scrolling capture and freehand region capture are positioned in Section 2 but not specified.</p>
+
+<h3 id="s1-3">Dependencies</h3>
+<ul>
+  <li><strong>Library PRD:</strong> capture-to-library workflow (Section 2.3, Section 6), auto-naming (Section 6.2), Library preferences (Section 8.1), <code>library_metadata</code> (Section 11.1).</li>
+  <li><strong>Library Implementation Notes:</strong> the existing entry point <code>MainWindow.add_to_library(image, source)</code>, the toast, the auto-open preference, and <code>LibraryManager.create_from_image</code>.</li>
+  <li><strong>General UI PRD:</strong> menu bar (Section 3), Main Toolbar (Section 4), Preferences dialog (Section 11.3), keyboard shortcuts (Section 12), first-run experience (Section 16), and the never-disabled controls principle (Section 1.3).</li>
+  <li><strong>Navigation &amp; Raster Operations PRD:</strong> raster selection drawing conventions (Section 5.3) that the region overlay mirrors; clipboard image paste (Section 9.3.3).</li>
+  <li><strong>Technical Architecture PRD:</strong> platform targets (Section 7.1), platform abstraction (Section 7.2), dependency policy (Section 9.1), .smk manifest (Section 3.8.1).</li>
+</ul>
+
+<h3 id="s1-4">Decisions Adopted</h3>
+<p>Three architectural decisions were made before this document was drafted. Each one is restated here so the sections that depend on it can be read without the decision record.</p>
+<table>
+  <colgroup><col class="w-medium"><col><col class="w-wide"></colgroup>
+  <thead>
+    <tr><th>Decision</th><th>Choice</th><th>Consequence in this document</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Global hotkeys</th><td>Platform-specific registration behind one interface. X11 and Windows in version 1; macOS deferred. Command-line invocation through a single-instance channel on every platform.</td><td>Sections 3.1, 3.5, 6.7, 9.2, 9.3.</td></tr>
+    <tr><th>Wayland strategy</th><td>Desktop portal only. No X11 fallback under Wayland. Portal absence is reported, never worked around.</td><td>Sections 6.4, 6.8, 9.2.</td></tr>
+    <tr><th>Overlay process model</th><td>The region selection overlay runs inside the SnapMock editor process. No helper process.</td><td>Sections 3.6, 5.1, 7.4.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s2">Capture Modes</h2>
+
+<h3 id="s2-1">Mode Summary</h3>
+<p>A capture mode names what part of the display is read. Every entry point in Section 3 starts a capture in one mode. The default mode is a preference (Section 8.1) and is Region on first run.</p>
+<table>
+  <colgroup><col class="w-short"><col class="w-short"><col class="w-wide"><col class="w-short"><col class="w-medium"></colgroup>
+  <thead>
+    <tr><th>Mode</th><th>Identifier</th><th>What is captured</th><th>Overlay shown</th><th>Version 1</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Full Screen</th><td><code>full_screen</code></td><td>One monitor, or every monitor, per the Full Screen Scope preference.</td><td>No</td><td>Yes</td></tr>
+    <tr><th>Active Window</th><td><code>active_window</code></td><td>The window that had keyboard focus when the capture was triggered.</td><td>No</td><td>Yes, where the backend supports it</td></tr>
+    <tr><th>Region</th><td>region</td><td>A rectangle the user draws over a frozen image of the screen.</td><td>Yes</td><td>Yes</td></tr>
+    <tr><th>Scrolling</th><td>scrolling</td><td>A window's full content, stitched while it scrolls.</td><td>Yes</td><td>Deferred (Section 2.5)</td></tr>
+    <tr><th>Freehand Region</th><td>freehand</td><td>A non-rectangular area the user draws.</td><td>Yes</td><td>Out of scope (Section 2.6)</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s2-2">Full Screen</h3>
+<ul>
+  <li>The capture manager (Section 6.1) asks the capture backend for a screen grab of every monitor, then keeps either the monitor under the mouse cursor or all monitors, per the Full Screen Scope preference (Section 4.4).</li>
+  <li>No overlay is shown. The delay timer (Section 4.1) applies before the grab.</li>
+  <li>The SnapMock window is hidden first when the Hide Window preference is on (Section 3.6).</li>
+  <li>The resulting image is handed to the Library (Section 7.1) with the capture mode recorded in <code>capture_metadata</code> (Section 12).</li>
+</ul>
+
+<h3 id="s2-3">Active Window</h3>
+<ul>
+  <li>The capture backend reports the geometry of the window that had focus at the moment the capture was triggered. When SnapMock itself had focus and Hide Window is on, the backend reports the window that had focus before SnapMock.</li>
+  <li>The screen grab is cropped to that geometry. Window decorations (title bar, borders) are included; a drop shadow is excluded where the platform reports the shadow extent separately.</li>
+  <li>Where the backend cannot report window geometry (Wayland in version 1), the mode degrades to Region with the message "Active window capture is not available on this desktop. Draw the region instead." shown in the overlay's hint bar (Section 5.2).</li>
+  <li>Windows that are minimized or on another virtual desktop are never captured; the message "No active window found" is shown and no file is created.</li>
+</ul>
+
+<h3 id="s2-4">Region</h3>
+<ul>
+  <li>The capture backend grabs every monitor first. The region selection overlay (Section 5) then shows that frozen image and lets the user draw a rectangle over it.</li>
+  <li>The frozen-image approach is deliberate. It works identically on every backend, it lets the overlay dim and magnify without reading the live screen, and it removes the race between the overlay appearing and the screen changing.</li>
+  <li>On confirmation the frozen image is cropped to the region in physical pixels (Section 4.5) and handed to the Library.</li>
+  <li>The region overlay is the only mode that shows the cursor image (Section 4.2) as a composited element, because the frozen image is taken before the overlay covers the screen.</li>
+</ul>
+
+<h3 id="s2-5">Scrolling Capture</h3>
+<p>Scrolling capture is deferred to a later version. Reason: every platform requires a different stitching strategy (synthetic scroll events on X11 and Windows, accessibility APIs on macOS, nothing portable on Wayland), and the image stitching itself needs overlap detection that is a project of its own. The capture mode identifier scrolling is reserved so that the data model (Section 10) does not change when it arrives. A menu entry is not shown in version 1; an absent feature is not a disabled control.</p>
+
+<h3 id="s2-6">Freehand Region</h3>
+<p>Freehand region capture is out of scope for this PRD. Reason: the Raster Selection (Freeform / Lasso) tool already produces a non-rectangular cut from any captured image inside the editor (Navigation &amp; Raster Operations PRD, Section 6). Capturing a rectangle and lassoing inside it gives the same result with one interaction model instead of two.</p>
+
+<h2 id="s3">Capture Entry Points</h2>
+<p>An entry point is any control or event that starts a capture. Every entry point builds a <code>CaptureRequest</code> (Section 10.2) and passes it to the capture manager. The manager, not the entry point, applies the delay, hides the window, and chooses the backend.</p>
+
+<h3 id="s3-1">Global Hotkeys</h3>
+<p>A global hotkey is a key combination the operating system delivers to SnapMock while another application has focus. Global hotkeys are registered by a hotkey backend (Section 6.7) when the application starts and again whenever a hotkey preference changes.</p>
+<table>
+  <colgroup><col class="w-wide"><col class="w-wide"><col class="w-wide"></colgroup>
+  <thead>
+    <tr><th>Action</th><th>Default key</th><th>Setting key</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Capture Region</th><td>PrintScreen</td><td><code>capture/hotkeyRegion</code></td></tr>
+    <tr><th>Capture Active Window</th><td>Alt+PrintScreen</td><td><code>capture/hotkeyWindow</code></td></tr>
+    <tr><th>Capture Full Screen</th><td>Ctrl+PrintScreen</td><td><code>capture/hotkeyFullScreen</code></td></tr>
+  </tbody>
+</table>
+<ul>
+  <li><strong>Where they work:</strong> X11 and Windows register hotkeys in-process in version 1. Wayland and macOS do not; on those platforms the same three actions are reachable through the command-line invocation (Section 3.5) bound to a desktop shortcut, and the first-run page explains how (Section 9.2).</li>
+  <li><strong>Registration failure:</strong> when the operating system refuses a key because another application owns it, the hotkey is recorded as unregistered, the Preferences dialog shows "In use by another application" beside it, and a toast says "PrintScreen is in use by another application. Change it in Preferences &gt; Capture." The application keeps running.</li>
+  <li><strong>Editing:</strong> each hotkey is edited in Preferences &gt; Capture with a key sequence editor. Clearing the field removes the hotkey. Changes register immediately; the previous key is released first.</li>
+  <li><strong>In-application use:</strong> the same key sequences are also ordinary application shortcuts (Section 13), so a user whose desktop swallows PrintScreen can still press it while SnapMock has focus, where the desktop allows it.</li>
+  <li><strong>Trigger while a capture is in progress:</strong> ignored. One capture at a time.</li>
+</ul>
+
+<h3 id="s3-2">System Tray Icon and Menu</h3>
+<p>The system tray icon is a small SnapMock icon in the operating system's notification area. It is created when the Show Tray Icon preference is on and the platform reports a tray is available.</p>
+<table>
+  <colgroup><col class="w-medium"><col><col class="w-medium"></colgroup>
+  <thead>
+    <tr><th>Menu item</th><th>Action</th><th>Requires</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Capture Region</th><td>Start a region capture.</td><td>Always</td></tr>
+    <tr><th>Capture Active Window</th><td>Start an active-window capture.</td><td>Always</td></tr>
+    <tr><th>Capture Full Screen</th><td>Start a full-screen capture.</td><td>Always</td></tr>
+    <tr><td colspan="3"><em>Separator</em></td></tr>
+    <tr><th>Delay: None / 3 s / 5 s / 10 s</th><td>Radio submenu that sets the delay preference for subsequent captures.</td><td>Always</td></tr>
+    <tr><th>Include Mouse Cursor</th><td>Checkbox mirroring the Include Cursor preference.</td><td>Always (checkbox)</td></tr>
+    <tr><th>Copy to Clipboard</th><td>Checkbox mirroring the Copy to Clipboard preference.</td><td>Always (checkbox)</td></tr>
+    <tr><td colspan="3"><em>Separator</em></td></tr>
+    <tr><th>Show SnapMock</th><td>Show, restore, and activate the main window.</td><td>Always</td></tr>
+    <tr><th>Preferences...</th><td>Open the Preferences dialog on the Capture category.</td><td>Always</td></tr>
+    <tr><td colspan="3"><em>Separator</em></td></tr>
+    <tr><th>Quit SnapMock</th><td>Quit, prompting for unsaved non-library documents.</td><td>Always</td></tr>
+  </tbody>
+</table>
+<ul>
+  <li><strong>Left-click on the icon:</strong> shows and activates the main window on Windows and Linux. On macOS a click opens the menu, per platform convention.</li>
+  <li><strong>Tooltip:</strong> "SnapMock" while idle; "SnapMock: capturing in N s" during a delay countdown.</li>
+  <li><strong>Keep Running in Tray:</strong> a preference (Section 8.1), off by default. When on, closing the main window hides it instead of quitting, and global hotkeys keep working. When off, closing the window quits, as it does today.</li>
+  <li><strong>Tray unavailable:</strong> some Wayland desktops show no tray without an extension. The tray icon is then not created. The Show Tray Icon preference stays present; toggling it shows "This desktop does not provide a system tray. Global hotkeys and the Capture menu still work."</li>
+</ul>
+
+<h3 id="s3-3">Main Toolbar Capture Button</h3>
+<ul>
+  <li>A new Group 0, Capture, is added at the left end of the Main Toolbar (General UI PRD, Section 4.2), before Group 1 File Operations, separated by a divider.</li>
+  <li>The group holds one Capture button, a menu-button style control. Clicking the main part starts a capture in the default mode. Clicking the arrow opens a menu with Capture Region, Capture Active Window, Capture Full Screen, and the Delay submenu from Section 3.2.</li>
+  <li>The tooltip reads "Capture (PrintScreen)", substituting the current hotkey for the default mode.</li>
+  <li>The button is never disabled. While a capture is in progress, clicking it shows "A capture is already in progress."</li>
+</ul>
+
+<h3 id="s3-4">Capture Menu</h3>
+<p>A Capture menu is added to the menu bar after the Library menu and before Help. Per the never-disabled controls principle, all items are always present.</p>
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col><col class="w-short"></colgroup>
+  <thead>
+    <tr><th>Menu item</th><th>Shortcut</th><th>Action</th><th>Requires</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Capture Region</th><td>PrintScreen</td><td>Start a region capture.</td><td>Always</td></tr>
+    <tr><th>Capture Active Window</th><td>Alt+PrintScreen</td><td>Start an active-window capture.</td><td>Always</td></tr>
+    <tr><th>Capture Full Screen</th><td>Ctrl+PrintScreen</td><td>Start a full-screen capture.</td><td>Always</td></tr>
+    <tr><td colspan="4"><em>Separator</em></td></tr>
+    <tr><th>Delay</th><td>(submenu)</td><td>None, 3 seconds, 5 seconds, 10 seconds. Radio items bound to the delay preference.</td><td>Always</td></tr>
+    <tr><th>Include Mouse Cursor</th><td></td><td>Checkbox bound to the Include Cursor preference.</td><td>Always (checkbox)</td></tr>
+    <tr><th>Copy to Clipboard</th><td></td><td>Checkbox bound to the Copy to Clipboard preference.</td><td>Always (checkbox)</td></tr>
+    <tr><th>Hide SnapMock During Capture</th><td></td><td>Checkbox bound to the Hide Window preference.</td><td>Always (checkbox)</td></tr>
+    <tr><td colspan="4"><em>Separator</em></td></tr>
+    <tr><th>Capture Preferences...</th><td></td><td>Open the Preferences dialog on the Capture category.</td><td>Always</td></tr>
+  </tbody>
+</table>
+<p>The shortcut column shows the current hotkey for each mode, so the menu doubles as the hotkey reference. Menu shortcuts update when a hotkey preference changes.</p>
+
+<h3 id="s3-5">Command-Line Invocation and Single Instance</h3>
+<p>The command-line invocation is the universal entry point. It exists so that desktops which do not allow in-process hotkey registration (Wayland, and macOS in version 1) can still bind a key to a capture.</p>
+<ul>
+  <li><strong>Syntax:</strong> <code>snapmock --capture &lt;mode&gt;</code>, where &lt;mode&gt; is region, window, or full. <code>snapmock --capture</code> with no mode uses the default mode preference. Additional flags: <code>--delay &lt;seconds&gt;</code> overrides the delay for this capture only.</li>
+  <li><strong>Single instance:</strong> on startup SnapMock connects to a single-instance channel, a local socket named for the current user. If a running instance answers, the new process forwards its command line to it and exits with status 0. If no instance answers, the new process becomes the running instance and listens on the channel.</li>
+  <li><strong>No running instance:</strong> <code>snapmock --capture &lt;mode&gt;</code> starts the application, performs the capture as the first action after the main window exists, and then continues running as the editor. The main window stays hidden until the capture completes when Hide Window is on.</li>
+  <li><strong>Forwarding delay:</strong> forwarding a request to a running instance completes within 100 milliseconds on a warm system. This is the number that makes the desktop-shortcut route feel like a native hotkey.</li>
+  <li><strong>Channel failure:</strong> if the channel cannot be created (a stale socket from a crash), the stale endpoint is removed and creation is retried once. If it still fails, the application runs without a channel and logs the reason; a second launch then opens a second window, as it does today.</li>
+</ul>
+
+<h3 id="s3-6">The SnapMock Window During Capture</h3>
+<p>The application's own window must not appear in a capture unless the user wants it to. The Hide Window preference (Section 8.1), on by default, governs this.</p>
+<ul>
+  <li><strong>Hide Window on:</strong> before the screen grab, the capture manager records the main window state (geometry, maximized or full-screen flag, active tab) and hides every SnapMock top-level window, including floating panels and the toast. It then waits until the platform confirms the window is gone, or 250 milliseconds, whichever is first, and then grabs the screen. Two compositor frames are the usual wait.</li>
+  <li><strong>Hide Window off:</strong> the window stays where it is and is captured like any other window. This is the mode for capturing SnapMock itself.</li>
+  <li><strong>Minimize is not used.</strong> Minimizing animates on several desktops and leaves a taskbar transition in the grab. Hiding does not.</li>
+  <li><strong>Restore:</strong> after the capture completes, is cancelled, or fails, every hidden window is shown again in its recorded state, and the main window is raised and activated. Restore happens exactly once, from a single code path, so no failure mode leaves the window hidden. If the application is quit while hidden, the recorded geometry is what is saved to settings.</li>
+  <li><strong>Modal dialogs:</strong> when a modal dialog (Preferences, Export, an unsaved-changes prompt) is open, a capture request is refused with the message "Close the open dialog before capturing." shown in that dialog's parent window and, if the request came from the tray or command line, as a system notification.</li>
+  <li><strong>Delay interaction:</strong> with a delay set, the window hides at the end of the countdown, not the start, so the user can keep working in SnapMock until the grab.</li>
+</ul>
+
+<h2 id="s4">Capture Options</h2>
+
+<h3 id="s4-1">Delay Timer</h3>
+<ul>
+  <li>The delay is the number of seconds between the trigger and the screen grab. Range 0 to 60, default 0. Set in Preferences, the Capture menu, the tray menu, the toolbar button menu, or <code>--delay</code> on the command line.</li>
+  <li>During a countdown a small frameless countdown badge shows the remaining seconds. It is placed at the top center of the monitor under the mouse cursor where the platform allows placement, and wherever the compositor puts it otherwise. The badge is excluded from the capture by hiding it 100 milliseconds before the grab.</li>
+  <li>The tray icon tooltip mirrors the countdown (Section 3.2).</li>
+  <li>Escape while the badge has focus, or clicking the badge, cancels the countdown. A cancelled countdown restores nothing, because nothing was hidden yet.</li>
+  <li>A second trigger during a countdown is ignored.</li>
+</ul>
+
+<h3 id="s4-2">Mouse Cursor</h3>
+<ul>
+  <li>The Include Cursor preference, off by default, composites the mouse cursor image into the captured image at its position at grab time.</li>
+  <li>The capture backend supplies the cursor image and hotspot when the platform exposes them (Section 6). When it does not, the option has no effect and the Preferences dialog shows "Not available on this desktop" beside the checkbox.</li>
+  <li>In Region mode the cursor is composited into the frozen image before the overlay appears, so what the user sees in the overlay is what is captured.</li>
+  <li>The cursor is drawn at the monitor's device pixel ratio so it is not blurred on high-DPI displays.</li>
+</ul>
+
+<h3 id="s4-3">Capture Sound</h3>
+<ul>
+  <li>The Play Sound preference, off by default, plays a short shutter sound when the grab completes. The sound file ships in <code>resources/sounds/</code> and is played through Qt's sound effect class, which ships with PyQt6.</li>
+  <li>The sound plays after the grab, never before it, so it cannot appear in a recording of the screen taken at the same moment.</li>
+  <li>If audio output is unavailable the failure is silent. Sound is never a reason for a capture to fail.</li>
+</ul>
+
+<h3 id="s4-4">Multi-Monitor Behavior</h3>
+<ul>
+  <li><strong>Monitor model:</strong> the capture backend reports every monitor as a <code>MonitorInfo</code> (Section 10.4) with logical geometry, physical geometry, device pixel ratio, and a primary flag. The union of the logical geometries is the virtual desktop.</li>
+  <li><strong>Full Screen Scope preference:</strong> Monitor Under Cursor (default) captures the monitor containing the mouse cursor at grab time. All Monitors captures the whole virtual desktop as one image; gaps between monitors of different sizes are filled with black.</li>
+  <li><strong>Active Window:</strong> the window is captured from the monitor that holds most of its area. A window spanning two monitors is captured across both.</li>
+  <li><strong>Region:</strong> the overlay covers every monitor (Section 5.7). A region may span two monitors only when they share a device pixel ratio; otherwise the region is clamped to the monitor where the drag began.</li>
+  <li><strong>Monitor change during capture:</strong> if a monitor is connected or removed between the grab and the confirmation, the capture proceeds from the frozen image. Nothing is re-read from the screen.</li>
+</ul>
+
+<h3 id="s4-5">High-DPI Scaling</h3>
+<p>Two coordinate systems exist on a scaled display. Logical pixels are the units Qt uses for widget geometry. Physical pixels are the units of the display hardware. The device pixel ratio is physical divided by logical, for example 2.0 on a 200 percent display.</p>
+<ul>
+  <li>Captures are always taken in physical pixels. The canvas of the resulting .smk file has the physical dimensions, so a 200 percent display produces a canvas twice the logical size. Nothing is downscaled.</li>
+  <li>The overlay draws in logical pixels and converts the drawn rectangle to physical pixels at confirmation, rounding outward so no edge pixel is lost.</li>
+  <li>The device pixel ratio of the source monitor is stored in <code>capture_metadata</code> (Section 12) so a later version can offer a scaled export.</li>
+  <li>Mixed ratios across monitors are supported: each monitor's grab is stored at its own ratio, and All Monitors composites them at the highest ratio present.</li>
+</ul>
+
+<h3 id="s4-6">Clipboard Copy</h3>
+<ul>
+  <li>The Copy to Clipboard preference, off by default, places the captured image on the system clipboard as a PNG at the same time it is handed to the Library.</li>
+  <li>Library storage always happens. Clipboard copy is in addition, never instead.</li>
+  <li>With this preference on, a capture can be pasted into the active non-library document with Ctrl+V (Navigation &amp; Raster Operations PRD, Section 9.3.3). That is the supported way to bring a capture into an existing mockup.</li>
+</ul>
+
+<h2 id="s5">Region Selection Overlay</h2>
+
+<h3 id="s5-1">Overlay Model</h3>
+<p>The region selection overlay is a set of full-screen, frameless, always-on-top windows, one per monitor, created inside the editor process. Each window paints the frozen image of its monitor and the selection graphics on top. The overlay owns keyboard focus while it is visible and releases it on confirm or cancel.</p>
+<ul>
+  <li>The overlay is created lazily on the first region capture and reused afterward, so the second capture is faster than the first.</li>
+  <li>The overlay reads the current preferences at the moment it is shown. It does not watch for changes while visible.</li>
+  <li>The overlay never reads the live screen. Everything it shows comes from the frozen image and from the <code>MonitorInfo</code> list.</li>
+  <li>Overlay code lives in <code>snapmock/capture/overlay.py</code> and depends on nothing in the editor except the theme colors. It is the one piece of this feature that runs while the main window is hidden, so it must not touch the main window.</li>
+</ul>
+
+<h3 id="s5-2">Appearance</h3>
+<ul>
+  <li><strong>Dimming:</strong> the frozen image is covered with 40 percent black. Inside the selected rectangle the image shows undimmed.</li>
+  <li><strong>Crosshair:</strong> before a drag begins, a full-height vertical and full-width horizontal 1 px line in the accent color follow the cursor. The crosshair hides during the drag and returns after release if the drag was discarded.</li>
+  <li><strong>Selection border:</strong> a 1 px solid line in the accent color with a 1 px white inner line, so it reads on light and dark content.</li>
+  <li><strong>Dimensions label:</strong> "W × H" in physical pixels, drawn in a small dark pill just outside the rectangle's bottom-right corner, flipping to the inside when there is no room.</li>
+  <li><strong>Hint bar:</strong> a single line at the top center of the monitor under the cursor: "Drag to select a region. Shift: square. Alt: from center. Space: move. Enter: capture. Esc: cancel." When Active Window degraded to Region (Section 2.3), the degradation message is shown first for 3 seconds.</li>
+  <li><strong>Cursor:</strong> crosshair while idle and dragging; closed hand while Space-moving.</li>
+  <li><strong>Theme:</strong> colors come from the <code>ThemeManager</code> (General UI PRD, Section 13.4) so the overlay matches the active theme.</li>
+</ul>
+
+<h3 id="s5-3">Mouse Interaction</h3>
+<ul>
+  <li><strong>Press and drag</strong> with the left button draws the rectangle from the press point to the current point. Dimensions update live.</li>
+  <li><strong>Release</strong> with a rectangle of at least 4 by 4 logical pixels confirms the capture immediately. Snagit users expect release to capture; there is no separate adjustment step in version 1.</li>
+  <li><strong>Release</strong> with a smaller rectangle discards the drag and returns to the idle crosshair. A plain click therefore does nothing destructive.</li>
+  <li><strong>Space held during a drag</strong> moves the whole rectangle with the mouse instead of resizing it. Releasing Space resumes resizing from the new position.</li>
+  <li><strong>Right-click</strong> cancels the overlay at any time, the same as Escape.</li>
+  <li><strong>Mouse wheel</strong> is ignored. There is no zoom in the overlay; the magnifier (Section 5.5) covers precision.</li>
+  <li><strong>Auto edge scroll</strong> does not apply; the overlay already shows every pixel of every monitor.</li>
+</ul>
+
+<h3 id="s5-4">Keyboard Modifiers and Keys</h3>
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Key</th><th>While</th><th>Effect</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Shift</th><td>Dragging</td><td>Constrain the rectangle to a square, using the larger dimension.</td></tr>
+    <tr><th>Alt</th><td>Dragging</td><td>Draw from the center: the press point is the center, not a corner.</td></tr>
+    <tr><th>Shift+Alt</th><td>Dragging</td><td>Square from the center.</td></tr>
+    <tr><th>Space</th><td>Dragging</td><td>Move the rectangle instead of resizing it.</td></tr>
+    <tr><th>Arrow keys</th><td>Idle</td><td>Move the crosshair, and therefore the pending press point, by 1 logical pixel. Shift+Arrow moves by 10.</td></tr>
+    <tr><th>Enter</th><td>Idle, after a discarded drag</td><td>No effect; there is no rectangle to confirm. The hint bar flashes.</td></tr>
+    <tr><th>Escape</th><td>Any</td><td>Cancel the overlay (Section 5.6).</td></tr>
+    <tr><th>Ctrl+C</th><td>Idle</td><td>Ignored. Copy is a preference, not an overlay action.</td></tr>
+  </tbody>
+</table>
+<p>Modifiers may be pressed or released at any point during the drag; the rectangle recomputes on every mouse move from the current modifier state, matching the raster selection tool (Navigation &amp; Raster Operations PRD, Section 5.3).</p>
+
+<h3 id="s5-5">Magnifier and Dimensions Label</h3>
+<ul>
+  <li>The magnifier is a 132 by 132 logical pixel square showing an 11 by 11 physical pixel neighborhood of the cursor at 12 times enlargement, with a 1 px grid and the center pixel outlined in the accent color.</li>
+  <li>Below the image the magnifier shows the cursor position in physical pixels, "X: 1234  Y: 567", and the hex color of the center pixel.</li>
+  <li>The magnifier sits 20 logical pixels below and to the right of the cursor and flips to the opposite side when it would leave the monitor.</li>
+  <li>The magnifier is visible while idle and while dragging. It hides while Space-moving, because the cursor is then not on an edge.</li>
+  <li>The Show Magnifier preference (Section 8.1), on by default, turns it off for users who find it distracting.</li>
+</ul>
+
+<h3 id="s5-6">Cancel and Escape</h3>
+<ul>
+  <li>Escape, right-click, or the overlay losing focus to another application cancels the capture. The overlay hides, the SnapMock windows are restored (Section 3.6), and no file is created.</li>
+  <li>A cancelled capture shows no toast. Cancel is silent.</li>
+  <li>Focus loss is treated as cancel because an overlay left on screen after an alt-tab is a trap.</li>
+</ul>
+
+<h3 id="s5-7">Behavior Across Monitors</h3>
+<ul>
+  <li>One overlay window per monitor, each showing that monitor's frozen image. The crosshair and magnifier appear on the monitor under the cursor.</li>
+  <li>A drag that crosses into a second monitor with the same device pixel ratio continues, and the rectangle spans both. The dimming and border are drawn consistently in each window from a shared selection model.</li>
+  <li>A drag that crosses into a monitor with a different device pixel ratio is clamped at the edge of the monitor where it began. The hint bar says "Selection cannot cross monitors with different scaling."</li>
+  <li>On Wayland the compositor decides where windows go. Each overlay window asks for full-screen on its own monitor through Qt's screen assignment. If the compositor places two overlays on one monitor, the capture still works from the frozen image; only the visual is wrong. This is recorded as a known limitation in Section 6.8.</li>
+</ul>
+
+<h2 id="s6">Platform Backends</h2>
+
+<h3 id="s6-1">The Capture Backend Abstraction</h3>
+<p>The application code sees exactly one interface, <code>CaptureBackend</code>, and one coordinator, <code>CaptureManager</code>. Nothing outside <code>snapmock/capture/</code> imports a platform module.</p>
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>CaptureBackend method</th><th>Returns</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>capabilities()</th><td><code>BackendCapabilities</code></td><td>Which modes and options this backend supports on this session (Section 10.6). Called once at startup and shown in Preferences.</td></tr>
+    <tr><th>monitors()</th><td>list[<code>MonitorInfo</code>]</td><td>Every connected monitor with logical and physical geometry and device pixel ratio.</td></tr>
+    <tr><th><code>grab_screens</code>(<code>include_cursor</code>)</th><td><code>ScreenGrab</code></td><td>One image per monitor in physical pixels, plus the cursor image and hotspot when requested and available. Raises <code>CaptureError</code> with a user-readable reason on failure.</td></tr>
+    <tr><th><code>active_window_geometry</code>()</th><td><code>QRect</code> | None</td><td>Logical geometry of the focused window, excluding shadow, or None when the platform cannot say.</td></tr>
+    <tr><th><code>request_permission</code>()</th><td><code>PermissionState</code></td><td>Granted, Denied, or <code>NotRequired</code>. Triggers the platform prompt where one exists (macOS). Never blocks for longer than the platform prompt itself.</td></tr>
+  </tbody>
+</table>
+<p><code>CaptureManager</code> owns one <code>CaptureBackend</code>, one <code>HotkeyBackend</code> (Section 6.7), the overlay, the delay timer, and the single-instance channel. It exposes start(request), cancel(), and the signals <code>capture_completed</code>(<code>CaptureResult</code>) and <code>capture_failed</code>(reason). <code>MainWindow</code> connects <code>capture_completed</code> to <code>add_to_library</code> and <code>capture_failed</code> to a message. That is the whole contract between capture and the editor.</p>
+
+<h3 id="s6-2">Backend Selection</h3>
+<ul>
+  <li>Selection happens once at startup in <code>snapmock/capture/__init__.py</code> from the platform name and, on Linux, the session type.</li>
+  <li>Linux with a Wayland session (the Qt platform name is wayland, or the session environment reports Wayland) selects the Wayland portal backend. Linux otherwise selects the X11 backend. macOS selects the macOS backend. Windows selects the Windows backend.</li>
+  <li>An unrecognized platform selects a null backend whose capabilities() reports nothing supported. Every capture entry point then shows "Screen capture is not supported on this platform."</li>
+  <li>Selection is not user-configurable. A wrong backend produces black images, which is worse than no backend.</li>
+</ul>
+
+<h3 id="s6-3">Linux X11</h3>
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Aspect</th><th>Behavior</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Screen grab</th><td>Qt's per-screen window grab of the root window, which reads the composited X11 screen. Returns one pixmap per <code>QScreen</code> at the screen's device pixel ratio.</td></tr>
+    <tr><th>Active window</th><td>The <code>_NET_ACTIVE_WINDOW</code> property of the root window, then that window's frame extents, read through the X11 library via <code>ctypes</code>. Implementation candidate: <code>python-xlib</code> as an alternative to <code>ctypes</code>; neither is a hard requirement.</td></tr>
+    <tr><th>Cursor</th><td>The XFixes extension cursor image, via <code>ctypes</code>. Available on every modern X server.</td></tr>
+    <tr><th>Permissions</th><td>None. X11 has no capture permission model.</td></tr>
+    <tr><th>Global hotkeys</th><td>X key grab on the root window, with a Qt native event filter receiving the key events. See Section 6.7.</td></tr>
+    <tr><th>Degradation</th><td>If the XFixes call fails, cursor inclusion is reported unavailable. If the active-window property is absent (no EWMH window manager), Active Window degrades to Region.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s6-4">Linux Wayland</h3>
+<p>Under Wayland an application cannot read pixels that belong to other applications. The desktop portal is the D-Bus service that a compositor exposes to grant privileged operations to applications. SnapMock uses its Screenshot interface and nothing else.</p>
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Aspect</th><th>Behavior</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Screen grab</th><td>Call <code>org.freedesktop.portal.Screenshot.Screenshot</code> with interactive false over QtDBus, which ships with PyQt6 on Linux. Wait for the Response signal, read the returned file URI into a <code>QImage</code>, and delete the file. The returned image is the whole virtual desktop; it is split per monitor using the <code>MonitorInfo</code> list.</td></tr>
+    <tr><th>Active window</th><td>Not available through the Screenshot interface. capabilities() reports <code>active_window</code> false and the mode degrades to Region (Section 2.3).</td></tr>
+    <tr><th>Cursor</th><td>Not available through the Screenshot interface. capabilities() reports cursor false.</td></tr>
+    <tr><th>Permissions</th><td>The compositor may show its own consent dialog on the first call and, on some versions, on every call. SnapMock cannot suppress it. The first-run page (Section 9.2) tells the user to expect it.</td></tr>
+    <tr><th>Global hotkeys</th><td>Not possible in-process. The command-line invocation bound to a desktop shortcut is the route (Sections 3.5, 9.2).</td></tr>
+    <tr><th>Degradation</th><td>If the portal service is absent or the call returns an error, the capture fails with "Screen capture needs the desktop portal (<code>xdg-desktop-portal</code> and a backend for your desktop). Install it and try again." No X11 fallback is attempted; under Wayland the X11 grab returns only SnapMock's own windows, and a wrong image is worse than a clear failure.</td></tr>
+    <tr><th>Overlay placement</th><td>Full-screen per monitor through Qt's screen assignment. Placement is at the compositor's discretion (Section 5.7).</td></tr>
+  </tbody>
+</table>
+<p>Version 2 candidate: the KDE compositor exposes a screenshot interface with active-window capture and cursor inclusion. A KDE-specific backend could restore both on that desktop. It is not part of version 1.</p>
+
+<h3 id="s6-5">macOS</h3>
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Aspect</th><th>Behavior</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Screen grab</th><td>Qt's per-screen grab, which uses the Core Graphics display image call. Returns the physical (Retina) resolution.</td></tr>
+    <tr><th>Active window</th><td>The frontmost application's front window, from the Core Graphics window list via <code>ctypes</code>. Implementation candidate: <code>pyobjc</code>, as an optional dependency, if the <code>ctypes</code> route proves fragile.</td></tr>
+    <tr><th>Cursor</th><td>Included by rendering the current system cursor image from the application services framework via <code>ctypes</code>; reported unavailable if that call fails.</td></tr>
+    <tr><th>Permissions</th><td>Screen Recording permission is required from macOS 10.15 onward. <code>request_permission</code>() calls the preflight check; if not granted, it calls the request call, which shows the system dialog once. Until granted, grabs return the desktop wallpaper only. The onboarding flow is in Section 9.1.</td></tr>
+    <tr><th>Global hotkeys</th><td>Deferred past version 1. The Carbon hotkey registration call is the version 2 candidate. In version 1 the command-line invocation bound to a Shortcuts or Automator hotkey is the route.</td></tr>
+    <tr><th>Degradation</th><td>Permission denied: capture fails with a message and a button that opens System Settings &gt; Privacy &amp; Security &gt; Screen Recording. macOS requires the application to restart after the permission changes; the message says so.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s6-6">Windows</h3>
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Aspect</th><th>Behavior</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Screen grab</th><td>Qt's per-screen grab, which uses GDI bit-block transfer. Per-monitor DPI awareness is enabled at startup so each screen reports its own device pixel ratio.</td></tr>
+    <tr><th>Active window</th><td><code>GetForegroundWindow</code> and <code>DwmGetWindowAttribute</code> for the extended frame bounds, via <code>ctypes</code>. The extended bounds exclude the invisible resize border that Windows 10 adds around windows.</td></tr>
+    <tr><th>Cursor</th><td><code>GetCursorInfo</code> and the icon image, via <code>ctypes</code>.</td></tr>
+    <tr><th>Permissions</th><td>None.</td></tr>
+    <tr><th>Global hotkeys</th><td><code>RegisterHotKey</code>, with a Qt native event filter receiving <code>WM_HOTKEY</code>. See Section 6.7.</td></tr>
+    <tr><th>Degradation</th><td>Windows that use hardware overlay rendering (some video players) appear black in a GDI grab. This is a platform limit and is documented, not worked around. A window on a secured desktop (the lock screen, elevation prompts) cannot be captured; the grab returns black and no error.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s6-7">Global Hotkey Backends</h3>
+<p><code>HotkeyBackend</code> is the second interface in <code>snapmock/capture/</code>. It has register(binding) returning True or False, unregister(binding), and a triggered(action) signal. Each key is a <code>HotkeyBinding</code> (Section 10.7).</p>
+<table>
+  <colgroup><col class="w-medium"><col><col class="w-medium"></colgroup>
+  <thead>
+    <tr><th>Platform</th><th>Mechanism</th><th>Version 1</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Linux X11</th><td>XGrabKey on the root window for the key code and every combination of the lock modifiers (Caps Lock, Num Lock), delivered through a Qt native event filter. Implemented through <code>ctypes</code> against the X11 library; no new dependency.</td><td>Yes</td></tr>
+    <tr><th>Linux Wayland</th><td>None. The null hotkey backend reports every registration as unsupported, and Preferences shows "Bind a desktop shortcut to: <code>snapmock --capture region</code>" with a copy button in place of the key editor.</td><td>Command-line route</td></tr>
+    <tr><th>Windows</th><td><code>RegisterHotKey</code> with the application's message window, delivered through a Qt native event filter on <code>WM_HOTKEY</code>. <code>ctypes</code>; no new dependency.</td><td>Yes</td></tr>
+    <tr><th>macOS</th><td>Deferred. The null hotkey backend is used and Preferences shows the same command-line guidance as Wayland, with the Shortcuts application named as the place to bind it.</td><td>Command-line route</td></tr>
+  </tbody>
+</table>
+<p>Third-party candidates considered and not adopted for version 1: <code>pynput</code>, which listens to all keyboard input rather than registering a key and needs the macOS Input Monitoring permission; and the <code>global-hotkeys</code> family of packages, which cover Windows only. Either may be revisited for macOS in version 2.</p>
+
+<h3 id="s6-8">Graceful Degradation</h3>
+<p>Every cell in this table is a behavior the user can observe. Nothing degrades silently: the Preferences dialog shows what is unavailable, and each unavailable action explains itself when invoked.</p>
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-medium"><col class="w-medium"><col class="w-medium"></colgroup>
+  <thead>
+    <tr><th>Capability</th><th>X11</th><th>Wayland (portal)</th><th>macOS</th><th>Windows</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Full screen</th><td>Yes</td><td>Yes</td><td>Yes, with permission</td><td>Yes</td></tr>
+    <tr><th>Active window</th><td>Yes</td><td>Degrades to Region</td><td>Yes, with permission</td><td>Yes</td></tr>
+    <tr><th>Region</th><td>Yes</td><td>Yes</td><td>Yes, with permission</td><td>Yes</td></tr>
+    <tr><th>Include cursor</th><td>Yes</td><td>Not available</td><td>Yes</td><td>Yes</td></tr>
+    <tr><th>In-process global hotkey</th><td>Yes</td><td>Desktop shortcut to command line</td><td>Desktop shortcut to command line</td><td>Yes</td></tr>
+    <tr><th>System tray</th><td>Yes</td><td>Depends on desktop</td><td>Yes (menu bar)</td><td>Yes</td></tr>
+    <tr><th>Overlay placement per monitor</th><td>Exact</td><td>Compositor decides</td><td>Exact</td><td>Exact</td></tr>
+    <tr><th>Consent dialog</th><td>None</td><td>Compositor's, possibly per capture</td><td>System, once</td><td>None</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s7">Post-Capture Flow</h2>
+
+<h3 id="s7-1">Handoff to the Library</h3>
+<ul>
+  <li>On <code>capture_completed</code>, <code>MainWindow</code> calls the existing entry point <code>add_to_library</code>(image, source="capture"). The Library creates the .smk file in the current library folder, names it with the auto-naming convention (Library PRD, Section 6.2), and refreshes the panel. None of that changes.</li>
+  <li>The entry point gains one optional keyword argument, <code>capture_metadata</code>, carrying the <code>CaptureMetadata</code> record (Section 10.5). <code>LibraryManager.create_from_image</code> passes it through to the manifest (Section 12). Callers that omit it, such as drag-and-drop import, are unaffected.</li>
+  <li>The image handed over is the final cropped image in physical pixels. The Library does not know or care which mode produced it.</li>
+  <li>The handoff runs on the main thread after the overlay has hidden and before the SnapMock windows are restored, so the new tab exists when the window reappears.</li>
+</ul>
+
+<h3 id="s7-2">Auto-Open and Toast</h3>
+<ul>
+  <li>Auto-open captures (Library PRD, Section 8.1) governs whether the new file opens in a tab. Screen Capture adds no preference of its own for this.</li>
+  <li>Toast notifications (Library PRD, Section 8.1) governs the "Captured to Library: [filename]" toast with its Open link. Screen Capture adds no preference of its own for this.</li>
+  <li>When Copy to Clipboard is on, the toast text is "Captured to Library and clipboard: [filename]".</li>
+  <li>When the main window is hidden in the tray (Keep Running in Tray on) at capture time, the toast has no window to appear in. A system notification with the same text is shown instead, through the tray icon's message facility. Clicking it shows the main window with the new tab active.</li>
+</ul>
+
+<h3 id="s7-3">Capture While a Non-Library Document Is Active</h3>
+<p>Nothing changes. A capture always creates a library file. If Auto-open is on, the new library tab opens and becomes active; the non-library document keeps its tab, its dirty state, and its undo stack, and is not saved or prompted. If Auto-open is off, the non-library document remains active and the toast offers the Open link.</p>
+<p>The alternative, placing the capture into the active document as a raster item, was considered and rejected for version 1. It would make the same key do two different things depending on which tab is active, and the clipboard route (Section 4.6) already covers the need.</p>
+
+<h3 id="s7-4">Capture Failure</h3>
+<ul>
+  <li><code>capture_failed</code>(reason) carries a user-readable sentence from the backend. <code>MainWindow</code> shows it as a toast when the window is visible and as a system notification otherwise. No file is created.</li>
+  <li>The SnapMock windows are restored on failure exactly as on success (Section 3.6).</li>
+  <li>Failures are also written to the application log with the platform, backend, mode, and the underlying error text, so a bug report has what it needs.</li>
+  <li>A failure inside the overlay (an exception while painting or handling input) is caught at the overlay boundary, reported as a failure with reason "The capture overlay encountered an error", and the overlay is destroyed so the next capture creates a fresh one. The editor keeps running.</li>
+</ul>
+
+<h2 id="s8">Preferences Integration</h2>
+
+<h3 id="s8-1">Capture Category</h3>
+<p>A Capture category is added to the Preferences dialog (General UI PRD, Section 11.3), positioned after the Library category. Every change applies immediately; there is no Apply button.</p>
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-short"><col class="w-medium"><col class="w-medium"></colgroup>
+  <thead>
+    <tr><th>Setting</th><th>Widget</th><th>Default</th><th>Setting key</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Default capture mode</th><td>Dropdown</td><td>Region</td><td><code>capture/defaultMode</code></td><td>Mode used by the toolbar button's main click, by the tray icon's primary action, and by <code>snapmock --capture</code> with no mode.</td></tr>
+    <tr><th>Region hotkey</th><td>Key sequence editor</td><td>PrintScreen</td><td><code>capture/hotkeyRegion</code></td><td>Global hotkey for Region. Shows "In use by another application" when registration fails. Replaced by command-line guidance on Wayland and macOS.</td></tr>
+    <tr><th>Active window hotkey</th><td>Key sequence editor</td><td>Alt+PrintScreen</td><td><code>capture/hotkeyWindow</code></td><td>As above, for Active Window.</td></tr>
+    <tr><th>Full screen hotkey</th><td>Key sequence editor</td><td>Ctrl+PrintScreen</td><td><code>capture/hotkeyFullScreen</code></td><td>As above, for Full Screen.</td></tr>
+    <tr><th>Delay</th><td>Spinbox, 0 to 60 seconds</td><td>0</td><td><code>capture/delaySeconds</code></td><td>Seconds between trigger and grab.</td></tr>
+    <tr><th>Include mouse cursor</th><td>Checkbox</td><td>Off</td><td><code>capture/includeCursor</code></td><td>Composite the cursor into the capture. Shows "Not available on this desktop" where the backend cannot.</td></tr>
+    <tr><th>Play capture sound</th><td>Checkbox</td><td>Off</td><td><code>capture/playSound</code></td><td>Play the shutter sound after the grab.</td></tr>
+    <tr><th>Hide SnapMock window during capture</th><td>Checkbox</td><td>On</td><td><code>capture/hideWindow</code></td><td>Hide all SnapMock windows before the grab and restore them after.</td></tr>
+    <tr><th>Copy to clipboard</th><td>Checkbox</td><td>Off</td><td><code>capture/copyToClipboard</code></td><td>Also place the capture on the system clipboard as PNG.</td></tr>
+    <tr><th>Full screen scope</th><td>Dropdown</td><td>Monitor under cursor</td><td><code>capture/fullScreenScope</code></td><td>Monitor under cursor, or All monitors.</td></tr>
+    <tr><th>Show magnifier</th><td>Checkbox</td><td>On</td><td><code>capture/showMagnifier</code></td><td>Show the magnifier in the region overlay.</td></tr>
+    <tr><th>Show tray icon</th><td>Checkbox</td><td>On</td><td><code>capture/trayEnabled</code></td><td>Show the system tray icon. Shows a message where the desktop has no tray.</td></tr>
+    <tr><th>Keep running in tray when window is closed</th><td>Checkbox</td><td>Off</td><td><code>capture/keepRunningInTray</code></td><td>Closing the main window hides it instead of quitting. Requires Show tray icon.</td></tr>
+  </tbody>
+</table>
+<p>A read-only line at the bottom of the category reports the active backend and its capabilities, for example "Backend: Wayland portal. Active window: not available. Cursor: not available. Global hotkeys: bind a desktop shortcut." This is the diagnostic a user pastes into a bug report.</p>
+
+<h2 id="s9">First-Run and Permission Onboarding</h2>
+<p>Onboarding runs the first time a capture is attempted on a platform that needs setup, not at application start. A user who never captures never sees it. Each onboarding dialog has a "Don't show this again" checkbox stored under <code>capture/onboardingShown</code>.</p>
+
+<h3 id="s9-1">macOS Screen Recording Permission</h3>
+<ul>
+  <li>On the first capture request, <code>request_permission</code>() runs the preflight check. If permission is granted, capture proceeds and no dialog is shown.</li>
+  <li>If not granted, an onboarding dialog explains: "macOS asks you to allow SnapMock to record the screen before it can take screenshots. Click Continue to see the system prompt. If you have already denied it, open System Settings and enable SnapMock under Privacy &amp; Security &gt; Screen Recording." Buttons: Continue, Open System Settings, Cancel.</li>
+  <li>Continue calls the system request, which shows Apple's dialog once. Open System Settings opens the Screen Recording pane directly.</li>
+  <li>After the user grants permission, macOS does not apply it to the running process. The dialog's final state says "Quit and reopen SnapMock to finish." with a Quit button.</li>
+  <li>Until permission is granted, every capture fails with the Section 6.5 message, and the Preferences capability line reads "Screen Recording permission: not granted".</li>
+</ul>
+
+<h3 id="s9-2">Wayland Portal and Desktop Shortcut</h3>
+<ul>
+  <li>On the first capture request under Wayland, an onboarding dialog explains two things in two short panels.</li>
+  <li><strong>Panel one, consent:</strong> "Your desktop will ask whether SnapMock may take a screenshot. This is the desktop's own dialog. Some desktops ask once; some ask every time."</li>
+  <li><strong>Panel two, hotkey:</strong> "Wayland desktops do not let applications register their own keyboard shortcuts. To capture with PrintScreen, bind a shortcut in your desktop's keyboard settings to this command:" followed by <code>snapmock --capture region</code> in a copyable field, a Copy button, and one line each for the window and full-screen commands. Below that, one sentence per known desktop: where the keyboard shortcut settings are on GNOME and on KDE, and that the desktop's own PrintScreen binding must be removed or changed first.</li>
+  <li>Buttons: Continue (proceeds to the capture), Cancel.</li>
+  <li>The same content is reachable at any time from Preferences &gt; Capture through a "How to set up a desktop shortcut..." link, so the dialog is not the only place it lives.</li>
+</ul>
+
+<h3 id="s9-3">Hotkey Conflicts</h3>
+<ul>
+  <li>On X11 and Windows, a failed registration at startup shows one toast: "PrintScreen is in use by another application. Change it in Preferences &gt; Capture." The toast names the specific key that failed. Multiple failures are collected into one toast.</li>
+  <li>Known conflicts are documented in the Preferences help text: GNOME on X11 and Windows 11 with the Snipping Tool shortcut both claim PrintScreen by default.</li>
+  <li>Changing a hotkey to one that is in use fails immediately in the key sequence editor with the same message, and the previous key stays registered.</li>
+</ul>
+
+<h2 id="s10">Data Models</h2>
+<p>These are application-level models in <code>snapmock/capture/models.py</code>. Only <code>CaptureMetadata</code> (Section 10.5) is written to disk, as part of <code>manifest.json</code>.</p>
+
+<h3 id="s10-1">CaptureMode</h3>
+<p>An enumeration with the values <code>full_screen</code>, <code>active_window</code>, region, and the reserved value scrolling. Serialized as the lowercase string.</p>
+
+<h3 id="s10-2">CaptureRequest</h3>
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>mode</th><td><code>CaptureMode</code></td><td>The requested mode. The manager may downgrade it (<code>active_window</code> to region) and records the downgrade in <code>CaptureMetadata</code>.</td></tr>
+    <tr><th><code>delay_seconds</code></th><td>int</td><td>Delay before the grab. Taken from the preference unless overridden by <code>--delay</code>.</td></tr>
+    <tr><th><code>include_cursor</code></th><td>bool</td><td>From the preference at request time.</td></tr>
+    <tr><th><code>copy_to_clipboard</code></th><td>bool</td><td>From the preference at request time.</td></tr>
+    <tr><th><code>hide_window</code></th><td>bool</td><td>From the preference at request time.</td></tr>
+    <tr><th>origin</th><td>str</td><td>One of hotkey, tray, toolbar, menu, <code>command_line</code>. For logging and for choosing toast versus notification.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s10-3">ScreenGrab</h3>
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>images</th><td>dict[str, <code>QImage</code>]</td><td>Physical-pixel image per monitor, keyed by <code>MonitorInfo</code>.name.</td></tr>
+    <tr><th><code>cursor_image</code></th><td><code>QImage</code> | None</td><td>Cursor bitmap with alpha, or None when unavailable or not requested.</td></tr>
+    <tr><th><code>cursor_hotspot</code></th><td><code>QPoint</code> | None</td><td>Hotspot offset within <code>cursor_image</code>.</td></tr>
+    <tr><th><code>cursor_position</code></th><td><code>QPoint</code> | None</td><td>Cursor position in virtual-desktop logical coordinates at grab time.</td></tr>
+    <tr><th><code>taken_at</code></th><td>datetime</td><td>Timestamp of the grab, used as <code>captured_at</code> in <code>library_metadata</code>.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s10-4">MonitorInfo</h3>
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>name</th><td>str</td><td>Platform monitor name, for example DP-1 or Built-in Retina Display.</td></tr>
+    <tr><th><code>logical_geometry</code></th><td><code>QRect</code></td><td>Position and size in logical pixels within the virtual desktop.</td></tr>
+    <tr><th><code>physical_size</code></th><td><code>QSize</code></td><td>Size in physical pixels.</td></tr>
+    <tr><th><code>device_pixel_ratio</code></th><td>float</td><td>physical divided by logical.</td></tr>
+    <tr><th><code>is_primary</code></th><td>bool</td><td>Whether the platform marks this monitor primary.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s10-5">CaptureMetadata</h3>
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>mode</th><td><code>CaptureMode</code></td><td>The mode actually used, after any downgrade.</td></tr>
+    <tr><th><code>requested_mode</code></th><td><code>CaptureMode</code></td><td>The mode the user asked for.</td></tr>
+    <tr><th><code>monitor_name</code></th><td>str | None</td><td>Source monitor for <code>full_screen</code> (single monitor) and region; None for All Monitors.</td></tr>
+    <tr><th><code>device_pixel_ratio</code></th><td>float</td><td>Ratio of the source monitor, or the highest ratio composited for All Monitors.</td></tr>
+    <tr><th><code>screen_rect</code></th><td><code>QRect</code></td><td>The captured rectangle in virtual-desktop physical pixels.</td></tr>
+    <tr><th><code>cursor_included</code></th><td>bool</td><td>Whether the cursor was composited.</td></tr>
+    <tr><th>platform</th><td>str</td><td>linux, darwin, or win32.</td></tr>
+    <tr><th>backend</th><td>str</td><td>x11, <code>wayland_portal</code>, macos, windows, or null.</td></tr>
+    <tr><th><code>window_title</code></th><td>str | None</td><td>Title of the captured window for <code>active_window</code>, when the backend can read it.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s10-6">BackendCapabilities</h3>
+<p>A record of booleans: <code>full_screen</code>, <code>active_window</code>, region, cursor, hotkeys, tray, <code>needs_permission</code>. Produced once by <code>CaptureBackend</code>.capabilities() and <code>HotkeyBackend</code>, and read by the Preferences dialog, the capture manager, and the onboarding flow.</p>
+
+<h3 id="s10-7">HotkeyBinding</h3>
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>action</th><td>str</td><td>capture.region, capture.window, or capture.<code>full_screen</code>.</td></tr>
+    <tr><th><code>key_sequence</code></th><td><code>QKeySequence</code></td><td>The key as stored in settings. Empty means unbound.</td></tr>
+    <tr><th>registered</th><td>bool</td><td>Whether the platform accepted the registration. Shown in Preferences.</td></tr>
+    <tr><th><code>failure_reason</code></th><td>str | None</td><td>Platform text when registration failed.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s10-8">CaptureResult</h3>
+<p>The value carried by <code>capture_completed</code>: image (<code>QImage</code>, physical pixels, final crop) and metadata (<code>CaptureMetadata</code>). It is consumed by <code>MainWindow</code> and never stored.</p>
+
+<h2 id="s11">Command Definitions</h2>
+<p>Screen Capture introduces no undoable commands. A capture creates a file in the Library; it does not mutate any open scene, so it never touches a <code>CommandStack</code>. The Library's own file operations (rename, move, folder creation) remain the commands defined in the Library PRD, Section 10.</p>
+<p>Two rules follow from this. First, undo after a capture undoes the last action in the active document, not the capture; the file is removed through the Library panel's Delete like any other file. Second, the auto-opened tab starts with an empty undo stack, exactly as a file opened from the panel does, because the capture is the file's origin, not an edit to it.</p>
+<p>If a later version adds "capture into the active document" (rejected for version 1 in Section 7.3), it would be an <code>AddItemCommand</code> on that document and would be specified then.</p>
+
+<h2 id="s12">Serialization</h2>
+
+<h3 id="s12-1">manifest.json Extension</h3>
+<p>One optional object, <code>capture_metadata</code>, is added to <code>manifest.json</code> beside <code>library_metadata</code>. Files without it load unchanged. The Library panel's Properties dialog shows its fields when present.</p>
+<table>
+  <colgroup><col class="w-wide"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Field path</th><th>Type</th><th>Serialization</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>capture_metadata</code></th><td>object | null</td><td>Present only for files with <code>library_metadata.source</code> equal to "capture".</td></tr>
+    <tr><th><code>capture_metadata.mode</code></th><td>string</td><td><code>"mode": "region"</code></td></tr>
+    <tr><th><code>capture_metadata.requested_mode</code></th><td>string</td><td><code>"requested_mode": "active_window"</code></td></tr>
+    <tr><th><code>capture_metadata.monitor_name</code></th><td>string | null</td><td><code>"monitor_name": "DP-1"</code></td></tr>
+    <tr><th><code>capture_metadata.device_pixel_ratio</code></th><td>number</td><td><code>"device_pixel_ratio": 2.0</code></td></tr>
+    <tr><th><code>capture_metadata.screen_rect</code></th><td>object</td><td><code>"screen_rect": {"x": 120, "y": 80, "width": 1600, "height": 900}</code></td></tr>
+    <tr><th><code>capture_metadata.cursor_included</code></th><td>boolean</td><td><code>"cursor_included": false</code></td></tr>
+    <tr><th><code>capture_metadata.platform</code></th><td>string</td><td><code>"platform": "linux"</code></td></tr>
+    <tr><th><code>capture_metadata.backend</code></th><td>string</td><td><code>"backend": "wayland_portal"</code></td></tr>
+    <tr><th><code>capture_metadata.window_title</code></th><td>string | null</td><td><code>"window_title": "Inbox - Mail"</code></td></tr>
+  </tbody>
+</table>
+<p><code>library_metadata.captured_at</code> is set from <code>ScreenGrab</code>.<code>taken_at</code>, the moment the pixels were read, not the moment the file was written. For a region capture with a long pause in the overlay, the two can differ by seconds; the grab time is the truthful one.</p>
+
+<h3 id="s12-2">Settings</h3>
+<p>All settings listed in Section 8.1 are stored through <code>AppSettings</code> under the capture/ prefix, plus <code>capture/onboardingShown</code> (boolean) and <code>capture/lastMode</code> (string, the mode of the most recent capture, for the toolbar tooltip). Key sequences are stored in Qt's portable text form so the same settings file works across platforms.</p>
+
+<h3 id="s12-3">Session Persistence</h3>
+<ul>
+  <li>Tray visibility and the Keep Running in Tray state are preferences, not session state.</li>
+  <li>When the application quits while the main window is hidden in the tray, the window geometry saved is the geometry recorded before hiding, not the hidden state.</li>
+  <li>No capture-in-progress state is persisted. A crash during capture leaves nothing to recover; the next launch starts idle.</li>
+</ul>
+
+<h2 id="s13">Keyboard Shortcuts</h2>
+
+<h3 id="s13-1">Global Hotkeys</h3>
+<p>Registered with the operating system on X11 and Windows (Section 3.1). Defaults: PrintScreen (Region), Alt+PrintScreen (Active Window), Ctrl+PrintScreen (Full Screen). All three are user-editable.</p>
+
+<h3 id="s13-2">Application Shortcuts</h3>
+<p>Added to <code>config/shortcuts.py</code>. These work while a SnapMock window has focus, on every platform where the desktop does not intercept the key.</p>
+<table>
+  <colgroup><col class="w-medium"><col class="w-wide"><col class="w-wide"></colgroup>
+  <thead>
+    <tr><th>Action name</th><th>Default</th><th>Menu item</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>capture.region</th><td>PrintScreen (follows the hotkey preference)</td><td>Capture &gt; Capture Region</td></tr>
+    <tr><th>capture.window</th><td>Alt+PrintScreen (follows the hotkey preference)</td><td>Capture &gt; Capture Active Window</td></tr>
+    <tr><th>capture.<code>full_screen</code></th><td>Ctrl+PrintScreen (follows the hotkey preference)</td><td>Capture &gt; Capture Full Screen</td></tr>
+    <tr><th>capture.preferences</th><td>(none)</td><td>Capture &gt; Capture Preferences...</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s13-3">Overlay Keys</h3>
+<p>Defined in Section 5.4: Shift, Alt, Space, Arrow keys, Enter, Escape. These are handled by the overlay directly and are not entries in <code>config/shortcuts.py</code>, because they apply only while the overlay has focus.</p>
+
+<h3 id="s13-4">Countdown Keys</h3>
+<p>Escape cancels a running delay countdown while the countdown badge has focus.</p>
+
+<h2 id="s14">Acceptance Criteria</h2>
+
+<h3 id="s14-1">Capture Modes</h3>
+<ol>
+  <li>A full-screen capture with scope Monitor Under Cursor produces an image whose size equals the physical size of the monitor containing the cursor.</li>
+  <li>A full-screen capture with scope All Monitors produces one image covering the virtual desktop, with black where no monitor exists.</li>
+  <li>An active-window capture on X11, macOS, and Windows produces an image whose size equals the window's frame size, excluding shadow.</li>
+  <li>An active-window request on Wayland opens the region overlay and shows the degradation message in the hint bar.</li>
+  <li>A region capture produces an image whose size equals the drawn rectangle in physical pixels.</li>
+  <li>No menu, tray, or toolbar entry for scrolling or freehand capture exists in version 1.</li>
+</ol>
+
+<h3 id="s14-2">Entry Points</h3>
+<ol>
+  <li>On X11 and Windows, pressing the default hotkey while another application has focus starts the corresponding capture.</li>
+  <li>A hotkey that fails to register produces exactly one toast naming the key, and the application continues.</li>
+  <li>Changing a hotkey in Preferences releases the old key and registers the new one without restart.</li>
+  <li>The tray icon appears when the preference is on and the platform has a tray; each tray menu item performs its action.</li>
+  <li>With Keep Running in Tray on, closing the main window hides it and hotkeys continue to work; Show SnapMock restores it.</li>
+  <li>The Main Toolbar Capture button's main click uses the default mode; its arrow menu offers all three modes.</li>
+  <li>The Capture menu appears after Library and before Help with every item from Section 3.4, and its shortcut labels follow the hotkey preferences.</li>
+  <li><code>snapmock --capture region</code> with a running instance forwards the request within 100 milliseconds and exits with status 0; the running instance shows the overlay.</li>
+  <li><code>snapmock --capture full</code> with no running instance starts the application, captures, and leaves the editor running.</li>
+  <li>With Hide Window on, no SnapMock window appears in any capture; with it off, the SnapMock window is captured.</li>
+  <li>After every capture outcome (success, cancel, failure) the main window is restored to its recorded geometry and state and is active.</li>
+  <li>A capture request while a modal dialog is open is refused with the specified message and creates no file.</li>
+</ol>
+
+<h3 id="s14-3">Capture Options</h3>
+<ol>
+  <li>With a delay of N seconds, the grab occurs N seconds (plus or minus 100 milliseconds) after the trigger, and the countdown badge shows the remaining seconds and does not appear in the capture.</li>
+  <li>Escape during a countdown cancels it and creates no file.</li>
+  <li>With Include Cursor on, on X11, macOS, and Windows, the cursor appears in the capture at its grab-time position; on Wayland the preference shows the unavailable message.</li>
+  <li>With Play Sound on, the shutter sound plays once per completed capture and never on cancel or failure.</li>
+  <li>On a display at 200 percent scaling, a region drawn at 400 by 300 logical pixels produces an 800 by 600 pixel image.</li>
+  <li>With Copy to Clipboard on, the system clipboard holds a PNG of the capture after the capture, and the library file is also created.</li>
+  <li>A region spanning two monitors with equal device pixel ratios is captured across both; with unequal ratios the region is clamped to the first monitor and the hint bar explains.</li>
+</ol>
+
+<h3 id="s14-4">Region Selection Overlay</h3>
+<ol>
+  <li>The overlay covers every monitor and shows the frozen image, dimmed 40 percent, with the crosshair and magnifier following the cursor.</li>
+  <li>Dragging draws the rectangle with a live "W × H" label; release with at least 4 by 4 logical pixels captures immediately.</li>
+  <li>Release with a smaller rectangle discards the drag and leaves the overlay open.</li>
+  <li>Shift constrains to a square; Alt draws from the center; Shift+Alt does both; Space during a drag moves the rectangle.</li>
+  <li>The magnifier shows the 11 by 11 pixel neighborhood, the physical cursor coordinates, and the center pixel's hex color, and flips sides near monitor edges.</li>
+  <li>Escape, right-click, and focus loss to another application each cancel the overlay silently and restore the SnapMock windows.</li>
+  <li>The overlay renders the crosshair and rectangle at 60 frames per second on a 4K monitor.</li>
+  <li>An exception inside the overlay is reported as a capture failure; the editor keeps running and the next capture works.</li>
+</ol>
+
+<h3 id="s14-5">Platform Backends</h3>
+<ol>
+  <li>No module outside <code>snapmock/capture/</code> imports a platform-specific module or calls <code>ctypes</code>.</li>
+  <li>The backend selected on a Wayland session is the portal backend; on an X11 session it is the X11 backend; the selection is logged at startup.</li>
+  <li>On Wayland with the portal absent, every capture fails with the Section 6.4 message and no X11 grab is attempted.</li>
+  <li>On macOS without Screen Recording permission, the onboarding dialog appears on the first capture request and the Open System Settings button opens the Screen Recording pane.</li>
+  <li>On Windows, an active-window capture excludes the invisible resize border.</li>
+  <li>The Preferences capability line reports the backend name and each unavailable capability.</li>
+  <li>The test suite runs every backend-independent path (manager, overlay, models, single instance, preferences) against a fake backend on the offscreen platform.</li>
+</ol>
+
+<h3 id="s14-6">Post-Capture Flow</h3>
+<ol>
+  <li>Every successful capture calls <code>add_to_library</code> once with source "capture" and a <code>CaptureMetadata</code> record, and the file appears in the Library panel immediately.</li>
+  <li>With Auto-open on, the new file opens in a tab and becomes active; with it off, it does not open and the toast's Open link opens it.</li>
+  <li>The toast text, and the system notification when the window is hidden, match Section 7.2.</li>
+  <li>A capture taken while a dirty non-library document is active leaves that document's tab, dirty flag, and undo stack unchanged.</li>
+  <li>A failed capture shows the backend's reason, creates no file, and restores the windows.</li>
+</ol>
+
+<h3 id="s14-7">Preferences and Onboarding</h3>
+<ol>
+  <li>The Capture category appears after Library with every setting from Section 8.1, and every change applies immediately and persists across sessions.</li>
+  <li>The hotkey editors are replaced by command-line guidance with a working Copy button on Wayland and macOS.</li>
+  <li>Each onboarding dialog appears on the first capture request only, honors Don't show this again, and is reachable again from Preferences.</li>
+</ol>
+
+<h3 id="s14-8">Serialization</h3>
+<ol>
+  <li>A captured file's <code>manifest.json</code> contains <code>capture_metadata</code> with every field from Section 12.1, and <code>library_metadata.captured_at</code> equals the grab time.</li>
+  <li>A file without <code>capture_metadata</code> loads and displays without error.</li>
+  <li>Settings written on Linux with a PrintScreen hotkey load on Windows with the same key.</li>
+</ol>
+
+<h2 id="s15">Open Questions</h2>
+
+<p>These items do not change a requirement. Each needs an answer before the section it names is implemented; the implementation kickoff prompt carries them forward.</p>
+
+<div class="note issue">
+  <span class="note-label">Open — GNOME consent dialog frequency (Section 6.4)</span>
+  <p>Whether the GNOME portal asks once per session or on every screenshot call is inferred, not checked. If it asks every time, the Wayland experience is one click worse than Section 6.4 implies. The onboarding text in Section 9.2 already warns of both cases.</p>
+</div>
+
+<div class="note issue">
+  <span class="note-label">Open — macOS active window through ctypes (Section 6.5)</span>
+  <p>The Core Graphics window list is reachable from <code>ctypes</code>, but <code>pyobjc</code> is the safer route. Section 6.5 names <code>pyobjc</code> as an optional implementation candidate; the implementer should decide after a spike.</p>
+</div>
+
+<div class="note issue">
+  <span class="note-label">Open — Wayland overlay placement (Section 5.7)</span>
+  <p>Compositors may ignore the per-monitor full-screen request. Section 5.7 records this as a known limitation. If it bites on GNOME in practice, a single overlay window spanning the virtual desktop is the fallback to evaluate.</p>
+</div>
+
+<div class="note issue">
+  <span class="note-label">Open — Windows 11 PrintScreen (Section 9.3)</span>
+  <p>Windows 11 can bind PrintScreen to the Snipping Tool by default. Section 9.3 documents the conflict. Whether SnapMock should offer to take over the key on first run is a version 1.1 question.</p>
+</div>
+
+<div class="note issue">
+  <span class="note-label">Open — Sound asset (Section 4.3)</span>
+  <p>The shutter sound file needs a license-compatible source before it ships.</p>
+</div>
+
+
+</main>
+
+</div>
+</body>
+</html>

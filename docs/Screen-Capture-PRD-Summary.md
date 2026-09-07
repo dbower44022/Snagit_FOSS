@@ -1,8 +1,8 @@
 # Screen Capture PRD: Summary Note
 
-Last Updated: 09-07-26 12:05 · Revision 1.0
+Last Updated: 09-07-26 12:12 · Revision 1.1
 
-Companion to `PRDs/SnapMock-Screen-Capture-PRD.docx` version 1.0. One page: the decisions made, the open questions.
+Companion to `PRDs/SnapMock-Screen-Capture-PRD.html` version 1.0, the canonical copy; `PRDs/SnapMock-Screen-Capture-PRD.docx` is the Word original it was converted from. One page: the decisions made, the open questions. The open questions are also Section 15 of the HTML document.
 
 ## Decisions surfaced and approved
 
@@ -47,4 +47,5 @@ Implement the PRD in a new session using `docs/Screen-Capture-Implementation-Kic
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 09-07-26 12:12 | Claude (Claude Code) | Point at the HTML PRD as the canonical copy; note that the open questions are now its Section 15. |
 | 1.0 | 09-07-26 12:05 | Claude (Claude Code) | Initial summary note for Screen Capture PRD v1.0. |
