@@ -1,6 +1,8 @@
 # Kickoff Prompt: Windows and macOS Capture Backends
 
-Last Updated: 09-07-26 16:05 · Revision 1.0
+Last Updated: 09-07-26 19:16 · Revision 1.1
+
+> Step A (Windows) is superseded by `docs/Windows-Backend-Kickoff-Prompt.md`, which carries the Windows environment setup and the corrected DPI-awareness step. Use this document for step B (macOS) only.
 
 Paste everything below the line into a new Claude Code session rooted in this repository, on the target platform (a Windows machine for step A, a macOS machine for step B). Each platform's backend is verified by hand on that platform; the offscreen test suite covers only what a fake can exercise.
 
@@ -65,4 +67,5 @@ State the next required step and write the next-action prompt for the version 2 
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 09-07-26 19:16 | Claude (Claude Code) | Step A superseded by the Windows-only kickoff prompt; this document now covers step B only. |
 | 1.0 | 09-07-26 16:05 | Claude (Claude Code) | Initial kickoff prompt for the Windows and macOS backends. |
