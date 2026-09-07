@@ -16,12 +16,12 @@ Write the **SnapMock Screen Capture PRD**, a product requirements document in th
 
 ## Read first, in this order
 
-1. `PRDs/SnapMock-Library-PRD.docx`, Sections 2.3, 6, and 8: the capture-to-library workflow this PRD must feed.
+1. `PRDs/SnapMock-Library-PRD.html`, Sections 2.3, 6, and 8: the capture-to-library workflow this PRD must feed.
 2. `docs/Library-Implementation.md`: what is already built. `MainWindow.add_to_library(image, source)` is the existing entry point a capture must call; the toast, auto-open preference, and auto-naming already exist.
-3. `PRDs/SnapMock-General-UI-PRD.docx`: menu bar, main toolbar, tool options bar, preferences dialog, keyboard shortcuts, first-run experience, and the never-disabled-controls principle.
-4. `PRDs/SnapMock-Navigation-Raster-Operations-PRD.docx`, Section 1.3 and any capture references.
-5. `PRDs/SnapMock-Technical-Architecture-PRD.docx`: class structure, the `.smk` format, and the platform targets.
-6. Extract text from a `.docx` with `unzip -p file.docx word/document.xml | sed 's/<\/w:p>/\n/g; s/<[^>]*>//g'`.
+3. `PRDs/SnapMock-General-UI-PRD.html`: menu bar, main toolbar, tool options bar, preferences dialog, keyboard shortcuts, first-run experience, and the never-disabled-controls principle.
+4. `PRDs/SnapMock-Navigation-Raster-Operations-PRD.html`, Section 1.3 and any capture references.
+5. `PRDs/SnapMock-Technical-Architecture-PRD.html`: class structure, the `.smk` format, and the platform targets.
+6. The PRDs are HTML; read them directly.
 
 Do not draft any section until all five documents are read. A PRD written against the wrong assumptions costs two rewrites.
 

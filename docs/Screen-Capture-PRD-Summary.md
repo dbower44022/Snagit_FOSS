@@ -2,7 +2,7 @@
 
 Last Updated: 09-07-26 12:12 · Revision 1.1
 
-Companion to `PRDs/SnapMock-Screen-Capture-PRD.html` version 1.0, the canonical copy; `PRDs/SnapMock-Screen-Capture-PRD.docx` is the Word original it was converted from. One page: the decisions made, the open questions. The open questions are also Section 15 of the HTML document.
+Companion to `PRDs/SnapMock-Screen-Capture-PRD.html` version 1.0. One page: the decisions made, the open questions. The open questions are also Section 15 of the HTML document.
 
 ## Decisions surfaced and approved
 

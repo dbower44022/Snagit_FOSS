@@ -12,7 +12,7 @@ Read the project `CLAUDE.md` at the repository root. No other repository is invo
 
 ## Task
 
-Implement the **SnapMock Screen Capture PRD** version 1.0 (`PRDs/SnapMock-Screen-Capture-PRD.html`, the canonical copy; the `.docx` beside it is the Word original) on the Linux backends first, with the Windows and macOS backends stubbed behind the same interfaces. Write `docs/Screen-Capture-Implementation.md` when done, in the format of `docs/Library-Implementation.md`.
+Implement the **SnapMock Screen Capture PRD** version 1.0 (`PRDs/SnapMock-Screen-Capture-PRD.html`) on the Linux backends first, with the Windows and macOS backends stubbed behind the same interfaces. Write `docs/Screen-Capture-Implementation.md` when done, in the format of `docs/Library-Implementation.md`.
 
 ## Read first, in this order
 
