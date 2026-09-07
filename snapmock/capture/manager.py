@@ -422,9 +422,6 @@ class CaptureManager(QObject):
             return
         geometry = self._backend.active_window_geometry()
         if geometry is None or geometry.isEmpty():
-            if self._backend.name == "x11" and not self._capabilities.active_window:
-                self._begin_region(grab, hint=MSG_WINDOW_DEGRADED)
-                return
             self._finish_failed(MSG_NO_WINDOW)
             return
         geometry = geometry.intersected(grab.virtual_logical_rect)
