@@ -31,7 +31,7 @@ from ctypes import (
 from typing import Any
 
 from PyQt6 import sip
-from PyQt6.QtCore import QObject, QPoint, QRect, QSocketNotifier, Qt
+from PyQt6.QtCore import QObject, QPoint, QRect, QSocketNotifier, Qt, QTimer
 from PyQt6.QtGui import QGuiApplication, QImage, QKeySequence
 
 from snapmock.capture.backend import (
@@ -62,6 +62,7 @@ MOD4_MASK = 1 << 6
 MOD5_MASK = 1 << 7
 XK_NUM_LOCK = 0xFF7F
 XEVENT_SIZE = 192  # sizeof(XEvent) on LP64
+QUEUE_POLL_MS = 150
 
 Window = c_ulong
 Atom = c_ulong
@@ -595,6 +596,12 @@ class X11HotkeyBackend(HotkeyBackend):
             sip.voidptr(connection.fd), QSocketNotifier.Type.Read, self
         )
         self._notifier.activated.connect(self._on_readable)
+        # Xlib reads whole buffers: a request on this connection can move a key
+        # event into Xlib's queue, leaving the socket unreadable and the notifier
+        # silent. A short poll drains such events (the classic XPending rule).
+        self._poll = QTimer(self)
+        self._poll.setInterval(QUEUE_POLL_MS)
+        self._poll.timeout.connect(self._on_readable)
 
     @property
     def supported(self) -> bool:
@@ -625,6 +632,8 @@ class X11HotkeyBackend(HotkeyBackend):
         self._grabs[binding.action] = (keycode, modifiers)
         binding.registered = True
         binding.failure_reason = None
+        if not self._poll.isActive():
+            self._poll.start()
         return True
 
     def unregister(self, binding: HotkeyBinding) -> None:
@@ -632,11 +641,14 @@ class X11HotkeyBackend(HotkeyBackend):
         if grab is not None:
             self._x.ungrab_key(*grab)
         binding.registered = False
+        if not self._grabs:
+            self._poll.stop()
 
     def unregister_all(self) -> None:
         for keycode, modifiers in self._grabs.values():
             self._x.ungrab_key(keycode, modifiers)
         self._grabs.clear()
+        self._poll.stop()
 
     def _on_readable(self) -> None:
         for keycode, state in self._x.pending_key_presses():
