@@ -12,6 +12,7 @@ from snapmock.items.base_item import SnapGraphicsItem
 
 if TYPE_CHECKING:
     from snapmock.core.scene import SnapScene
+    from snapmock.items.raster_region_item import RasterRegionItem
 
 
 class CropCanvasCommand(BaseCommand):
@@ -79,7 +80,7 @@ class RasterCutCommand(BaseCommand):
         self._original_pixels = QImage(original_pixels)
         self._source_layer_id = source_layer_id
         # Backup of (item, original_pixmap) for affected RasterRegionItems
-        self._backups: list[tuple[SnapGraphicsItem, QPixmap]] = []
+        self._backups: list[tuple[RasterRegionItem, QPixmap]] = []
 
     def redo(self) -> None:
         from snapmock.items.raster_region_item import RasterRegionItem

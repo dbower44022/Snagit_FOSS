@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QFont, QTextCharFormat, QTextCursor
@@ -423,7 +423,7 @@ class PropertyPanel(QDockWidget):
         """Return True if showing vector tool defaults (no selection + vector tool)."""
         return self._first_selected_item() is None and self._active_tool_id in _VECTOR_TOOL_IDS
 
-    def _active_tool_defaults(self) -> dict[str, object] | None:
+    def _active_tool_defaults(self) -> dict[str, Any] | None:
         """Return the creation_defaults dict for the active tool, or None."""
         if self._tool_manager is None:
             return None

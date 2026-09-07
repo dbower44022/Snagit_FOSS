@@ -23,7 +23,7 @@ class _SwatchButton(QPushButton):
         self._color = QColor(value)
         self.update()
 
-    def paintEvent(self, event: QPaintEvent) -> None:
+    def paintEvent(self, event: QPaintEvent | None) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         inner = self.rect().adjusted(1, 1, -1, -1)

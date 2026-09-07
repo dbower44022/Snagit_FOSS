@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 from PyQt6.QtCore import QRectF, Qt
 from PyQt6.QtGui import (
     QColor,
@@ -166,15 +168,17 @@ class RichTextMixin:
     def set_line_height(
         self,
         height: float,
-        height_type: int = QTextBlockFormat.LineHeightTypes.ProportionalHeight.value,
+        height_type: QTextBlockFormat.LineHeightTypes | None = None,
         cursor: QTextCursor | None = None,
     ) -> None:
         """Set line spacing for blocks touched by *cursor*.
 
         *height_type* defaults to ``ProportionalHeight`` (percentage, e.g. 150 = 1.5x).
         """
+        if height_type is None:
+            height_type = QTextBlockFormat.LineHeightTypes.ProportionalHeight
         fmt = QTextBlockFormat()
-        fmt.setLineHeight(height, height_type)
+        fmt.setLineHeight(height, cast(int, height_type.value))
         self.set_block_format(fmt, cursor)
 
     def set_text_indent(self, indent: float, cursor: QTextCursor | None = None) -> None:

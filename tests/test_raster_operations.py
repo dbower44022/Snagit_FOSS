@@ -150,7 +150,6 @@ def test_raster_select_move_marquee(qtbot: object) -> None:
     view.mouseReleaseEvent(release_event)
     assert tool._state.name == "ACTIVE"
 
-    old_rect = tool.selection_rect
     # Now click inside and drag to move
     inside_pt = QPoint(200, 175)
     press_event2 = _make_mouse_event(QMouseEvent.Type.MouseButtonPress, inside_pt)
