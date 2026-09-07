@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Library — SnapMock Product Requirements Document</title>
+<link rel="stylesheet" href="prd.css">
+</head>
+<body>
+<div class="doc">
+
+<header class="doc-head">
+  <h1>Library</h1>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.0</span>
+  <dl class="doc-meta">
+    <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
+    <dt>Covers</dt>          <dd>Capture Library · Auto-Save · File Management · Tabbed Editing</dd>
+    <dt>Document version</dt><dd>1.0</dd>
+    <dt>Last Updated</dt>    <dd>09-07-26 19:31</dd>
+    <dt>Author</dt>          <dd>Doug Bower</dd>
+    <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
+  </dl>
+</header>
+
+<section class="front-matter">
+
+  <h2 class="unnumbered">Revision control</h2>
+  <table>
+    <colgroup><col class="w-narrow"><col class="w-short"><col class="w-short"><col><col class="w-short"></colgroup>
+    <thead>
+      <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1.0</td>
+        <td class="nowrap">09-07-26 19:31</td>
+        <td>Doug Bower</td>
+        <td>Converted from Word to HTML. Content unchanged except for corrections
+        noted in the change log below.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
+      <tr>
+        <td>1.0</td>
+        <td class="nowrap">March 2026</td>
+        <td>Doug Bower</td>
+        <td>Initial release of the Library PRD covering: Library concept, Library panel (dockable
+        file browser), tabbed multi-document editing, Library menu, capture-to-library
+        workflow,…</td>
+        <td><span class="status closed">Superseded by format conversion</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note issue">
+    <span class="note-label">Open — incomplete revision history</span>
+    <p>The Word original recorded release months only for version 1.0, so
+    that date does not meet the MM-DD-YY HH:MM standard. They are carried over as written
+    rather than invented. Supply the exact dates and they will be corrected.</p>
+  </div>
+
+  <h2 class="unnumbered">Change log</h2>
+  <table>
+    <colgroup><col class="w-short"><col class="w-short"><col class="w-short"><col></colgroup>
+    <thead>
+      <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="nowrap">09-07-26 19:31</td>
+        <td>All</td>
+        <td>Format</td>
+        <td>Converted from Word to HTML against the shared stylesheet. Revision control
+        and change log tables added to meet the output standard; the original had a
+        change log only. Open issues gathered in new Section 13.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">March 2026</td>
+        <td>General</td>
+        <td>Initial</td>
+        <td>Initial release of the Library PRD covering: Library concept, Library panel (dockable
+        file browser), tabbed multi-document editing, Library menu, capture-to-library workflow,
+        auto-naming convention, drag-and-drop import/export, multi-select operations, export
+        integration, Preferences integration, data models, command definitions, serialization,
+        and acceptance criteria.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 class="unnumbered">Contents</h2>
+  <ol class="toc">
+    <li><a href="#s1">Document Overview</a>
+      <ol>
+        <li><a href="#s1-1">Purpose</a></li>
+        <li><a href="#s1-2">Scope</a></li>
+        <li><a href="#s1-3">Dependencies</a></li>
+      </ol>
+    </li>
+    <li><a href="#s2">Library Concept</a>
+      <ol>
+        <li><a href="#s2-1">Purpose &amp; Workflow</a></li>
+        <li><a href="#s2-2">Library Directory</a></li>
+        <li><a href="#s2-3">Auto-Save Behavior</a></li>
+        <li><a href="#s2-4">Native File Format (.smk) Integration</a></li>
+      </ol>
+    </li>
+    <li><a href="#s3">Library Panel</a>
+      <ol>
+        <li><a href="#s3-1">Panel Overview</a></li>
+        <li><a href="#s3-2">Docking &amp; Positioning</a></li>
+        <li><a href="#s3-3">Panel Layout</a></li>
+        <li><a href="#s3-4">Thumbnail Grid View</a></li>
+        <li><a href="#s3-5">Preview List View</a></li>
+        <li><a href="#s3-6">Thumbnail / Preview Size</a></li>
+        <li><a href="#s3-7">File Selection &amp; Interaction</a></li>
+        <li><a href="#s3-8">File Management Operations</a></li>
+        <li><a href="#s3-9">Folder Support</a></li>
+        <li><a href="#s3-10">Sorting &amp; Searching</a></li>
+        <li><a href="#s3-11">Library Size Indicator</a></li>
+        <li><a href="#s3-12">Multi-Select</a></li>
+        <li><a href="#s3-13">Drag-and-Drop</a></li>
+        <li><a href="#s3-14">Context Menu</a></li>
+      </ol>
+    </li>
+    <li><a href="#s4">Tabbed Editing</a>
+      <ol>
+        <li><a href="#s4-1">Tab Bar</a></li>
+        <li><a href="#s4-2">Opening Files</a></li>
+        <li><a href="#s4-3">Tab Behavior</a></li>
+        <li><a href="#s4-4">Continuous Write-Back</a></li>
+      </ol>
+    </li>
+    <li><a href="#s5">Library Menu</a>
+      <ol>
+        <li><a href="#s5-1">Menu Structure</a></li>
+      </ol>
+    </li>
+    <li><a href="#s6">Capture-to-Library Workflow</a>
+      <ol>
+        <li><a href="#s6-1">Capture Integration</a></li>
+        <li><a href="#s6-2">Auto-Naming Convention</a></li>
+        <li><a href="#s6-3">Import via Drag-and-Drop</a></li>
+      </ol>
+    </li>
+    <li><a href="#s7">Export</a>
+      <ol>
+        <li><a href="#s7-1">Export Formats</a></li>
+        <li><a href="#s7-2">Multi-Select Export</a></li>
+        <li><a href="#s7-3">Integration with Export Quick</a></li>
+      </ol>
+    </li>
+    <li><a href="#s8">Preferences Integration</a>
+      <ol>
+        <li><a href="#s8-1">Library Category</a></li>
+      </ol>
+    </li>
+    <li><a href="#s9">Data Models</a>
+      <ol>
+        <li><a href="#s9-1">LibraryFileInfo</a></li>
+        <li><a href="#s9-2">LibraryModel</a></li>
+        <li><a href="#s9-3">TabModel</a></li>
+        <li><a href="#s9-4">TabInfo</a></li>
+      </ol>
+    </li>
+    <li><a href="#s10">Command Definitions</a>
+      <ol>
+        <li><a href="#s10-1">RenameLibraryFileCommand</a></li>
+        <li><a href="#s10-2">DeleteLibraryFileCommand</a></li>
+        <li><a href="#s10-3">MoveLibraryFileCommand</a></li>
+        <li><a href="#s10-4">CreateFolderCommand</a></li>
+      </ol>
+    </li>
+    <li><a href="#s11">Serialization</a>
+      <ol>
+        <li><a href="#s11-1">manifest.json Extension</a></li>
+        <li><a href="#s11-2">Session Persistence</a></li>
+      </ol>
+    </li>
+    <li><a href="#s12">Acceptance Criteria</a>
+      <ol>
+        <li><a href="#s12-1">Library Panel</a></li>
+        <li><a href="#s12-2">File Management</a></li>
+        <li><a href="#s12-3">Multi-Select</a></li>
+        <li><a href="#s12-4">Drag-and-Drop</a></li>
+        <li><a href="#s12-5">Tabbed Editing</a></li>
+        <li><a href="#s12-6">Continuous Write-Back</a></li>
+        <li><a href="#s12-7">Library Menu</a></li>
+        <li><a href="#s12-8">Export</a></li>
+        <li><a href="#s12-9">Preferences</a></li>
+      </ol>
+    </li>
+    <li><a href="#s13">Open Issues</a></li>
+  </ol>
+
+</section>
+
+<main>
+
+<h2 id="s1">Document Overview</h2>
+
+<h3 id="s1-1">Purpose</h3>
+
+<p>This document defines the functional requirements for the SnapMock Library feature. The
+Library provides a rapid-capture workspace that automatically stores annotation files to
+a user-defined directory, decoupling the act of capturing and annotating from the
+overhead of manual file management. Users can capture many screenshots in quick
+succession, annotate them at their leisure, and later save or export finished work to
+permanent locations.</p>
+
+<h3 id="s1-2">Scope</h3>
+
+<p>This PRD covers: the Library panel (dockable file browser), the Library menu in the main
+menu bar, capture-to-library auto-save workflow, tabbed multi-document editing, file
+management operations within the library, drag-and-drop import/export, multi-select
+batch operations, export from the library, and Preferences integration. This document
+does not redefine the <code>.smk</code> file format (covered in the Technical
+Architecture PRD) or the Export dialog (covered in the General UI PRD).</p>
+
+<h3 id="s1-3">Dependencies</h3>
+
+<ul>
+  <li>Technical Architecture PRD: <code>.smk</code> file format (Section 3.8), CommandStack,
+  File I/O &amp; Serialization.</li>
+  <li>General UI PRD: Main Window Layout, Menu Bar, Export Dialog, Preferences Dialog,
+  Keyboard Shortcuts, Session Persistence.</li>
+  <li>Navigation &amp; Raster Operations PRD: Capture and import workflows.</li>
+</ul>
+
+<h2 id="s2">Library Concept</h2>
+
+<h3 id="s2-1">Purpose &amp; Workflow</h3>
+
+<p>The Library is a quick work-in-progress storage mechanism. The core workflow is:</p>
+
+<ul>
+  <li>Capture a screenshot. It instantly appears in the Library as a <code>.smk</code> file.</li>
+  <li>Optionally annotate the capture immediately, or move on to capture the next screenshot.</li>
+  <li>Later, open the Library panel to browse all captured files.</li>
+  <li>Double-click a file to open it in a canvas tab for annotation.</li>
+  <li>When finished, export or save the file to a permanent location.</li>
+</ul>
+
+<p>This workflow eliminates the friction of choosing file names and save locations during
+rapid capture sessions. All working files are kept in a single, organized directory.</p>
+
+<h3 id="s2-2">Library Directory</h3>
+
+<p>The Library directory is a user-defined folder on disk where all auto-saved
+<code>.smk</code> files are stored. Configuration:</p>
+
+<ul>
+  <li><strong>Default path: </strong>~/SnapMock/Library/ (Linux/macOS) or
+  %USERPROFILE%\SnapMock\Library\ (Windows). Created automatically on first launch if it
+  does not exist.</li>
+  <li><strong>User configurable: </strong>The library path is set in Preferences &gt; Library
+  (see Section 8) and displayed in the Library panel header.</li>
+  <li><strong>Switching libraries: </strong>The user can open a different directory as the
+  active library via the Library menu or the Library panel. Switching does not move or
+  delete files in the previous library.</li>
+  <li><strong>Moving a library: </strong>The user can move the entire library directory to a
+  new location. SnapMock moves all files and updates the stored path.</li>
+  <li><strong>Multiple libraries: </strong>Only one library directory is active at a time. The
+  user switches between libraries by opening a different directory.</li>
+</ul>
+
+<h3 id="s2-3">Auto-Save Behavior</h3>
+
+<p>The Library uses a continuous write-back strategy to ensure files are always up to date:</p>
+
+<ul>
+  <li><strong>On capture: </strong>A new <code>.smk</code> file is immediately created in the
+  library directory containing the captured raster image and an initial (empty) annotation
+  JSON.</li>
+  <li><strong>On every completed action: </strong>Whenever a command is pushed to the undo
+  stack (any annotation operation: add item, move, resize, property change, delete, etc.),
+  the annotation JSON files (layers.json, items.json, manifest.json) within the
+  <code>.smk</code> archive are written back. Because these are small JSON files, the
+  write is effectively instantaneous.</li>
+  <li><strong>Raster data: </strong>The raster image (background layer PNG, raster region
+  PNGs) is written once at capture time and only rewritten when a raster-level operation
+  occurs (crop, resize image, raster cut/paste, flatten layers).</li>
+  <li><strong>No explicit save required: </strong>Library files are always current. The
+  traditional File &gt; Save workflow is used only when saving a copy to a different
+  location outside the library.</li>
+  <li><strong>Crash safety: </strong>Because writes happen on every action, the maximum data
+  loss in a crash is the last in-progress action (which was not yet committed to the undo
+  stack).</li>
+</ul>
+
+<h3 id="s2-4">Native File Format (.smk) Integration</h3>
+
+<p>Library files use the standard <code>.smk</code> format as defined in the Technical
+Architecture PRD (Section 3.8.1). The <code>.smk</code> ZIP archive contains
+manifest.json, layers.json, items.json, raster/ directory, thumbnails/ directory, and
+fonts/ directory. The Library adds no additional structures to the <code>.smk</code>
+format; library-specific metadata (such as the display name) is stored in manifest.json
+via an optional <code>library_metadata</code> field:</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>display_name</code></th><td>string</td><td>User-assigned display name for the file. Defaults to the auto-generated capture name. Updated when the user renames the file in the Library panel.</td></tr>
+    <tr><th><code>captured_at</code></th><td>ISO 8601 string</td><td>Timestamp of the original capture. Immutable after creation.</td></tr>
+    <tr><th>source</th><td>string</td><td>Origin of the file: "capture" (screen capture), "import" (imported image), "new" (blank canvas).</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s3">Library Panel</h2>
+
+<h3 id="s3-1">Panel Overview</h3>
+
+<p>The Library panel is a dockable panel (QDockWidget) that provides a visual file browser
+for all <code>.smk</code> files in the active library directory. It displays thumbnails
+or previews of library files, supports full file management operations, and allows the
+user to open files for editing by double-clicking.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Value</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Widget Type</th><td>QDockWidget</td></tr>
+    <tr><th>Default Position</th><td>Bottom edge of main window</td></tr>
+    <tr><th>Default Height</th><td>250px (when docked at bottom)</td></tr>
+    <tr><th>Minimum Size</th><td>200px wide, 150px tall</td></tr>
+    <tr><th>Default Visibility</th><td>Visible (toggleable via View menu)</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s3-2">Docking &amp; Positioning</h3>
+
+<p>The Library panel follows the standard QDockWidget behavior established in the General
+UI PRD (Section 2.3):</p>
+
+<ul>
+  <li>Dockable to the left, right, top, or bottom edges of the main window.</li>
+  <li>Can be floated as an independent window (undocked) and dragged to any monitor.</li>
+  <li>Can be tabbed together with the Layer Panel or Property Panel if docked to the same
+  edge.</li>
+  <li>Can be closed (hidden) via the panel's close button or the View menu. Re-opened via View
+  &gt; Show Library Panel.</li>
+  <li>Dragging the panel near a dock edge shows a blue highlight indicator of the dock target
+  area.</li>
+  <li>Panel position, size, and dock state are saved and restored across sessions via
+  QSettings.</li>
+</ul>
+
+<h3 id="s3-3">Panel Layout</h3>
+
+<p>The Library panel is organized into three horizontal zones, from top to bottom:</p>
+
+<p><strong>Header Bar</strong></p>
+
+<ul>
+  <li><strong>Library path display: </strong>A read-only text label showing the current
+  library directory path (truncated with ellipsis if too long). Hovering shows the full
+  path in a tooltip.</li>
+  <li><strong>Change Library button: </strong>A small folder icon button that opens a
+  directory chooser dialog to switch to a different library folder.</li>
+  <li><strong>View toggle: </strong>Two small icon buttons to switch between Grid View and
+  Preview (List) View. The active view is highlighted.</li>
+  <li><strong>Size slider: </strong>A small slider to adjust thumbnail/preview size (see
+  Section 3.6).</li>
+  <li><strong>Search bar: </strong>A text input field with a magnifying glass icon for
+  filtering files by name (see Section 3.10).</li>
+</ul>
+
+<p><strong>Content Area</strong></p>
+
+<p>The scrollable area displaying library files in either Grid View or Preview List View.
+Supports folder navigation with a breadcrumb path or back button. When the library is
+empty, displays a centered message: "No files in library. Capture a screenshot or drag
+images here to get started."</p>
+
+<p><strong>Footer Bar</strong></p>
+
+<ul>
+  <li><strong>File count: </strong>"N files" (or "N files in M folders" if subfolders exist).</li>
+  <li><strong>Library size: </strong>Total disk usage of the library directory (e.g., "248
+  MB"). Updated when files are added, removed, or modified.</li>
+  <li><strong>Sort dropdown: </strong>A small dropdown to select the sort order (see Section
+  3.10).</li>
+</ul>
+
+<h3 id="s3-4">Thumbnail Grid View</h3>
+
+<p>In Grid View, library files are displayed as a grid of thumbnail cards. Each card
+contains:</p>
+
+<ul>
+  <li><strong>Thumbnail: </strong>A preview image of the annotation file rendered at the
+  current thumbnail size. Thumbnails are generated from the thumbnails/ directory in the
+  <code>.smk</code> file and cached in memory. If no thumbnail is available, a placeholder
+  icon is shown.</li>
+  <li><strong>File name: </strong>Displayed below the thumbnail, truncated with ellipsis if
+  too long.</li>
+  <li><strong>Modified date: </strong>Displayed below the file name in smaller, gray text
+  (e.g., "Mar 1, 2026 2:23 PM").</li>
+</ul>
+
+<p>Folder items display a folder icon with a small preview mosaic of the first 4 files
+inside. The folder name and item count ("12 items") are displayed below.</p>
+
+<h3 id="s3-5">Preview List View</h3>
+
+<p>In Preview List View, library files are displayed as horizontal rows. Each row contains,
+from left to right:</p>
+
+<ul>
+  <li><strong>Thumbnail: </strong>A square preview image at the current preview size.</li>
+  <li><strong>File name: </strong>The display name of the file.</li>
+  <li><strong>File size: </strong>The <code>.smk</code> file size on disk (e.g., "1.2 MB").</li>
+  <li><strong>Date modified: </strong>Last modification timestamp.</li>
+  <li><strong>Date captured: </strong>Original capture timestamp (from
+  <code>captured_at</code> in manifest.json).</li>
+</ul>
+
+<p>Columns are resizable. The user can click column headers to sort by that column.</p>
+
+<h3 id="s3-6">Thumbnail / Preview Size</h3>
+
+<p>The size slider in the header bar controls the thumbnail and preview dimensions:</p>
+
+<ul>
+  <li><strong>Grid View: </strong>Thumbnail size ranges from 80x80px (minimum) to 256x256px
+  (maximum). Default: 128x128px. The grid reflows as the size changes.</li>
+  <li><strong>Preview List View: </strong>Preview height ranges from 48px (minimum) to 128px
+  (maximum). Default: 64px. Width scales proportionally.</li>
+  <li>The current size is saved and restored across sessions.</li>
+</ul>
+
+<h3 id="s3-7">File Selection &amp; Interaction</h3>
+
+<ul>
+  <li><strong>Single click: </strong>Selects the file (highlights it with the accent color).
+  Deselects any previously selected file unless Ctrl or Shift is held.</li>
+  <li><strong>Double-click: </strong>Opens the file in a new canvas tab for editing (see
+  Section 4). If the file is already open in a tab, switches to that tab.</li>
+  <li><strong>Double-click on folder: </strong>Navigates into the folder, updating the content
+  area to show the folder's contents and updating the breadcrumb path.</li>
+  <li><strong>Right-click: </strong>Opens the context menu (see Section 3.14).</li>
+  <li><strong>Enter key: </strong>Opens the selected file(s) in canvas tabs.</li>
+  <li><strong>F2 key: </strong>Begins inline rename of the selected file.</li>
+  <li><strong>Delete key: </strong>Deletes the selected file(s) with confirmation dialog.</li>
+</ul>
+
+<h3 id="s3-8">File Management Operations</h3>
+
+<p>The Library panel supports full file system operations within the library directory:</p>
+
+<table>
+  <colgroup><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Operation</th><th>Behavior</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Rename</th><td>Inline rename: click on the file name (or press F2) to enter edit mode. The name field becomes an editable text input. Press Enter to confirm or Escape to cancel. The <code>.smk</code> file on disk is renamed accordingly. If the file is open in a tab, the tab title updates.</td></tr>
+    <tr><th>Delete</th><td>Moves the file to the system trash/recycle bin. A confirmation dialog is shown: "Delete [filename]? The file will be moved to the system trash." If the file is open in a tab, the tab is closed first (with a save prompt if there are unsaved changes). Multi-select delete is supported.</td></tr>
+    <tr><th>Copy</th><td>Copies the selected file(s) to the internal clipboard. The files remain in the library.</td></tr>
+    <tr><th>Paste</th><td>Pastes copied file(s) into the current folder. If a name conflict exists, the pasted file is renamed with a " (Copy)" suffix.</td></tr>
+    <tr><th>Move</th><td>Drag-and-drop a file onto a folder to move it. If the file is open in a tab, the file reference is updated silently.</td></tr>
+    <tr><th>New Folder</th><td>Creates a new folder in the current directory with the name "New Folder" (or "New Folder (2)" etc. if a conflict exists). The folder name is immediately editable for renaming.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s3-9">Folder Support</h3>
+
+<p>The Library supports user-created subdirectories within the library root for organizing
+files:</p>
+
+<ul>
+  <li>Folders appear as items in the grid or list view with a folder icon.</li>
+  <li>Double-clicking a folder navigates into it.</li>
+  <li>A breadcrumb path or back button in the content area header shows the current navigation
+  depth and allows navigating back to parent folders.</li>
+  <li>The root of the breadcrumb is the library directory name (e.g., "Library &gt;
+  Screenshots &gt; March").</li>
+  <li>Files can be moved between folders via drag-and-drop or cut/paste.</li>
+  <li>Empty folders can be deleted without confirmation. Folders with content show a
+  confirmation dialog listing the item count.</li>
+</ul>
+
+<h3 id="s3-10">Sorting &amp; Searching</h3>
+
+<p><strong>Sorting</strong></p>
+
+<p>The sort dropdown in the footer bar provides the following sort options:</p>
+
+<ul>
+  <li>Name (A-Z) / Name (Z-A)</li>
+  <li>Date Modified (Newest First) / Date Modified (Oldest First)</li>
+  <li>Date Captured (Newest First) / Date Captured (Oldest First)</li>
+  <li>File Size (Largest First) / File Size (Smallest First)</li>
+</ul>
+
+<p>Folders always appear before files, sorted by the same criteria. The default sort order
+is Date Modified (Newest First). The selected sort order is saved and restored across
+sessions.</p>
+
+<p><strong>Searching</strong></p>
+
+<p>The search bar in the header filters the current view in real-time as the user types:</p>
+
+<ul>
+  <li>Filtering is case-insensitive and matches against the file display name.</li>
+  <li>The filter applies to the current folder only (does not search recursively into
+  subfolders).</li>
+  <li>When a filter is active, the file count in the footer updates to show "N of M files" to
+  indicate filtered results.</li>
+  <li>Clearing the search bar (or pressing Escape while focused in it) removes the filter and
+  shows all files.</li>
+</ul>
+
+<h3 id="s3-11">Library Size Indicator</h3>
+
+<p>The footer bar displays the total size of the library directory on disk. This is
+calculated by summing the sizes of all files in the library directory (including all
+subdirectories). The size is displayed in human-readable format (e.g., "248 MB", "1.3
+GB"). The value is recalculated when files are added, removed, or modified, and on panel
+open. For large libraries, the calculation runs asynchronously to avoid blocking the UI.</p>
+
+<h3 id="s3-12">Multi-Select</h3>
+
+<p>The Library panel supports selecting multiple files for batch operations:</p>
+
+<ul>
+  <li><strong>Ctrl+click: </strong>Toggles individual file selection (add/remove from
+  selection).</li>
+  <li><strong>Shift+click: </strong>Selects a range of files from the last selected file to
+  the clicked file.</li>
+  <li><strong>Ctrl+A: </strong>Selects all files in the current folder (not including folders
+  themselves).</li>
+</ul>
+
+<p>Multi-select batch operations include: delete, move (drag to folder), export, copy, and
+open in tabs. The context menu adapts to show relevant multi-select actions when
+multiple files are selected.</p>
+
+<h3 id="s3-13">Drag-and-Drop</h3>
+
+<p><strong>Drag Into Library (Import)</strong></p>
+
+<ul>
+  <li>Dragging image files (PNG, JPEG, BMP, TIFF, GIF, WebP) from the OS file manager into the
+  Library panel imports them.</li>
+  <li>Each imported image is converted to a new <code>.smk</code> file: the image becomes the
+  background layer, an empty annotation layer is created, and the file is saved to the
+  current library folder.</li>
+  <li>The auto-naming convention is applied (see Section 6.2) using "Import" as the prefix
+  instead of "Capture".</li>
+  <li>Dragging an existing <code>.smk</code> file into the library copies it to the current
+  library folder.</li>
+  <li>A drop indicator (highlighted border around the panel) shows when a valid drop target is
+  active.</li>
+  <li>Multiple files can be dragged in simultaneously.</li>
+</ul>
+
+<p><strong>Drag Out of Library (Export)</strong></p>
+
+<ul>
+  <li>Dragging a file from the Library panel to the OS desktop or file manager exports a
+  flattened PNG copy of the file to the drop location.</li>
+  <li>Dragging a file from the Library panel to the canvas area of SnapMock opens the file in
+  a new tab (equivalent to double-click).</li>
+  <li>Multiple files can be dragged out simultaneously; each produces a separate PNG file.</li>
+</ul>
+
+<p><strong>Copy to Clipboard</strong></p>
+
+<ul>
+  <li>Selecting a file and pressing Ctrl+C (or right-click &gt; Copy to Clipboard) places a
+  flattened PNG rendering of the file on the system clipboard, ready to paste into other
+  applications.</li>
+  <li>This is distinct from the file-level Copy operation, which copies the <code>.smk</code>
+  file for paste within the library.</li>
+</ul>
+
+<h3 id="s3-14">Context Menu</h3>
+
+<p>Right-clicking a file or selection in the Library panel shows the following context
+menu. Per the never-disabled controls principle, all items are always present; items
+whose requirements are not met display an informative message when clicked.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Menu Item</th><th>Shortcut</th><th>Action</th><th>Requires</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Open</th><td>Enter</td><td>Open the file in a new canvas tab.</td><td>File selected</td></tr>
+    <tr><th>Open in New Window</th><td></td><td>Open the file in a new SnapMock window.</td><td>File selected</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Rename</th><td>F2</td><td>Begin inline rename of the file.</td><td>Single file selected</td></tr>
+    <tr><th>Delete</th><td>Delete</td><td>Move the file(s) to system trash. Shows confirmation.</td><td>File(s) selected</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Copy File</th><td>Ctrl+C</td><td>Copy the selected <code>.smk</code> file(s) to the internal clipboard.</td><td>File(s) selected</td></tr>
+    <tr><th>Paste File</th><td>Ctrl+V</td><td>Paste copied <code>.smk</code> file(s) into the current folder.</td><td>Internal clipboard has <code>.smk</code> files</td></tr>
+    <tr><th>Copy to Clipboard</th><td>Ctrl+Shift+C</td><td>Copy a flattened PNG rendering to the system clipboard.</td><td>Single file selected</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Export...</th><td></td><td>Open the Export dialog for the selected file(s).</td><td>File(s) selected</td></tr>
+    <tr><th>Export Quick (PNG)</th><td>Ctrl+Shift+E</td><td>Export the selected file(s) as PNG using last-used export settings.</td><td>File(s) selected</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Move to Folder...</th><td></td><td>Open a folder chooser to move the selected file(s) to a subfolder.</td><td>File(s) selected</td></tr>
+    <tr><th>New Folder</th><td></td><td>Create a new subfolder in the current directory.</td><td>Always</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Reveal in File Manager</th><td></td><td>Open the OS file manager with the file selected.</td><td>File(s) selected</td></tr>
+    <tr><th>Properties</th><td></td><td>Show file details: name, size, captured date, modified date, canvas size, layer count, item count.</td><td>Single file selected</td></tr>
+  </tbody>
+</table>
+
+<p>Right-clicking a folder shows: Open, Rename, Delete, New Folder, and Reveal in File
+Manager.</p>
+
+<p>Right-clicking empty space in the content area shows: Paste File, New Folder, and Sort
+By submenu.</p>
+
+<h2 id="s4">Tabbed Editing</h2>
+
+<h3 id="s4-1">Tab Bar</h3>
+
+<p>When the Library feature is active, the canvas area gains a tab bar at the top that
+allows multiple <code>.smk</code> files to be open simultaneously. The tab bar appears
+above the canvas and below the Tool Options Bar.</p>
+
+<ul>
+  <li>Each open file is represented by a tab showing the file's display name.</li>
+  <li>The active tab is visually distinguished with the accent color and a slightly larger
+  font weight.</li>
+  <li>Tabs are reorderable by dragging.</li>
+  <li>Each tab has a close button (X) on the right side.</li>
+  <li>If too many tabs are open to fit, overflow tabs are accessible via a dropdown chevron
+  button at the right end of the tab bar.</li>
+  <li>The tab bar is hidden when only one file (or no file) is open.</li>
+</ul>
+
+<h3 id="s4-2">Opening Files</h3>
+
+<ul>
+  <li>Double-clicking a file in the Library panel opens it in a new tab.</li>
+  <li>If the file is already open, the existing tab is activated (no duplicate tabs).</li>
+  <li>File &gt; Open also opens files in new tabs.</li>
+  <li>New captures automatically open in a new tab if the user has the "Auto-open captures"
+  preference enabled (see Section 8.1).</li>
+</ul>
+
+<h3 id="s4-3">Tab Behavior</h3>
+
+<ul>
+  <li><strong>Switching tabs: </strong>Clicking a tab switches the canvas to display that
+  file. The Tool Options Bar, Property Panel, and Layer Panel all update to reflect the
+  active file's state. The undo/redo stack is per-file; switching tabs changes the active
+  undo stack.</li>
+  <li><strong>Closing a tab: </strong>Clicking the close button on a tab closes that file. For
+  library files, because continuous write-back keeps them saved, no save prompt is shown.
+  For files opened from outside the library that have unsaved changes, the standard
+  unsaved changes dialog is shown.</li>
+  <li><strong>Window title: </strong>The window title shows the active tab's file name:
+  [Filename] - SnapMock. For modified non-library files: *[Filename] - SnapMock.</li>
+  <li><strong>Keyboard navigation: </strong>Ctrl+Tab cycles forward through open tabs.
+  Ctrl+Shift+Tab cycles backward. Ctrl+W closes the active tab.</li>
+  <li><strong>Middle-click: </strong>Middle-clicking a tab closes it (standard tab behavior).</li>
+  <li><strong>Tab context menu: </strong>Right-clicking a tab shows: Close, Close Others,
+  Close All, Close Tabs to the Right, Reveal in Library, Reveal in File Manager.</li>
+</ul>
+
+<h3 id="s4-4">Continuous Write-Back</h3>
+
+<p>For files that reside in the library directory, the continuous write-back mechanism
+(Section 2.3) keeps them saved at all times. This means:</p>
+
+<ul>
+  <li>No asterisk (*) appears in the tab title for library files, since they are always saved.</li>
+  <li>Closing a tab for a library file never triggers an unsaved changes prompt.</li>
+  <li>The undo/redo history for each file is maintained in memory for the duration the tab is
+  open. Closing and reopening a file resets the undo history.</li>
+  <li>If the user undoes actions in a library file, the write-back updates the
+  <code>.smk</code> file to reflect the undo state. The redo stack remains available until
+  the tab is closed or a new action branches the history.</li>
+</ul>
+
+<h2 id="s5">Library Menu</h2>
+
+<h3 id="s5-1">Menu Structure</h3>
+
+<p>The Library menu is a top-level menu in the main menu bar, positioned after the Tools
+menu. Per the never-disabled controls principle, all items are always present.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col class="w-medium"><col></colgroup>
+  <thead>
+    <tr><th>Menu Item</th><th>Shortcut</th><th>Action</th><th>Requires</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Show Library Panel</th><td>Ctrl+L</td><td>Toggle visibility of the Library panel. Checkmark when visible.</td><td>Always (checkbox)</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Open Library...</th><td></td><td>Open a directory chooser to select a different folder as the active library. The Library panel updates to show the new directory.</td><td>Always</td></tr>
+    <tr><th>Move Library...</th><td></td><td>Open a directory chooser to select a new location. SnapMock moves all files from the current library directory to the chosen location and updates the stored path. A progress dialog is shown during the move.</td><td>Always</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>New Folder</th><td></td><td>Create a new subfolder in the currently viewed library folder.</td><td>Always</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Reveal in File Manager</th><td></td><td>Open the OS file manager at the current library directory.</td><td>Always</td></tr>
+    <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
+    <tr><th>Library Preferences...</th><td></td><td>Open the Preferences dialog with the Library category selected.</td><td>Always</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s6">Capture-to-Library Workflow</h2>
+
+<h3 id="s6-1">Capture Integration</h3>
+
+<p>When a screen capture is performed (via hotkey, system tray, or capture button), the
+captured image is immediately processed into the library:</p>
+
+<ul>
+  <li>A new <code>.smk</code> file is created in the current library folder (or root if no
+  subfolder is navigated to).</li>
+  <li>The captured image is stored as the background layer raster in the raster/ directory of
+  the <code>.smk</code> archive.</li>
+  <li>An empty annotation layer ("Annotations") is created above the background layer.</li>
+  <li>A thumbnail is generated and stored in the thumbnails/ directory.</li>
+  <li>The manifest.json is populated with the auto-generated file name, current timestamp as
+  <code>captured_at</code>, source set to "capture", and the application version.</li>
+  <li>The file appears in the Library panel immediately (the panel refreshes its file list).</li>
+  <li>If the "Auto-open captures" preference is enabled, the file also opens in a new canvas
+  tab.</li>
+  <li>A brief toast notification appears at the bottom of the screen: "Captured to Library:
+  [filename]" with a clickable link to open the file.</li>
+</ul>
+
+<h3 id="s6-2">Auto-Naming Convention</h3>
+
+<p>Auto-generated file names follow the pattern:</p>
+
+<p>[Prefix]_[Date]_[Time].[ext]</p>
+
+<p>Where:</p>
+
+<ul>
+  <li><strong>Prefix: </strong>"Capture" for screen captures, "Import" for imported images,
+  "Untitled" for new blank canvases.</li>
+  <li><strong>Date: </strong>YYYY-MM-DD format.</li>
+  <li><strong>Time: </strong>HH-MM-SS format (24-hour, using hyphens instead of colons for
+  file system compatibility).</li>
+  <li><strong>Extension: </strong><code>.smk</code></li>
+</ul>
+
+<p>Example: <code>Capture_2026</code>-03-01_14-23-45.smk</p>
+
+<p>If a name collision occurs (extremely unlikely given second-level precision), a numeric
+suffix is appended: <code>Capture_2026</code>-03-01_14-23-45_2.smk.</p>
+
+<h3 id="s6-3">Import via Drag-and-Drop</h3>
+
+<p>External images dragged into the Library panel are imported using the same workflow as
+capture (Section 6.1), with these differences:</p>
+
+<ul>
+  <li>The prefix is "Import" instead of "Capture".</li>
+  <li>The source field in manifest.json is set to "import".</li>
+  <li>Multiple images can be dragged in simultaneously; each produces a separate
+  <code>.smk</code> file.</li>
+  <li>Supported import formats: PNG, JPEG, BMP, TIFF, GIF, WebP.</li>
+</ul>
+
+<h2 id="s7">Export</h2>
+
+<h3 id="s7-1">Export Formats</h3>
+
+<p>Files in the Library can be exported to the following formats, consistent with the
+Export Dialog defined in the General UI PRD (Section 11.2):</p>
+
+<ul>
+  <li><strong>PNG: </strong>Flattened raster export with configurable DPI, transparency, and
+  color depth.</li>
+  <li><strong>JPEG: </strong>Flattened raster export with configurable quality and DPI.</li>
+  <li><strong>PDF: </strong>Document export with configurable DPI, page size, and orientation.</li>
+  <li><strong>SVG: </strong>Vector export with optional embedded raster images.</li>
+  <li><strong><code>.smk</code>: </strong>Native SnapMock project file. Copies the
+  <code>.smk</code> file to the chosen location, preserving full editability.</li>
+</ul>
+
+<h3 id="s7-2">Multi-Select Export</h3>
+
+<p>When multiple files are selected in the Library panel:</p>
+
+<ul>
+  <li>Right-click &gt; Export... opens the Export dialog. The dialog includes an additional
+  "Output Directory" selector (in place of the single-file output path) and an "Apply to
+  All" checkbox that applies the same export settings to all selected files.</li>
+  <li>Right-click &gt; Export Quick (PNG) exports all selected files to PNG using the
+  last-used export settings. The user is prompted for an output directory. Files are named
+  using their library display names with the appropriate extension.</li>
+  <li>A progress dialog shows the export progress with a cancel button.</li>
+  <li>If any file fails to export (e.g., permission error), the error is logged and export
+  continues with remaining files. A summary is shown at completion.</li>
+</ul>
+
+<h3 id="s7-3">Integration with Export Quick</h3>
+
+<p>The existing Export Quick (PNG) action in the Main Toolbar and File Menu (Ctrl+Shift+E)
+continues to work as defined in the General UI PRD. When a library file is the active
+tab, Export Quick exports using the last-used settings. If invoked from the Library
+panel context menu on a selection, it performs multi-select export as described above.</p>
+
+<h2 id="s8">Preferences Integration</h2>
+
+<h3 id="s8-1">Library Category</h3>
+
+<p>A new "Library" category is added to the Preferences dialog (General UI PRD Section
+11.3), positioned after the Performance category in the sidebar.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Setting</th><th>Widget</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>Library Directory</th><td>Text field + Browse button</td><td>~/SnapMock/Library/</td><td>The current library directory path. Changing this switches the active library (does not move files).</td></tr>
+    <tr><th>Auto-open captures</th><td>Checkbox</td><td>On</td><td>When enabled, newly captured files are automatically opened in a canvas tab in addition to being saved to the library.</td></tr>
+    <tr><th>Default view mode</th><td>Dropdown</td><td>Grid</td><td>The default view mode for the Library panel: Grid or Preview (List).</td></tr>
+    <tr><th>Default thumbnail size</th><td>Slider</td><td>128px</td><td>The default thumbnail size in Grid View (80-256px).</td></tr>
+    <tr><th>Default sort order</th><td>Dropdown</td><td>Date Modified (Newest First)</td><td>The default sort order for the Library panel.</td></tr>
+    <tr><th>Toast notifications</th><td>Checkbox</td><td>On</td><td>Show a brief notification when a file is captured to the library.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s9">Data Models</h2>
+
+<p>The following data models support the Library feature. These are application-level
+models, not additions to the <code>.smk</code> file format (which is unchanged except
+for the optional <code>library_metadata</code> field in manifest.json described in
+Section 2.4).</p>
+
+<h3 id="s9-1">LibraryFileInfo</h3>
+
+<p>An in-memory representation of a file in the library, used by the Library panel for
+display and management.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>file_path</code></th><td>Path</td><td>Absolute path to the <code>.smk</code> file on disk.</td></tr>
+    <tr><th><code>display_name</code></th><td>string</td><td>The user-facing name of the file (from manifest.json <code>library_metadata</code>.display_name, or derived from filename).</td></tr>
+    <tr><th>thumbnail</th><td>QPixmap</td><td>Cached thumbnail image for display. Loaded lazily from the <code>.smk</code> thumbnails/ directory.</td></tr>
+    <tr><th><code>file_size</code></th><td>int</td><td>File size in bytes.</td></tr>
+    <tr><th><code>captured_at</code></th><td>datetime</td><td>Original capture timestamp (from manifest.json).</td></tr>
+    <tr><th><code>modified_at</code></th><td>datetime</td><td>File system last-modified timestamp.</td></tr>
+    <tr><th><code>canvas_width</code></th><td>int</td><td>Canvas width in pixels (from manifest.json).</td></tr>
+    <tr><th><code>canvas_height</code></th><td>int</td><td>Canvas height in pixels (from manifest.json).</td></tr>
+    <tr><th><code>layer_count</code></th><td>int</td><td>Number of layers (from layers.json).</td></tr>
+    <tr><th><code>item_count</code></th><td>int</td><td>Total number of annotation items (from items.json).</td></tr>
+    <tr><th>source</th><td>string</td><td>Origin: "capture", "import", or "new".</td></tr>
+    <tr><th><code>is_open</code></th><td>bool</td><td>True if the file is currently open in a canvas tab.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s9-2">LibraryModel</h3>
+
+<p>The data model backing the Library panel. Extends QAbstractItemModel to support both
+flat and hierarchical (folder) display.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>root_path</code></th><td>Path</td><td>The root directory of the active library.</td></tr>
+    <tr><th><code>current_path</code></th><td>Path</td><td>The currently displayed directory (may be a subfolder of <code>root_path</code>).</td></tr>
+    <tr><th>files</th><td>list[LibraryFileInfo]</td><td>Cached list of files in the current directory.</td></tr>
+    <tr><th>folders</th><td>list[Path]</td><td>List of subdirectories in the current directory.</td></tr>
+    <tr><th><code>sort_key</code></th><td>enum</td><td>Current sort field: name, <code>date_modified</code>, <code>date_captured</code>, <code>file_size</code>.</td></tr>
+    <tr><th><code>sort_order</code></th><td>enum</td><td>Ascending or descending.</td></tr>
+    <tr><th><code>filter_text</code></th><td>string</td><td>Current search/filter text. Empty string means no filter.</td></tr>
+    <tr><th><code>total_size_bytes</code></th><td>int</td><td>Cached total size of the entire library directory tree.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s9-3">TabModel</h3>
+
+<p>Tracks the state of open tabs in the canvas area.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th>tabs</th><td>list[TabInfo]</td><td>Ordered list of open tabs.</td></tr>
+    <tr><th><code>active_tab_index</code></th><td>int</td><td>Index of the currently active tab.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s9-4">TabInfo</h3>
+
+<p>Per-tab state information.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>tab_id</code></th><td>UUID</td><td>Unique identifier for this tab instance.</td></tr>
+    <tr><th><code>file_path</code></th><td>Path</td><td>Path to the <code>.smk</code> file. None for unsaved new projects.</td></tr>
+    <tr><th><code>display_name</code></th><td>string</td><td>Tab title text.</td></tr>
+    <tr><th><code>is_library_file</code></th><td>bool</td><td>True if the file resides in the library directory. Determines write-back behavior.</td></tr>
+    <tr><th>scene</th><td>SnapScene</td><td>The QGraphicsScene for this tab.</td></tr>
+    <tr><th><code>undo_stack</code></th><td>CommandStack</td><td>Per-tab undo/redo stack.</td></tr>
+    <tr><th><code>view_state</code></th><td>ViewState</td><td>Zoom level, scroll position, and other viewport state for restoring when switching tabs.</td></tr>
+    <tr><th><code>is_dirty</code></th><td>bool</td><td>True if unsaved changes exist. Always false for library files (due to continuous write-back).</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s10">Command Definitions</h2>
+
+<p>The Library feature introduces the following undoable commands. All commands extend the
+base Command interface defined in the Technical Architecture PRD.</p>
+
+<h3 id="s10-1">RenameLibraryFileCommand</h3>
+
+<p>Renames a file in the library.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>file_path</code></th><td>Path</td><td>Path to the <code>.smk</code> file.</td></tr>
+    <tr><th><code>old_name</code></th><td>string</td><td>The previous display name.</td></tr>
+    <tr><th><code>new_name</code></th><td>string</td><td>The new display name.</td></tr>
+  </tbody>
+</table>
+
+<p>Execute: Rename the file on disk and update <code>display_name</code> in manifest.json.
+Update the Library panel and any open tab title.</p>
+
+<p>Undo: Restore the previous name on disk and in manifest.json.</p>
+
+<h3 id="s10-2">DeleteLibraryFileCommand</h3>
+
+<p>Deletes file(s) from the library by moving them to the system trash.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>file_paths</code></th><td>list[Path]</td><td>Paths to the <code>.smk</code> files being deleted.</td></tr>
+    <tr><th><code>trash_paths</code></th><td>list[Path]</td><td>The paths where the files were moved in the system trash (for undo).</td></tr>
+  </tbody>
+</table>
+
+<p>Execute: Close any open tabs for the files, move files to system trash, refresh the
+Library panel.</p>
+
+<p>Undo: Restore files from system trash to their original library paths.</p>
+
+<h3 id="s10-3">MoveLibraryFileCommand</h3>
+
+<p>Moves file(s) to a different folder within the library.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>file_paths</code></th><td>list[Path]</td><td>Original paths of the files being moved.</td></tr>
+    <tr><th><code>destination_folder</code></th><td>Path</td><td>The target folder.</td></tr>
+    <tr><th><code>original_folders</code></th><td>list[Path]</td><td>The source folders for each file (for undo).</td></tr>
+  </tbody>
+</table>
+
+<p>Execute: Move files on disk, update any open tab file references, refresh the Library
+panel.</p>
+
+<p>Undo: Move files back to their original folders.</p>
+
+<h3 id="s10-4">CreateFolderCommand</h3>
+
+<p>Creates a new subfolder in the library.</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>folder_path</code></th><td>Path</td><td>The path of the new folder.</td></tr>
+  </tbody>
+</table>
+
+<p>Execute: Create the directory on disk, refresh the Library panel.</p>
+
+<p>Undo: Remove the directory (only if empty; if files have been added, undo is blocked
+with an informative message).</p>
+
+<h2 id="s11">Serialization</h2>
+
+<p>The Library feature relies on the existing <code>.smk</code> serialization format
+defined in the Technical Architecture PRD. The only addition is the optional
+<code>library_metadata</code> object in manifest.json:</p>
+
+<h3 id="s11-1">manifest.json Extension</h3>
+
+<p>The following field is added to the manifest.json schema:</p>
+
+<table>
+  <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
+  <thead>
+    <tr><th>Field Path</th><th>Type</th><th>Serialization</th></tr>
+  </thead>
+  <tbody>
+    <tr><th><code>library_metadata</code></th><td>object | null</td><td>{"<code>display_name</code>": string, "<code>captured_at</code>": ISO 8601 string, "source": "capture" | "import" | "new"}</td></tr>
+    <tr><th><code>library_metadata</code>.display_name</th><td>string</td><td>"<code>display_name</code>": "<code>Capture_2026</code>-03-01_14-23-45"</td></tr>
+    <tr><th><code>library_metadata</code>.captured_at</th><td>string</td><td>"<code>captured_at</code>": "2026-03-01T14:23:45Z"</td></tr>
+    <tr><th><code>library_metadata</code>.source</th><td>string</td><td>"source": "capture"</td></tr>
+  </tbody>
+</table>
+
+<p>The <code>library_metadata</code> field is optional. Files that were not created via the
+Library (e.g., opened from File &gt; Open) do not have this field. The Library panel
+gracefully handles files without <code>library_metadata</code> by deriving
+<code>display_name</code> from the filename and leaving <code>captured_at</code> as
+null.</p>
+
+<h3 id="s11-2">Session Persistence</h3>
+
+<p>The following Library-related state is saved and restored across sessions via QSettings:</p>
+
+<ul>
+  <li>Library panel dock position, size, and visibility state.</li>
+  <li>Active library directory path.</li>
+  <li>Current view mode (Grid or Preview List).</li>
+  <li>Thumbnail/preview size slider position.</li>
+  <li>Sort order selection.</li>
+  <li>List of open tabs (file paths) and the active tab index, to restore the workspace on
+  next launch.</li>
+  <li>Per-tab view state (zoom level, scroll position) for open library files.</li>
+</ul>
+
+<h2 id="s12">Acceptance Criteria</h2>
+
+<h3 id="s12-1">Library Panel</h3>
+
+<ul>
+  <li>The Library panel can be docked to any edge of the main window, floated as an
+  independent window, and moved to a separate monitor.</li>
+  <li>Panel position, size, and visibility are saved and restored across sessions.</li>
+  <li>Grid View displays thumbnail cards with file name and modified date. Thumbnails render
+  correctly at all slider sizes from 80px to 256px.</li>
+  <li>Preview List View displays rows with thumbnail, file name, file size, date modified, and
+  date captured. Column headers are clickable for sorting.</li>
+  <li>View mode toggle and size slider work correctly and persist across sessions.</li>
+  <li>The search bar filters files in real-time as the user types, case-insensitive, and the
+  file count updates to show filtered results.</li>
+  <li>The library size indicator displays the correct total size and updates when files are
+  added or removed.</li>
+</ul>
+
+<h3 id="s12-2">File Management</h3>
+
+<ul>
+  <li>Rename: F2 activates inline rename. Enter confirms, Escape cancels. The
+  <code>.smk</code> file on disk and manifest.json are updated. Any open tab title updates
+  immediately.</li>
+  <li>Delete: Delete key or context menu moves files to system trash with confirmation. Open
+  tabs for deleted files are closed.</li>
+  <li>Copy/Paste: Ctrl+C copies selected <code>.smk</code> files. Ctrl+V pastes into current
+  folder with conflict resolution.</li>
+  <li>New Folder: Creates a new folder with immediate inline rename. Folder is visible in both
+  grid and list views.</li>
+  <li>Folder navigation: Double-clicking a folder navigates into it. Breadcrumb path allows
+  navigating back. Back button returns to parent folder.</li>
+</ul>
+
+<h3 id="s12-3">Multi-Select</h3>
+
+<ul>
+  <li>Ctrl+click toggles individual selection. Shift+click selects a range. Ctrl+A selects all
+  files in the current folder.</li>
+  <li>Multi-select batch delete, move, export, and copy work correctly.</li>
+  <li>The context menu adapts appropriately for multi-select (e.g., shows "Delete N files"
+  instead of "Delete").</li>
+</ul>
+
+<h3 id="s12-4">Drag-and-Drop</h3>
+
+<ul>
+  <li>Dragging PNG/JPEG/BMP/TIFF/GIF/WebP files into the Library panel creates new
+  <code>.smk</code> files with correct auto-naming and source metadata.</li>
+  <li>Dragging <code>.smk</code> files into the Library copies them to the current folder.</li>
+  <li>Dragging files out of the Library to the OS desktop exports flattened PNGs.</li>
+  <li>Dragging files onto folders within the Library moves them.</li>
+  <li>Copy to Clipboard (Ctrl+Shift+C) places a flattened PNG on the system clipboard.</li>
+</ul>
+
+<h3 id="s12-5">Tabbed Editing</h3>
+
+<ul>
+  <li>Double-clicking a library file opens it in a new tab. Double-clicking an already-open
+  file switches to its tab.</li>
+  <li>Tab bar appears when 2+ files are open and hides for 0-1 files.</li>
+  <li>Ctrl+Tab and Ctrl+Shift+Tab cycle through tabs. Ctrl+W closes the active tab.</li>
+  <li>Switching tabs correctly swaps the canvas, Layer Panel, Property Panel, Tool Options
+  Bar, and undo stack.</li>
+  <li>Each tab maintains its own independent undo/redo history.</li>
+  <li>Library file tabs never show unsaved indicators and never prompt on close.</li>
+  <li>Non-library file tabs show the asterisk (*) dirty indicator and prompt on close if
+  unsaved.</li>
+</ul>
+
+<h3 id="s12-6">Continuous Write-Back</h3>
+
+<ul>
+  <li>A new capture instantly creates a <code>.smk</code> file in the library directory.</li>
+  <li>Every annotation action (add item, move, resize, property change, delete) writes the
+  updated JSON to the <code>.smk</code> file.</li>
+  <li>The <code>.smk</code> file on disk is always consistent with the current canvas state
+  (verified by closing and reopening the file).</li>
+  <li>Raster data is written only on capture and raster-level operations (crop, resize,
+  flatten).</li>
+  <li>The Library panel thumbnail updates after annotation changes.</li>
+</ul>
+
+<h3 id="s12-7">Library Menu</h3>
+
+<ul>
+  <li>All Library menu items are present and functional.</li>
+  <li>Open Library switches to a new directory and the panel updates immediately.</li>
+  <li>Move Library moves all files with a progress dialog and updates the stored path.</li>
+  <li>Reveal in File Manager opens the correct OS file manager at the library path.</li>
+</ul>
+
+<h3 id="s12-8">Export</h3>
+
+<ul>
+  <li>Single-file export from the context menu opens the Export dialog and produces correct
+  output in PNG, JPEG, PDF, SVG, and <code>.smk</code> formats.</li>
+  <li>Multi-select export prompts for an output directory and exports all selected files with
+  correct naming.</li>
+  <li>Export Quick (PNG) from the context menu exports using last-used settings without
+  opening the dialog.</li>
+  <li>Export errors are handled gracefully with per-file error reporting and continued
+  processing of remaining files.</li>
+</ul>
+
+<h3 id="s12-9">Preferences</h3>
+
+<ul>
+  <li>The Library category appears in Preferences with all settings from Section 8.1.</li>
+  <li>Changing the library directory switches the active library.</li>
+  <li>All preference changes take effect immediately.</li>
+  <li>Preferences persist across application sessions.</li>
+</ul>
+
+<p>--- End of Library PRD ---</p>
+
+<h2 id="s13">Open Issues</h2>
+
+<p>These items were raised by the conversion from Word. None of them changes a
+requirement; each needs a decision before this document leaves draft.</p>
+
+<div class="note issue">
+  <span class="note-label">Open — approval status never recorded</span>
+  <p>The original carried no approval record. Version 1.0 is shown as pending. Confirm
+  whether any earlier version was formally approved.</p>
+</div>
+
+</main>
+
+</div>
+</body>
+</html>
