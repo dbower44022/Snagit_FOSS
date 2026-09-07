@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt, QTimer, QUrl
-from PyQt6.QtGui import QAction, QCloseEvent, QDesktopServices, QKeyEvent, QKeySequence
+from PyQt6.QtGui import (
+    QAction,
+    QActionGroup,
+    QCloseEvent,
+    QDesktopServices,
+    QKeyEvent,
+    QKeySequence,
+)
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -15,11 +23,29 @@ from PyQt6.QtWidgets import (
     QMenuBar,
     QMessageBox,
     QProgressDialog,
+    QSystemTrayIcon,
+    QToolButton,
 )
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from PyQt6.QtWidgets import QGraphicsItem
 
+from snapmock.capture.manager import CaptureManager
+from snapmock.capture.models import (
+    HOTKEY_ACTION_FULL_SCREEN,
+    HOTKEY_ACTION_REGION,
+    HOTKEY_ACTION_WINDOW,
+    ORIGIN_COMMAND_LINE,
+    ORIGIN_MENU,
+    ORIGIN_TOOLBAR,
+    ORIGIN_TRAY,
+    CaptureMetadata,
+    CaptureMode,
+    CaptureResult,
+)
+from snapmock.capture.tray import make_tray_icon
 from snapmock.config.constants import (
     APP_NAME,
     APP_VERSION,
@@ -38,7 +64,12 @@ from snapmock.core.selection_manager import SelectionManager
 from snapmock.core.view import SnapView
 from snapmock.io.exporter import export_jpg, export_pdf, export_png, export_svg
 from snapmock.io.importer import import_image
-from snapmock.io.project_serializer import load_project, read_library_metadata, save_project
+from snapmock.io.project_serializer import (
+    load_project,
+    read_capture_metadata,
+    read_library_metadata,
+    save_project,
+)
 from snapmock.io.snagit_reader import load_snagx
 from snapmock.io.snagit_writer import save_snagx
 from snapmock.items.base_item import SnapGraphicsItem
@@ -73,9 +104,31 @@ from snapmock.ui.tool_options_bar import ToolOptionsBar
 from snapmock.ui.toolbar import SnapToolBar
 
 MAX_RECENT_FILES = 10
+DELAY_CHOICES = (0, 3, 5, 10)
+MODE_LABELS = {
+    CaptureMode.REGION: "Capture &Region",
+    CaptureMode.ACTIVE_WINDOW: "Capture Active &Window",
+    CaptureMode.FULL_SCREEN: "Capture &Full Screen",
+}
+MODE_ACTIONS = {
+    CaptureMode.REGION: HOTKEY_ACTION_REGION,
+    CaptureMode.ACTIVE_WINDOW: HOTKEY_ACTION_WINDOW,
+    CaptureMode.FULL_SCREEN: HOTKEY_ACTION_FULL_SCREEN,
+}
+TRAY_UNAVAILABLE_MESSAGE = (
+    "This desktop does not provide a system tray. Global hotkeys and the Capture menu still work."
+)
 
 
 _extra_windows: list[MainWindow] = []
+
+
+def create_capture_manager(settings: AppSettings) -> CaptureManager:
+    """Build the process-wide CaptureManager from the platform backends (PRD 6.2)."""
+    from snapmock.capture import select_backends
+
+    backend, hotkeys = select_backends()
+    return CaptureManager(backend, hotkeys, settings)
 
 
 class MainWindow(QMainWindow):
@@ -87,11 +140,32 @@ class MainWindow(QMainWindow):
     ``_selection_manager`` and ``_clipboard`` always refer to the active tab.
     """
 
-    def __init__(self, *, restore_session: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        restore_session: bool = False,
+        capture_manager: CaptureManager | None = None,
+        primary_capture: bool = True,
+    ) -> None:
         super().__init__()
         self._settings = AppSettings()
         self.setWindowTitle(APP_NAME)
         self.resize(1200, 800)
+
+        # Screen capture (Screen Capture PRD): one manager per process. Only the
+        # primary window connects its results, owns the tray icon, and quits.
+        self._capture = capture_manager or create_capture_manager(self._settings)
+        self._primary_capture = primary_capture
+        self._tray: QSystemTrayIcon | None = None
+        self._tray_menu: QMenu | None = None
+        self._hidden_in_tray = False
+        self._quit_requested = False
+        self._pending_capture_clipboard = False
+        self._capture_mode_actions: dict[CaptureMode, QAction] = {}
+        self._toolbar_mode_actions: dict[CaptureMode, QAction] = {}
+        self._delay_groups: list[QActionGroup] = []
+        self._capture_toggle_actions: list[tuple[str, QAction]] = []
+        self._capture_button: QToolButton | None = None
 
         # Library: auto-saved capture workspace (Library PRD)
         self._library = LibraryManager(self._settings.library_directory(), parent=self)
@@ -142,6 +216,7 @@ class MainWindow(QMainWindow):
             lambda _d: self._library_panel.refresh_open_state()
         )
         self._toast = Toast(self)
+        self._setup_capture_toolbar()
 
         # Style the dock splitter so it's easier to grab
         self.setStyleSheet(
@@ -225,6 +300,14 @@ class MainWindow(QMainWindow):
 
         self._update_title()
 
+        if self._primary_capture:
+            self._capture.capture_completed.connect(self._on_capture_completed)
+            self._capture.capture_failed.connect(self._on_capture_failed)
+            self._capture.capture_refused.connect(self._on_capture_refused)
+            self._capture.countdown_tick.connect(self._on_capture_countdown)
+            self._capture.hotkeys_changed.connect(self._sync_capture_shortcuts)
+            self._setup_tray()
+
         if restore_session:
             self._restore_session()
 
@@ -265,6 +348,7 @@ class MainWindow(QMainWindow):
         self._setup_arrange_menu(menu_bar)
         self._setup_tools_menu(menu_bar)
         self._setup_library_menu(menu_bar)
+        self._setup_capture_menu(menu_bar)
         self._setup_help_menu(menu_bar)
 
     def _setup_file_menu(self, menu_bar: QMenuBar) -> None:  # noqa: C901
@@ -797,6 +881,313 @@ class MainWindow(QMainWindow):
         if prefs is not None:
             prefs.triggered.connect(lambda: self._file_preferences(focus_library=True))
 
+    # ---- capture (Screen Capture PRD 3.2 to 3.4, 7) ----
+
+    def _setup_capture_menu(self, menu_bar: QMenuBar) -> None:
+        """Capture menu after Library and before Help (PRD 3.4)."""
+        capture_menu = menu_bar.addMenu("&Capture")
+        if capture_menu is None:
+            return
+        self._capture_menu = capture_menu
+        for mode in (CaptureMode.REGION, CaptureMode.ACTIVE_WINDOW, CaptureMode.FULL_SCREEN):
+            action = QAction(MODE_LABELS[mode], self)
+            action.triggered.connect(
+                lambda _checked=False, m=mode: self._start_capture(m, ORIGIN_MENU)
+            )
+            capture_menu.addAction(action)
+            self._capture_mode_actions[mode] = action
+        capture_menu.addSeparator()
+        capture_menu.addMenu(self._build_delay_menu(capture_menu))
+        self._add_capture_toggle(
+            capture_menu,
+            "Include Mouse &Cursor",
+            "include_cursor",
+            self._settings.capture_include_cursor,
+            self._settings.set_capture_include_cursor,
+        )
+        self._add_capture_toggle(
+            capture_menu,
+            "Copy to Clip&board",
+            "copy_to_clipboard",
+            self._settings.capture_copy_to_clipboard,
+            self._settings.set_capture_copy_to_clipboard,
+        )
+        self._add_capture_toggle(
+            capture_menu,
+            "&Hide SnapMock During Capture",
+            "hide_window",
+            self._settings.capture_hide_window,
+            self._settings.set_capture_hide_window,
+        )
+        capture_menu.addSeparator()
+        prefs = capture_menu.addAction("Capture &Preferences...")
+        if prefs is not None:
+            prefs.triggered.connect(lambda: self._file_preferences(focus_capture=True))
+        self._sync_capture_shortcuts()
+
+    def _build_delay_menu(self, parent: QMenu) -> QMenu:
+        """Delay: None / 3 s / 5 s / 10 s radio submenu bound to the preference (PRD 3.2)."""
+        menu = QMenu("&Delay", parent)
+        group = QActionGroup(menu)
+        group.setExclusive(True)
+        current = self._settings.capture_delay_seconds()
+        for seconds in DELAY_CHOICES:
+            label = "&None" if seconds == 0 else f"&{seconds} seconds"
+            action = QAction(label, menu)
+            action.setCheckable(True)
+            action.setData(seconds)
+            action.setChecked(seconds == current)
+            action.triggered.connect(lambda _c=False, s=seconds: self._set_capture_delay(s))
+            group.addAction(action)
+            menu.addAction(action)
+        self._delay_groups.append(group)
+        return menu
+
+    def _set_capture_delay(self, seconds: int) -> None:
+        self._settings.set_capture_delay_seconds(seconds)
+        self._sync_capture_toggles()
+
+    def _add_capture_toggle(
+        self,
+        menu: QMenu,
+        label: str,
+        key: str,
+        getter: Callable[[], bool],
+        setter: Callable[[bool], None],
+    ) -> QAction:
+        action = QAction(label, menu)
+        action.setCheckable(True)
+        action.setChecked(getter())
+        action.toggled.connect(lambda checked: self._on_capture_toggle(setter, checked))
+        menu.addAction(action)
+        self._capture_toggle_actions.append((key, action))
+        return action
+
+    def _on_capture_toggle(self, setter: Callable[[bool], None], checked: bool) -> None:
+        setter(checked)
+        self._sync_capture_toggles()
+
+    def _sync_capture_toggles(self) -> None:
+        """Reflect the delay and checkbox preferences in every menu that shows them."""
+        getters: dict[str, Callable[[], bool]] = {
+            "include_cursor": self._settings.capture_include_cursor,
+            "copy_to_clipboard": self._settings.capture_copy_to_clipboard,
+            "hide_window": self._settings.capture_hide_window,
+        }
+        for key, action in self._capture_toggle_actions:
+            value = getters[key]()
+            if action.isChecked() != value:
+                action.blockSignals(True)
+                action.setChecked(value)
+                action.blockSignals(False)
+        delay = self._settings.capture_delay_seconds()
+        for group in self._delay_groups:
+            for action in group.actions():
+                action.setChecked(action.data() == delay)
+
+    def _sync_capture_shortcuts(self) -> None:
+        """Menu shortcuts and the toolbar tooltip follow the hotkey preferences (PRD 3.4)."""
+        for mode, action in self._capture_mode_actions.items():
+            binding = self._capture.binding(MODE_ACTIONS[mode])
+            action.setShortcut(binding.key_sequence if binding else QKeySequence())
+        for mode, action in self._toolbar_mode_actions.items():
+            binding = self._capture.binding(MODE_ACTIONS[mode])
+            action.setShortcut(QKeySequence())  # toolbar copies never own the shortcut
+            action.setText(
+                MODE_LABELS[mode].replace("&", "")
+                + (f"\t{binding.display_text}" if binding and binding.is_bound else "")
+            )
+        if self._capture_button is not None:
+            default_mode = CaptureMode.from_string(self._settings.capture_default_mode())
+            binding = self._capture.binding(MODE_ACTIONS[default_mode])
+            key = binding.display_text if binding and binding.is_bound else ""
+            self._capture_button.setToolTip(f"Capture ({key})" if key else "Capture")
+
+    def _setup_capture_toolbar(self) -> None:
+        """Group 0 Capture: a menu-button control at the left end (PRD 3.3)."""
+        button = QToolButton()
+        button.setText("Capture")
+        button.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+        button.clicked.connect(lambda: self._start_capture(None, ORIGIN_TOOLBAR))
+        menu = QMenu(button)
+        for mode in (CaptureMode.REGION, CaptureMode.ACTIVE_WINDOW, CaptureMode.FULL_SCREEN):
+            action = QAction(MODE_LABELS[mode], menu)
+            action.triggered.connect(
+                lambda _checked=False, m=mode: self._start_capture(m, ORIGIN_TOOLBAR)
+            )
+            menu.addAction(action)
+            self._toolbar_mode_actions[mode] = action
+        menu.addSeparator()
+        menu.addMenu(self._build_delay_menu(menu))
+        button.setMenu(menu)
+        self._capture_button = button
+        self._toolbar.set_capture_button(button)
+        self._sync_capture_shortcuts()
+
+    def _setup_tray(self) -> None:
+        """The system tray icon and menu (PRD 3.2); created only when available."""
+        if not self._settings.capture_tray_enabled():
+            return
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            return
+        tray = QSystemTrayIcon(make_tray_icon(), self)
+        tray.setToolTip(APP_NAME)
+        menu = QMenu(self)
+        for mode in (CaptureMode.REGION, CaptureMode.ACTIVE_WINDOW, CaptureMode.FULL_SCREEN):
+            action = QAction(MODE_LABELS[mode], menu)
+            action.triggered.connect(
+                lambda _checked=False, m=mode: self._start_capture(m, ORIGIN_TRAY)
+            )
+            menu.addAction(action)
+        menu.addSeparator()
+        menu.addMenu(self._build_delay_menu(menu))
+        self._add_capture_toggle(
+            menu,
+            "Include Mouse &Cursor",
+            "include_cursor",
+            self._settings.capture_include_cursor,
+            self._settings.set_capture_include_cursor,
+        )
+        self._add_capture_toggle(
+            menu,
+            "Copy to Clip&board",
+            "copy_to_clipboard",
+            self._settings.capture_copy_to_clipboard,
+            self._settings.set_capture_copy_to_clipboard,
+        )
+        menu.addSeparator()
+        show = menu.addAction("&Show SnapMock")
+        if show is not None:
+            show.triggered.connect(self.show_from_tray)
+        prefs = menu.addAction("&Preferences...")
+        if prefs is not None:
+            prefs.triggered.connect(lambda: self._file_preferences(focus_capture=True))
+        menu.addSeparator()
+        quit_action = menu.addAction("&Quit SnapMock")
+        if quit_action is not None:
+            quit_action.triggered.connect(self.quit_application)
+        tray.setContextMenu(menu)
+        tray.activated.connect(self._on_tray_activated)
+        tray.messageClicked.connect(self.show_from_tray)
+        tray.show()
+        self._tray = tray
+        self._tray_menu = menu
+        self._apply_quit_policy()
+
+    def _teardown_tray(self) -> None:
+        if self._tray is not None:
+            self._tray.hide()
+            self._tray.deleteLater()
+            self._tray = None
+        if self._tray_menu is not None:
+            self._capture_toggle_actions = [
+                (k, a)
+                for k, a in self._capture_toggle_actions
+                if a.parent() is not self._tray_menu
+            ]
+            self._delay_groups = [
+                g for g in self._delay_groups if g.parent() is not self._tray_menu
+            ]
+            self._tray_menu.deleteLater()
+            self._tray_menu = None
+        self._apply_quit_policy()
+
+    def _apply_quit_policy(self) -> None:
+        """Keep the process alive without windows only while the tray keeps it running."""
+        keep = self._tray is not None and self._settings.capture_keep_running_in_tray()
+        app = QApplication.instance()
+        if isinstance(app, QApplication):
+            app.setQuitOnLastWindowClosed(not keep)
+
+    def _on_tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
+        if reason == QSystemTrayIcon.ActivationReason.Trigger and self._capture.platform != (
+            "darwin"
+        ):
+            self.show_from_tray()
+
+    def show_from_tray(self) -> None:
+        """Show, restore, and activate the main window (tray: Show SnapMock)."""
+        self._hidden_in_tray = False
+        if self.isMinimized():
+            self.showNormal()
+        self.show()
+        self.raise_()
+        self.activateWindow()
+
+    def quit_application(self) -> None:
+        """Quit from the tray, prompting for unsaved non-library documents."""
+        self._quit_requested = True
+        if not self.isVisible():
+            self.show()
+        self.close()
+        if self.isVisible():
+            self._quit_requested = False  # the user cancelled the close prompt
+
+    @property
+    def hidden_in_tray(self) -> bool:
+        return self._hidden_in_tray
+
+    @property
+    def tray_icon(self) -> QSystemTrayIcon | None:
+        return self._tray
+
+    def _start_capture(self, mode: CaptureMode | None, origin: str) -> None:
+        self._capture.start(self._capture.request_from_settings(mode, origin))
+
+    def _on_capture_completed(self, result: CaptureResult) -> None:
+        """Hand the image to the Library (PRD 7.1). The manager restores windows after this."""
+        self._pending_capture_clipboard = self._settings.capture_copy_to_clipboard()
+        try:
+            self.add_to_library(
+                result.image,
+                source="capture",
+                capture_metadata=result.metadata,
+                when=result.taken_at,
+            )
+        finally:
+            self._pending_capture_clipboard = False
+
+    def _on_capture_failed(self, reason: str) -> None:
+        self._notify("Capture failed", reason)
+
+    def _on_capture_refused(self, reason: str, origin: str) -> None:
+        self._notify(
+            "Capture", reason, force_notification=origin in (ORIGIN_TRAY, ORIGIN_COMMAND_LINE)
+        )
+
+    def _on_capture_countdown(self, remaining: int) -> None:
+        if self._tray is not None:
+            self._tray.setToolTip(
+                f"{APP_NAME}: capturing in {remaining} s" if remaining > 0 else APP_NAME
+            )
+
+    def _notify(self, title: str, text: str, *, force_notification: bool = False) -> None:
+        """A toast in the window, or a system notification while it is in the tray (PRD 7.4).
+
+        The window may be hidden for the grab when this runs; the manager
+        restores it right after, so the toast is still the right channel then.
+        """
+        if not self._hidden_in_tray:
+            self._toast.show_message(text)
+        if self._tray is not None and (force_notification or self._hidden_in_tray):
+            self._tray.showMessage(title, text)
+
+    def report_hotkey_failures(self) -> None:
+        """One toast naming every hotkey the desktop refused (PRD 9.3)."""
+        failed = [b for b in self._capture.bindings if b.is_bound and not b.registered]
+        if not failed or not self._capture.hotkey_backend.supported:
+            return
+        keys = ", ".join(b.display_text for b in failed)
+        verb = "is" if len(failed) == 1 else "are"
+        self._notify(
+            "Capture hotkeys",
+            f"{keys} {verb} in use by another application. Change it in Preferences > Capture.",
+        )
+
+    @property
+    def capture_manager(self) -> CaptureManager:
+        return self._capture
+
     def _setup_help_menu(self, menu_bar: QMenuBar) -> None:
         help_menu = menu_bar.addMenu("&Help")
         if help_menu is None:
@@ -972,9 +1363,11 @@ class MainWindow(QMainWindow):
             if path.suffix.lower() == SNAGIT_EXTENSION:
                 scene = load_snagx(path)
                 metadata = None
+                capture_metadata = None
             else:
                 scene = load_project(path)
                 metadata = read_library_metadata(path)
+                capture_metadata = read_capture_metadata(path)
         except Exception as e:  # noqa: BLE001
             QMessageBox.critical(self, "Open Error", f"Could not open project:\n{e}")
             return None
@@ -985,6 +1378,7 @@ class MainWindow(QMainWindow):
             is_library_file=is_library,
             display_name=(metadata or {}).get("display_name"),
             library_metadata=metadata,
+            capture_metadata=capture_metadata,
             parent=self,
         )
         self._add_document(doc)
@@ -1109,12 +1503,16 @@ class MainWindow(QMainWindow):
     def _file_print(self) -> None:
         QMessageBox.information(self, "Print", "Print support is coming soon.")
 
-    def _file_preferences(self, *, focus_library: bool = False) -> None:
+    def _file_preferences(
+        self, *, focus_library: bool = False, focus_capture: bool = False
+    ) -> None:
         from snapmock.ui.preferences_dialog import PreferencesDialog
 
         dlg = PreferencesDialog(self._settings, self)
         if focus_library:
             dlg.focus_library_section()
+        if focus_capture and hasattr(dlg, "focus_capture_section"):
+            dlg.focus_capture_section()
         if dlg.exec() == PreferencesDialog.DialogCode.Accepted:
             self._apply_preference_changes(dlg.get_changes())
 
@@ -1198,7 +1596,7 @@ class MainWindow(QMainWindow):
             self._open_project(p)
 
     def _open_in_new_window(self, path: Path) -> None:
-        window = MainWindow()
+        window = MainWindow(capture_manager=self._capture, primary_capture=False)
         window.show()
         window._open_project(path)  # noqa: SLF001
         _extra_windows.append(window)
@@ -1224,18 +1622,30 @@ class MainWindow(QMainWindow):
         )
         self._open_project(path)
 
-    def add_to_library(self, image: object, *, source: str = "capture") -> Path | None:
+    def add_to_library(
+        self,
+        image: object,
+        *,
+        source: str = "capture",
+        capture_metadata: CaptureMetadata | None = None,
+        when: datetime | None = None,
+    ) -> Path | None:
         """Store *image* (QImage or QPixmap) as a new library file (Library PRD 6.1).
 
-        Opens it in a tab when the Auto-open preference is on. This is the
-        entry point a screen-capture feature should call.
+        Opens it in a tab when the Auto-open preference is on. Screen capture
+        passes *capture_metadata* (written to the manifest, Screen Capture PRD
+        12.1) and *when*, the grab time, which becomes ``captured_at``.
         """
         from PyQt6.QtGui import QImage, QPixmap
 
         if not isinstance(image, (QImage, QPixmap)):
             return None
         path = self._library.create_from_image(
-            image, source=source, folder=self._library_panel.current_path
+            image,
+            source=source,
+            folder=self._library_panel.current_path,
+            when=when,
+            capture_metadata=capture_metadata.to_dict() if capture_metadata else None,
         )
         if self._settings.library_auto_open():
             self._open_project(path)
@@ -1244,11 +1654,13 @@ class MainWindow(QMainWindow):
     def _on_library_file_created(self, path: Path) -> None:
         if not self._settings.library_toast_enabled():
             return
-        self._toast.show_message(
-            f"Captured to Library: {path.stem}",
-            "Open",
-            lambda: self._open_library_files([path]),
-        )
+        where = "Library and clipboard" if self._pending_capture_clipboard else "Library"
+        text = f"Captured to {where}: {path.stem}"
+        if self._hidden_in_tray and self._tray is not None:
+            # No window to show a toast in: a system notification instead (PRD 7.2).
+            self._tray.showMessage(APP_NAME, text)
+            return
+        self._toast.show_message(text, "Open", lambda: self._open_library_files([path]))
 
     def _export_library_files(self, paths: list[Path]) -> None:
         """Export one file via the Export dialog, or many into a directory."""
@@ -2240,7 +2652,25 @@ class MainWindow(QMainWindow):
         super().keyReleaseEvent(event)
 
     def closeEvent(self, event: QCloseEvent | None) -> None:
-        """Prompt for unsaved documents, then save window geometry and state."""
+        """Prompt for unsaved documents, then save window geometry and state.
+
+        With Keep Running in Tray on and a tray icon present, closing hides the
+        window instead and global hotkeys keep working (PRD 3.2).
+        """
+        keep_running = (
+            self._primary_capture
+            and self._tray is not None
+            and self._settings.capture_keep_running_in_tray()
+            and not self._quit_requested
+        )
+        if keep_running:
+            self._settings.save_window_geometry(self.saveGeometry().data())
+            self._settings.save_window_state(self.saveState().data())
+            self._hidden_in_tray = True
+            self.hide()
+            if event is not None:
+                event.ignore()
+            return
         for doc in self._documents.documents:
             if doc.is_dirty:
                 self._documents.set_active(doc)
@@ -2252,6 +2682,9 @@ class MainWindow(QMainWindow):
         self._save_session()
         self._settings.save_window_geometry(self.saveGeometry().data())
         self._settings.save_window_state(self.saveState().data())
+        if self._primary_capture:
+            self._teardown_tray()
+            self._capture.shutdown()
         super().closeEvent(event)
 
     # ---- properties ----

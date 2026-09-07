@@ -38,6 +38,14 @@ class SnapToolBar(QToolBar):
         tool_manager.tool_changed.connect(self._on_tool_changed)
         self._on_tool_changed(tool_manager.active_tool_id)
 
+    def set_capture_button(self, button: QToolButton) -> None:
+        """Install the Group 0 Capture control at the left end (Screen Capture PRD 3.3)."""
+        actions = self.actions()
+        first = actions[0] if actions else None
+        button.setParent(self)
+        self.insertWidget(first, button)
+        self.insertSeparator(first)
+
     def _make_activator(self, tool_id: str):  # type: ignore[no-untyped-def]
         def _activate() -> None:
             self._tool_manager.activate(tool_id)

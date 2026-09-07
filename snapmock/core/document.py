@@ -33,6 +33,7 @@ class Document(QObject):
         is_library_file: bool = False,
         display_name: str | None = None,
         library_metadata: dict[str, Any] | None = None,
+        capture_metadata: dict[str, Any] | None = None,
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
@@ -46,6 +47,7 @@ class Document(QObject):
         self._is_library_file = is_library_file
         self._display_name: str | None = display_name
         self.library_metadata: dict[str, Any] | None = library_metadata
+        self.capture_metadata: dict[str, Any] | None = capture_metadata
         scene.command_stack.stack_changed.connect(self.title_changed)
 
     # --- core objects ---

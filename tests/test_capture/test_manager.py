@@ -254,7 +254,7 @@ def test_busy_request_is_refused(qtbot: QtBot, manager: CaptureManager) -> None:
     assert manager.start(_request(CaptureMode.REGION))
     with qtbot.waitSignal(manager.capture_refused) as blocker:
         assert manager.start(_request(CaptureMode.REGION)) is False
-    assert blocker.args == [MSG_BUSY]
+    assert blocker.args == [MSG_BUSY, "menu"]
     manager.cancel()
 
 
@@ -266,16 +266,16 @@ def test_modal_dialog_refuses_capture(qtbot: QtBot, manager: CaptureManager) -> 
     assert QApplication.activeModalWidget() is dlg
     with qtbot.waitSignal(manager.capture_refused) as blocker:
         assert manager.start(_request(CaptureMode.FULL_SCREEN)) is False
-    assert blocker.args == [MSG_MODAL]
+    assert blocker.args == [MSG_MODAL, "menu"]
     dlg.hide()
 
 
 def test_null_backend_refuses(qapp: QApplication) -> None:
     manager = CaptureManager(NullCaptureBackend(), FakeHotkeyBackend(), AppSettings())
-    refused: list[str] = []
-    manager.capture_refused.connect(refused.append)
+    refused: list[tuple[str, str]] = []
+    manager.capture_refused.connect(lambda r, o: refused.append((r, o)))
     assert manager.start(_request(CaptureMode.REGION)) is False
-    assert refused == ["Screen capture is not supported on this platform."]
+    assert refused == [("Screen capture is not supported on this platform.", "menu")]
     assert "not supported" in manager.capability_summary()
 
 

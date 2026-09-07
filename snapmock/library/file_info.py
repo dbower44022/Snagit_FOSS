@@ -6,6 +6,7 @@ import zipfile
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from PyQt6.QtGui import QPixmap
 
@@ -28,6 +29,7 @@ class LibraryFileInfo:
     source: str = ""
     is_open: bool = False
     is_valid: bool = True
+    capture_metadata: dict[str, Any] | None = None
     _thumbnail: QPixmap | None = field(default=None, repr=False, compare=False)
     _thumbnail_loaded: bool = field(default=False, repr=False, compare=False)
 
@@ -56,6 +58,7 @@ class LibraryFileInfo:
         if isinstance(name, str) and name:
             info.display_name = name
         info.source = str(meta.get("source", ""))
+        info.capture_metadata = summary.get("capture_metadata")
         captured = meta.get("captured_at")
         if isinstance(captured, str) and captured:
             info.captured_at = _parse_iso(captured)

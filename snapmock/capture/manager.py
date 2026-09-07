@@ -18,7 +18,12 @@ from PyQt6.QtCore import QObject, QRect, QTimer, pyqtBoundSignal, pyqtSignal
 from PyQt6.QtGui import QCursor, QImage, QKeySequence
 from PyQt6.QtWidgets import QApplication
 
-from snapmock.capture.backend import CaptureBackend, CaptureError, HotkeyBackend
+from snapmock.capture.backend import (
+    UNSUPPORTED_PLATFORM_MESSAGE,
+    CaptureBackend,
+    CaptureError,
+    HotkeyBackend,
+)
 from snapmock.capture.cli import CaptureCommand
 from snapmock.capture.compositing import (
     composite_cursor,
@@ -110,8 +115,9 @@ class CaptureManager(QObject):
         A user-readable reason. No file was created.
     capture_cancelled()
         The user cancelled (Escape, right-click, focus loss, countdown cancel).
-    capture_refused(str)
+    capture_refused(str, str)
         A request was not started: busy, modal dialog open, or unsupported.
+        Carries the reason and the request origin (PRD 3.6).
     countdown_tick(int)
         Seconds remaining in a delay; 0 when the countdown ends.
     state_changed(str)
@@ -122,7 +128,7 @@ class CaptureManager(QObject):
     capture_completed = pyqtSignal(object)
     capture_failed = pyqtSignal(str)
     capture_cancelled = pyqtSignal()
-    capture_refused = pyqtSignal(str)
+    capture_refused = pyqtSignal(str, str)
     countdown_tick = pyqtSignal(int)
     state_changed = pyqtSignal(str)
     hotkeys_changed = pyqtSignal()
@@ -245,13 +251,13 @@ class CaptureManager(QObject):
     def start(self, request: CaptureRequest) -> bool:
         """Start a capture. Returns False (and emits ``capture_refused``) when not started."""
         if self.is_busy:
-            self.capture_refused.emit(MSG_BUSY)
+            self.capture_refused.emit(MSG_BUSY, request.origin)
             return False
         if QApplication.activeModalWidget() is not None:
-            self.capture_refused.emit(MSG_MODAL)
+            self.capture_refused.emit(MSG_MODAL, request.origin)
             return False
         if not self._capabilities.any_capture:
-            self.capture_refused.emit("Screen capture is not supported on this platform.")
+            self.capture_refused.emit(UNSUPPORTED_PLATFORM_MESSAGE, request.origin)
             return False
         if self._onboarding_gate is not None and not self._onboarding_gate(request):
             return False

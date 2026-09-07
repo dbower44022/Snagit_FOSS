@@ -6,7 +6,11 @@ import pytest
 from PyQt6.QtCore import QSettings
 from pytestqt.qtbot import QtBot
 
+from snapmock import main_window as main_window_module
+from snapmock.capture.backend import FakeCaptureBackend, FakeHotkeyBackend
+from snapmock.capture.manager import CaptureManager
 from snapmock.config import settings as settings_module
+from snapmock.config.settings import AppSettings
 from snapmock.core.scene import SnapScene
 from snapmock.core.view import SnapView
 from snapmock.main_window import MainWindow
@@ -28,6 +32,20 @@ def isolated_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(settings_module.AppSettings, "__init__", _init)
     settings_module.AppSettings().set_library_directory(library_dir)
     return library_dir
+
+
+@pytest.fixture(autouse=True)
+def fake_capture_backends(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every MainWindow gets a CaptureManager on the fake backends.
+
+    Keeps the suite off the real platform backends, which would grab the
+    developer's screen and register real global hotkeys.
+    """
+
+    def _create(settings: AppSettings) -> CaptureManager:
+        return CaptureManager(FakeCaptureBackend(), FakeHotkeyBackend(), settings)
+
+    monkeypatch.setattr(main_window_module, "create_capture_manager", _create)
 
 
 @pytest.fixture()

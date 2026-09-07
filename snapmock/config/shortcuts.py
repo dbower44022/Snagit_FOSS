@@ -76,6 +76,11 @@ SHORTCUTS: dict[str, str] = {
     "tool.lasso_select": "Shift+M",
     # Library
     "library.toggle_panel": "Ctrl+L",
+    # Capture (defaults; the live values follow the hotkey preferences)
+    "capture.region": "Print",
+    "capture.window": "Alt+Print",
+    "capture.full_screen": "Ctrl+Print",
+    "capture.preferences": "",
     # Additional edit shortcuts
     "edit.paste_in_place": "Ctrl+Shift+V",
 }

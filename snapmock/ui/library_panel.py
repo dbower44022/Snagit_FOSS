@@ -733,6 +733,26 @@ class LibraryPanel(QDockWidget):
             f"Items: {info.item_count}",
             f"Source: {info.source or '—'}",
         ]
+        capture = info.capture_metadata
+        if capture:  # Screen Capture PRD 12.1
+            rect = capture.get("screen_rect") or {}
+            lines += [
+                "",
+                f"Capture mode: {capture.get('mode', '—')}"
+                + (
+                    f" (requested {capture['requested_mode']})"
+                    if capture.get("requested_mode") not in (None, capture.get("mode"))
+                    else ""
+                ),
+                f"Monitor: {capture.get('monitor_name') or 'All monitors'}",
+                f"Scale: {capture.get('device_pixel_ratio', 1)}×",
+                f"Screen rect: {rect.get('x', 0)}, {rect.get('y', 0)}, "
+                f"{rect.get('width', 0)} × {rect.get('height', 0)}",
+                f"Cursor included: {'yes' if capture.get('cursor_included') else 'no'}",
+                f"Backend: {capture.get('backend', '—')} on {capture.get('platform', '—')}",
+            ]
+            if capture.get("window_title"):
+                lines.append(f"Window: {capture['window_title']}")
         QMessageBox.information(self, "Properties", "\n".join(lines))
 
     # ------------------------------------------------------------------ keys / menus

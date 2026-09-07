@@ -23,7 +23,7 @@ def _menu_titles(window: MainWindow) -> list[str]:
     return [a.text() for a in menu_bar.actions() if isinstance(a.menu(), QMenu)]
 
 
-def test_all_nine_menus_exist(window: MainWindow) -> None:
+def test_all_ten_menus_exist(window: MainWindow) -> None:
     titles = _menu_titles(window)
     expected = [
         "&File",
@@ -34,6 +34,7 @@ def test_all_nine_menus_exist(window: MainWindow) -> None:
         "&Arrange",
         "&Tools",
         "Li&brary",
+        "&Capture",
         "&Help",
     ]
     assert titles == expected

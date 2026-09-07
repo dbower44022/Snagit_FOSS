@@ -72,12 +72,14 @@ def save_project(
     library_metadata: dict[str, Any] | None = None,
     *,
     write_thumbnail: bool = True,
+    capture_metadata: dict[str, Any] | None = None,
 ) -> None:
     """Save the scene to a .smk ZIP archive.
 
     *library_metadata* (display_name, captured_at, source) is stored in
-    manifest.json when given.  A flattened preview is written to
-    ``thumbnails/thumb.png`` unless *write_thumbnail* is False.
+    manifest.json when given, and so is *capture_metadata* (Screen Capture
+    PRD 12.1).  A flattened preview is written to ``thumbnails/thumb.png``
+    unless *write_thumbnail* is False.
     """
     manifest: dict[str, Any] = {
         "format_version": PROJECT_FORMAT_VERSION,
@@ -89,6 +91,8 @@ def save_project(
     }
     if library_metadata:
         manifest["library_metadata"] = dict(library_metadata)
+    if capture_metadata:
+        manifest["capture_metadata"] = dict(capture_metadata)
     active = scene.layer_manager.active_layer
     if active is not None:
         manifest["active_layer_id"] = active.layer_id
@@ -143,6 +147,15 @@ def read_library_metadata(path: Path) -> dict[str, Any] | None:
     return meta if isinstance(meta, dict) else None
 
 
+def read_capture_metadata(path: Path) -> dict[str, Any] | None:
+    """Return the optional ``capture_metadata`` block of a .smk manifest (PRD 12.1)."""
+    try:
+        meta = read_manifest(path).get("capture_metadata")
+    except (OSError, zipfile.BadZipFile, KeyError, ValueError):
+        return None
+    return meta if isinstance(meta, dict) else None
+
+
 def update_library_metadata(path: Path, **fields: Any) -> None:
     """Merge *fields* into the ``library_metadata`` block of an existing .smk.
 
@@ -187,7 +200,8 @@ def read_thumbnail(path: Path) -> QPixmap | None:
 def read_project_summary(path: Path) -> dict[str, Any]:
     """Return lightweight facts about a .smk file without building a scene.
 
-    Keys: canvas_width, canvas_height, layer_count, item_count, library_metadata.
+    Keys: canvas_width, canvas_height, layer_count, item_count, library_metadata,
+    capture_metadata.
     """
     with zipfile.ZipFile(path, "r") as zf:
         manifest = json.loads(zf.read("manifest.json"))
@@ -195,12 +209,14 @@ def read_project_summary(path: Path) -> dict[str, Any]:
         items = json.loads(zf.read("items.json"))
     canvas = manifest.get("canvas", {}) if isinstance(manifest, dict) else {}
     meta = manifest.get("library_metadata") if isinstance(manifest, dict) else None
+    capture = manifest.get("capture_metadata") if isinstance(manifest, dict) else None
     return {
         "canvas_width": int(canvas.get("width", 0)),
         "canvas_height": int(canvas.get("height", 0)),
         "layer_count": len(layers) if isinstance(layers, list) else 0,
         "item_count": len(items) if isinstance(items, list) else 0,
         "library_metadata": meta if isinstance(meta, dict) else None,
+        "capture_metadata": capture if isinstance(capture, dict) else None,
     }
 
 

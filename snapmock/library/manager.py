@@ -150,8 +150,13 @@ class LibraryManager(QObject):
         source: str = "capture",
         folder: Path | None = None,
         when: datetime | None = None,
+        capture_metadata: dict[str, Any] | None = None,
     ) -> Path:
-        """Create a new library file whose background layer holds *image*."""
+        """Create a new library file whose background layer holds *image*.
+
+        *capture_metadata* (Screen Capture PRD 12.1) is written to the manifest
+        beside ``library_metadata``; *when* becomes ``captured_at``.
+        """
         pixmap = image if isinstance(image, QPixmap) else QPixmap.fromImage(image)
         scene = SnapScene(width=max(1, pixmap.width()), height=max(1, pixmap.height()))
         lm = scene.layer_manager
@@ -169,7 +174,9 @@ class LibraryManager(QObject):
         lm.set_active(ann_layer.layer_id)
         scene.command_stack.clear()
         scene.command_stack.mark_clean()
-        return self.create_from_scene(scene, source=source, folder=folder, when=when)
+        return self.create_from_scene(
+            scene, source=source, folder=folder, when=when, capture_metadata=capture_metadata
+        )
 
     def create_blank(
         self,
@@ -190,6 +197,7 @@ class LibraryManager(QObject):
         source: str,
         folder: Path | None = None,
         when: datetime | None = None,
+        capture_metadata: dict[str, Any] | None = None,
     ) -> Path:
         folder = folder or self._root
         folder.mkdir(parents=True, exist_ok=True)
@@ -197,7 +205,7 @@ class LibraryManager(QObject):
         stem = self.auto_name(source, when)
         path = self.unique_file_path(folder, stem)
         metadata = self.new_metadata(path.stem, source, when)
-        save_project(scene, path, metadata)
+        save_project(scene, path, metadata, capture_metadata=capture_metadata)
         self.file_created.emit(path)
         self.files_changed.emit()
         return path
@@ -264,7 +272,12 @@ class LibraryManager(QObject):
         if doc.file_path is None:
             return False
         try:
-            save_project(doc.scene, doc.file_path, doc.library_metadata)
+            save_project(
+                doc.scene,
+                doc.file_path,
+                doc.library_metadata,
+                capture_metadata=doc.capture_metadata,
+            )
         except OSError:
             return False
         self.file_written.emit(doc.file_path)
