@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QComboBox, QToolBar, QToolButton
 
 from snapmock.config.constants import ZOOM_STEPS
+from snapmock.core.theme_manager import theme_manager
+from snapmock.ui.icons import CAPTURE_ICON, TOOL_ICONS, tool_tooltip
 
 if TYPE_CHECKING:
     from PyQt6.QtWidgets import QWidget
@@ -22,7 +25,9 @@ class SnapToolBar(QToolBar):
         super().__init__("Tools", parent)
         self._tool_manager = tool_manager
         self._buttons: dict[str, QToolButton] = {}
+        self._capture_button: QToolButton | None = None
         self.setMovable(False)
+        self.setIconSize(theme_manager().icon_qsize())
 
         for tid in tool_manager.tool_ids:
             tool = tool_manager.tool(tid)
@@ -30,6 +35,7 @@ class SnapToolBar(QToolBar):
                 continue
             btn = QToolButton(self)
             btn.setText(tool.display_name)
+            btn.setToolTip(tool_tooltip(tid, tool.display_name))
             btn.setCheckable(True)
             btn.clicked.connect(self._make_activator(tid))
             self.addWidget(btn)
@@ -37,6 +43,32 @@ class SnapToolBar(QToolBar):
 
         tool_manager.tool_changed.connect(self._on_tool_changed)
         self._on_tool_changed(tool_manager.active_tool_id)
+        self.apply_theme()
+        # Bound-method slots: Qt drops them when this toolbar is destroyed.
+        theme_manager().theme_changed.connect(self._on_theme_changed)
+        theme_manager().icon_size_changed.connect(self._on_icon_size_changed)
+
+    def _on_theme_changed(self, _name: str) -> None:
+        self.apply_theme()
+
+    def _on_icon_size_changed(self, _size: int) -> None:
+        self.apply_theme()
+
+    def apply_theme(self) -> None:
+        """Themed icons at the preferred size on every button (General UI PRD 13.4)."""
+        manager = theme_manager()
+        self.setIconSize(manager.icon_qsize())
+        for tid, btn in self._buttons.items():
+            name = TOOL_ICONS.get(tid)
+            icon = manager.icon(name) if name is not None else None
+            if icon is not None and not icon.isNull():
+                btn.setIcon(icon)
+                btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+            else:
+                btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        if self._capture_button is not None:
+            self._capture_button.setIcon(manager.icon(CAPTURE_ICON))
+            self._capture_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
     def set_capture_button(self, button: QToolButton) -> None:
         """Install the Group 0 Capture control at the left end (Screen Capture PRD 3.3)."""
@@ -45,6 +77,8 @@ class SnapToolBar(QToolBar):
         button.setParent(self)
         self.insertWidget(first, button)
         self.insertSeparator(first)
+        self._capture_button = button
+        self.apply_theme()
 
     def _make_activator(self, tool_id: str):  # type: ignore[no-untyped-def]
         def _activate() -> None:

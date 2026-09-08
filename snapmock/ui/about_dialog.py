@@ -31,7 +31,7 @@ from snapmock.config.constants import (
 )
 
 TAGLINE = "Screenshot Annotation & UI Mockup Tool"
-CREDITS = ["Doug Bower"]
+CREDITS = ["Doug Bower", "Tabler Icons by Paweł Kuna (MIT)"]
 
 
 def pyqt_version() -> str:

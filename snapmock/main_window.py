@@ -115,6 +115,7 @@ from snapmock.tools.tool_manager import ToolManager
 from snapmock.tools.zoom_tool import ZoomTool
 from snapmock.ui.document_tabs import DocumentTabs
 from snapmock.ui.export_dialog import ExportDialog
+from snapmock.ui.icons import apply_action_icons, apply_menu_bar_icons, apply_tool_action_icons
 from snapmock.ui.layer_panel import LayerPanel
 from snapmock.ui.library_panel import LibraryPanel
 from snapmock.ui.property_panel import PropertyPanel
@@ -378,6 +379,7 @@ class MainWindow(QMainWindow):
         self._dark_mode_action.blockSignals(True)
         self._dark_mode_action.setChecked(resolved == "dark")
         self._dark_mode_action.blockSignals(False)
+        self._apply_menu_icons()
         for doc in self._documents.documents:
             doc.view.apply_theme()
         select_tool = self._tool_manager.tool("select")
@@ -444,6 +446,14 @@ class MainWindow(QMainWindow):
         self._setup_library_menu(menu_bar)
         self._setup_capture_menu(menu_bar)
         self._setup_help_menu(menu_bar)
+        self._apply_menu_icons()
+
+    def _apply_menu_icons(self) -> None:
+        """Themed icons on every menu row that has one (General UI PRD 13.4)."""
+        apply_menu_bar_icons(self.menuBar())
+        apply_tool_action_icons(self._tool_actions)
+        if self._tray_menu is not None:
+            apply_action_icons(self._tray_menu.actions())
 
     def _setup_file_menu(self, menu_bar: QMenuBar) -> None:  # noqa: C901
         file_menu = menu_bar.addMenu("&File")

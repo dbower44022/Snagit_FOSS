@@ -35,9 +35,9 @@
         <td>1.7</td>
         <td class="nowrap">09-08-26 15:05</td>
         <td>Doug Bower</td>
-        <td>Section 10: module added under core by the General UI implementation, Phase 3
-        (<code>core/theme_manager.py</code>); the theme style sheets and the vendored icon set
-        listed under resources.</td>
+        <td>Section 10: modules added by the General UI implementation, Phase 3
+        (<code>core/theme_manager.py</code>, <code>ui/icons.py</code>); the theme style sheets
+        and the vendored icon set listed under resources.</td>
         <td><span class="status open">Pending</span></td>
       </tr>
       <tr>
@@ -118,7 +118,7 @@
         <td class="nowrap">09-08-26 15:05</td>
         <td>10</td>
         <td>Added</td>
-        <td>General UI implementation, Phase 3: <code>core/theme_manager.py</code>, the ThemeManager of the General UI PRD Section 13 (light and dark themes, the System option, live switching, themed icons); <code>resources/themes/light.qss</code> and <code>dark.qss</code>; <code>resources/icons/tabler/</code>, the vendored Tabler Icons subset under its MIT licence.</td>
+        <td>General UI implementation, Phase 3: <code>core/theme_manager.py</code>, the ThemeManager of the General UI PRD Section 13 (light and dark themes, the System option, live switching, themed icons); <code>ui/icons.py</code>, the glyph name for every tool, menu action, and panel button; <code>resources/themes/light.qss</code> and <code>dark.qss</code>; <code>resources/icons/tabler/</code>, the vendored Tabler Icons subset under its MIT licence.</td>
       </tr>
       <tr>
         <td class="nowrap">09-08-26 13:40</td>
@@ -1423,6 +1423,7 @@ docstring.</p>
         export_dialog.py          # Export dialog: format options, region, output path, preview, size estimate
         find_replace_bar.py       # inline find/replace bar for rich text editing
         find_replace_color_dialog.py # find and replace a colour across all items (Edit menu)
+        icons.py                  # icon names for tools, menu actions, and panel buttons
         item_properties_dialog.py # inspect and edit properties of a SnapGraphicsItem
         layer_panel.py            # dock widget showing the layer stack
         layer_properties_dialog.py # inspect and edit properties of a Layer

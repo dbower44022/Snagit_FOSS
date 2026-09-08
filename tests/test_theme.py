@@ -198,3 +198,59 @@ class TestCanvasReadsTheme:
         assert accent_color().name().upper() == "#2B579A"
         theme_manager().set_mode(ThemeMode.DARK)
         assert accent_color().name().upper() == "#5B9BD5"
+
+
+class TestIcons:
+    def test_every_named_icon_file_exists(self) -> None:
+        from snapmock.ui.icons import ACTION_ICONS, ADD_ICON, CAPTURE_ICON, REMOVE_ICON, TOOL_ICONS
+
+        names = set(TOOL_ICONS.values()) | set(ACTION_ICONS.values())
+        names |= {ADD_ICON, REMOVE_ICON, CAPTURE_ICON}
+        missing = sorted(n for n in names if not (tm.ICONS_DIR / f"{n}.svg").exists())
+        assert missing == []
+        assert (tm.ICONS_DIR / "LICENSE").exists()
+
+    def test_icon_is_rendered_and_recoloured(self, qtbot: QtBot) -> None:
+        manager = theme_manager()
+        icon = manager.icon("pointer")
+        assert not icon.isNull()
+        assert not icon.availableSizes()[0].isEmpty()
+        assert manager.icon("no-such-glyph").isNull()
+        light_key = ("pointer", "light")
+        assert light_key in manager._icon_cache
+        manager.set_mode(ThemeMode.DARK)
+        assert light_key not in manager._icon_cache
+        assert not manager.icon("pointer").isNull()
+
+    def test_tool_palette_buttons_show_icons(self, main_window: MainWindow) -> None:
+        from PyQt6.QtCore import Qt
+
+        toolbar = main_window._toolbar
+        for tool_id, btn in toolbar._buttons.items():
+            assert not btn.icon().isNull(), tool_id
+            assert btn.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonIconOnly
+        assert toolbar._buttons["select"].toolTip() == "Select (V)"
+        assert toolbar.iconSize().width() == 24
+
+    def test_icon_size_preference_resizes_the_palette(self, main_window: MainWindow) -> None:
+        theme_manager().set_icon_size(32)
+        assert main_window._toolbar.iconSize().width() == 32
+
+    def test_menu_rows_have_icons(self, main_window: MainWindow) -> None:
+        from snapmock.ui.icons import plain_label
+
+        menu_bar = main_window.menuBar()
+        assert menu_bar is not None
+        file_menu = menu_bar.actions()[0].menu()
+        assert file_menu is not None
+        labels = {plain_label(a.text()): a for a in file_menu.actions() if not a.isSeparator()}
+        assert not labels["Save"].icon().isNull()
+        assert not labels["Export..."].icon().isNull()
+        tools_action = main_window._tool_actions["rectangle"]
+        assert not tools_action.icon().isNull()
+
+    def test_plain_label_strips_accelerators(self) -> None:
+        from snapmock.ui.icons import plain_label
+
+        assert plain_label("&Save") == "Save"
+        assert plain_label("Fish && Chips") == "Fish & Chips"

@@ -15,6 +15,9 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from snapmock.core.theme_manager import theme_manager
+from snapmock.ui.icons import ADD_ICON, REMOVE_ICON
+
 if TYPE_CHECKING:
     from snapmock.core.layer import Layer
     from snapmock.core.layer_manager import LayerManager
@@ -50,6 +53,8 @@ class LayerPanel(QDockWidget):
         self._remove_btn.clicked.connect(self._on_remove_layer)
         btn_layout.addWidget(self._remove_btn)
         layout.addLayout(btn_layout)
+        self._apply_icons()
+        theme_manager().theme_changed.connect(self._on_theme_changed)
 
         self.setWidget(container)
 
@@ -89,6 +94,17 @@ class LayerPanel(QDockWidget):
             layer_id = item.data(Qt.ItemDataRole.UserRole)
             if isinstance(layer_id, str):
                 self._layer_manager.set_active(layer_id)
+
+    def _on_theme_changed(self, _name: str) -> None:
+        self._apply_icons()
+
+    def _apply_icons(self) -> None:
+        manager = theme_manager()
+        for btn, name in ((self._add_btn, ADD_ICON), (self._remove_btn, REMOVE_ICON)):
+            icon = manager.icon(name)
+            if not icon.isNull():
+                btn.setIcon(icon)
+                btn.setText("")
 
     def _on_add_layer(self) -> None:
         self._layer_manager.add_layer()
