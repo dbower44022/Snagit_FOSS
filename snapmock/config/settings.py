@@ -100,6 +100,30 @@ class AppSettings:
     def set_status_bar_visible(self, visible: bool) -> None:
         self._qs.setValue("view/statusBarVisible", visible)
 
+    # --- appearance (General UI PRD 11.3 Appearance, 13.1, 15.4) ---
+
+    def theme_mode(self) -> str:
+        """``light`` (the default), ``dark``, or ``system``."""
+        val = str(self._qs.value("appearance/theme", "light"))
+        return val if val in ("light", "dark", "system") else "light"
+
+    def set_theme_mode(self, mode: str) -> None:
+        self._qs.setValue("appearance/theme", mode)
+
+    def icon_size(self) -> int:
+        val = int(self._qs.value("appearance/iconSize", 24))
+        return val if val in (16, 24, 32) else 24
+
+    def set_icon_size(self, size: int) -> None:
+        self._qs.setValue("appearance/iconSize", size)
+
+    def ui_font_size(self) -> str:
+        val = str(self._qs.value("appearance/uiFontSize", "medium"))
+        return val if val in ("small", "medium", "large") else "medium"
+
+    def set_ui_font_size(self, size: str) -> None:
+        self._qs.setValue("appearance/uiFontSize", size)
+
     def last_tool(self) -> str:
         return str(self._qs.value("session/lastTool", ""))
 

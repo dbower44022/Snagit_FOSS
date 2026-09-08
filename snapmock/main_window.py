@@ -72,6 +72,7 @@ from snapmock.core.document_manager import DocumentManager
 from snapmock.core.layer import Layer
 from snapmock.core.scene import SnapScene
 from snapmock.core.selection_manager import SelectionManager
+from snapmock.core.theme_manager import ThemeMode, theme_manager
 from snapmock.core.view import SnapView
 from snapmock.io.exporter import (
     ExportFormat,
@@ -171,6 +172,14 @@ class MainWindow(QMainWindow):
     ) -> None:
         super().__init__()
         self._settings = AppSettings()
+        # Theme (General UI PRD 13): applied before any widget is built so the
+        # first paint is already themed; live switches repaint through the signal.
+        self._theme = theme_manager()
+        self._theme.set_icon_size(self._settings.icon_size())
+        self._theme.set_ui_font_size(self._settings.ui_font_size())
+        self._theme.set_mode(ThemeMode.from_value(self._settings.theme_mode()))
+        self._theme.apply()
+        self._theme.theme_changed.connect(self._on_theme_changed)
         self.setWindowTitle(APP_NAME)
         self.setMinimumSize(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
         self.resize(self._default_window_size())
@@ -246,19 +255,6 @@ class MainWindow(QMainWindow):
         )
         self._toast = Toast(self)
         self._setup_capture_toolbar()
-
-        # Style the dock splitter so it's easier to grab
-        self.setStyleSheet(
-            "QMainWindow::separator {"
-            "  width: 6px;"
-            "  height: 6px;"
-            "  background: #c0c0c0;"
-            "  border: 1px solid #a0a0a0;"
-            "}"
-            "QMainWindow::separator:hover {"
-            "  background: #a0a0a0;"
-            "}"
-        )
 
         self._status_bar = SnapStatusBar(self._view)
         self.setStatusBar(self._status_bar)
@@ -363,6 +359,29 @@ class MainWindow(QMainWindow):
         self.resizeDocks([self._library_panel], [250], Qt.Orientation.Vertical)
         layer_h = self._layer_panel.preferred_height()
         self.resizeDocks([self._layer_panel], [layer_h], Qt.Orientation.Vertical)
+
+    def _toggle_dark_mode(self, checked: bool) -> None:
+        """View > Dark Mode (PRD 3.3): an explicit Light or Dark choice, persisted."""
+        mode = ThemeMode.DARK if checked else ThemeMode.LIGHT
+        if self._theme.mode is mode:
+            return
+        self._settings.set_theme_mode(mode.value)
+        self._theme.set_mode(mode)
+
+    def set_theme_mode(self, mode: ThemeMode) -> None:
+        """Choose Light, Dark, or System (Preferences > Appearance) and persist it."""
+        self._settings.set_theme_mode(mode.value)
+        self._theme.set_mode(mode)
+
+    def _on_theme_changed(self, resolved: str) -> None:
+        """Repaint what reads theme colours outside the style sheet (PRD 13.4)."""
+        self._dark_mode_action.blockSignals(True)
+        self._dark_mode_action.setChecked(resolved == "dark")
+        self._dark_mode_action.blockSignals(False)
+        for doc in self._documents.documents:
+            vp = doc.view.viewport()
+            if vp is not None:
+                vp.update()
 
     def _view_reset_layout(self) -> None:
         """Restore every panel and toolbar to its default position, size, and visibility."""
@@ -670,6 +689,12 @@ class MainWindow(QMainWindow):
         reset_layout = view_menu.addAction("Reset &Layout")
         if reset_layout is not None:
             reset_layout.triggered.connect(self._view_reset_layout)
+
+        self._dark_mode_action = QAction("&Dark Mode", self)
+        self._dark_mode_action.setCheckable(True)
+        self._dark_mode_action.setChecked(self._theme.resolved == "dark")
+        self._dark_mode_action.toggled.connect(self._toggle_dark_mode)
+        view_menu.addAction(self._dark_mode_action)
 
         view_menu.addSeparator()
 

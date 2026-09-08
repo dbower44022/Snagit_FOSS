@@ -1,0 +1,327 @@
+/* SnapMock light theme (General UI PRD Section 13.2).
+ *
+ * Constants come first, one per line, as "@name: value;". Every colour in the
+ * rules below is written as "@name" and the ThemeManager substitutes the value
+ * before the sheet is applied. The ThemeManager also reads the same constants
+ * for canvas rendering (selection handles, grid, rulers, guides), so this file
+ * is the single source of every light-theme colour. The dark theme defines the
+ * same names in dark.qss.
+ */
+
+/* --- Section 13.2 table --- */
+@window-bg: #F5F5F5;
+@panel-bg: #FFFFFF;
+@pasteboard: #E0E0E0;
+@text-primary: #1A1A1A;
+@text-secondary: #666666;
+@accent: #2B579A;
+@accent-text: #FFFFFF;
+@selection-handle: #2B579A;
+@selection-outline: #2B579A;
+@toolbar-bg: #EEEEEE;
+@toolbar-separator: #CCCCCC;
+@button-hover: #D8D8D8;
+@button-pressed: #C0C0C0;
+@error: #D32F2F;
+@warning: #F57C00;
+@grid-lines: #33000000;
+@grid-lines-major: #55000000;
+
+/* --- Canvas and chrome colours the table leaves to the implementation --- */
+@border: #CCCCCC;
+@input-bg: #FFFFFF;
+@ruler-bg: #EEEEEE;
+@ruler-text: #333333;
+@ruler-tick: #999999;
+@ruler-cursor: #D32F2F;
+@canvas-border: #B4B4B4;
+@canvas-shadow: #66000000;
+@empty-canvas-text: #999999;
+@checkerboard-a: #FFFFFF;
+@checkerboard-b: #CCCCCC;
+@guide: #00BFFF;
+@crosshair: #66000000;
+@overlay-dim: #40000000;
+@tooltip-bg: #FFFFE1;
+
+/* --- Rules --- */
+
+QWidget {
+    background-color: @window-bg;
+    color: @text-primary;
+    selection-background-color: @accent;
+    selection-color: @accent-text;
+}
+
+QMainWindow, QDialog {
+    background-color: @window-bg;
+}
+
+QMainWindow::separator {
+    width: 6px;
+    height: 6px;
+    background: @toolbar-separator;
+    border: 1px solid @border;
+}
+
+QMainWindow::separator:hover {
+    background: @button-pressed;
+}
+
+QMenuBar {
+    background-color: @toolbar-bg;
+    color: @text-primary;
+}
+
+QMenuBar::item:selected, QMenuBar::item:pressed {
+    background-color: @button-hover;
+}
+
+QMenu {
+    background-color: @panel-bg;
+    color: @text-primary;
+    border: 1px solid @border;
+}
+
+QMenu::item:selected {
+    background-color: @accent;
+    color: @accent-text;
+}
+
+QMenu::separator {
+    height: 1px;
+    background: @toolbar-separator;
+    margin: 4px 8px;
+}
+
+QToolBar {
+    background-color: @toolbar-bg;
+    border: none;
+    spacing: 2px;
+}
+
+QToolBar::separator {
+    width: 1px;
+    background: @toolbar-separator;
+    margin: 4px 4px;
+}
+
+QToolButton {
+    background-color: transparent;
+    color: @text-primary;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    padding: 3px;
+}
+
+QToolButton:hover {
+    background-color: @button-hover;
+}
+
+QToolButton:pressed, QToolButton:checked {
+    background-color: @button-pressed;
+    border: 1px solid @toolbar-separator;
+}
+
+QDockWidget {
+    color: @text-primary;
+    titlebar-close-icon: none;
+    titlebar-normal-icon: none;
+}
+
+QDockWidget::title {
+    background-color: @toolbar-bg;
+    padding: 4px 6px;
+}
+
+QStatusBar {
+    background-color: @toolbar-bg;
+    color: @text-primary;
+}
+
+QStatusBar::item {
+    border: none;
+}
+
+QListWidget, QListView, QTreeView, QTableView, QTextEdit, QPlainTextEdit {
+    background-color: @panel-bg;
+    color: @text-primary;
+    border: 1px solid @border;
+}
+
+QListView::item:hover, QTreeView::item:hover {
+    background-color: @button-hover;
+}
+
+QListView::item:selected, QTreeView::item:selected, QTableView::item:selected {
+    background-color: @accent;
+    color: @accent-text;
+}
+
+QHeaderView::section {
+    background-color: @toolbar-bg;
+    color: @text-primary;
+    border: 1px solid @border;
+    padding: 2px 4px;
+}
+
+QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox, QKeySequenceEdit, QFontComboBox {
+    background-color: @input-bg;
+    color: @text-primary;
+    border: 1px solid @border;
+    border-radius: 3px;
+    padding: 2px 4px;
+}
+
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus, QKeySequenceEdit:focus {
+    border: 2px solid @accent;
+}
+
+QComboBox QAbstractItemView {
+    background-color: @panel-bg;
+    color: @text-primary;
+    border: 1px solid @border;
+    selection-background-color: @accent;
+    selection-color: @accent-text;
+}
+
+QPushButton {
+    background-color: @toolbar-bg;
+    color: @text-primary;
+    border: 1px solid @border;
+    border-radius: 3px;
+    padding: 4px 12px;
+}
+
+QPushButton:hover {
+    background-color: @button-hover;
+}
+
+QPushButton:pressed, QPushButton:checked {
+    background-color: @button-pressed;
+}
+
+QPushButton:default {
+    border: 1px solid @accent;
+}
+
+QPushButton:focus {
+    border: 2px solid @accent;
+}
+
+QCheckBox, QRadioButton {
+    background-color: transparent;
+    color: @text-primary;
+}
+
+QGroupBox {
+    border: 1px solid @border;
+    border-radius: 3px;
+    margin-top: 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 8px;
+    padding: 0 3px;
+}
+
+QTabWidget::pane {
+    border: 1px solid @border;
+}
+
+QTabBar::tab {
+    background-color: @toolbar-bg;
+    color: @text-primary;
+    border: 1px solid @border;
+    border-bottom: none;
+    padding: 4px 10px;
+}
+
+QTabBar::tab:selected {
+    background-color: @panel-bg;
+}
+
+QTabBar::tab:hover {
+    background-color: @button-hover;
+}
+
+QScrollBar:vertical {
+    background: @toolbar-bg;
+    width: 12px;
+    margin: 0;
+}
+
+QScrollBar:horizontal {
+    background: @toolbar-bg;
+    height: 12px;
+    margin: 0;
+}
+
+QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+    background: @button-pressed;
+    border-radius: 4px;
+    min-height: 20px;
+    min-width: 20px;
+    margin: 2px;
+}
+
+QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
+    background: @text-secondary;
+}
+
+QScrollBar::add-line, QScrollBar::sub-line {
+    width: 0;
+    height: 0;
+}
+
+QScrollBar::add-page, QScrollBar::sub-page {
+    background: none;
+}
+
+QSlider::groove:horizontal {
+    height: 4px;
+    background: @toolbar-separator;
+    border-radius: 2px;
+}
+
+QSlider::handle:horizontal {
+    width: 12px;
+    margin: -5px 0;
+    background: @accent;
+    border-radius: 6px;
+}
+
+QSplitter::handle {
+    background: @toolbar-separator;
+}
+
+QToolTip {
+    background-color: @tooltip-bg;
+    color: @text-primary;
+    border: 1px solid @border;
+    padding: 2px;
+}
+
+QLabel[role="secondary"] {
+    color: @text-secondary;
+}
+
+QLabel[role="error"] {
+    color: @error;
+}
+
+QLabel[role="warning"] {
+    color: @warning;
+}
+
+QProgressBar {
+    border: 1px solid @border;
+    border-radius: 3px;
+    background-color: @panel-bg;
+    text-align: center;
+}
+
+QProgressBar::chunk {
+    background-color: @accent;
+}

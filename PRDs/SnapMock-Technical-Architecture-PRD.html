@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Technical Architecture</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.6</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.7</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
-    <dt>Document version</dt><dd>1.6</dd>
-    <dt>Last Updated</dt>    <dd>09-08-26 13:40</dd>
+    <dt>Document version</dt><dd>1.7</dd>
+    <dt>Last Updated</dt>    <dd>09-08-26 15:05</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,15 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.7</td>
+        <td class="nowrap">09-08-26 15:05</td>
+        <td>Doug Bower</td>
+        <td>Section 10: module added under core by the General UI implementation, Phase 3
+        (<code>core/theme_manager.py</code>); the theme style sheets and the vendored icon set
+        listed under resources.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.6</td>
         <td class="nowrap">09-08-26 13:40</td>
@@ -105,6 +114,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-08-26 15:05</td>
+        <td>10</td>
+        <td>Added</td>
+        <td>General UI implementation, Phase 3: <code>core/theme_manager.py</code>, the ThemeManager of the General UI PRD Section 13 (light and dark themes, the System option, live switching, themed icons); <code>resources/themes/light.qss</code> and <code>dark.qss</code>; <code>resources/icons/tabler/</code>, the vendored Tabler Icons subset under its MIT licence.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-08-26 13:40</td>
         <td>10</td>
@@ -1339,6 +1354,7 @@ docstring.</p>
         rich_text_mixin.py        # shared QTextDocument-based rich text for TextItem and…
         scene.py                  # the backbone QGraphicsScene that owns LayerManager +…
         selection_manager.py      # tracks the set of currently selected scene items
+        theme_manager.py          # light and dark themes, the System option, live switching, icons
         view.py                   # QGraphicsView with zoom, pan, and tool event routing
     io/                           # File I/O — project save/load, import/export, Snagit…
         exporter.py               # export scene to PNG, JPG, SVG, PDF
@@ -1370,13 +1386,12 @@ docstring.</p>
         render.py                 # Render library files without opening them in a tab
     resources/                    # Application resources — icons, stamps, themes
         icons/
+            tabler/               # vendored Tabler Icons subset (MIT); LICENSE alongside the SVG files
         sounds/
         stamps/
         themes/
-        icons/
-        sounds/
-        stamps/
-        themes/
+            light.qss             # light theme constants and rules (General UI PRD 13.2)
+            dark.qss              # dark theme constants and rules (General UI PRD 13.3)
     tools/                        # Tool engine — BaseTool subclasses and ToolManager
         arrow_tool.py             # click-and-drag to create arrows
         base_tool.py              # abstract base class for all interactive tools
