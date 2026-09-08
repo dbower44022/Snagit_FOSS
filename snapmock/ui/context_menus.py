@@ -1,4 +1,8 @@
-"""Context menu builder functions for canvas, items, and layer panel."""
+"""Context menu builder functions for canvas, items, and layer panel.
+
+No row is ever disabled (General UI PRD 1.3): each handler checks its own
+requirements and shows the unmet-requirement message.
+"""
 
 from __future__ import annotations
 
@@ -15,25 +19,12 @@ def build_canvas_context_menu(parent: MainWindow) -> QMenu:
     """Build the context menu shown when right-clicking empty canvas (PRD §10.1)."""
     menu = QMenu(parent)
 
-    has_clipboard = parent.clipboard.has_internal or parent.clipboard.has_raster
-    sys_clipboard = False
-    from PyQt6.QtWidgets import QApplication
-
-    cb = QApplication.clipboard()
-    if cb is not None:
-        img = cb.image()
-        sys_clipboard = img is not None and not img.isNull()
-
-    paste_enabled = has_clipboard or sys_clipboard
-
     paste_action = menu.addAction("Paste")
     if paste_action is not None:
-        paste_action.setEnabled(paste_enabled)
         paste_action.triggered.connect(parent._edit_paste)  # noqa: SLF001
 
     paste_in_place_action = menu.addAction("Paste in Place")
     if paste_in_place_action is not None:
-        paste_in_place_action.setEnabled(paste_enabled)
         paste_in_place_action.triggered.connect(parent._edit_paste_in_place)  # noqa: SLF001
 
     menu.addSeparator()
@@ -75,34 +66,25 @@ def build_item_context_menu(parent: MainWindow) -> QMenu:
     """Build the context menu shown when right-clicking a selected item (PRD §10.2)."""
     menu = QMenu(parent)
 
-    has_sel = not parent.selection_manager.is_empty
-    sel_count = parent.selection_manager.count
-    has_clipboard = parent.clipboard.has_internal or parent.clipboard.has_raster
-
     # --- Clipboard actions ---
     cut_action = menu.addAction("Cut")
     if cut_action is not None:
-        cut_action.setEnabled(has_sel)
         cut_action.triggered.connect(parent._edit_cut)  # noqa: SLF001
 
     copy_action = menu.addAction("Copy")
     if copy_action is not None:
-        copy_action.setEnabled(has_sel)
         copy_action.triggered.connect(parent._edit_copy)  # noqa: SLF001
 
     paste_action = menu.addAction("Paste")
     if paste_action is not None:
-        paste_action.setEnabled(has_clipboard)
         paste_action.triggered.connect(parent._edit_paste)  # noqa: SLF001
 
     duplicate_action = menu.addAction("Duplicate")
     if duplicate_action is not None:
-        duplicate_action.setEnabled(has_sel)
         duplicate_action.triggered.connect(parent._edit_duplicate)  # noqa: SLF001
 
     delete_action = menu.addAction("Delete")
     if delete_action is not None:
-        delete_action.setEnabled(has_sel)
         delete_action.triggered.connect(parent._edit_delete)  # noqa: SLF001
 
     menu.addSeparator()
@@ -110,22 +92,18 @@ def build_item_context_menu(parent: MainWindow) -> QMenu:
     # --- Arrange actions ---
     front_action = menu.addAction("Bring to Front")
     if front_action is not None:
-        front_action.setEnabled(has_sel)
         front_action.triggered.connect(parent._arrange_bring_to_front)  # noqa: SLF001
 
     forward_action = menu.addAction("Bring Forward")
     if forward_action is not None:
-        forward_action.setEnabled(has_sel)
         forward_action.triggered.connect(parent._arrange_bring_forward)  # noqa: SLF001
 
     backward_action = menu.addAction("Send Backward")
     if backward_action is not None:
-        backward_action.setEnabled(has_sel)
         backward_action.triggered.connect(parent._arrange_send_backward)  # noqa: SLF001
 
     back_action = menu.addAction("Send to Back")
     if back_action is not None:
-        back_action.setEnabled(has_sel)
         back_action.triggered.connect(parent._arrange_send_to_back)  # noqa: SLF001
 
     menu.addSeparator()
@@ -154,7 +132,6 @@ def build_item_context_menu(parent: MainWindow) -> QMenu:
     lock_text = "Unlock Item" if (first_item is not None and first_item.locked) else "Lock Item"
     lock_action = menu.addAction(lock_text)
     if lock_action is not None:
-        lock_action.setEnabled(has_sel)
         lock_action.triggered.connect(parent._toggle_item_lock)  # noqa: SLF001
 
     menu.addSeparator()
@@ -162,7 +139,6 @@ def build_item_context_menu(parent: MainWindow) -> QMenu:
     # --- Align submenu ---
     align_menu = menu.addMenu("Align")
     if align_menu is not None:
-        align_menu.setEnabled(sel_count >= 2)
         for label, alignment in [
             ("Align Left", "left"),
             ("Align Center Horizontal", "center_h"),
@@ -180,7 +156,6 @@ def build_item_context_menu(parent: MainWindow) -> QMenu:
     # --- Distribute submenu ---
     distribute_menu = menu.addMenu("Distribute")
     if distribute_menu is not None:
-        distribute_menu.setEnabled(sel_count >= 3)
         dist_h = distribute_menu.addAction("Distribute Horizontally")
         if dist_h is not None:
             dist_h.triggered.connect(
@@ -197,12 +172,10 @@ def build_item_context_menu(parent: MainWindow) -> QMenu:
     # --- Flip actions ---
     flip_h_action = menu.addAction("Flip Horizontal")
     if flip_h_action is not None:
-        flip_h_action.setEnabled(has_sel)
         flip_h_action.triggered.connect(parent._arrange_flip_horizontal)  # noqa: SLF001
 
     flip_v_action = menu.addAction("Flip Vertical")
     if flip_v_action is not None:
-        flip_v_action.setEnabled(has_sel)
         flip_v_action.triggered.connect(parent._arrange_flip_vertical)  # noqa: SLF001
 
     menu.addSeparator()
@@ -223,9 +196,6 @@ def build_layer_panel_context_menu(
     layer = layer_manager.layer_by_id(layer_id)
     if layer is None:
         return menu
-
-    idx = layer_manager.index_of(layer_id)
-    count = layer_manager.count
 
     # --- New Layer Above / Below ---
     new_above_action = menu.addAction("New Layer Above")
@@ -249,7 +219,6 @@ def build_layer_panel_context_menu(
 
     delete_action = menu.addAction("Delete Layer")
     if delete_action is not None:
-        delete_action.setEnabled(count > 1)
         delete_action.triggered.connect(parent._layer_delete)  # noqa: SLF001
 
     menu.addSeparator()
@@ -264,7 +233,6 @@ def build_layer_panel_context_menu(
     # --- Merge actions ---
     merge_down_action = menu.addAction("Merge Down")
     if merge_down_action is not None:
-        merge_down_action.setEnabled(idx > 0)
         merge_down_action.triggered.connect(parent._layer_merge_down)  # noqa: SLF001
 
     merge_visible_action = menu.addAction("Merge Visible")

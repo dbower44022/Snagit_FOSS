@@ -55,12 +55,15 @@ from snapmock.config.constants import (
     DEFAULT_CANVAS_WIDTH,
     PROJECT_EXTENSION,
     SNAGIT_EXTENSION,
+    ZOOM_MAX,
+    ZOOM_MIN,
 )
 from snapmock.config.settings import AppSettings
 from snapmock.config.shortcuts import SHORTCUTS
 from snapmock.core.clipboard_manager import ClipboardManager
 from snapmock.core.document import Document
 from snapmock.core.document_manager import DocumentManager
+from snapmock.core.layer import Layer
 from snapmock.core.scene import SnapScene
 from snapmock.core.selection_manager import SelectionManager
 from snapmock.core.view import SnapView
@@ -104,6 +107,7 @@ from snapmock.ui.status_bar import SnapStatusBar
 from snapmock.ui.toast import Toast
 from snapmock.ui.tool_options_bar import ToolOptionsBar
 from snapmock.ui.toolbar import SnapToolBar
+from snapmock.ui.unmet_requirements import check_requirements, show_not_available
 
 MAX_RECENT_FILES = 10
 DELAY_CHOICES = (0, 3, 5, 10)
@@ -281,7 +285,6 @@ class MainWindow(QMainWindow):
 
         # Per-document signal wiring (title, layer state, menu state)
         self._wire_document(first)
-        self._update_menu_states()
 
         # Restore window geometry
         geo = self._settings.window_geometry()
@@ -503,12 +506,12 @@ class MainWindow(QMainWindow):
         zoom_in = view_menu.addAction("Zoom &In")
         if zoom_in is not None:
             zoom_in.setShortcut(QKeySequence(SHORTCUTS["view.zoom_in"]))
-            zoom_in.triggered.connect(lambda: self._view.zoom_in())
+            zoom_in.triggered.connect(self._view_zoom_in)
 
         zoom_out = view_menu.addAction("Zoom &Out")
         if zoom_out is not None:
             zoom_out.setShortcut(QKeySequence(SHORTCUTS["view.zoom_out"]))
-            zoom_out.triggered.connect(lambda: self._view.zoom_out())
+            zoom_out.triggered.connect(self._view_zoom_out)
 
         fit_action = view_menu.addAction("&Fit to Window")
         if fit_action is not None:
@@ -1299,52 +1302,35 @@ class MainWindow(QMainWindow):
 
     # ---- signals ----
 
-    def _update_menu_states(self) -> None:
-        """Enable/disable arrange and layer actions based on current state."""
-        sel_count = self._selection_manager.count
-        has_selection = sel_count > 0
-        multi_selection = sel_count >= 2
-        triple_selection = sel_count >= 3
+    # ---- never-disabled controls (General UI PRD 1.3) ----
 
-        # Arrange z-order actions need at least 1 selected item
-        for action in (
-            self._bring_front_action,
-            self._bring_forward_action,
-            self._send_backward_action,
-            self._send_to_back_action,
-            self._align_canvas_action,
-            self._flip_h_action,
-            self._flip_v_action,
-        ):
-            if action is not None:
-                action.setEnabled(has_selection)
+    def _require(self, action: str, *requirements: tuple[bool, str]) -> bool:
+        """Show the unmet-requirement message and return False unless every requirement holds."""
+        return check_requirements(self, action, list(requirements))
 
-        # Align needs 2+, distribute needs 3+
-        if self._align_menu is not None:
-            self._align_menu.setEnabled(multi_selection)
-        if self._distribute_menu is not None:
-            self._distribute_menu.setEnabled(triple_selection)
+    def _require_selection(self, action: str, minimum: int = 1) -> list[SnapGraphicsItem]:
+        """The selected items, or an empty list after the message when fewer than *minimum*."""
+        items = self._selected_snap_items()
+        words = {1: "at least one item selected", 2: "at least two items selected"}
+        need = words.get(minimum, f"at least {minimum} items selected")
+        if not self._require(action, (len(items) >= minimum, need)):
+            return []
+        return items
 
-        # Layer reorder actions based on active layer position
-        lm = self._scene.layer_manager
-        active = lm.active_layer
-        if active is not None:
-            idx = lm.index_of(active.layer_id)
-            count = lm.count
-            can_up = idx < count - 1
-            can_down = idx > 0
-            for action in (self._layer_move_up_action, self._layer_move_top_action):
-                if action is not None:
-                    action.setEnabled(can_up)
-            for action in (self._layer_move_down_action, self._layer_move_bottom_action):
-                if action is not None:
-                    action.setEnabled(can_down)
-            # Can't delete the last layer
-            if self._layer_delete_action is not None:
-                self._layer_delete_action.setEnabled(count > 1)
-            # Merge down requires a layer below
-            if self._layer_merge_down_action is not None:
-                self._layer_merge_down_action.setEnabled(idx > 0)
+    def _require_active_layer(self, action: str) -> Layer | None:
+        active = self._scene.layer_manager.active_layer
+        if not self._require(action, (active is not None, "an active layer")):
+            return None
+        return active
+
+    def _clipboard_has_content(self) -> bool:
+        if self._clipboard.has_internal or self._clipboard.has_raster:
+            return True
+        cb = QApplication.clipboard()
+        if cb is None:
+            return False
+        mime = cb.mimeData()
+        return mime is not None and (mime.hasImage() or bool(cb.text()))
 
     def _on_layer_lock_changed(self, layer_id: str, locked: bool) -> None:
         if locked:
@@ -1372,9 +1358,21 @@ class MainWindow(QMainWindow):
             for item in affected:
                 self._selection_manager.toggle(item)
 
+    def _view_zoom_in(self) -> None:
+        if self._require(
+            "Zoom In", (self._view.zoom_percent < ZOOM_MAX, f"a zoom below {ZOOM_MAX}%")
+        ):
+            self._view.zoom_in()
+
+    def _view_zoom_out(self) -> None:
+        if self._require(
+            "Zoom Out", (self._view.zoom_percent > ZOOM_MIN, f"a zoom above {ZOOM_MIN}%")
+        ):
+            self._view.zoom_out()
+
     def _view_zoom_to_selection(self) -> None:
         """Zoom to fit the current selection in the viewport."""
-        items = [i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)]
+        items = self._require_selection("Zoom to Selection")
         if not items:
             return
         rect = items[0].sceneBoundingRect()
@@ -1862,13 +1860,18 @@ class MainWindow(QMainWindow):
         if active is not None and active.is_active_operation:
             active.cancel()
             return  # first Ctrl+Z cancels active operation
-        self._scene.command_stack.undo()
+        stack = self._scene.command_stack
+        if self._require("Undo", (stack.can_undo, "something to undo")):
+            stack.undo()
 
     def _edit_redo(self) -> None:
-        self._scene.command_stack.redo()
+        stack = self._scene.command_stack
+        if self._require("Redo", (stack.can_redo, "something to redo")):
+            stack.redo()
 
     def _edit_deselect(self) -> None:
-        self._selection_manager.deselect_all()
+        if self._require_selection("Deselect"):
+            self._selection_manager.deselect_all()
 
     def _edit_cut(self) -> None:
         active = self._tool_manager.active_tool
@@ -1879,6 +1882,8 @@ class MainWindow(QMainWindow):
         ):
             self._copy_raster_selection(active)
             self._cut_raster_selection(active)
+            return
+        if not self._require_selection("Cut"):
             return
         self._edit_copy()
         self._edit_delete()
@@ -1892,7 +1897,7 @@ class MainWindow(QMainWindow):
         ):
             self._copy_raster_selection(active)
             return
-        items = [i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)]
+        items = self._require_selection("Copy")
         if items:
             self._clipboard.copy_items(items)
 
@@ -1921,6 +1926,8 @@ class MainWindow(QMainWindow):
         tool.cancel()
 
     def _edit_paste(self) -> None:
+        if not self._require("Paste", (self._clipboard_has_content(), "content on the clipboard")):
+            return
         # Smart paste routing: internal items → internal raster → system image → system text
         # 1. Internal vector items
         data = self._clipboard.paste_items()
@@ -2028,6 +2035,10 @@ class MainWindow(QMainWindow):
 
     def _edit_paste_in_place(self) -> None:
         """Paste items at their original positions (no offset)."""
+        if not self._require(
+            "Paste in Place", (self._clipboard_has_content(), "content on the clipboard")
+        ):
+            return
         data = self._clipboard.paste_items()
         if data:
             self._paste_internal_items(data, offset=False)
@@ -2041,7 +2052,7 @@ class MainWindow(QMainWindow):
             self._paste_system_image(sys_image)
 
     def _edit_delete(self) -> None:
-        items = [i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)]
+        items = self._require_selection("Delete")
         if not items:
             return
         from snapmock.commands.remove_item import RemoveItemCommand
@@ -2052,7 +2063,7 @@ class MainWindow(QMainWindow):
 
     def _edit_duplicate(self) -> None:
         """Clone selected items with +10,+10 offset."""
-        items = [i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)]
+        items = self._require_selection("Duplicate")
         if not items:
             return
         from snapmock.commands.add_item import AddItemCommand
@@ -2069,17 +2080,31 @@ class MainWindow(QMainWindow):
         self._selection_manager.select_items(clones)
 
     def _edit_select_all(self) -> None:
-        all_items: list[QGraphicsItem] = [
-            i for i in self._scene.items() if isinstance(i, SnapGraphicsItem)
+        """Select every unlocked item on the active layer (PRD 3.2)."""
+        lm = self._scene.layer_manager
+        active = lm.active_layer
+        items: list[QGraphicsItem] = [
+            i
+            for i in self._scene.items()
+            if isinstance(i, SnapGraphicsItem)
+            and active is not None
+            and i.layer_id == active.layer_id
+            and not i.locked
         ]
-        self._selection_manager.select_items(all_items)
+        if self._require("Select All", (bool(items), "at least one item on the active layer")):
+            self._selection_manager.select_items(items)
 
     def _edit_select_all_layers(self) -> None:
-        """Select all items across all layers."""
-        all_items: list[QGraphicsItem] = [
-            i for i in self._scene.items() if isinstance(i, SnapGraphicsItem)
+        """Select every unlocked item on every visible, unlocked layer."""
+        lm = self._scene.layer_manager
+        usable = {layer.layer_id for layer in lm.layers if layer.visible and not layer.locked}
+        items: list[QGraphicsItem] = [
+            i
+            for i in self._scene.items()
+            if isinstance(i, SnapGraphicsItem) and i.layer_id in usable and not i.locked
         ]
-        self._selection_manager.select_items(all_items)
+        if self._require("Select All Layers", (bool(items), "at least one item on the canvas")):
+            self._selection_manager.select_items(items)
 
     # ---- image operations ----
 
@@ -2154,7 +2179,7 @@ class MainWindow(QMainWindow):
 
     def _layer_duplicate(self) -> None:
         lm = self._scene.layer_manager
-        active = lm.active_layer
+        active = self._require_active_layer("Duplicate Layer")
         if active is None:
             return
         from snapmock.commands.layer_commands import AddLayerCommand
@@ -2166,27 +2191,42 @@ class MainWindow(QMainWindow):
     def _layer_delete(self) -> None:
         lm = self._scene.layer_manager
         active = lm.active_layer
-        if active is None or lm.count <= 1:
+        if not self._require(
+            "Delete Layer",
+            (active is not None, "an active layer"),
+            (lm.count > 1, "more than one layer"),
+        ):
             return
+        assert active is not None
         from snapmock.commands.layer_commands import RemoveLayerCommand
 
         cmd = RemoveLayerCommand(lm, active.layer_id)
         self._scene.command_stack.push(cmd)
 
+    _MERGE_DEFERRAL = "Layer merging is scheduled for the raster operations follow-up."
+
     def _layer_merge_down(self) -> None:
-        QMessageBox.information(self, "Merge Down", "Merge down is coming soon.")
+        lm = self._scene.layer_manager
+        active = lm.active_layer
+        idx = lm.index_of(active.layer_id) if active is not None else -1
+        if self._require("Merge Down", (idx > 0, "a layer below the active layer")):
+            show_not_available(self, "Merge Down", self._MERGE_DEFERRAL)
 
     def _layer_merge_visible(self) -> None:
-        QMessageBox.information(self, "Merge Visible", "Merge visible is coming soon.")
+        visible = sum(1 for layer in self._scene.layer_manager.layers if layer.visible)
+        if self._require("Merge Visible", (visible >= 2, "at least two visible layers")):
+            show_not_available(self, "Merge Visible", self._MERGE_DEFERRAL)
 
     def _layer_flatten(self) -> None:
-        QMessageBox.information(self, "Flatten All", "Flatten all is coming soon.")
+        count = self._scene.layer_manager.count
+        if self._require("Flatten All", (count >= 2, "at least two layers")):
+            show_not_available(self, "Flatten All", self._MERGE_DEFERRAL)
 
     def _layer_rename(self) -> None:
         from PyQt6.QtWidgets import QInputDialog
 
         lm = self._scene.layer_manager
-        active = lm.active_layer
+        active = self._require_active_layer("Rename Layer")
         if active is None:
             return
         new_name, ok = QInputDialog.getText(self, "Rename Layer", "New name:", text=active.name)
@@ -2197,8 +2237,7 @@ class MainWindow(QMainWindow):
             self._scene.command_stack.push(cmd)
 
     def _layer_properties(self) -> None:
-        lm = self._scene.layer_manager
-        active = lm.active_layer
+        active = self._require_active_layer("Layer Properties")
         if active is not None:
             self._show_layer_properties(active.layer_id)
 
@@ -2238,11 +2277,11 @@ class MainWindow(QMainWindow):
 
     def _layer_move_up(self) -> None:
         lm = self._scene.layer_manager
-        active = lm.active_layer
+        active = self._require_active_layer("Move Layer Up")
         if active is None:
             return
         idx = lm.index_of(active.layer_id)
-        if idx < lm.count - 1:
+        if self._require("Move Layer Up", (idx < lm.count - 1, "a layer above the active layer")):
             from snapmock.commands.layer_commands import ReorderLayerCommand
 
             cmd = ReorderLayerCommand(lm, active.layer_id, idx + 1)
@@ -2250,11 +2289,11 @@ class MainWindow(QMainWindow):
 
     def _layer_move_down(self) -> None:
         lm = self._scene.layer_manager
-        active = lm.active_layer
+        active = self._require_active_layer("Move Layer Down")
         if active is None:
             return
         idx = lm.index_of(active.layer_id)
-        if idx > 0:
+        if self._require("Move Layer Down", (idx > 0, "a layer below the active layer")):
             from snapmock.commands.layer_commands import ReorderLayerCommand
 
             cmd = ReorderLayerCommand(lm, active.layer_id, idx - 1)
@@ -2262,11 +2301,13 @@ class MainWindow(QMainWindow):
 
     def _layer_move_to_top(self) -> None:
         lm = self._scene.layer_manager
-        active = lm.active_layer
+        active = self._require_active_layer("Move Layer to Top")
         if active is None:
             return
         idx = lm.index_of(active.layer_id)
-        if idx < lm.count - 1:
+        if self._require(
+            "Move Layer to Top", (idx < lm.count - 1, "a layer above the active layer")
+        ):
             from snapmock.commands.layer_commands import ReorderLayerCommand
 
             cmd = ReorderLayerCommand(lm, active.layer_id, lm.count - 1)
@@ -2274,11 +2315,11 @@ class MainWindow(QMainWindow):
 
     def _layer_move_to_bottom(self) -> None:
         lm = self._scene.layer_manager
-        active = lm.active_layer
+        active = self._require_active_layer("Move Layer to Bottom")
         if active is None:
             return
         idx = lm.index_of(active.layer_id)
-        if idx > 0:
+        if self._require("Move Layer to Bottom", (idx > 0, "a layer below the active layer")):
             from snapmock.commands.layer_commands import ReorderLayerCommand
 
             cmd = ReorderLayerCommand(lm, active.layer_id, 0)
@@ -2298,7 +2339,7 @@ class MainWindow(QMainWindow):
 
     def _toggle_item_lock(self) -> None:
         """Toggle the locked flag on all selected items."""
-        items = self._selected_snap_items()
+        items = self._require_selection("Lock Item")
         if not items:
             return
         # Use the first item's state to determine the toggle direction
@@ -2347,7 +2388,7 @@ class MainWindow(QMainWindow):
         return [i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)]
 
     def _arrange_bring_to_front(self) -> None:
-        items = self._selected_snap_items()
+        items = self._require_selection("Bring to Front")
         if not items:
             return
         from snapmock.commands.arrange_commands import ChangeZOrderCommand
@@ -2356,7 +2397,7 @@ class MainWindow(QMainWindow):
         self._scene.command_stack.push(cmd)
 
     def _arrange_bring_forward(self) -> None:
-        items = self._selected_snap_items()
+        items = self._require_selection("Bring Forward")
         if not items:
             return
         from snapmock.commands.arrange_commands import ChangeZOrderCommand
@@ -2365,7 +2406,7 @@ class MainWindow(QMainWindow):
         self._scene.command_stack.push(cmd)
 
     def _arrange_send_backward(self) -> None:
-        items = self._selected_snap_items()
+        items = self._require_selection("Send Backward")
         if not items:
             return
         from snapmock.commands.arrange_commands import ChangeZOrderCommand
@@ -2374,7 +2415,7 @@ class MainWindow(QMainWindow):
         self._scene.command_stack.push(cmd)
 
     def _arrange_send_to_back(self) -> None:
-        items = self._selected_snap_items()
+        items = self._require_selection("Send to Back")
         if not items:
             return
         from snapmock.commands.arrange_commands import ChangeZOrderCommand
@@ -2383,7 +2424,7 @@ class MainWindow(QMainWindow):
         self._scene.command_stack.push(cmd)
 
     def _arrange_flip_horizontal(self) -> None:
-        items = self._selected_snap_items()
+        items = self._require_selection("Flip Horizontal")
         if not items:
             return
         from snapmock.commands.macro_command import MacroCommand
@@ -2399,7 +2440,7 @@ class MainWindow(QMainWindow):
         self._scene.command_stack.push(MacroCommand(cmds, "Flip Horizontal"))
 
     def _arrange_flip_vertical(self) -> None:
-        items = self._selected_snap_items()
+        items = self._require_selection("Flip Vertical")
         if not items:
             return
         from snapmock.commands.macro_command import MacroCommand
@@ -2415,8 +2456,8 @@ class MainWindow(QMainWindow):
         self._scene.command_stack.push(MacroCommand(cmds, "Flip Vertical"))
 
     def _arrange_align(self, alignment: str) -> None:
-        items = self._selected_snap_items()
-        if len(items) < 2:
+        items = self._require_selection("Align", 2)
+        if not items:
             return
         from snapmock.commands.arrange_commands import AlignItemsCommand
 
@@ -2424,8 +2465,8 @@ class MainWindow(QMainWindow):
         self._scene.command_stack.push(cmd)
 
     def _arrange_distribute(self, direction: str) -> None:
-        items = self._selected_snap_items()
-        if len(items) < 3:
+        items = self._require_selection("Distribute", 3)
+        if not items:
             return
         from snapmock.commands.arrange_commands import DistributeItemsCommand
 
@@ -2433,7 +2474,7 @@ class MainWindow(QMainWindow):
         self._scene.command_stack.push(cmd)
 
     def _arrange_align_canvas_center(self) -> None:
-        items = self._selected_snap_items()
+        items = self._require_selection("Align to Canvas Center")
         if not items:
             return
         from snapmock.commands.arrange_commands import AlignToCanvasCommand
@@ -2488,7 +2529,9 @@ class MainWindow(QMainWindow):
         if not recent:
             no_action = self._recent_menu.addAction("(No recent files)")
             if no_action is not None:
-                no_action.setEnabled(False)
+                no_action.triggered.connect(
+                    lambda: self._require("Open Recent", (False, "a recently opened file"))
+                )
             return
         for path_str in recent:
             action = self._recent_menu.addAction(Path(path_str).name)
@@ -2559,12 +2602,6 @@ class MainWindow(QMainWindow):
         lm.layer_lock_changed.connect(self._on_layer_lock_changed)
         lm.layer_visibility_changed.connect(self._on_layer_visibility_changed)
         lm.active_layer_changed.connect(self._on_active_layer_changed)
-        doc.selection_manager.selection_changed.connect(lambda _items: self._update_menu_states())
-        doc.selection_manager.selection_cleared.connect(self._update_menu_states)
-        lm.active_layer_changed.connect(lambda _lid: self._update_menu_states())
-        lm.layers_reordered.connect(self._update_menu_states)
-        lm.layer_added.connect(lambda _l: self._update_menu_states())
-        lm.layer_removed.connect(lambda _lid: self._update_menu_states())
 
     def _add_document(self, doc: Document, *, activate: bool = True) -> None:
         """Register a new document, replacing a pristine Untitled tab if present."""
@@ -2609,8 +2646,6 @@ class MainWindow(QMainWindow):
         if hasattr(self, "_status_bar"):
             self._status_bar.set_view(doc.view)
         self._update_title()
-        if hasattr(self, "_bring_front_action"):
-            self._update_menu_states()
 
     def _file_close_tab(self) -> None:
         self._close_document(self._active_document)

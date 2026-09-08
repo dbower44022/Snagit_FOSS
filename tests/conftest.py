@@ -66,6 +66,23 @@ def main_window(qtbot: QtBot) -> MainWindow:
 
 
 @pytest.fixture()
+def unmet_messages(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
+    """Capture the never-disabled unmet-requirement messages instead of showing them.
+
+    Each entry is ``(title, text)`` as passed to the information box.
+    """
+    from snapmock.ui import unmet_requirements
+
+    shown: list[tuple[str, str]] = []
+
+    def _record(_parent: object, title: str, text: str, *_a: object, **_k: object) -> None:
+        shown.append((title, text))
+
+    monkeypatch.setattr(unmet_requirements.QMessageBox, "information", staticmethod(_record))
+    return shown
+
+
+@pytest.fixture()
 def scene() -> SnapScene:
     """Create a bare SnapScene (no view needed)."""
     return SnapScene()

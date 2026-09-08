@@ -65,7 +65,9 @@ class TestCanvasContextMenu:
         assert "Fit to Window" in texts
         assert "Zoom to 100%" in texts
 
-    def test_paste_disabled_when_clipboard_empty(self, window: MainWindow) -> None:
+    def test_paste_never_disabled_and_explains_when_clipboard_empty(
+        self, window: MainWindow, unmet_messages: list[tuple[str, str]]
+    ) -> None:
         from PyQt6.QtWidgets import QApplication
 
         window.clipboard.clear()
@@ -76,10 +78,12 @@ class TestCanvasContextMenu:
         menu = build_canvas_context_menu(window)
         for action in menu.actions():
             if action.text() == "Paste":
-                assert not action.isEnabled()
+                assert action.isEnabled()
+                action.trigger()
                 break
         else:
             pytest.fail("Paste action not found")
+        assert unmet_messages == [("Paste", "Paste needs content on the clipboard.")]
 
     def test_paste_enabled_when_clipboard_has_items(self, window: MainWindow) -> None:
         # Copy an item to fill the clipboard
@@ -133,17 +137,21 @@ class TestItemContextMenu:
         texts = _action_texts(menu)
         assert "Unlock Item" in texts
 
-    def test_align_disabled_with_single_selection(self, window: MainWindow) -> None:
+    def test_align_never_disabled_and_explains_with_single_selection(
+        self, window: MainWindow, unmet_messages: list[tuple[str, str]]
+    ) -> None:
         item = _make_rect(window.scene, 10, 10)
         window.selection_manager.select(item)
         menu = build_item_context_menu(window)
         for action in menu.actions():
             sub = action.menu()
             if isinstance(sub, QMenu) and action.text() == "Align":
-                assert not sub.isEnabled()
+                assert sub.isEnabled()
+                sub.actions()[0].trigger()
                 break
         else:
             pytest.fail("Align submenu not found")
+        assert unmet_messages == [("Align", "Align needs at least two items selected.")]
 
     def test_align_enabled_with_two_items(self, window: MainWindow) -> None:
         a = _make_rect(window.scene, 10, 10)
@@ -159,7 +167,9 @@ class TestItemContextMenu:
         else:
             pytest.fail("Align submenu not found")
 
-    def test_distribute_disabled_with_two_items(self, window: MainWindow) -> None:
+    def test_distribute_never_disabled_and_explains_with_two_items(
+        self, window: MainWindow, unmet_messages: list[tuple[str, str]]
+    ) -> None:
         a = _make_rect(window.scene, 10, 10)
         b = _make_rect(window.scene, 50, 50)
         window.selection_manager.select(a)
@@ -168,10 +178,12 @@ class TestItemContextMenu:
         for action in menu.actions():
             sub = action.menu()
             if isinstance(sub, QMenu) and action.text() == "Distribute":
-                assert not sub.isEnabled()
+                assert sub.isEnabled()
+                sub.actions()[0].trigger()
                 break
         else:
             pytest.fail("Distribute submenu not found")
+        assert unmet_messages == [("Distribute", "Distribute needs at least 3 items selected.")]
 
     def test_distribute_enabled_with_three_items(self, window: MainWindow) -> None:
         a = _make_rect(window.scene, 10, 10)
@@ -224,7 +236,9 @@ class TestLayerPanelContextMenu:
         assert "Flatten All" in texts
         assert "Layer Properties..." in texts
 
-    def test_delete_disabled_with_single_layer(self, window: MainWindow) -> None:
+    def test_delete_never_disabled_and_explains_with_single_layer(
+        self, window: MainWindow, unmet_messages: list[tuple[str, str]]
+    ) -> None:
         lm = window.scene.layer_manager
         assert lm.count == 1
         layer = lm.active_layer
@@ -232,10 +246,13 @@ class TestLayerPanelContextMenu:
         menu = build_layer_panel_context_menu(window, lm, layer.layer_id)
         for action in menu.actions():
             if action.text() == "Delete Layer":
-                assert not action.isEnabled()
+                assert action.isEnabled()
+                action.trigger()
                 break
         else:
             pytest.fail("Delete Layer action not found")
+        assert unmet_messages == [("Delete Layer", "Delete Layer needs more than one layer.")]
+        assert lm.count == 1
 
     def test_delete_enabled_with_multiple_layers(self, window: MainWindow) -> None:
         lm = window.scene.layer_manager
@@ -250,18 +267,25 @@ class TestLayerPanelContextMenu:
         else:
             pytest.fail("Delete Layer action not found")
 
-    def test_merge_down_disabled_for_bottom_layer(self, window: MainWindow) -> None:
+    def test_merge_down_never_disabled_and_explains_for_bottom_layer(
+        self, window: MainWindow, unmet_messages: list[tuple[str, str]]
+    ) -> None:
         lm = window.scene.layer_manager
         lm.add_layer("Layer 2")
         # Bottom layer is at index 0
         bottom_layer = lm.layers[0]
+        lm.set_active(bottom_layer.layer_id)
         menu = build_layer_panel_context_menu(window, lm, bottom_layer.layer_id)
         for action in menu.actions():
             if action.text() == "Merge Down":
-                assert not action.isEnabled()
+                assert action.isEnabled()
+                action.trigger()
                 break
         else:
             pytest.fail("Merge Down action not found")
+        assert unmet_messages == [
+            ("Merge Down", "Merge Down needs a layer below the active layer.")
+        ]
 
     def test_merge_down_enabled_for_non_bottom_layer(self, window: MainWindow) -> None:
         lm = window.scene.layer_manager
