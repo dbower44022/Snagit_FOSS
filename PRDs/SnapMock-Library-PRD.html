@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Library</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.0</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.1</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Capture Library · Auto-Save · File Management · Tabbed Editing</dd>
-    <dt>Document version</dt><dd>1.0</dd>
-    <dt>Last Updated</dt>    <dd>09-07-26 19:31</dd>
+    <dt>Document version</dt><dd>1.1</dd>
+    <dt>Last Updated</dt>    <dd>09-07-26 23:15</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -32,12 +32,21 @@
     </thead>
     <tbody>
       <tr>
+        <td>1.1</td>
+        <td class="nowrap">09-07-26 23:15</td>
+        <td>Doug Bower</td>
+        <td>Delete gains undo through a session trash inside the library; New Canvas
+        joins the Library menu; the Export dialog and its multi-select variant are
+        assigned to the General UI implementation.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
+      <tr>
         <td>1.0</td>
         <td class="nowrap">09-07-26 19:31</td>
         <td>Doug Bower</td>
         <td>Converted from Word to HTML. Content unchanged except for corrections
         noted in the change log below.</td>
-        <td><span class="status open">Pending</span></td>
+        <td><span class="status closed">Superseded</span></td>
       </tr>
       <tr>
         <td>1.0</td>
@@ -65,6 +74,34 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-07-26 23:15</td>
+        <td>3.8, 10.2, 12.2</td>
+        <td>Changed</td>
+        <td>Delete is undoable. Files move into a session trash folder,
+        <code>.trash/&lt;session&gt;</code> at the library root, and reach the system
+        trash only when the delete can no longer be undone: when its command leaves
+        the undo stack, when the window closes, when the library is switched or moved,
+        and by a sweep at startup for sessions that did not close cleanly. Undo does
+        not reopen a closed tab. Decided 09-07-26.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 23:15</td>
+        <td>5.1, 12.7</td>
+        <td>Added</td>
+        <td>New Canvas in the Library menu after New Folder: a blank canvas at the
+        default size in the folder the panel is showing, opened in a tab. File &gt; New
+        stays outside the Library. Decided 09-07-26.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 23:15</td>
+        <td>7, 12.8</td>
+        <td>Changed</td>
+        <td>The Export dialog and the Library's multi-select variant (output directory,
+        Apply to All, progress with cancel) are delivered by the General UI
+        implementation. Until then the Library prompts for an output directory and
+        writes PNG files; Export Quick wording is unchanged. Decided 09-07-26.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-07-26 19:31</td>
         <td>All</td>
@@ -458,7 +495,7 @@ from left to right:</p>
   </thead>
   <tbody>
     <tr><th>Rename</th><td>Inline rename: click on the file name (or press F2) to enter edit mode. The name field becomes an editable text input. Press Enter to confirm or Escape to cancel. The <code>.smk</code> file on disk is renamed accordingly. If the file is open in a tab, the tab title updates.</td></tr>
-    <tr><th>Delete</th><td>Moves the file to the system trash/recycle bin. A confirmation dialog is shown: "Delete [filename]? The file will be moved to the system trash." If the file is open in a tab, the tab is closed first (with a save prompt if there are unsaved changes). Multi-select delete is supported.</td></tr>
+    <tr><th>Delete</th><td>Removes the file from the library as an undoable command. A confirmation dialog is shown: "Delete [filename]? The file will be moved to the system trash." If the file is open in a tab, the tab is closed first. Multi-select delete is supported, and a folder is deleted whole. The file first moves into a session trash folder, <code>.trash/&lt;session&gt;</code> at the library root, which the panel never lists and the size indicator never counts. Undo (Ctrl+Z in the panel) moves the file back to its original path, or to the next free name if that path is taken; undo does not reopen a closed tab. The file reaches the system trash only when the delete can no longer be undone: when its command leaves the undo stack (by the stack limit, by a newer command after an undo, or when the stack is cleared), when the window closes, when the library is switched or moved, and by a sweep at startup that clears session trash left by a session that did not close cleanly. Each window has its own session trash, so two windows on the same library never sweep each other's held deletes.</td></tr>
     <tr><th>Copy</th><td>Copies the selected file(s) to the internal clipboard. The files remain in the library.</td></tr>
     <tr><th>Paste</th><td>Pastes copied file(s) into the current folder. If a name conflict exists, the pasted file is renamed with a " (Copy)" suffix.</td></tr>
     <tr><th>Move</th><td>Drag-and-drop a file onto a folder to move it. If the file is open in a tab, the file reference is updated silently.</td></tr>
@@ -700,6 +737,7 @@ menu. Per the never-disabled controls principle, all items are always present.</
     <tr><th>Move Library...</th><td></td><td>Open a directory chooser to select a new location. SnapMock moves all files from the current library directory to the chosen location and updates the stored path. A progress dialog is shown during the move.</td><td>Always</td></tr>
     <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
     <tr><th>New Folder</th><td></td><td>Create a new subfolder in the currently viewed library folder.</td><td>Always</td></tr>
+    <tr><th>New Canvas</th><td></td><td>Create a blank library file at the default canvas size in the currently viewed library folder and open it in a tab. The same action as New Canvas in the panel's empty-space context menu (Section 3.14). File &gt; New is unchanged and does not create a library file.</td><td>Always</td></tr>
     <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
     <tr><th>Reveal in File Manager</th><td></td><td>Open the OS file manager at the current library directory.</td><td>Always</td></tr>
     <tr><th>---</th><td></td><td>Separator</td><td></td></tr>
@@ -766,6 +804,14 @@ capture (Section 6.1), with these differences:</p>
 </ul>
 
 <h2 id="s7">Export</h2>
+
+<p>The Export dialog is defined by the General UI PRD (Section 11.2) and is delivered by
+the General UI implementation, together with the Library's multi-select variant of it
+described in Section 7.2: the Output Directory selector, the Apply to All checkbox, and
+the progress dialog with cancel. Until that implementation lands, Export... from the
+Library panel on one file runs File &gt; Export for that file, and on several files
+prompts for an output directory and writes PNG files with a progress dialog and a
+per-file error summary. Export Quick (PNG) is unchanged.</p>
 
 <h3 id="s7-1">Export Formats</h3>
 
@@ -946,7 +992,7 @@ Update the Library panel and any open tab title.</p>
 
 <h3 id="s10-2">DeleteLibraryFileCommand</h3>
 
-<p>Deletes file(s) from the library by moving them to the system trash.</p>
+<p>Deletes files or folders from the library through the session trash (Section 3.8).</p>
 
 <table>
   <colgroup><col class="w-medium"><col class="w-short"><col></colgroup>
@@ -954,15 +1000,22 @@ Update the Library panel and any open tab title.</p>
     <tr><th>Property</th><th>Type</th><th>Description</th></tr>
   </thead>
   <tbody>
-    <tr><th><code>file_paths</code></th><td>list[Path]</td><td>Paths to the <code>.smk</code> files being deleted.</td></tr>
-    <tr><th><code>trash_paths</code></th><td>list[Path]</td><td>The paths where the files were moved in the system trash (for undo).</td></tr>
+    <tr><th><code>paths</code></th><td>list[Path]</td><td>Paths of the <code>.smk</code> files and folders being deleted; after an undo, where they were restored to.</td></tr>
+    <tr><th><code>trash_paths</code></th><td>list[Path]</td><td>Where each entry sits in the session trash folder while the delete stands (for undo).</td></tr>
   </tbody>
 </table>
 
-<p>Execute: Close any open tabs for the files, move files to system trash, refresh the
-Library panel.</p>
+<p>Execute: Open tabs for the files are closed by the panel before the command is pushed.
+Move each entry into the session trash folder under a unique name, record the pairs,
+refresh the Library panel.</p>
 
-<p>Undo: Restore files from system trash to their original library paths.</p>
+<p>Undo: Move each entry back to its original path, or to the next free name if that path
+is now taken. Closed tabs are not reopened.</p>
+
+<p>Discard: When the command leaves the undo stack for good, send whatever is still in the
+session trash to the system trash. The command stack calls this for the oldest command
+dropped by its limit, for redo history truncated by a new command, and for every
+command when the stack is cleared. Entries already restored by an undo are untouched.</p>
 
 <h3 id="s10-3">MoveLibraryFileCommand</h3>
 
@@ -1073,8 +1126,10 @@ null.</p>
   <li>Rename: F2 activates inline rename. Enter confirms, Escape cancels. The
   <code>.smk</code> file on disk and manifest.json are updated. Any open tab title updates
   immediately.</li>
-  <li>Delete: Delete key or context menu moves files to system trash with confirmation. Open
-  tabs for deleted files are closed.</li>
+  <li>Delete: Delete key or context menu removes files with confirmation. Open tabs for
+  deleted files are closed. Ctrl+Z in the panel restores the files to the library. A
+  file reaches the system trash once its delete can no longer be undone, and never
+  before.</li>
   <li>Copy/Paste: Ctrl+C copies selected <code>.smk</code> files. Ctrl+V pastes into current
   folder with conflict resolution.</li>
   <li>New Folder: Creates a new folder with immediate inline rename. Folder is visible in both
@@ -1139,13 +1194,16 @@ null.</p>
   <li>Open Library switches to a new directory and the panel updates immediately.</li>
   <li>Move Library moves all files with a progress dialog and updates the stored path.</li>
   <li>Reveal in File Manager opens the correct OS file manager at the library path.</li>
+  <li>New Canvas creates a blank library file in the folder the panel is showing and opens
+  it in a tab.</li>
 </ul>
 
 <h3 id="s12-8">Export</h3>
 
 <ul>
   <li>Single-file export from the context menu opens the Export dialog and produces correct
-  output in PNG, JPEG, PDF, SVG, and <code>.smk</code> formats.</li>
+  output in PNG, JPEG, PDF, SVG, and <code>.smk</code> formats (General UI
+  implementation).</li>
   <li>Multi-select export prompts for an output directory and exports all selected files with
   correct naming.</li>
   <li>Export Quick (PNG) from the context menu exports using last-used settings without
