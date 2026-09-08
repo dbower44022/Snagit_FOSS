@@ -53,13 +53,15 @@ from snapmock.config.constants import (
     APP_VERSION,
     DEFAULT_CANVAS_HEIGHT,
     DEFAULT_CANVAS_WIDTH,
+    DOCUMENTATION_URL,
+    ISSUES_URL,
     PROJECT_EXTENSION,
     SNAGIT_EXTENSION,
     ZOOM_MAX,
     ZOOM_MIN,
 )
 from snapmock.config.settings import AppSettings
-from snapmock.config.shortcuts import SHORTCUTS
+from snapmock.config.shortcuts import SHORTCUTS, key_sequences
 from snapmock.core.clipboard_manager import ClipboardManager
 from snapmock.core.document import Document
 from snapmock.core.document_manager import DocumentManager
@@ -239,6 +241,7 @@ class MainWindow(QMainWindow):
 
         self._status_bar = SnapStatusBar(self._view)
         self.setStatusBar(self._status_bar)
+        self._status_bar.setVisible(self._settings.status_bar_visible())
         self._configure_view(first.view)
 
         # Wire tool hint to status bar
@@ -276,6 +279,8 @@ class MainWindow(QMainWindow):
         # Tools menu action map
         self._tool_actions: dict[str, QAction] = {}
         self._setup_menus()
+        self._status_bar_action.setChecked(self._settings.status_bar_visible())
+        self._update_undo_redo_text()
 
         # Autosave timer
         self._autosave_timer = QTimer(self)
@@ -349,8 +354,8 @@ class MainWindow(QMainWindow):
         self._setup_file_menu(menu_bar)
         self._setup_edit_menu(menu_bar)
         self._setup_view_menu(menu_bar)
-        self._setup_image_menu(menu_bar)
         self._setup_layer_menu(menu_bar)
+        self._setup_image_menu(menu_bar)
         self._setup_arrange_menu(menu_bar)
         self._setup_tools_menu(menu_bar)
         self._setup_library_menu(menu_bar)
@@ -371,6 +376,9 @@ class MainWindow(QMainWindow):
         if open_action is not None:
             open_action.setShortcut(QKeySequence(SHORTCUTS["file.open"]))
             open_action.triggered.connect(self._file_open)
+
+        self._recent_menu = file_menu.addMenu("Open &Recent")
+        self._update_recent_files_menu()
 
         close_action = file_menu.addAction("&Close")
         if close_action is not None:
@@ -401,7 +409,7 @@ class MainWindow(QMainWindow):
             export_action.setShortcut(QKeySequence(SHORTCUTS["file.export"]))
             export_action.triggered.connect(self._file_export)
 
-        export_png_action = file_menu.addAction("Export Quick &PNG")
+        export_png_action = file_menu.addAction("Export &Quick (PNG)")
         if export_png_action is not None:
             export_png_action.setShortcut(QKeySequence(SHORTCUTS["file.export_quick_png"]))
             export_png_action.triggered.connect(self._file_export_quick_png)
@@ -415,11 +423,6 @@ class MainWindow(QMainWindow):
 
         file_menu.addSeparator()
 
-        self._recent_menu = file_menu.addMenu("Recent Files")
-        self._update_recent_files_menu()
-
-        file_menu.addSeparator()
-
         prefs_action = file_menu.addAction("Pre&ferences...")
         if prefs_action is not None:
             prefs_action.setShortcut(QKeySequence(SHORTCUTS["file.preferences"]))
@@ -429,7 +432,7 @@ class MainWindow(QMainWindow):
 
         quit_action = file_menu.addAction("&Quit")
         if quit_action is not None:
-            quit_action.setShortcut(QKeySequence("Ctrl+Q"))
+            quit_action.setShortcut(QKeySequence(SHORTCUTS["file.quit"]))
             quit_action.triggered.connect(self.close)
 
     def _setup_edit_menu(self, menu_bar: QMenuBar) -> None:
@@ -437,15 +440,15 @@ class MainWindow(QMainWindow):
         if edit_menu is None:
             return
 
-        undo_action = edit_menu.addAction("&Undo")
-        if undo_action is not None:
-            undo_action.setShortcut(QKeySequence(SHORTCUTS["edit.undo"]))
-            undo_action.triggered.connect(self._edit_undo)
+        self._undo_action = QAction("&Undo", self)
+        self._undo_action.setShortcut(QKeySequence(SHORTCUTS["edit.undo"]))
+        self._undo_action.triggered.connect(self._edit_undo)
+        edit_menu.addAction(self._undo_action)
 
-        redo_action = edit_menu.addAction("&Redo")
-        if redo_action is not None:
-            redo_action.setShortcut(QKeySequence(SHORTCUTS["edit.redo"]))
-            redo_action.triggered.connect(self._edit_redo)
+        self._redo_action = QAction("&Redo", self)
+        self._redo_action.setShortcut(QKeySequence(SHORTCUTS["edit.redo"]))
+        self._redo_action.triggered.connect(self._edit_redo)
+        edit_menu.addAction(self._redo_action)
 
         edit_menu.addSeparator()
 
@@ -471,7 +474,7 @@ class MainWindow(QMainWindow):
 
         delete_action = edit_menu.addAction("&Delete")
         if delete_action is not None:
-            delete_action.setShortcut(QKeySequence(SHORTCUTS["edit.delete"]))
+            delete_action.setShortcuts(key_sequences("edit.delete"))
             delete_action.triggered.connect(self._edit_delete)
 
         edit_menu.addSeparator()
@@ -518,7 +521,7 @@ class MainWindow(QMainWindow):
             fit_action.setShortcut(QKeySequence(SHORTCUTS["view.fit_window"]))
             fit_action.triggered.connect(lambda: self._view.fit_in_view_all())
 
-        actual_action = view_menu.addAction("&Actual Size")
+        actual_action = view_menu.addAction("Zoom to &100%")
         if actual_action is not None:
             actual_action.setShortcut(QKeySequence(SHORTCUTS["view.actual_size"]))
             actual_action.triggered.connect(lambda: self._view.set_zoom(100))
@@ -539,6 +542,13 @@ class MainWindow(QMainWindow):
         self._grid_action.toggled.connect(self._toggle_grid)
         view_menu.addAction(self._grid_action)
 
+        self._snap_grid_action = QAction("&Snap to Grid", self)
+        self._snap_grid_action.setCheckable(True)
+        self._snap_grid_action.setShortcut(QKeySequence(SHORTCUTS["view.snap_to_grid"]))
+        self._snap_grid_action.setChecked(self._settings.snap_to_grid())
+        self._snap_grid_action.toggled.connect(self._toggle_snap_to_grid)
+        view_menu.addAction(self._snap_grid_action)
+
         self._rulers_action = QAction("Show &Rulers", self)
         self._rulers_action.setCheckable(True)
         self._rulers_action.setShortcut(QKeySequence(SHORTCUTS["view.toggle_rulers"]))
@@ -548,39 +558,38 @@ class MainWindow(QMainWindow):
         self._rulers_action.toggled.connect(self._toggle_rulers)
         view_menu.addAction(self._rulers_action)
 
-        self._snap_grid_action = QAction("&Snap to Grid", self)
-        self._snap_grid_action.setCheckable(True)
-        self._snap_grid_action.setShortcut(QKeySequence(SHORTCUTS["view.snap_to_grid"]))
-        self._snap_grid_action.setChecked(self._settings.snap_to_grid())
-        self._snap_grid_action.toggled.connect(self._toggle_snap_to_grid)
-        view_menu.addAction(self._snap_grid_action)
-
         view_menu.addSeparator()
 
         # Panel visibility toggles
         toolbar_toggle = self._toolbar.toggleViewAction()
         if toolbar_toggle is not None:
-            toolbar_toggle.setText("Show Tool&bar")
+            toolbar_toggle.setText("Show Tool &Palette")
             view_menu.addAction(toolbar_toggle)
 
         options_toggle = self._tool_options.toggleViewAction()
         if options_toggle is not None:
-            options_toggle.setText("Show &Options Bar")
+            options_toggle.setText("Show Tool &Options")
             view_menu.addAction(options_toggle)
 
         layer_toggle = self._layer_panel.toggleViewAction()
         if layer_toggle is not None:
-            layer_toggle.setText("Show &Layers Panel")
+            layer_toggle.setText("Show &Layer Panel")
             view_menu.addAction(layer_toggle)
 
         property_toggle = self._property_panel.toggleViewAction()
         if property_toggle is not None:
-            property_toggle.setText("Show &Properties Panel")
+            property_toggle.setText("Show &Property Panel")
             view_menu.addAction(property_toggle)
 
         library_toggle = self._library_panel.toggleViewAction()
         if library_toggle is not None:
             view_menu.addAction(library_toggle)
+
+        self._status_bar_action = QAction("Show &Status Bar", self)
+        self._status_bar_action.setCheckable(True)
+        self._status_bar_action.setChecked(True)
+        self._status_bar_action.toggled.connect(self._toggle_status_bar)
+        view_menu.addAction(self._status_bar_action)
 
         view_menu.addSeparator()
 
@@ -599,6 +608,11 @@ class MainWindow(QMainWindow):
         if image_menu is None:
             return
 
+        crop_canvas_action = image_menu.addAction("Crop to C&anvas")
+        if crop_canvas_action is not None:
+            crop_canvas_action.setShortcut(QKeySequence(SHORTCUTS["image.crop_to_canvas"]))
+            crop_canvas_action.triggered.connect(self._image_crop_to_canvas)
+
         resize_canvas_action = image_menu.addAction("Resize &Canvas...")
         if resize_canvas_action is not None:
             resize_canvas_action.triggered.connect(self._image_resize_canvas)
@@ -606,11 +620,6 @@ class MainWindow(QMainWindow):
         resize_image_action = image_menu.addAction("Resize &Image...")
         if resize_image_action is not None:
             resize_image_action.triggered.connect(self._image_resize_image)
-
-        crop_canvas_action = image_menu.addAction("Crop to C&anvas")
-        if crop_canvas_action is not None:
-            crop_canvas_action.setShortcut(QKeySequence(SHORTCUTS["image.crop_to_canvas"]))
-            crop_canvas_action.triggered.connect(self._image_crop_to_canvas)
 
         image_menu.addSeparator()
 
@@ -735,25 +744,15 @@ class MainWindow(QMainWindow):
 
         arrange_menu.addSeparator()
 
-        self._flip_h_action = QAction("Flip &Horizontal", self)
-        self._flip_h_action.triggered.connect(self._arrange_flip_horizontal)
-        arrange_menu.addAction(self._flip_h_action)
-
-        self._flip_v_action = QAction("Flip &Vertical", self)
-        self._flip_v_action.triggered.connect(self._arrange_flip_vertical)
-        arrange_menu.addAction(self._flip_v_action)
-
-        arrange_menu.addSeparator()
-
         # Align submenu
         self._align_menu = arrange_menu.addMenu("Ali&gn")
         if self._align_menu is not None:
             for label, alignment in [
                 ("Align &Left", "left"),
-                ("Align Center &Horizontal", "center_h"),
+                ("Align Center (&H)", "center_h"),
                 ("Align &Right", "right"),
                 ("Align &Top", "top"),
-                ("Align &Middle Vertical", "middle_v"),
+                ("Align &Middle (V)", "middle_v"),
                 ("Align &Bottom", "bottom"),
             ]:
                 action = self._align_menu.addAction(label)
@@ -761,6 +760,8 @@ class MainWindow(QMainWindow):
                     action.triggered.connect(
                         lambda _checked=False, a=alignment: self._arrange_align(a)
                     )
+
+        arrange_menu.addSeparator()
 
         # Distribute submenu
         self._distribute_menu = arrange_menu.addMenu("&Distribute")
@@ -781,6 +782,28 @@ class MainWindow(QMainWindow):
         self._align_canvas_action = QAction("Align to Canvas &Center", self)
         self._align_canvas_action.triggered.connect(self._arrange_align_canvas_center)
         arrange_menu.addAction(self._align_canvas_action)
+
+        arrange_menu.addSeparator()
+
+        group_action = QAction("&Group", self)
+        group_action.setShortcut(QKeySequence(SHORTCUTS["arrange.group"]))
+        group_action.triggered.connect(self._arrange_group)
+        arrange_menu.addAction(group_action)
+
+        ungroup_action = QAction("&Ungroup", self)
+        ungroup_action.setShortcut(QKeySequence(SHORTCUTS["arrange.ungroup"]))
+        ungroup_action.triggered.connect(self._arrange_ungroup)
+        arrange_menu.addAction(ungroup_action)
+
+        arrange_menu.addSeparator()
+
+        self._flip_h_action = QAction("Flip &Horizontal", self)
+        self._flip_h_action.triggered.connect(self._arrange_flip_horizontal)
+        arrange_menu.addAction(self._flip_h_action)
+
+        self._flip_v_action = QAction("Flip &Vertical", self)
+        self._flip_v_action.triggered.connect(self._arrange_flip_vertical)
+        arrange_menu.addAction(self._flip_v_action)
 
     def _setup_tools_menu(self, menu_bar: QMenuBar) -> None:
         tools_menu = menu_bar.addMenu("&Tools")
@@ -1247,7 +1270,7 @@ class MainWindow(QMainWindow):
         if help_menu is None:
             return
 
-        welcome_action = help_menu.addAction("&Welcome")
+        welcome_action = help_menu.addAction("&Welcome / Getting Started")
         if welcome_action is not None:
             welcome_action.triggered.connect(self._help_welcome)
 
@@ -1259,19 +1282,17 @@ class MainWindow(QMainWindow):
         if shortcuts_action is not None:
             shortcuts_action.triggered.connect(self._help_shortcuts)
 
-        help_menu.addSeparator()
-
         bug_action = help_menu.addAction("Report a &Bug")
         if bug_action is not None:
             bug_action.triggered.connect(self._help_report_bug)
+
+        help_menu.addSeparator()
 
         updates_action = help_menu.addAction("Check for &Updates")
         if updates_action is not None:
             updates_action.triggered.connect(self._help_check_updates)
 
-        help_menu.addSeparator()
-
-        about_action = help_menu.addAction("&About SnapMock")
+        about_action = help_menu.addAction(f"&About {APP_NAME}")
         if about_action is not None:
             about_action.triggered.connect(self._help_about)
 
@@ -1287,6 +1308,10 @@ class MainWindow(QMainWindow):
 
     def _toggle_snap_to_grid(self, checked: bool) -> None:
         self._settings.set_snap_to_grid(checked)
+
+    def _toggle_status_bar(self, checked: bool) -> None:
+        self._status_bar.setVisible(checked)
+        self._settings.set_status_bar_visible(checked)
 
     def _on_tool_changed_for_hint(self, _tool_id: str) -> None:
         tool = self._tool_manager.active_tool
@@ -2455,6 +2480,16 @@ class MainWindow(QMainWindow):
         ]
         self._scene.command_stack.push(MacroCommand(cmds, "Flip Vertical"))
 
+    _GROUP_DEFERRAL = "Grouping is scheduled for its own implementation after this one."
+
+    def _arrange_group(self) -> None:
+        if self._require_selection("Group", 2):
+            show_not_available(self, "Group", self._GROUP_DEFERRAL)
+
+    def _arrange_ungroup(self) -> None:
+        # No group item type exists yet, so no selection can contain a group.
+        self._require("Ungroup", (False, "a group selected"))
+
     def _arrange_align(self, alignment: str) -> None:
         items = self._require_selection("Align", 2)
         if not items:
@@ -2485,10 +2520,12 @@ class MainWindow(QMainWindow):
     # ---- help operations ----
 
     def _help_welcome(self) -> None:
-        QMessageBox.information(self, "Welcome", "Welcome dialog is coming soon.")
+        show_not_available(
+            self, "Welcome / Getting Started", "The welcome panel arrives with the first-run work."
+        )
 
     def _help_docs(self) -> None:
-        QDesktopServices.openUrl(QUrl("https://snapmock.org/docs"))
+        QDesktopServices.openUrl(QUrl(DOCUMENTATION_URL))
 
     def _help_shortcuts(self) -> None:
         QMessageBox.information(
@@ -2496,10 +2533,12 @@ class MainWindow(QMainWindow):
         )
 
     def _help_report_bug(self) -> None:
-        QDesktopServices.openUrl(QUrl("https://github.com/snapmock/snapmock/issues"))
+        QDesktopServices.openUrl(QUrl(ISSUES_URL))
 
     def _help_check_updates(self) -> None:
-        QMessageBox.information(self, "Check for Updates", "Update checking is coming soon.")
+        show_not_available(
+            self, "Check for Updates", "Update checking is scheduled for a later phase."
+        )
 
     def _help_about(self) -> None:
         QMessageBox.about(
@@ -2536,9 +2575,18 @@ class MainWindow(QMainWindow):
         for path_str in recent:
             action = self._recent_menu.addAction(Path(path_str).name)
             if action is not None:
+                action.setToolTip(path_str)
                 action.triggered.connect(
                     lambda _checked=False, p=path_str: self._open_project(Path(p))
                 )
+        self._recent_menu.addSeparator()
+        clear = self._recent_menu.addAction("Clear Recent")
+        if clear is not None:
+            clear.triggered.connect(self._clear_recent_files)
+
+    def _clear_recent_files(self) -> None:
+        self._settings.set_recent_files([])
+        self._update_recent_files_menu()
 
     # ---- autosave ----
 
@@ -2597,7 +2645,7 @@ class MainWindow(QMainWindow):
         if doc.tab_id in self._wired_docs:
             return
         self._wired_docs.add(doc.tab_id)
-        doc.scene.command_stack.stack_changed.connect(self._update_title)
+        doc.scene.command_stack.stack_changed.connect(self._on_stack_changed)
         lm = doc.scene.layer_manager
         lm.layer_lock_changed.connect(self._on_layer_lock_changed)
         lm.layer_visibility_changed.connect(self._on_layer_visibility_changed)
@@ -2646,6 +2694,8 @@ class MainWindow(QMainWindow):
         if hasattr(self, "_status_bar"):
             self._status_bar.set_view(doc.view)
         self._update_title()
+        if hasattr(self, "_undo_action"):
+            self._update_undo_redo_text()
 
     def _file_close_tab(self) -> None:
         self._close_document(self._active_document)
@@ -2713,6 +2763,18 @@ class MainWindow(QMainWindow):
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(doc.file_path.parent)))
 
     # ---- helpers ----
+
+    def _on_stack_changed(self) -> None:
+        self._update_title()
+        self._update_undo_redo_text()
+
+    def _update_undo_redo_text(self) -> None:
+        """Undo [action] / Redo [action] follow the active document's stack (PRD 3.2)."""
+        stack = self._scene.command_stack
+        undo = stack.undo_text
+        redo = stack.redo_text
+        self._undo_action.setText(f"&Undo {undo}" if undo else "&Undo")
+        self._redo_action.setText(f"&Redo {redo}" if redo else "&Redo")
 
     def _update_title(self) -> None:
         doc = self._active_document

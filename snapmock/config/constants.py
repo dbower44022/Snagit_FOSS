@@ -7,6 +7,9 @@ APP_NAME = "SnapMock"
 APP_VERSION = "0.1.0"
 ORG_NAME = "SnapMock"
 ORG_DOMAIN = "snapmock.org"
+REPOSITORY_URL = "https://github.com/dbower44022/Snagit_FOSS"
+DOCUMENTATION_URL = f"{REPOSITORY_URL}#readme"
+ISSUES_URL = f"{REPOSITORY_URL}/issues"
 
 # Canvas defaults
 DEFAULT_CANVAS_WIDTH = 1920

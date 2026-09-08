@@ -1,8 +1,12 @@
 """Keyboard shortcut definitions.
 
 Each entry maps a logical action name to a key sequence string
-compatible with ``QKeySequence``.
+compatible with ``QKeySequence``. ``ALTERNATE_SHORTCUTS`` lists extra
+sequences bound to the same action (General UI PRD 3.2: Delete / Backspace).
+The Keyboard Shortcuts dialog (Help menu) is built from these tables.
 """
+
+from PyQt6.QtGui import QKeySequence
 
 SHORTCUTS: dict[str, str] = {
     # File
@@ -16,6 +20,7 @@ SHORTCUTS: dict[str, str] = {
     "file.print": "Ctrl+P",
     "file.preferences": "Ctrl+,",
     "file.close_tab": "Ctrl+W",
+    "file.quit": "Ctrl+Q",
     # Edit
     "edit.undo": "Ctrl+Z",
     "edit.redo": "Ctrl+Shift+Z",
@@ -55,6 +60,8 @@ SHORTCUTS: dict[str, str] = {
     "arrange.bring_forward": "Ctrl+Up",
     "arrange.send_backward": "Ctrl+Down",
     "arrange.send_to_back": "Ctrl+Shift+Down",
+    "arrange.group": "Ctrl+G",
+    "arrange.ungroup": "Ctrl+Shift+G",
     # Tools
     "tool.select": "V",
     "tool.rectangle": "R",
@@ -84,3 +91,13 @@ SHORTCUTS: dict[str, str] = {
     # Additional edit shortcuts
     "edit.paste_in_place": "Ctrl+Shift+V",
 }
+
+ALTERNATE_SHORTCUTS: dict[str, list[str]] = {
+    "edit.delete": ["Backspace"],
+}
+
+
+def key_sequences(action: str) -> list[QKeySequence]:
+    """Every key sequence bound to *action*: the primary one plus any alternates."""
+    seqs = [SHORTCUTS[action]] + ALTERNATE_SHORTCUTS.get(action, [])
+    return [QKeySequence(text) for text in seqs if text]

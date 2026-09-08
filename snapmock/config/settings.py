@@ -93,6 +93,12 @@ class AppSettings:
     def set_snap_to_grid(self, enabled: bool) -> None:
         self._qs.setValue("view/snapToGrid", enabled)
 
+    def status_bar_visible(self) -> bool:
+        return _as_bool(self._qs.value("view/statusBarVisible", True))
+
+    def set_status_bar_visible(self, visible: bool) -> None:
+        self._qs.setValue("view/statusBarVisible", visible)
+
     # --- autosave ---
 
     def autosave_enabled(self) -> bool:
