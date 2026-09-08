@@ -64,7 +64,7 @@ class RectangleItem(VectorItem):
             path.addRoundedRect(self._rect, self._corner_radius, self._corner_radius)
         else:
             path.addRect(self._rect)
-        return path
+        return self.hit_shape(path)
 
     def paint(self, painter: QPainter | None, option: Any, widget: Any = None) -> None:
         if painter is None:
