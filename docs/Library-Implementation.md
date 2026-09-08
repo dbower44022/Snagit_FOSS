@@ -1,8 +1,8 @@
 # Library Implementation Notes
 
-Last Updated: 09-07-26 01:30 · Revision 1.0
+Last Updated: 09-07-26 23:20 · Revision 1.1
 
-Implements the SnapMock Library PRD (version 1.0, March 2026): tabbed multi-document editing, the Library panel, continuous write-back, the Library menu, preferences, session persistence, drag-and-drop import and export, and library file commands.
+Implements the SnapMock Library PRD (version 1.1, 09-07-26): tabbed multi-document editing, the Library panel, continuous write-back, the Library menu, preferences, session persistence, drag-and-drop import and export, and library file commands.
 
 ## 1. Architecture
 
@@ -41,11 +41,15 @@ Shortcuts added: `file.close_tab` (Ctrl+W), `view.next_tab` (Ctrl+Tab), `view.pr
 
 | Component | File | Role |
 |---|---|---|
-| `LibraryManager` | `snapmock/library/manager.py` | Root directory, naming (`Capture_YYYY-MM-DD_HH-MM-SS`), creation from image / blank / import, continuous write-back (debounced 300 ms after `stack_changed`), listing, rename (disk + manifest), delete (system trash via `send2trash`), move, copy (" (Copy)" suffix), folders, `move_library`, total size. Owns a `CommandStack` for library operations. |
+| `LibraryManager` | `snapmock/library/manager.py` | Root directory, naming (`Capture_YYYY-MM-DD_HH-MM-SS`), creation from image / blank / import, continuous write-back (debounced 300 ms after `stack_changed`), listing, rename (disk + manifest), session trash (`trash_files`, `restore_files`, `purge_session_trash`, `sweep_foreign_trash`, `sweep_trash`), move, copy (" (Copy)" suffix), folders, `move_library`, total size. Owns a `CommandStack` for library operations. |
 | `LibraryFileInfo` | `snapmock/library/file_info.py` | PRD 9.1 record; thumbnail loaded lazily; invalid archives flagged rather than raising. |
 | `LibraryModel` | `snapmock/library/model.py` | `QAbstractTableModel` for the current folder: folders first, in-model sort and filter, breadcrumbs, drag (internal paths mime + exported PNG URLs) and drop (internal move onto folders, external import). |
-| Commands | `snapmock/library/commands.py` | `RenameLibraryFileCommand`, `MoveLibraryFileCommand`, `CreateFolderCommand` (undo blocked with a message once the folder has content). |
+| Commands | `snapmock/library/commands.py` | `RenameLibraryFileCommand`, `DeleteLibraryFileCommand`, `MoveLibraryFileCommand`, `CreateFolderCommand` (undo blocked with a message once the folder has content). |
 | Rendering | `snapmock/library/render.py` | `render_file_to_image`, `export_files_to_png`, `export_for_drag`. |
+
+**Session trash (PRD 3.8, 10.2).** Delete is undoable without asking the system trash to give a file back, which `send2trash` cannot do. Each `LibraryManager` has a session id, `<pid>-<random>`, and a session trash folder `<root>/.trash/<session id>` created on first use. `DeleteLibraryFileCommand.redo` moves each file or whole folder into that folder under a unique name and records the pairs; `undo` moves them back to their original paths, or to the next free name if the original is now taken; `discard` sends whatever is still in the session trash to the system trash. `discard` is a hook added to `BaseCommand` for this: `CommandStack` calls it for the oldest command dropped by its limit, for redo history truncated by a push, and for everything on `clear`; scene commands inherit the empty default.
+
+Files reach the system trash at four points: when the command is discarded; on the main window's close path, where `purge_session_trash` runs next to `flush`; at `LibraryManager` construction, where `sweep_foreign_trash` clears every `.trash` entry that is not this process's, which handles crashes and windows that closed without a clean exit while another window of the same process keeps its held deletes; and before `move_library` and `set_root`, which clear the Library command stack (sending held deletes through `discard`) and then sweep `.trash` so the old location is left with nothing in it. Switching or moving the library therefore ends the Library undo history. The panel's delete path is unchanged up to the push: confirmation dialog, `files_about_to_be_deleted` so the main window closes tabs, then the command. Undo does not reopen a closed tab. `.trash` was already hidden from the folder listing and skipped by the size total; `.trash` is removed once it is empty.
 
 ### 1.4 Library panel (PRD Section 3)
 
@@ -58,33 +62,31 @@ Context menus follow PRD 3.14 for files, folders, and empty space. Unmet require
 ### 1.5 MainWindow wiring (PRD Sections 4 to 8)
 
 - Opening a path under the library root marks the document `is_library_file` and attaches write-back. File > Save on a library document writes back immediately. File > Save As on a library document writes a copy and leaves the tab bound to the library file.
-- Library menu after Tools: Show Library Panel (Ctrl+L), Open Library, Move Library (progress dialog, re-points open tabs), New Folder, Reveal in File Manager, Library Preferences.
+- Library menu after Tools: Show Library Panel (Ctrl+L), Open Library, Move Library (progress dialog, re-points open tabs), New Folder, New Canvas (blank canvas at the default size in the folder the panel is showing, the same action as the panel's empty-space context-menu item), Reveal in File Manager, Library Preferences.
 - `MainWindow.add_to_library(image, source)` is the capture entry point (PRD 6.1): creates the file in the current library folder, opens it when Auto-open is on, and shows a toast with an Open link. There is no screen-capture feature yet; this is the hook for it.
-- Deleting a file from the panel closes its tab first, without a prompt.
-- Export from the panel: one file opens it and runs File > Export; several files prompt for an output directory and export PNGs with a progress dialog and a per-file error summary.
+- Deleting a file from the panel closes its tab first, without a prompt. Undo restores the file but not the tab.
+- Export from the panel: one file opens it and runs File > Export; several files prompt for an output directory and export PNGs with a progress dialog and a per-file error summary. This is the interim behavior until the General UI implementation delivers the Export dialog (Section 4).
 - Dragging a library file onto the canvas opens it (`SnapView.library_files_dropped`).
 - Session: open tab paths and the active index are saved on close and restored when the app starts (`MainWindow(restore_session=True)` in `app.py`).
 - Preferences: a Library group (directory, auto-open, default view mode, default thumbnail size, default sort, toast notifications). Changes apply immediately.
 
 ## 2. Deviations from the PRD
 
-- **Delete has no undo.** Files go to the system trash through `send2trash`, which does not report where the file landed, so `DeleteLibraryFileCommand` (PRD 10.2) is not implemented. The confirmation dialog is the safeguard.
 - **Raster data is rewritten on every write-back.** The .smk format embeds rasters in `items.json`, so PRD 2.3's "raster written only on raster operations" is approximated by caching the PNG encoding and debouncing writes.
-- **Export dialog.** SnapMock has no Export dialog yet (General UI PRD 11.2). Multi-select export prompts for a directory and writes PNGs; per-format options are not offered.
-- **New Canvas.** Added to the empty-space context menu so the `new` source is reachable. File > New still creates an unsaved, non-library tab.
-- **Open in New Window** opens a second `MainWindow` in the same process.
+- **Open in New Window** opens a second `MainWindow` in the same process. Each window builds its own `LibraryManager` and Library command stack over the same root; the per-manager session trash keeps their held deletes apart.
 
 ## 3. Tests
 
 - `tests/test_documents.py`: Document, DocumentManager, tab behavior in MainWindow.
-- `tests/test_library_manager.py`: naming, creation, import, rename, move, folders, copy, size, write-back, move library, commands.
-- `tests/test_library_panel.py`: model sort / filter / navigation / drag-drop, panel behavior, MainWindow integration, preferences.
+- `tests/test_command_stack.py`: `discard` is called for the oldest command under the limit, for truncated redo history, and on `clear`, and never by undo or redo.
+- `tests/test_library_manager.py`: naming, creation, import, rename, move, folders, copy, size, write-back, move library, commands; session trash (`trash_files` / `restore_files`, unique names, restore into an occupied path), `DeleteLibraryFileCommand` undo / redo / discard, discard after undo sends nothing, whole-folder delete, `purge_session_trash`, the construction sweep sparing this process's folders, `move_library` and `set_root` sweeping `.trash` first. `send2trash` is replaced by a fake that records and removes.
+- `tests/test_library_panel.py`: model sort / filter / navigation / drag-drop, panel behavior (delete pushes an undoable command and honors Cancel), MainWindow integration (window close purges the session trash, Library menu New Canvas uses the shown folder and sits after New Folder), preferences.
 - `tests/conftest.py` isolates `AppSettings` in a temporary INI file and points the library at a temporary directory for every test.
 
 ## 4. Follow-ups
 
 - Screen capture (hotkey, tray) feeding `MainWindow.add_to_library`.
-- Export dialog with per-format options and "Apply to All".
+- Export dialog (General UI PRD 11.2), delivered by the General UI implementation together with the Library's multi-select variant: Output Directory selector, Apply to All, progress with cancel. The Library keeps its file-dialog fallback until then; nothing in export code changes for it.
 - Write-back on a worker thread for very large rasters.
 - Thumbnail refresh in the panel after write-back is immediate; a size recalculation runs on every change and could be throttled for very large libraries.
 
@@ -92,4 +94,5 @@ Context menus follow PRD 3.14 for files, folders, and empty space. Unmet require
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 09-07-26 23:20 | Claude (Claude Code) | Three deviations closed per the 09-07-26 decisions: delete is undoable through a session trash (Section 1.3, tests in Section 3); New Canvas joins the Library menu (Section 1.5); the Export dialog moves to Section 4 with the Library variant named. |
 | 1.0 | 09-07-26 01:30 | Claude (Claude Code) | Initial implementation notes for the Library PRD. |
