@@ -1,6 +1,6 @@
 # General UI Implementation Notes
 
-Last Updated: 09-08-26 11:23 · Revision 1.1
+Last Updated: 09-08-26 13:21 · Revision 1.2
 
 Implements the SnapMock General User Interface PRD (version 1.6, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
@@ -154,7 +154,7 @@ Recorded here so Phase 1 can propose change-log rows for the General UI PRD; non
 | Stubbed Layer and Image rows | B | Crop to Canvas and Auto-Trim built in Phase 1; Merge Down, Merge Visible, Flatten All deferred to a Navigation and Raster Operations follow-up with a General UI PRD change-log row. |
 | Group and Ungroup | B | Own kickoff after Phase 8; rows present and explain the deferral. |
 | Print | A | Built in Phase 1 through the system print dialog. |
-| Tool shortcut letters | B | The shipped map stays; departure rows in the General UI, Text and Callout, Blur, and Navigation PRDs. The Basic Shape PRD's row is owed (Section 6). |
+| Tool shortcut letters | B | The shipped map stays; departure rows in the General UI, Text and Callout, Blur, Navigation, and Basic Shape PRDs. |
 | Licence | A | MIT. LICENSE file, project metadata, and the About dialog. |
 
 The kickoff's remaining decisions (icon set, memory zone, guide persistence, welcome-panel card) are presented at the start of the phase that needs them.
@@ -171,7 +171,7 @@ The kickoff prompt's six decisions stand. The inventory adds three that pass the
 
 Each has its change-log row in `PRDs/SnapMock-General-UI-PRD.html` version 1.7 unless the entry says otherwise.
 
-- **Tool shortcut letters** (Section 3.7). Six letters differ from the PRD tables by decision; rows in four PRDs. Owed: the Basic Shape Annotation Tools PRD's row for Line (PRD U, shipped L). Another session held uncommitted edits to that file on 09-08-26, so Phase 1 did not touch it. Add the row when that file is next committed.
+- **Tool shortcut letters** (Section 3.7). Six letters differ from the PRD tables by decision; rows in all five PRDs (the Basic Shape PRD's row for Line, PRD U and shipped L, followed once that file's other edits were committed).
 - **Merge Down, Merge Visible, Flatten All** (Section 3.4). Deferred; the rows check their requirement, then say the feature is not available yet.
 - **Group and Ungroup** (Section 3.6). Deferred to their own kickoff; rows present with shortcuts.
 - **Align and Distribute as submenus** (Section 3.6). The PRD lists eight flat rows; the menu keeps two submenus in the PRD's position and order.
@@ -192,11 +192,12 @@ Phase 0 adds no tests. On 09-07-26 the working tree (commit `a198744` plus the u
 
 In commit order: the Redo and Deselect binding fix; the never-disabled audit with `snapmock/ui/unmet_requirements.py`; the menu bar aligned to Section 3 (order, labels, Open Recent with Clear Recent, Undo and Redo action names, Backspace for Delete, Show Status Bar, Group and Ungroup rows, Help labels and real links); Duplicate Layer copying items, Delete Layer confirming, Crop to Canvas as the crop tool, Auto-Trim; Print; the Keyboard Shortcuts dialog; the About dialog and the MIT licence; window management (object names so the layout persists, minimum size, 80 percent default, Reset Layout, the title pattern, the Unsaved Changes wording, the last-used tool); Select All Text and Find/Replace Color; Home and End, Tab cycling, the Alt eyedropper; and the PRD change-log rows. Technical Architecture PRD 1.5 lists the four new modules under `ui/`.
 
-**Next required step:** Phase 2, Export, in a new session pasting `docs/General-UI-Implementation-Kickoff-Prompt.md`. Before it, add the owed Basic Shape PRD row once that file's other edits are committed.
+**Next required step:** Phase 2, Export, in a new session pasting `docs/General-UI-Implementation-Kickoff-Prompt.md`.
 
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 09-08-26 13:21 | Claude (Claude Code) | Basic Shape PRD shortcut row delivered; the owed item is closed. |
 | 1.1 | 09-08-26 11:23 | Claude (Claude Code) | Phase 1 done: phase table, decisions taken (Section 5.1), ten deviations (Section 6), tests (Section 7), build summary and next step (Section 8). |
 | 1.0 | 09-08-26 00:10 | Claude (Claude Code) | Phase 0: verified inventory by PRD section, corrections to the kickoff inventory, PRD inconsistencies, three added Phase 1 decisions, empty deviations list. |
