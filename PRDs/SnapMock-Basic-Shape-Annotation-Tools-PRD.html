@@ -16,7 +16,7 @@
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Line · Arrow · Rectangle · Ellipse · Arc · Polygon · Freehand / Pen</dd>
     <dt>Document version</dt><dd>1.4</dd>
-    <dt>Last Updated</dt>    <dd>09-07-26 19:19</dd>
+    <dt>Last Updated</dt>    <dd>09-07-26 23:42</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -100,6 +100,18 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-07-26 23:42</td>
+        <td>5.6, 6.6, 14</td>
+        <td>Resolved</td>
+        <td>Implemented: RectangleItem.shape() and EllipseItem.shape() now return the
+        interior when fill_color has alpha greater than zero and a band around the
+        outline, stroke_width plus 4 pixels wide, when the fill is transparent (shared
+        VectorItem.hit_shape helper). The Section 14 open issue is closed. Polygon
+        (8.7) and closed Freehand (9.9) have no implementation yet, so the rule cannot
+        be applied there until those tools exist. Document version unchanged; no
+        requirement changed.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-07-26 19:19</td>
         <td>2.2</td>
@@ -2005,16 +2017,6 @@ requirement; each needs a decision before this document leaves draft.</p>
   <span class="note-label">Open — approval status never recorded</span>
   <p>The original carried no approval record. Version 1.4 is shown as pending. Confirm
   whether any earlier version was formally approved.</p>
-</div>
-
-<div class="note issue">
-  <span class="note-label">Open — near-the-border selection for transparent fills is not implemented</span>
-  <p>Section 5.6 requires that a rectangle with a transparent fill be selectable only by
-  clicking near its border. The current <code>RectangleItem.shape()</code> always returns
-  the filled interior, so a click anywhere inside selects the rectangle regardless of fill.
-  The same check applies to Ellipse (Section 6.6), Polygon (Section 8.7), and closed
-  Freehand paths (Section 9.9). This gap predates version 1.4; the decision to key the rule
-  on <code>fill_color</code> alpha does not change what needs to be built.</p>
 </div>
 
 </main>

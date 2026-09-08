@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from PyQt6.QtCore import QRectF, Qt
-from PyQt6.QtGui import QColor, QPen
+from PyQt6.QtGui import QColor, QPainterPath, QPainterPathStroker, QPen
 
 from snapmock.config.constants import (
     DEFAULT_FILL_COLOR,
@@ -56,6 +56,8 @@ class VectorItem(SnapGraphicsItem):
 
     @fill_color.setter
     def fill_color(self, color: QColor) -> None:
+        # shape() depends on whether the fill is transparent (see hit_shape).
+        self.prepareGeometryChange()
         self._fill_color = QColor(color)
         self.update()
 
@@ -65,6 +67,25 @@ class VectorItem(SnapGraphicsItem):
         p.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
         p.setCapStyle(Qt.PenCapStyle.RoundCap)
         return p
+
+    # --- hit testing ---
+
+    HIT_PADDING: float = 4.0
+
+    def hit_shape(self, outline: QPainterPath) -> QPainterPath:
+        """Return the clickable area for a closed outline.
+
+        Basic Shape Annotation Tools PRD, Sections 5.6 and 6.6: when ``fill_color``
+        has an alpha greater than zero the whole interior is clickable; when the
+        fill is transparent only a band around the outline is, ``stroke_width``
+        plus 4 pixels wide, so an unfilled shape does not swallow clicks meant for
+        whatever it surrounds.
+        """
+        if self._fill_color.alpha() > 0:
+            return outline
+        stroker = QPainterPathStroker()
+        stroker.setWidth(self._stroke_width + self.HIT_PADDING)
+        return stroker.createStroke(outline)
 
     # --- serialization helpers ---
 
