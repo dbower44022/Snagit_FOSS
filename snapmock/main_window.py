@@ -2765,6 +2765,7 @@ class MainWindow(QMainWindow):
                         event.ignore()
                     return
         self._library.flush()
+        self._library.purge_session_trash()
         self._save_session()
         self._settings.save_window_geometry(self.saveGeometry().data())
         self._settings.save_window_state(self.saveState().data())

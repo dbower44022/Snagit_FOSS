@@ -67,6 +67,7 @@ class LibraryManager(QObject):
         self._write_timer.setInterval(LIBRARY_WRITE_BACK_DELAY_MS)
         self._write_timer.timeout.connect(self.flush)
         self.ensure_root()
+        self.sweep_foreign_trash()
 
     # --- root ---
 
@@ -81,10 +82,18 @@ class LibraryManager(QObject):
             pass
 
     def set_root(self, path: Path) -> None:
-        """Switch to a different library directory (files are not moved)."""
+        """Switch to a different library directory (files are not moved).
+
+        The Library undo history ends here: clearing the stack sends any files
+        held in this session's trash to the system trash, so nothing is left
+        behind in the old library.
+        """
         self.flush()
+        self._command_stack.clear()
+        self.purge_session_trash()
         self._root = path
         self.ensure_root()
+        self.sweep_foreign_trash()
         self.root_changed.emit(path)
         self.files_changed.emit()
 
@@ -95,8 +104,13 @@ class LibraryManager(QObject):
 
         *progress(done, total)* is called after each top-level entry; returning
         False cancels the remaining moves. Returns the number of entries moved.
+
+        ``.trash`` is swept to the system trash first, ending the Library undo
+        history, so the old location is left with nothing in it.
         """
         self.flush()
+        self._command_stack.clear()
+        self.sweep_trash()
         new_root.mkdir(parents=True, exist_ok=True)
         entries = [p for p in self._root.iterdir() if p.name != TRASH_DIR_NAME]
         moved = 0
@@ -384,8 +398,50 @@ class LibraryManager(QObject):
         """Send everything in this session's trash folder to the system trash.
 
         Returns the number of entries sent. Called on the window's close path.
+        ``.trash`` itself is removed once no session folder is left in it.
         """
-        return _sweep_folder(self.session_trash_dir)
+        sent = _sweep_folder(self.session_trash_dir)
+        try:
+            (self._root / TRASH_DIR_NAME).rmdir()
+        except OSError:
+            pass
+        return sent
+
+    def sweep_foreign_trash(self) -> int:
+        """Send every ``.trash`` entry that is not this process's to the system trash.
+
+        Session folders are named ``<pid>-<random>``, so folders left by a
+        crashed or unclean earlier run are cleared while another window of this
+        process keeps its own. Returns the number of entries sent.
+        """
+        return self._sweep_trash(keep_own_process=True)
+
+    def sweep_trash(self) -> int:
+        """Send everything under ``.trash`` to the system trash and remove it."""
+        return self._sweep_trash(keep_own_process=False)
+
+    def _sweep_trash(self, *, keep_own_process: bool) -> int:
+        trash_root = self._root / TRASH_DIR_NAME
+        if not trash_root.is_dir():
+            return 0
+        own_prefix = f"{os.getpid()}-"
+        sent = 0
+        try:
+            entries = list(trash_root.iterdir())
+        except OSError:
+            return 0
+        for entry in entries:
+            if keep_own_process and entry.is_dir() and entry.name.startswith(own_prefix):
+                continue
+            if entry.is_dir():
+                sent += _sweep_folder(entry)
+            elif send_to_system_trash(entry):
+                sent += 1
+        try:
+            trash_root.rmdir()
+        except OSError:
+            pass
+        return sent
 
     # --- file operations (raw; undo is provided by library commands) ---
 

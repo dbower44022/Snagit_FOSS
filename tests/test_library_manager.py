@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 from collections.abc import Callable
 from datetime import datetime
@@ -307,6 +308,66 @@ def test_purge_session_trash_sends_each_entry(
     assert sorted(sent) == sorted(t for _o, t in pairs)
     assert not library.session_trash_dir.exists()
     assert library.purge_session_trash() == 0
+
+
+def test_construction_sweeps_other_sessions_trash(
+    tmp_path: Path, qapp: QApplication, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sent: list[Path] = []
+    monkeypatch.setattr(manager_module, "send2trash", _fake_send2trash(sent))
+    root = tmp_path / "Library"
+    trash = root / ".trash"
+    foreign = trash / "1-deadbeef"
+    foreign.mkdir(parents=True)
+    (foreign / "old.smk").write_bytes(b"x")
+    own = trash / f"{os.getpid()}-abcd1234"
+    own.mkdir()
+    (own / "held.smk").write_bytes(b"x")
+    stray = trash / "stray.smk"
+    stray.write_bytes(b"x")
+    LibraryManager(root)
+    assert sorted(sent) == [foreign / "old.smk", stray]
+    assert not foreign.exists()
+    assert (own / "held.smk").exists()
+
+
+def test_move_library_sweeps_trash_first(
+    library: LibraryManager, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sent: list[Path] = []
+    monkeypatch.setattr(manager_module, "send2trash", _fake_send2trash(sent))
+    kept = library.create_blank(10, 10)
+    doomed = library.create_blank(10, 10, folder=library.root / "Sub")
+    cmd = DeleteLibraryFileCommand(library, [doomed])
+    library.command_stack.push(cmd)
+    held = cmd.trash_paths[0]
+    foreign = library.root / ".trash" / "1-deadbeef"
+    foreign.mkdir()
+    (foreign / "old.smk").write_bytes(b"x")
+    old_root = library.root
+    new_root = tmp_path / "Elsewhere"
+    assert library.move_library(new_root) == 2
+    assert sorted(sent) == sorted([held, foreign / "old.smk"])
+    assert not library.command_stack.can_undo
+    assert not (old_root / ".trash").exists()
+    assert (new_root / kept.name).exists()
+    assert not (new_root / ".trash").exists()
+
+
+def test_set_root_ends_undo_history_and_purges(
+    library: LibraryManager, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sent: list[Path] = []
+    monkeypatch.setattr(manager_module, "send2trash", _fake_send2trash(sent))
+    doomed = library.create_blank(10, 10)
+    cmd = DeleteLibraryFileCommand(library, [doomed])
+    library.command_stack.push(cmd)
+    held = cmd.trash_paths[0]
+    old_root = library.root
+    library.set_root(tmp_path / "Other")
+    assert sent == [held]
+    assert not library.command_stack.can_undo
+    assert not (old_root / ".trash").exists()
 
 
 def test_copy_files_adds_copy_suffix(library: LibraryManager) -> None:

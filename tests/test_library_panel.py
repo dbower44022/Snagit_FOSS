@@ -15,6 +15,8 @@ from snapmock.config.constants import LIBRARY_PATHS_MIME
 from snapmock.config.settings import AppSettings
 from snapmock.io.project_serializer import load_project, read_library_metadata
 from snapmock.items.rectangle_item import RectangleItem
+from snapmock.library import manager as manager_module
+from snapmock.library.commands import DeleteLibraryFileCommand
 from snapmock.library.manager import LibraryManager
 from snapmock.library.model import (
     COL_NAME,
@@ -321,6 +323,26 @@ def test_deleting_open_library_file_closes_its_tab(main_window: MainWindow) -> N
     assert main_window.documents.find_by_path(path) is None
     assert main_window.documents.count == 1
     assert main_window.active_document.display_name == "Untitled"
+
+
+def test_window_close_purges_session_trash(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
+    sent: list[Path] = []
+
+    def _send(p: str) -> None:
+        sent.append(Path(p))
+        Path(p).unlink()
+
+    monkeypatch.setattr(manager_module, "send2trash", _send)
+    window = MainWindow()
+    qtbot.addWidget(window)
+    path = window.library.create_blank(10, 10)
+    cmd = DeleteLibraryFileCommand(window.library, [path])
+    window.library.command_stack.push(cmd)
+    held = cmd.trash_paths[0]
+    assert held.exists()
+    window.close()
+    assert sent == [held]
+    assert not window.library.session_trash_dir.exists()
 
 
 def test_new_canvas_in_library(main_window: MainWindow) -> None:
