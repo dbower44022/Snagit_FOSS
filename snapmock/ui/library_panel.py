@@ -65,6 +65,7 @@ from snapmock.config.constants import (
 from snapmock.config.settings import AppSettings
 from snapmock.library.commands import (
     CreateFolderCommand,
+    DeleteLibraryFileCommand,
     MoveLibraryFileCommand,
     RenameLibraryFileCommand,
 )
@@ -648,7 +649,7 @@ class LibraryPanel(QDockWidget):
                 return
         if files:
             self.files_about_to_be_deleted.emit(files)
-        self._manager.delete_files(paths)
+        self._manager.command_stack.push(DeleteLibraryFileCommand(self._manager, paths))
 
     def copy_selected_files(self) -> None:
         files = self.selected_paths(files_only=True)

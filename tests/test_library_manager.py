@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import shutil
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 
@@ -20,8 +22,10 @@ from snapmock.io.project_serializer import (
     save_project,
 )
 from snapmock.items.rectangle_item import RectangleItem
+from snapmock.library import manager as manager_module
 from snapmock.library.commands import (
     CreateFolderCommand,
+    DeleteLibraryFileCommand,
     MoveLibraryFileCommand,
     RenameLibraryFileCommand,
 )
@@ -32,6 +36,20 @@ from snapmock.library.manager import LibraryManager
 @pytest.fixture()
 def library(qapp: QApplication, tmp_path: Path) -> LibraryManager:
     return LibraryManager(tmp_path / "Library")
+
+
+def _fake_send2trash(sent: list[Path]) -> Callable[[str], None]:
+    """Stand in for send2trash: record the path and remove it from disk."""
+
+    def _send(p: str) -> None:
+        path = Path(p)
+        sent.append(path)
+        if path.is_dir():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
+
+    return _send
 
 
 def _image(w: int = 40, h: int = 30) -> QImage:
@@ -194,6 +212,101 @@ def test_create_folder_unique_names_and_undo(library: LibraryManager) -> None:
     library.command_stack.undo()
     assert first.created_path.exists()
     assert first.undo_blocked_message is not None
+
+
+def test_trash_and_restore_files(library: LibraryManager) -> None:
+    path = library.create_blank(10, 10)
+    assert not library.session_trash_dir.exists()
+    pairs = library.trash_files([path])
+    assert pairs == [(path, library.session_trash_dir / path.name)]
+    assert not path.exists() and pairs[0][1].exists()
+    assert library.session_trash_dir.parent == library.root / ".trash"
+    assert library.list_files() == []
+    restored = library.restore_files(pairs)
+    assert restored == [(pairs[0][1], path)]
+    assert path.exists()
+
+
+def test_trash_files_keeps_same_names_apart(library: LibraryManager) -> None:
+    a = library.create_blank(10, 10)
+    b = library.copy_files([a], library.root)[0]
+    library.rename_file(b, "Twin")
+    twin = library.root / "Twin.smk"
+    first = library.trash_files([twin])[0][1]
+    library.create_blank(10, 10)
+    twin2 = library.rename_file(library.list_files()[0].file_path, "Twin")
+    second = library.trash_files([twin2])[0][1]
+    assert first != second and first.exists() and second.exists()
+
+
+def test_restore_takes_unique_name_when_original_is_occupied(library: LibraryManager) -> None:
+    path = library.create_blank(10, 10)
+    pairs = library.trash_files([path])
+    path.write_bytes(b"newer")
+    restored = library.restore_files(pairs)
+    assert restored[0][1] != path
+    assert restored[0][1].exists() and path.read_bytes() == b"newer"
+
+
+def test_delete_command_undo_redo_and_discard(
+    library: LibraryManager, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sent: list[Path] = []
+    monkeypatch.setattr(manager_module, "send2trash", _fake_send2trash(sent))
+    path = library.create_blank(10, 10)
+    cmd = DeleteLibraryFileCommand(library, [path])
+    library.command_stack.push(cmd)
+    assert not path.exists()
+    assert cmd.trash_paths and cmd.trash_paths[0].exists()
+    library.command_stack.undo()
+    assert path.exists() and cmd.trash_paths == [] and cmd.paths == [path]
+    library.command_stack.redo()
+    assert not path.exists()
+    trashed = cmd.trash_paths[0]
+    library.command_stack.clear()
+    assert sent == [trashed] and not trashed.exists()
+    assert cmd.trash_paths == []
+
+
+def test_delete_command_discard_after_undo_sends_nothing(
+    library: LibraryManager, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sent: list[Path] = []
+    monkeypatch.setattr(manager_module, "send2trash", _fake_send2trash(sent))
+    path = library.create_blank(10, 10)
+    library.command_stack.push(DeleteLibraryFileCommand(library, [path]))
+    library.command_stack.undo()
+    library.command_stack.clear()
+    assert sent == [] and path.exists()
+
+
+def test_delete_command_moves_folder_whole(
+    library: LibraryManager, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(manager_module, "send2trash", _fake_send2trash([]))
+    folder = library.create_folder(name="Sub")
+    inner = library.create_blank(10, 10, folder=folder)
+    cmd = DeleteLibraryFileCommand(library, [folder])
+    library.command_stack.push(cmd)
+    assert not folder.exists()
+    assert (cmd.trash_paths[0] / inner.name).exists()
+    assert cmd.description == "Delete Sub"
+    library.command_stack.undo()
+    assert inner.exists()
+
+
+def test_purge_session_trash_sends_each_entry(
+    library: LibraryManager, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sent: list[Path] = []
+    monkeypatch.setattr(manager_module, "send2trash", _fake_send2trash(sent))
+    a = library.create_blank(10, 10)
+    folder = library.create_folder(name="Sub")
+    pairs = library.trash_files([a, folder])
+    assert library.purge_session_trash() == 2
+    assert sorted(sent) == sorted(t for _o, t in pairs)
+    assert not library.session_trash_dir.exists()
+    assert library.purge_session_trash() == 0
 
 
 def test_copy_files_adds_copy_suffix(library: LibraryManager) -> None:

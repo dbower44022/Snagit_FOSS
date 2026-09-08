@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from PyQt6.QtCore import QMimeData, QModelIndex, QRectF, Qt
 from PyQt6.QtGui import QColor, QImage
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QMessageBox
 from pytestqt.qtbot import QtBot
 
 from snapmock.commands.add_item import AddItemCommand
@@ -220,6 +220,31 @@ def test_panel_copy_paste_files(panel: LibraryPanel) -> None:
     panel.copy_selected_files()
     panel.paste_files()
     assert (panel.manager.root / f"{file.stem} (Copy).smk").exists()
+
+
+def test_panel_delete_pushes_undoable_command(
+    panel: LibraryPanel, library: LibraryManager, qtbot: QtBot, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+    path = library.create_blank(10, 10)
+    with qtbot.waitSignal(panel.files_about_to_be_deleted) as blocker:
+        panel.delete_paths([path])
+    assert blocker.args == [[path]]
+    assert not path.exists()
+    assert library.command_stack.undo_text == f"Delete {path.stem}"
+    assert library.list_files() == []
+    library.command_stack.undo()
+    assert path.exists()
+    assert [f.file_path for f in library.list_files()] == [path]
+
+
+def test_panel_delete_cancelled_pushes_nothing(
+    panel: LibraryPanel, library: LibraryManager, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Cancel)
+    path = library.create_blank(10, 10)
+    panel.delete_paths([path])
+    assert path.exists() and not library.command_stack.can_undo
 
 
 def test_panel_double_click_opens_file(panel: LibraryPanel, qtbot: QtBot) -> None:

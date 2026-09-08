@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import os
 import shutil
+import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -10,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 from PyQt6.QtGui import QImage, QPixmap
+from send2trash import send2trash
 
 from snapmock.config.constants import (
     LIBRARY_IMPORT_EXTENSIONS,
@@ -55,6 +58,7 @@ class LibraryManager(QObject):
     def __init__(self, root: Path, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._root = root
+        self._session_id = f"{os.getpid()}-{uuid.uuid4().hex[:8]}"
         self._command_stack = CommandStack(self)
         self._pending: dict[str, Document] = {}
         self._attached: dict[str, Document] = {}
@@ -327,6 +331,62 @@ class LibraryManager(QObject):
             return total
         return total
 
+    # --- session trash (Library PRD 3.8, 10.2) ---
+
+    @property
+    def session_id(self) -> str:
+        """Identifies this manager's session trash folder: ``<pid>-<random>``."""
+        return self._session_id
+
+    @property
+    def session_trash_dir(self) -> Path:
+        """``<root>/.trash/<session id>``; not created until :meth:`trash_files` runs."""
+        return self._root / TRASH_DIR_NAME / self._session_id
+
+    def trash_files(self, paths: list[Path]) -> list[tuple[Path, Path]]:
+        """Move files or whole folders into the session trash.
+
+        Returns (original, trashed) pairs for what moved; a path that is
+        already gone is skipped.
+        """
+        moved: list[tuple[Path, Path]] = []
+        for p in paths:
+            if not p.exists():
+                continue
+            trash_dir = self.session_trash_dir
+            trash_dir.mkdir(parents=True, exist_ok=True)
+            target = _unique_path(trash_dir / p.name)
+            shutil.move(str(p), str(target))
+            moved.append((p, target))
+        if moved:
+            self.files_changed.emit()
+        return moved
+
+    def restore_files(self, pairs: list[tuple[Path, Path]]) -> list[tuple[Path, Path]]:
+        """Move (original, trashed) pairs back out of the session trash.
+
+        Returns (trashed, restored) pairs. The original path is used when it
+        is free; otherwise the restored file takes the next unique name.
+        """
+        restored: list[tuple[Path, Path]] = []
+        for original, trashed in pairs:
+            if not trashed.exists():
+                continue
+            original.parent.mkdir(parents=True, exist_ok=True)
+            target = _unique_path(original)
+            shutil.move(str(trashed), str(target))
+            restored.append((trashed, target))
+        if restored:
+            self.files_changed.emit()
+        return restored
+
+    def purge_session_trash(self) -> int:
+        """Send everything in this session's trash folder to the system trash.
+
+        Returns the number of entries sent. Called on the window's close path.
+        """
+        return _sweep_folder(self.session_trash_dir)
+
     # --- file operations (raw; undo is provided by library commands) ---
 
     def rename_file(self, path: Path, new_stem: str) -> Path:
@@ -343,21 +403,6 @@ class LibraryManager(QObject):
         self.file_renamed.emit(path, target)
         self.files_changed.emit()
         return target
-
-    def delete_files(self, paths: list[Path]) -> list[Path]:
-        """Move files (or folders) to the system trash. Returns what was deleted."""
-        from send2trash import send2trash
-
-        deleted: list[Path] = []
-        for p in paths:
-            try:
-                send2trash(str(p))
-                deleted.append(p)
-            except OSError:
-                continue
-        if deleted:
-            self.files_changed.emit()
-        return deleted
 
     def move_files(self, paths: list[Path], dest_folder: Path) -> list[tuple[Path, Path]]:
         """Move files into *dest_folder*. Returns (old, new) pairs."""
@@ -426,6 +471,36 @@ class LibraryManager(QObject):
             return sum(1 for _ in path.rglob("*"))
         except OSError:
             return 0
+
+
+def send_to_system_trash(path: Path) -> bool:
+    """Send one file or folder to the system trash. False if it is gone or refused."""
+    if not path.exists():
+        return False
+    try:
+        send2trash(str(path))
+    except OSError:
+        return False
+    return True
+
+
+def _sweep_folder(folder: Path) -> int:
+    """Send every entry of *folder* to the system trash, then remove the folder."""
+    if not folder.is_dir():
+        return 0
+    sent = 0
+    try:
+        entries = list(folder.iterdir())
+    except OSError:
+        return 0
+    for entry in entries:
+        if send_to_system_trash(entry):
+            sent += 1
+    try:
+        folder.rmdir()
+    except OSError:
+        pass
+    return sent
 
 
 def _unique_path(target: Path) -> Path:

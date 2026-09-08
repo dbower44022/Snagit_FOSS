@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from snapmock.core.command_stack import BaseCommand
-from snapmock.library.manager import LibraryManager
+from snapmock.library.manager import LibraryManager, send_to_system_trash
 
 
 class RenameLibraryFileCommand(BaseCommand):
@@ -32,6 +32,50 @@ class RenameLibraryFileCommand(BaseCommand):
     @property
     def description(self) -> str:
         return f"Rename {self._old_name}"
+
+
+class DeleteLibraryFileCommand(BaseCommand):
+    """Delete files or folders through the session trash (Library PRD 10.2).
+
+    ``redo`` moves each path into the manager's session trash; ``undo`` moves
+    them back. ``discard`` sends whatever is still in the session trash to the
+    system trash: the command can no longer be undone, so the files leave the
+    library for good.
+    """
+
+    def __init__(self, manager: LibraryManager, paths: list[Path]) -> None:
+        self._manager = manager
+        self._paths = list(paths)
+        self._trashed: list[tuple[Path, Path]] = []
+
+    def redo(self) -> None:
+        self._trashed = self._manager.trash_files(self._paths)
+
+    def undo(self) -> None:
+        restored = dict(self._manager.restore_files(self._trashed))
+        self._paths = [restored.get(trashed, original) for original, trashed in self._trashed]
+        self._trashed = []
+
+    def discard(self) -> None:
+        for _original, trashed in self._trashed:
+            send_to_system_trash(trashed)
+        self._trashed = []
+
+    @property
+    def paths(self) -> list[Path]:
+        """Where the files are, or would be, in the library right now."""
+        return list(self._paths)
+
+    @property
+    def trash_paths(self) -> list[Path]:
+        """Where the files sit in the session trash while the delete stands."""
+        return [trashed for _original, trashed in self._trashed]
+
+    @property
+    def description(self) -> str:
+        if len(self._paths) == 1:
+            return f"Delete {self._paths[0].stem}"
+        return f"Delete {len(self._paths)} items"
 
 
 class MoveLibraryFileCommand(BaseCommand):
