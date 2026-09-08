@@ -41,6 +41,15 @@ class BaseCommand(ABC):
         """
         return False
 
+    def discard(self) -> None:
+        """Release resources when the stack drops this command for good.
+
+        Called once, by :class:`CommandStack`, when the command can no longer
+        be undone or redone: it fell off the oldest end under the limit, it was
+        redo history truncated by a new push, or the stack was cleared.  The
+        default does nothing.
+        """
+
 
 class CommandStack(QObject):
     """Manages an ordered stack of :class:`BaseCommand` objects with undo/redo.
@@ -94,6 +103,7 @@ class CommandStack(QObject):
                     return
 
         # Truncate any redo history
+        self._discard(self._commands[self._index :])
         del self._commands[self._index :]
         command.redo()
         self._commands.append(command)
@@ -102,6 +112,7 @@ class CommandStack(QObject):
         # Enforce limit
         if len(self._commands) > self._limit:
             excess = len(self._commands) - self._limit
+            self._discard(self._commands[:excess])
             del self._commands[:excess]
             self._index -= excess
             self._clean_index = max(0, self._clean_index - excess)
@@ -125,7 +136,8 @@ class CommandStack(QObject):
         self._emit_signals()
 
     def clear(self) -> None:
-        """Remove all commands from the stack."""
+        """Remove all commands from the stack, discarding each."""
+        self._discard(self._commands)
         self._commands.clear()
         self._index = 0
         self._clean_index = 0
@@ -166,6 +178,11 @@ class CommandStack(QObject):
         return len(self._commands)
 
     # --- internal ---
+
+    @staticmethod
+    def _discard(commands: list[BaseCommand]) -> None:
+        for cmd in commands:
+            cmd.discard()
 
     def _emit_signals(self) -> None:
         self.can_undo_changed.emit(self.can_undo)

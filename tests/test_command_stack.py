@@ -22,6 +22,18 @@ class IncrementCommand(BaseCommand):
         return f"Increment by {self._amount}"
 
 
+class DiscardTrackingCommand(IncrementCommand):
+    """Test command that records when the stack discards it."""
+
+    def __init__(self, counter: list[int], discarded: list[str], name: str) -> None:
+        super().__init__(counter)
+        self._discarded = discarded
+        self._name = name
+
+    def discard(self) -> None:
+        self._discarded.append(self._name)
+
+
 class MergeableCommand(BaseCommand):
     """Test command that supports merging (accumulates value)."""
 
@@ -108,6 +120,49 @@ def test_stack_limit() -> None:
         stack.push(IncrementCommand(counter, 1))
     assert stack.count == 3
     assert counter[0] == 5
+
+
+def test_discard_called_when_limit_drops_oldest() -> None:
+    discarded: list[str] = []
+    stack = CommandStack(limit=2)
+    for name in ("a", "b", "c"):
+        stack.push(DiscardTrackingCommand([0], discarded, name))
+    assert discarded == ["a"]
+    stack.push(DiscardTrackingCommand([0], discarded, "d"))
+    assert discarded == ["a", "b"]
+
+
+def test_discard_called_for_truncated_redo_history() -> None:
+    discarded: list[str] = []
+    stack = CommandStack()
+    for name in ("a", "b", "c"):
+        stack.push(DiscardTrackingCommand([0], discarded, name))
+    stack.undo()
+    stack.undo()
+    assert discarded == []
+    stack.push(DiscardTrackingCommand([0], discarded, "d"))
+    assert sorted(discarded) == ["b", "c"]
+    assert stack.count == 2
+
+
+def test_discard_called_on_clear() -> None:
+    discarded: list[str] = []
+    stack = CommandStack()
+    for name in ("a", "b"):
+        stack.push(DiscardTrackingCommand([0], discarded, name))
+    stack.undo()
+    stack.clear()
+    assert sorted(discarded) == ["a", "b"]
+    assert stack.count == 0
+
+
+def test_discard_not_called_by_undo_or_redo() -> None:
+    discarded: list[str] = []
+    stack = CommandStack()
+    stack.push(DiscardTrackingCommand([0], discarded, "a"))
+    stack.undo()
+    stack.redo()
+    assert discarded == []
 
 
 def test_dirty_flag() -> None:
