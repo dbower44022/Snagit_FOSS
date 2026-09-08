@@ -1,8 +1,8 @@
 # General UI Implementation Notes
 
-Last Updated: 09-08-26 13:45 · Revision 1.3
+Last Updated: 09-08-26 16:30 · Revision 1.4
 
-Implements the SnapMock General User Interface PRD (version 1.8, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
+Implements the SnapMock General User Interface PRD (version 1.9, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
 ## 1. Phase status
 
@@ -11,7 +11,7 @@ Implements the SnapMock General User Interface PRD (version 1.8, `PRDs/SnapMock-
 | 0 | Inventory and notes | Done | 3972f47 |
 | 1 | Menus, shortcuts, help, and window | Done | 9073edc to c7b88ba |
 | 2 | Export | Done | 8a34cad to c5ddfe5 |
-| 3 | Theme and Preferences | Not started | |
+| 3 | Theme and Preferences | Done | a3d19a2 to 4e15e66 |
 | 4 | Toolbars and status bar | Not started | |
 | 5 | Canvas | Not started | |
 | 6 | Panels and colour picker | Not started | |
@@ -157,7 +157,13 @@ Recorded here so Phase 1 can propose change-log rows for the General UI PRD; non
 | Tool shortcut letters | B | The shipped map stays; departure rows in the General UI, Text and Callout, Blur, Navigation, and Basic Shape PRDs. |
 | Licence | A | MIT. LICENSE file, project metadata, and the About dialog. |
 
-The kickoff's remaining decisions (icon set, memory zone, guide persistence, welcome-panel card) are presented at the start of the phase that needs them.
+Taken at the start of Phase 3 (09-08-26):
+
+| Decision | Choice | Effect |
+|---|---|---|
+| Icon set | A, Tabler Icons | The glyphs SnapMock uses are vendored from Tabler Icons v3.46.0 under `snapmock/resources/icons/tabler/` with the MIT licence file and a README; `snapmock/ui/icons.py` maps every tool, menu row, and panel button to a glyph; the About dialog credits the set. |
+
+The kickoff's remaining decisions (memory zone, guide persistence, welcome-panel card) are presented at the start of the phase that needs them.
 
 ### 5.2 As raised by Phase 0
 
@@ -169,7 +175,7 @@ The kickoff prompt's six decisions stand. The inventory adds three that pass the
 
 ## 6. Deviations from the PRD
 
-Each has its change-log row in `PRDs/SnapMock-General-UI-PRD.html` version 1.7 (Phase 1) or 1.8 (Phase 2) unless the entry says otherwise.
+Each has its change-log row in `PRDs/SnapMock-General-UI-PRD.html` version 1.7 (Phase 1), 1.8 (Phase 2), or 1.9 (Phase 3) unless the entry says otherwise.
 
 - **Tool shortcut letters** (Section 3.7). Six letters differ from the PRD tables by decision; rows in all five PRDs (the Basic Shape PRD's row for Line, PRD U and shipped L, followed once that file's other edits were committed).
 - **Merge Down, Merge Visible, Flatten All** (Section 3.4). Deferred; the rows check their requirement, then say the feature is not available yet.
@@ -179,7 +185,13 @@ Each has its change-log row in `PRDs/SnapMock-General-UI-PRD.html` version 1.7 (
 - **Show Tool Palette** (Section 3.3). Toggles the existing top toolbar, which is the tool palette until Phase 4 builds the Main Toolbar and moves the palette to the left edge. Show Main Toolbar arrives with Phase 4. Not recorded in the PRD: it is an interim state, not a departure.
 - **Last-used tool option values** (Section 15.4). Phase 1 persists the tool id only; option values persist with the preset work of Phase 7.
 - **Select All Text batch changes** (Section 3.2). Phase 1 selects the text-containing items; applying a font, size, or colour to the whole selection at once arrives with the Property Panel's multi-selection behaviour in Phase 6 (Section 8.6).
-- **Preferences dependent controls** (Section 1.3). The Autosave interval spinbox and Keep Running in Tray checkbox are disabled while their parent setting is off. Left for Phase 3, which rebuilds the dialog.
+- **Preferences dependent controls** (Section 1.3). Resolved in Phase 3: Auto-save is one spinbox where 0 means disabled, and Keep running in tray stays editable while the tray is off.
+- **Pasteboard colour** (Sections 6.1, 13.2, 13.3). The theme tables win: #E0E0E0 light, #1E1E1E dark. Preferences offers an override that follows the theme by default. The PRD's Section 18 issue is closed.
+- **Theme constants and palette** (Section 13.4). Each style sheet opens with `@name: value;` constants that the theme manager substitutes into the rules and reads for canvas rendering; a matching QPalette is applied beside the sheet so style-drawn parts follow the theme. The base widget style stays the platform default.
+- **Theme colours beyond the tables** (Section 13). Ruler, canvas border and shadow, checkerboard, guide, crosshair, input, and tooltip colours are defined per theme in the style sheet constants; the PRD tables leave them to the implementation.
+- **Preferences rows without a consumer yet** (Section 11.3). Language (English only), Snap tolerance, Guide color and opacity, and Thumbnail update delay are stored; guides use theirs in Phase 5, layer thumbnails in Phase 6, translation is unscheduled. Freehand smoothing is pushed into the freehand tool's creation defaults for the Phase 4 Tool Options Bar.
+- **Preferences view toggles** (Section 11.3). Show grid, Show rulers, and Snap to grid are no longer in the dialog: they are View menu toggles, and the PRD's category list does not carry them.
+- **Follow-theme states** (Section 11.3). Grid color, Grid opacity, the checkerboard colours, and the pasteboard colour default to the theme value and keep following the theme until set; the PRD lists fixed defaults.
 - **Library variant of the Export dialog** (Section 11.2). No Export region group, since a file that is not open in a tab has no selection or visible area; a SnapMock Project format that copies the file, from Library PRD 7.1. With Apply to All unchecked the dialog reopens per file after the first, pre-filled with the directory (Library PRD 1.2 row).
 - **SVG Embed raster images unchecked** (Section 11.2). Raster regions and stamps are omitted so the file is vector-only; the PRD does not define the unchecked output and the SVG generator cannot link external files.
 - **SVG and PDF preview** (Section 11.2). The preview is the flattened raster of the region; the size estimate encodes the real export in memory (PDF through a temporary file).
@@ -187,6 +199,8 @@ Each has its change-log row in `PRDs/SnapMock-General-UI-PRD.html` version 1.7 (
 - **Momentary eyedropper** (Section 12.2). Alt switches to the eyedropper and back, but the eyedropper's picked colour has no consumer until Phase 4 builds its options bar (Apply to Stroke / Apply to Fill).
 
 ## 7. Tests
+
+Phase 3 adds `tests/test_theme.py` (26 tests: the two theme files define every constant and the Section 13 table values, constant substitution and the two parse errors, the manager's default, live dark switch with palette and sheet, no re-apply on the same mode, System following the style hint, UI font size, icon size, View > Dark Mode reflecting and persisting the mode, the view's pasteboard and grid pens and checkerboard tile reading the theme and its overrides, handle recolouring, the capture accent, every named icon file existing beside the licence, icon rendering and recolouring, the palette's icon-only buttons and tooltips, icon size, and menu icons) and rewrites `tests/test_preferences_dialog.py` (17 tests: category order and page switching, no disabled control, the defaults of every page, stored values shown, changed keys only, and the application of General, Performance, Appearance, Canvas & Grid, and Tools changes including tool defaults at startup and the Delete Layer confirmation preference). `tests/test_capture/test_preferences.py` now expects Keep running in tray to stay enabled. At the close of Phase 3 the suite passed 686 tests with 13 skipped and one environmental deselection (`test_font_combo_reflects_text_item_font`).
 
 Phase 2 adds `tests/test_export_dialog.py` (17 tests: default path and format switching, custom DPI, the unmet-requirement messages for a missing path and for Selection Only without a selection, per-format persistence and restore, the Library variant's controls, File > Export and Export Quick through the dialog, the Library batch and its display-name targets, the SnapMock Project copy, Export Quick from the panel, the preview thumbnail, its debounce, and the size estimate) and ten tests to `tests/test_io/test_exporter.py` (settings round trip and tolerant load, region resolution, selection rectangle, PNG DPI and colour depth and transparency, JPEG quality, SVG viewbox and raster embedding, PDF page sizes, the project-file copy, byte-size text, `AppSettings` export keys). At the close of Phase 2 the suite passed 655 tests with 13 skipped and one environmental deselection (`test_font_combo_reflects_text_item_font`).
 
@@ -202,12 +216,17 @@ In commit order: the Redo and Deselect binding fix; the never-disabled audit wit
 
 In commit order: the export engine (`ExportSettings`, `ExportFormat`, `ExportRegion`, `PdfPageSize`, `export_scene`, `resolve_region`, `selection_rect`, `estimate_export_size`, `format_byte_size` in `snapmock/io/exporter.py`; `RenderEngine.render_region` takes a scale for DPI; `AppSettings` keeps the last-used settings and directory per format and the last format); the Export dialog (`snapmock/ui/export_dialog.py`) with its format pages, region radios, output path or directory, Apply to All, preview and size estimate, and the never-disabled Export button, wired to File > Export, Export Quick (PNG), and the Library panel's Export... and Export Quick (PNG) with the progress dialog; and the preview and size-estimate tests. Technical Architecture PRD 1.6 lists the new module. The Library PRD is at 1.2 and its implementation notes at 1.2 for the delivered variant.
 
-**Next required step:** Phase 3, Theme and Preferences, in a new session pasting `docs/General-UI-Implementation-Kickoff-Prompt.md`. Phase 3 opens by presenting decision 1 (icon set) with the consequential decision template and waiting.
+## 10. What Phase 3 built
+
+In commit order: the theme manager (`snapmock/core/theme_manager.py`: `ThemeMode`, `ThemeColors`, `parse_theme_file`, `ThemeManager` with `set_mode`, `apply`, `icon`, `set_icon_size`, `set_ui_font_size`, the `theme_changed` and `icon_size_changed` signals, and the process-wide `theme_manager()` and `current_theme()`), the two style sheets under `snapmock/resources/themes/`, the theme, icon-size, and UI-font-size settings, and View > Dark Mode; canvas rendering from the theme (the view's pasteboard, shadow, border, empty-canvas text, checkerboard, and grid pens with their Preferences overrides; rulers; transform handles with `apply_theme`; the crop overlay and capture overlay accents; hard-coded style sheets replaced by theme roles; the superseded colour constants removed from `config/constants.py`); the icon set (`snapmock/resources/icons/tabler/` with LICENSE and README, `snapmock/ui/icons.py`, icon-only palette buttons with tooltips, menu and tray icons, Layer Panel buttons, the About credit); and the Preferences dialog rebuilt as sidebar categories with every Section 11.3 setting in `AppSettings` and wired (view preferences per document, tool defaults through `_apply_tool_defaults`, `CommandStack.set_limit`, `LibraryManager.create_blank` taking a colour, `PropertyPanel.refresh_tool_defaults`). Technical Architecture PRD 1.7 lists `core/theme_manager.py`, `ui/icons.py`, and the resource files.
+
+**Next required step:** Phase 4, Toolbars and status bar, in a new session pasting `docs/General-UI-Implementation-Kickoff-Prompt.md`. Phase 4 opens by presenting decision 2 (memory usage zone: a runtime dependency or platform calls in one module) with the consequential decision template and waiting.
 
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 09-08-26 16:30 | Claude (Claude Code) | Phase 3 done: phase table, the icon-set decision (Section 5.1), seven deviations (Section 6), tests (Section 7), build summary and next step (Section 10). |
 | 1.3 | 09-08-26 13:45 | Claude (Claude Code) | Phase 2 done: phase table, four deviations (Section 6), tests (Section 7), build summary and next step (Section 9). |
 | 1.2 | 09-08-26 13:21 | Claude (Claude Code) | Basic Shape PRD shortcut row delivered; the owed item is closed. |
 | 1.1 | 09-08-26 11:23 | Claude (Claude Code) | Phase 1 done: phase table, decisions taken (Section 5.1), ten deviations (Section 6), tests (Section 7), build summary and next step (Section 8). |
