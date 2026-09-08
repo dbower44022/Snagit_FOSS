@@ -1,6 +1,6 @@
 # General UI Implementation Notes
 
-Last Updated: 09-08-26 00:10 · Revision 1.0
+Last Updated: 09-08-26 11:23 · Revision 1.1
 
 Implements the SnapMock General User Interface PRD (version 1.6, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
@@ -8,8 +8,8 @@ Implements the SnapMock General User Interface PRD (version 1.6, `PRDs/SnapMock-
 
 | Phase | Scope | Status | Commits |
 |---|---|---|---|
-| 0 | Inventory and notes | Done | this file's first commit |
-| 1 | Menus, shortcuts, help, and window | Not started | |
+| 0 | Inventory and notes | Done | 3972f47 |
+| 1 | Menus, shortcuts, help, and window | Done | 9073edc to c7b88ba |
 | 2 | Export | Not started | |
 | 3 | Theme and Preferences | Not started | |
 | 4 | Toolbars and status bar | Not started | |
@@ -145,7 +145,21 @@ Recorded here so Phase 1 can propose change-log rows for the General UI PRD; non
 - Section 17.4 cites "Section 6.5" for the cursor table; the table is Section 6.6 after the Guides insertion.
 - Section 2.1 says the status bar is toggleable and Section 3.3 lists Show Status Bar; both are consistent, but Section 15.4 does not list status bar visibility among persisted toggles. Treated as covered by "toolbar and panel visibility toggles".
 
-## 5. Decisions to surface at the start of Phase 1
+## 5. Decisions
+
+### 5.1 Taken at the start of Phase 1 (09-08-26)
+
+| Decision | Choice | Effect |
+|---|---|---|
+| Stubbed Layer and Image rows | B | Crop to Canvas and Auto-Trim built in Phase 1; Merge Down, Merge Visible, Flatten All deferred to a Navigation and Raster Operations follow-up with a General UI PRD change-log row. |
+| Group and Ungroup | B | Own kickoff after Phase 8; rows present and explain the deferral. |
+| Print | A | Built in Phase 1 through the system print dialog. |
+| Tool shortcut letters | B | The shipped map stays; departure rows in the General UI, Text and Callout, Blur, and Navigation PRDs. The Basic Shape PRD's row is owed (Section 6). |
+| Licence | A | MIT. LICENSE file, project metadata, and the About dialog. |
+
+The kickoff's remaining decisions (icon set, memory zone, guide persistence, welcome-panel card) are presented at the start of the phase that needs them.
+
+### 5.2 As raised by Phase 0
 
 The kickoff prompt's six decisions stand. The inventory adds three that pass the two-part test and must be presented with the consequential decision template before Phase 1 writes code:
 
@@ -155,14 +169,34 @@ The kickoff prompt's six decisions stand. The inventory adds three that pass the
 
 ## 6. Deviations from the PRD
 
-None recorded yet. Phase 1 onward appends here, with the matching change-log row in `PRDs/SnapMock-General-UI-PRD.html`.
+Each has its change-log row in `PRDs/SnapMock-General-UI-PRD.html` version 1.7 unless the entry says otherwise.
+
+- **Tool shortcut letters** (Section 3.7). Six letters differ from the PRD tables by decision; rows in four PRDs. Owed: the Basic Shape Annotation Tools PRD's row for Line (PRD U, shipped L). Another session held uncommitted edits to that file on 09-08-26, so Phase 1 did not touch it. Add the row when that file is next committed.
+- **Merge Down, Merge Visible, Flatten All** (Section 3.4). Deferred; the rows check their requirement, then say the feature is not available yet.
+- **Group and Ungroup** (Section 3.6). Deferred to their own kickoff; rows present with shortcuts.
+- **Align and Distribute as submenus** (Section 3.6). The PRD lists eight flat rows; the menu keeps two submenus in the PRD's position and order.
+- **Check for Updates** (Section 3.8). Present; says it is scheduled for a later phase. No phase owns it yet.
+- **Show Tool Palette** (Section 3.3). Toggles the existing top toolbar, which is the tool palette until Phase 4 builds the Main Toolbar and moves the palette to the left edge. Show Main Toolbar arrives with Phase 4. Not recorded in the PRD: it is an interim state, not a departure.
+- **Last-used tool option values** (Section 15.4). Phase 1 persists the tool id only; option values persist with the preset work of Phase 7.
+- **Select All Text batch changes** (Section 3.2). Phase 1 selects the text-containing items; applying a font, size, or colour to the whole selection at once arrives with the Property Panel's multi-selection behaviour in Phase 6 (Section 8.6).
+- **Preferences dependent controls** (Section 1.3). The Autosave interval spinbox and Keep Running in Tray checkbox are disabled while their parent setting is off. Left for Phase 3, which rebuilds the dialog.
+- **Momentary eyedropper** (Section 12.2). Alt switches to the eyedropper and back, but the eyedropper's picked colour has no consumer until Phase 4 builds its options bar (Apply to Stroke / Apply to Fill).
 
 ## 7. Tests
 
+Phase 1 adds `tests/test_layer_menu_actions.py`, `tests/test_shortcuts_dialog.py`, `tests/test_about_dialog.py`, `tests/test_window_layout.py`, `tests/test_find_replace_color.py`, and `tests/test_navigation_keys.py`; extends `tests/test_menus.py`, `tests/test_context_menus.py`, `tests/test_documents.py`, `tests/test_app.py`, and `tests/test_io/test_exporter.py`; and adds the `unmet_messages` fixture to `tests/conftest.py`, which captures the never-disabled message instead of showing it. At the close of Phase 1 the suite passed 628 tests with 13 skipped and one environmental deselection (`test_font_combo_reflects_text_item_font`); `test_main_window_default_size` passes again now that the window has a minimum size.
+
 Phase 0 adds no tests. On 09-07-26 the working tree (commit `a198744` plus the uncommitted Basic Shape work) was ruff-clean and mypy-strict-clean, and the suite passed 590 tests with 13 skipped, with the two known environmental failures deselected: `test_main_window_default_size` and `test_font_combo_reflects_text_item_font`.
+
+## 8. What Phase 1 built
+
+In commit order: the Redo and Deselect binding fix; the never-disabled audit with `snapmock/ui/unmet_requirements.py`; the menu bar aligned to Section 3 (order, labels, Open Recent with Clear Recent, Undo and Redo action names, Backspace for Delete, Show Status Bar, Group and Ungroup rows, Help labels and real links); Duplicate Layer copying items, Delete Layer confirming, Crop to Canvas as the crop tool, Auto-Trim; Print; the Keyboard Shortcuts dialog; the About dialog and the MIT licence; window management (object names so the layout persists, minimum size, 80 percent default, Reset Layout, the title pattern, the Unsaved Changes wording, the last-used tool); Select All Text and Find/Replace Color; Home and End, Tab cycling, the Alt eyedropper; and the PRD change-log rows. Technical Architecture PRD 1.5 lists the four new modules under `ui/`.
+
+**Next required step:** Phase 2, Export, in a new session pasting `docs/General-UI-Implementation-Kickoff-Prompt.md`. Before it, add the owed Basic Shape PRD row once that file's other edits are committed.
 
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 09-08-26 11:23 | Claude (Claude Code) | Phase 1 done: phase table, decisions taken (Section 5.1), ten deviations (Section 6), tests (Section 7), build summary and next step (Section 8). |
 | 1.0 | 09-08-26 00:10 | Claude (Claude Code) | Phase 0: verified inventory by PRD section, corrections to the kickoff inventory, PRD inconsistencies, three added Phase 1 decisions, empty deviations list. |
