@@ -1,8 +1,8 @@
 # Screen Capture Implementation Notes
 
-Last Updated: 09-07-26 16:05 · Revision 1.0
+Last Updated: 09-07-26 20:41 · Revision 1.1
 
-Implements the SnapMock Screen Capture PRD (version 1.0, September 2026): the three capture modes, every entry point (global hotkeys, system tray, Main Toolbar button, Capture menu, command-line invocation with a single-instance channel), the capture options, the region selection overlay, the capture backend abstraction with the Linux X11 and Linux Wayland backends, stubs for Windows and macOS, the post-capture handoff to the Library, the Capture preferences category, and the Wayland and macOS onboarding dialogs.
+Implements the SnapMock Screen Capture PRD (version 1.0, September 2026): the three capture modes, every entry point (global hotkeys, system tray, Main Toolbar button, Capture menu, command-line invocation with a single-instance channel), the capture options, the region selection overlay, the capture backend abstraction with the Linux X11, Linux Wayland and Windows backends, a stub for macOS, the post-capture handoff to the Library, the Capture preferences category, and the Wayland and macOS onboarding dialogs.
 
 ## 1. Architecture
 
@@ -27,7 +27,8 @@ Nothing outside `snapmock/capture/` imports a platform module or calls ctypes. T
 | Onboarding | `snapmock/capture/onboarding.py` | `WaylandOnboardingDialog` (consent and desktop-shortcut panels, Copy buttons, per-desktop notes, Don't show again) and `MacOSPermissionDialog` (Continue, Open System Settings, Cancel, then the quit-and-reopen state) (PRD 9). |
 | X11 | `snapmock/capture/x11.py` | `X11CaptureBackend` and `X11HotkeyBackend` over a private Xlib connection through ctypes (PRD 6.3, 6.7). |
 | Wayland | `snapmock/capture/wayland_portal.py` | `WaylandPortalBackend` over QtDBus and the portal's Screenshot interface (PRD 6.4). |
-| Windows, macOS | `snapmock/capture/windows.py`, `snapmock/capture/macos.py` | Stubs that implement the interfaces, report the capabilities the platform will have, and raise `CaptureError("not yet implemented on this platform")` from every grab. |
+| Windows | `snapmock/capture/windows.py` | `WindowsCaptureBackend` and `WindowsHotkeyBackend` over user32, gdi32 and dwmapi through ctypes (PRD 6.6, 6.7). |
+| macOS | `snapmock/capture/macos.py` | A stub that implements the interfaces, reports the capabilities the platform will have, and raises `CaptureError("not yet implemented on this platform")` from every grab. |
 
 ### 1.2 The capture flow
 
@@ -57,6 +58,14 @@ The X11 backend opens its own Xlib display rather than sharing Qt's connection. 
 
 The Capture category holds every setting from PRD 8.1. Hotkey editors register immediately: a change releases the old key, registers the new one, and on refusal shows "In use by another application" beside the editor and keeps the previous key. On a backend without in-process hotkeys, each editor is replaced by "Bind a desktop shortcut to:" with the command and a Copy button, plus the "How to set up a desktop shortcut..." link that opens the Wayland onboarding content. The read-only capability line comes from `CaptureManager.capability_summary()`.
 
+### 1.7 Windows through ctypes
+
+The screen grab is Qt's, which uses a GDI bit-block transfer underneath; ctypes supplies only what Qt does not expose. The Win32 types are spelled out with plain `ctypes` rather than taken from `ctypes.wintypes`, so the module imports for free on Linux and macOS, where the suite still imports it; nothing touches user32, gdi32 or dwmapi until `create_backends()` runs, and that raises `OSError` off Windows.
+
+Per-monitor DPI awareness version 2 is already set by Qt while `QGuiApplication` starts, and a second call is refused, so `create_backends()` verifies the thread's context with `GetThreadDpiAwarenessContext` and `AreDpiAwarenessContextsEqual` instead of setting it. The active window comes from `GetForegroundWindow`, its frame from `DWMWA_EXTENDED_FRAME_BOUNDS` so that the invisible resize border Windows adds is excluded, falling back to `GetWindowRect` only when DWM reports an error; the rectangle is virtual-desktop physical pixels and is mapped through `physical_to_logical`. SnapMock's own windows and the shell classes (`Progman`, `WorkerW`, `Shell_TrayWnd` and their kin) report no active window, so the manager's own fallback applies as it does on X11. The cursor comes from `GetCursorInfo` and `GetIconInfo`, converted with `GetDIBits` into a top-down 32-bit `Format_ARGB32` image; a colour bitmap without alpha is masked by its AND mask, and a monochrome cursor, which is what the stock arrow and I-beam are, is rebuilt from the double-height mask whose upper half is the AND mask and lower half the XOR mask. Every bitmap `GetIconInfo` hands out is released.
+
+Hotkeys are `RegisterHotKey` with `MOD_NOREPEAT` on a message-only window parented to `HWND_MESSAGE`, borrowing the `STATIC` class so none of our own has to be registered. `WM_HOTKEY` arrives through a `QAbstractNativeEventFilter`, and two details matter. The filter is a separate `_HotkeyEventFilter` object rather than the backend itself, because PyQt does not dispatch `nativeEventFilter` to a class that also inherits `QObject` and the backend must be a `QObject` to carry the `triggered` signal; a plain filter receives `WM_HOTKEY`, a `QObject`-mixed one receives nothing. And the filter is removed in `close()`, because Qt keeps a bare pointer to it and calling into a collected filter faults the process at exit. `RegisterHotKey` failing with error 1409 sets the failure reason to "In use by another application", the same wording the X11 backend and the fake use, so Preferences reads the same everywhere.
+
 ## 2. Deviations from the PRD
 
 - **`ScreenGrab` carries `monitors`.** PRD 10.3 lists images and cursor fields only. The grab keeps the monitor list at grab time so a monitor change after the grab cannot affect the capture (PRD 4.4), and so the overlay draws from one object.
@@ -66,14 +75,17 @@ The Capture category holds every setting from PRD 8.1. Hotkey editors register i
 - **`capture_refused` carries the origin** so the main window can honor PRD 3.6's rule that tray and command-line refusals are shown as system notifications.
 - **Countdown badge focus.** PRD 4.1 cancels on Escape while the badge has focus; the badge takes focus when shown, and a click also cancels.
 - **Shutter sound.** The PRD left the sound asset as an open question. `resources/sounds/shutter.wav` is a short synthesized click generated for this project, so no license question remains.
-- **Windows hotkey stub reports unsupported.** Until `RegisterHotKey` is wired, the stub's `supported` is false so Preferences shows the command-line guidance instead of editors that cannot work.
+- **Windows DPI awareness is verified, not set.** PRD 6.6 says awareness is enabled at startup. Qt has already set per-monitor awareness version 2 by the time `create_backends()` runs, and a second call fails with access denied, so the backend confirms the context and logs it rather than setting it.
+- **A Windows hotkey may have no modifier.** The shipped Region default is a bare Print Screen and `RegisterHotKey` accepts a zero modifier mask, so a sequence without a modifier is registered rather than refused.
+- **The Windows native event filter is a separate object.** PyQt does not dispatch `nativeEventFilter` to a class that also inherits `QObject`, and `HotkeyBackend` must be one, so the filter cannot be the backend itself.
+- **`physical_to_logical` lives in `backend.py`.** It began in `x11.py`; the Windows backend needs the same mapping and must not import a platform module that is not its own, so it moved beside `qt_monitors` and `QtScreenGrabBackend`.
 - **macOS stub reports permission denied.** It cannot preflight or request, so every capture on macOS fails with the Section 6.5 message and the onboarding dialog reaches its quit-and-reopen state. The gate is skipped after Don't show this again.
 - **Tray capability.** `BackendCapabilities.tray` is reported true on every real backend; whether a tray exists is decided by Qt at runtime, and the "no tray on this desktop" message appears when the preference is turned on without one.
 - **Portal timeout.** The PRD sets no limit for the compositor's consent dialog; two minutes was chosen.
 
 ## 3. Tests
 
-All under `tests/test_capture/`, run against the fake backends on the offscreen platform (121 tests). `tests/conftest.py` gives every `MainWindow` a manager on the fake backends so the suite never touches a real screen or registers a real hotkey.
+All under `tests/test_capture/`, run against the fake backends on the offscreen platform. `tests/conftest.py` gives every `MainWindow` a manager on the fake backends so the suite never touches a real screen or registers a real hotkey.
 
 - `test_models.py`: enumerations, metadata round trip, monitor geometry, settings defaults and clamping.
 - `test_backend.py`: null and fake backends, Qt monitor listing.
@@ -85,13 +97,18 @@ All under `tests/test_capture/`, run against the fake backends on the offscreen 
 - `test_preferences.py`: the Capture category, live hotkey editing, command-line guidance, capability line, applying changes, tray creation and removal.
 - `test_x11.py`: struct sizes, keysym mapping, session refusal; live tests (skipped without a display) for the active window, cursor, grab conflicts, and a synthesized key press through XTest.
 - `test_wayland_portal.py`: per-monitor splitting, file handling, injected screenshots, silent cancel, degradation; a fake portal service registered on the session bus exercises the real D-Bus round trip for success, cancel, and error.
-- `test_platform_stubs.py`: Windows and macOS stubs, the permission message, and the macOS dialog states.
+- `test_windows.py`: struct sizes against the 64-bit layouts, the Qt-to-virtual-key mapping, and `create_backends` refusing off Windows; live tests (Windows only) for the DPI context, the frame rectangle and title of a window the test creates, the stock cursors put through the ICONINFO conversion, a duplicate key, error 1409 reported as in use, release on unregister, and a `WM_HOTKEY` round trip to `triggered`.
+- `test_platform_stubs.py`: the Windows backend's capabilities and its refusal to activate off Windows, the macOS stub, the permission message, and the macOS dialog states.
+- `test_wayland_portal.py` is skipped off Linux: QtDBus is absent from some Windows wheels, and where it is present it has no session bus and faults on teardown.
 
-Verified by hand on this X11 machine: struct sizes, EWMH active window with frame extents and title, XFixes cursor image, grab refusal from a second client, release after ungrab, and the portal protocol (handle path, Response signal).
+Verified by hand on the X11 machine: struct sizes, EWMH active window with frame extents and title, XFixes cursor image, grab refusal from a second client, release after ungrab, and the portal protocol (handle path, Response signal).
+
+Verified on the Windows machine, from an automated session: the DPI context reported per-monitor v2 under the real platform plugin (`0x22`); `RegisterHotKey` accepted the default bindings and reported 1409 as in use for a key another registration held; a released key registered again; a posted `WM_HOTKEY` reached `triggered` with the right action; the stock arrow, I-beam and wait cursors converted to 32x32 images with correct hotspots through the monochrome mask path; and `window_frame_rect` and `window_title` returned the geometry and title of a window created for the test.
+
+**Not yet verified on Windows, and still owed** (PRD 6.6, and the kickoff prompt's hand-verification list). The session that wrote this backend ran against a locked workstation with one monitor, so `GetForegroundWindow` returned 0, `GetCursorInfo` failed, GDI `CopyFromScreen` refused with an invalid handle, and no scale factor other than 1.0 was available. `select_backends()` did choose the Windows pair, and a full-screen grab returned a correctly sized 1920x1200 image with no error and entirely black pixels, which is exactly the secured-desktop degradation PRD 6.6 documents. The plumbing is therefore verified but the pixel content of a capture is not. Outstanding: the three modes from the menu, toolbar, tray and each hotkey; a real key press with another application focused, and hotkeys ceasing after Quit; the Print Screen conflict against Windows 11's own capture; the active window of a maximized window, of one with the invisible resize border compared against `GetWindowRect`, and of one on a second monitor; the cursor composited at a different scale factor; a mixed-DPI pair of monitors, including whether the composited region crosses the boundary without a seam; and `--capture region` reaching a running instance over the channel.
 
 ## 4. Follow-ups
 
-- Windows backend: `GetForegroundWindow` and `DwmGetWindowAttribute` for the extended frame bounds, `GetCursorInfo` for the cursor, `RegisterHotKey` with a native event filter on `WM_HOTKEY`, per-monitor DPI awareness at startup (PRD 6.6, 6.7).
 - macOS backend: the Screen Recording preflight and request calls, the Core Graphics window list for the active window, the system cursor image; pyobjc remains the optional candidate if ctypes proves fragile (PRD 6.5, open question 2).
 - Window snap in the overlay (version 2), scrolling capture (deferred), a KDE-specific Wayland backend for active window and cursor (version 2 candidate).
 - Replace the code-drawn tray glyph with a designed icon when the resources directory gains one, and take the overlay accent from the ThemeManager when it exists.
@@ -101,4 +118,5 @@ Verified by hand on this X11 machine: struct sizes, EWMH active window with fram
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 09-07-26 20:41 | Claude (Claude Code) | Windows backend implemented (Section 1.7); its stub deviation removed and four new ones recorded; `test_windows.py` added; the Windows follow-up closed; Windows hand-verification results and what is still owed recorded. |
 | 1.0 | 09-07-26 16:05 | Claude (Claude Code) | Initial implementation notes for the Screen Capture PRD. |

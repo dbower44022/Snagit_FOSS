@@ -1,8 +1,8 @@
 # Kickoff Prompt: Windows and macOS Capture Backends
 
-Last Updated: 09-07-26 19:31 · Revision 1.2
+Last Updated: 09-07-26 20:41 · Revision 1.3
 
-> Step A (Windows) is superseded by `docs/Windows-Backend-Kickoff-Prompt.md`, which carries the Windows environment setup and the corrected DPI-awareness step. Use this document for step B (macOS) only.
+> Step A (Windows) is **done**, as of 09-07-26. It was carried out from `docs/Windows-Backend-Kickoff-Prompt.md`, which held the Windows environment setup and the corrected DPI-awareness step; the result is described in Section 1.7 of `docs/Screen-Capture-Implementation.md`, along with the hand verification that is still owed on a real Windows desktop. Use this document for step B (macOS) only.
 >
 > Step B is deferred as of 09-07-26: no macOS device is available. The macOS stub stays in place, and every capture on macOS fails with the Section 6.5 message until step B runs. Nothing in the Windows work depends on it.
 
@@ -69,6 +69,7 @@ State the next required step and write the next-action prompt for the version 2 
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 09-07-26 20:41 | Claude (Claude Code) | Step A done; header points at the Windows kickoff prompt and the implementation notes. |
 | 1.2 | 09-07-26 19:31 | Claude (Claude Code) | Step B deferred; no macOS device available. |
 | 1.1 | 09-07-26 19:16 | Claude (Claude Code) | Step A superseded by the Windows-only kickoff prompt; this document now covers step B only. |
 | 1.0 | 09-07-26 16:05 | Claude (Claude Code) | Initial kickoff prompt for the Windows and macOS backends. |
