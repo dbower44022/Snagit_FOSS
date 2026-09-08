@@ -36,8 +36,17 @@ LAYER_Z_RANGE = 10_000
 # Undo/redo stack limit
 UNDO_LIMIT = 200
 
-# Grid snapping
+# Grid snapping (General UI PRD 11.3 Canvas & Grid)
 GRID_SIZE_DEFAULT = 10
+SNAP_TOLERANCE_DEFAULT = 5
+GUIDE_COLOR_DEFAULT = "#00BFFF"
+GUIDE_OPACITY_DEFAULT = 70
+
+# Recent files (General UI PRD 11.3 General)
+RECENT_FILES_DEFAULT = 10
+
+# Layer thumbnail refresh delay (General UI PRD 11.3 Performance)
+THUMBNAIL_DELAY_DEFAULT_MS = 500
 
 # Autosave interval in milliseconds (2 minutes)
 AUTOSAVE_INTERVAL_MS = 120_000

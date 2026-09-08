@@ -4,15 +4,31 @@ import json
 from pathlib import Path
 
 from PyQt6.QtCore import QSettings
+from PyQt6.QtGui import QColor
 
 from snapmock.config.constants import (
     APP_NAME,
+    CHECKERBOARD_CELL_SIZE,
+    DEFAULT_CANVAS_HEIGHT,
+    DEFAULT_CANVAS_WIDTH,
+    DEFAULT_FILL_COLOR,
+    DEFAULT_FONT_FAMILY,
+    DEFAULT_FONT_SIZE,
     DEFAULT_LIBRARY_DIRECTORY,
+    DEFAULT_STROKE_COLOR,
+    DEFAULT_STROKE_WIDTH,
     GRID_SIZE_DEFAULT,
+    GUIDE_COLOR_DEFAULT,
+    GUIDE_OPACITY_DEFAULT,
     LIBRARY_PREVIEW_DEFAULT,
     LIBRARY_THUMBNAIL_DEFAULT,
     ORG_NAME,
+    RECENT_FILES_DEFAULT,
+    SNAP_TOLERANCE_DEFAULT,
+    THUMBNAIL_DELAY_DEFAULT_MS,
+    UNDO_LIMIT,
     ZOOM_DEFAULT,
+    ZOOM_PIXEL_GRID_THRESHOLD,
 )
 
 # Global hotkey settings: action -> (settings key, default portable key sequence).
@@ -100,7 +116,175 @@ class AppSettings:
     def set_status_bar_visible(self, visible: bool) -> None:
         self._qs.setValue("view/statusBarVisible", visible)
 
+    # --- general (General UI PRD 11.3 General) ---
+
+    def language(self) -> str:
+        return str(self._qs.value("general/language", "en"))
+
+    def set_language(self, code: str) -> None:
+        self._qs.setValue("general/language", code)
+
+    def recent_files_count(self) -> int:
+        return _clamp(int(self._qs.value("files/recentCount", RECENT_FILES_DEFAULT)), 1, 20)
+
+    def set_recent_files_count(self, count: int) -> None:
+        self._qs.setValue("files/recentCount", _clamp(count, 1, 20))
+
+    def default_canvas_size(self) -> tuple[int, int]:
+        width = int(self._qs.value("canvas/defaultWidth", DEFAULT_CANVAS_WIDTH))
+        height = int(self._qs.value("canvas/defaultHeight", DEFAULT_CANVAS_HEIGHT))
+        return max(1, width), max(1, height)
+
+    def set_default_canvas_size(self, width: int, height: int) -> None:
+        self._qs.setValue("canvas/defaultWidth", max(1, width))
+        self._qs.setValue("canvas/defaultHeight", max(1, height))
+
+    def default_canvas_color(self) -> QColor:
+        return _color(self._qs.value("canvas/defaultColor", "#FFFFFF"), "#FFFFFF")
+
+    def set_default_canvas_color(self, color: QColor) -> None:
+        self._qs.setValue("canvas/defaultColor", _color_text(color))
+
+    def pasteboard_color(self) -> QColor | None:
+        """The pasteboard colour override, or None to follow the theme (PRD 13)."""
+        return _optional_color(self._qs.value("canvas/pasteboardColor", ""))
+
+    def set_pasteboard_color(self, color: QColor | None) -> None:
+        self._qs.setValue("canvas/pasteboardColor", _color_text(color) if color else "")
+
+    def confirm_delete_layers(self) -> bool:
+        return _as_bool(self._qs.value("general/confirmDeleteLayers", True))
+
+    def set_confirm_delete_layers(self, enabled: bool) -> None:
+        self._qs.setValue("general/confirmDeleteLayers", enabled)
+
     # --- appearance (General UI PRD 11.3 Appearance, 13.1, 15.4) ---
+
+    def checkerboard_size(self) -> int:
+        val = int(self._qs.value("appearance/checkerboardSize", CHECKERBOARD_CELL_SIZE))
+        return val if val in (4, 8, 16) else CHECKERBOARD_CELL_SIZE
+
+    def set_checkerboard_size(self, size: int) -> None:
+        self._qs.setValue("appearance/checkerboardSize", size)
+
+    def checkerboard_colors(self) -> tuple[QColor, QColor] | None:
+        """The two checkerboard colours, or None to follow the theme."""
+        a = _optional_color(self._qs.value("appearance/checkerboardColorA", ""))
+        b = _optional_color(self._qs.value("appearance/checkerboardColorB", ""))
+        if a is None or b is None:
+            return None
+        return a, b
+
+    def set_checkerboard_colors(self, colors: tuple[QColor, QColor] | None) -> None:
+        a = _color_text(colors[0]) if colors else ""
+        b = _color_text(colors[1]) if colors else ""
+        self._qs.setValue("appearance/checkerboardColorA", a)
+        self._qs.setValue("appearance/checkerboardColorB", b)
+
+    # --- canvas and grid (General UI PRD 11.3 Canvas & Grid) ---
+
+    def grid_color(self) -> QColor | None:
+        """The grid colour override, or None to follow the theme."""
+        return _optional_color(self._qs.value("view/gridColor", ""))
+
+    def set_grid_color(self, color: QColor | None) -> None:
+        self._qs.setValue("view/gridColor", _color_text(color) if color else "")
+
+    def grid_opacity(self) -> int | None:
+        """Grid opacity in percent, or None to follow the theme."""
+        val = self._qs.value("view/gridOpacity", "")
+        if val is None or val == "":
+            return None
+        return _clamp(int(val), 1, 100)
+
+    def set_grid_opacity(self, percent: int | None) -> None:
+        self._qs.setValue("view/gridOpacity", _clamp(percent, 1, 100) if percent else "")
+
+    def snap_tolerance(self) -> int:
+        return _clamp(int(self._qs.value("view/snapTolerance", SNAP_TOLERANCE_DEFAULT)), 1, 20)
+
+    def set_snap_tolerance(self, pixels: int) -> None:
+        self._qs.setValue("view/snapTolerance", _clamp(pixels, 1, 20))
+
+    def pixel_grid_zoom(self) -> int:
+        val = int(self._qs.value("view/pixelGridZoom", ZOOM_PIXEL_GRID_THRESHOLD))
+        return _clamp(val, 100, 3200)
+
+    def set_pixel_grid_zoom(self, percent: int) -> None:
+        self._qs.setValue("view/pixelGridZoom", _clamp(percent, 100, 3200))
+
+    def guide_color(self) -> QColor:
+        return _color(self._qs.value("view/guideColor", GUIDE_COLOR_DEFAULT), GUIDE_COLOR_DEFAULT)
+
+    def set_guide_color(self, color: QColor) -> None:
+        self._qs.setValue("view/guideColor", _color_text(color))
+
+    def guide_opacity(self) -> int:
+        return _clamp(int(self._qs.value("view/guideOpacity", GUIDE_OPACITY_DEFAULT)), 1, 100)
+
+    def set_guide_opacity(self, percent: int) -> None:
+        self._qs.setValue("view/guideOpacity", _clamp(percent, 1, 100))
+
+    # --- tools (General UI PRD 11.3 Tools): defaults pushed into each tool ---
+
+    def default_stroke_color(self) -> QColor:
+        return _color(
+            self._qs.value("tools/strokeColor", DEFAULT_STROKE_COLOR), DEFAULT_STROKE_COLOR
+        )
+
+    def set_default_stroke_color(self, color: QColor) -> None:
+        self._qs.setValue("tools/strokeColor", _color_text(color))
+
+    def default_stroke_width(self) -> float:
+        return max(0.0, float(self._qs.value("tools/strokeWidth", DEFAULT_STROKE_WIDTH)))
+
+    def set_default_stroke_width(self, width: float) -> None:
+        self._qs.setValue("tools/strokeWidth", max(0.0, width))
+
+    def default_fill_color(self) -> QColor:
+        return _color(self._qs.value("tools/fillColor", DEFAULT_FILL_COLOR), DEFAULT_FILL_COLOR)
+
+    def set_default_fill_color(self, color: QColor) -> None:
+        self._qs.setValue("tools/fillColor", _color_text(color))
+
+    def default_font_family(self) -> str:
+        return str(self._qs.value("tools/fontFamily", DEFAULT_FONT_FAMILY)) or DEFAULT_FONT_FAMILY
+
+    def set_default_font_family(self, family: str) -> None:
+        self._qs.setValue("tools/fontFamily", family)
+
+    def default_font_size(self) -> int:
+        return max(1, int(self._qs.value("tools/fontSize", DEFAULT_FONT_SIZE)))
+
+    def set_default_font_size(self, size: int) -> None:
+        self._qs.setValue("tools/fontSize", max(1, size))
+
+    def freehand_smoothing(self) -> int:
+        return _clamp(int(self._qs.value("tools/freehandSmoothing", 50)), 0, 100)
+
+    def set_freehand_smoothing(self, percent: int) -> None:
+        self._qs.setValue("tools/freehandSmoothing", _clamp(percent, 0, 100))
+
+    def numbered_step_start(self) -> int:
+        return max(0, int(self._qs.value("tools/numberedStepStart", 1)))
+
+    def set_numbered_step_start(self, number: int) -> None:
+        self._qs.setValue("tools/numberedStepStart", max(0, number))
+
+    # --- performance (General UI PRD 11.3 Performance) ---
+
+    def undo_limit(self) -> int:
+        return _clamp(int(self._qs.value("performance/undoLimit", UNDO_LIMIT)), 10, 1000)
+
+    def set_undo_limit(self, limit: int) -> None:
+        self._qs.setValue("performance/undoLimit", _clamp(limit, 10, 1000))
+
+    def thumbnail_delay_ms(self) -> int:
+        val = int(self._qs.value("performance/thumbnailDelayMs", THUMBNAIL_DELAY_DEFAULT_MS))
+        return _clamp(val, 100, 2000)
+
+    def set_thumbnail_delay_ms(self, delay: int) -> None:
+        self._qs.setValue("performance/thumbnailDelayMs", _clamp(delay, 100, 2000))
 
     def theme_mode(self) -> str:
         """``light`` (the default), ``dark``, or ``system``."""
@@ -347,6 +531,31 @@ class AppSettings:
 
     def set_session_active_index(self, index: int) -> None:
         self._qs.setValue("session/activeIndex", index)
+
+
+def _clamp(val: int, low: int, high: int) -> int:
+    return max(low, min(high, val))
+
+
+def _color_text(color: QColor | None) -> str:
+    """``#AARRGGBB`` when the colour carries alpha, else ``#RRGGBB``."""
+    if color is None:
+        return ""
+    if color.alpha() < 255:
+        return color.name(QColor.NameFormat.HexArgb).upper()
+    return color.name(QColor.NameFormat.HexRgb).upper()
+
+
+def _color(val: object, default: str) -> QColor:
+    color = QColor(str(val)) if isinstance(val, str) and val else QColor()
+    return color if color.isValid() else QColor(default)
+
+
+def _optional_color(val: object) -> QColor | None:
+    if not isinstance(val, str) or not val:
+        return None
+    color = QColor(val)
+    return color if color.isValid() else None
 
 
 def _as_bool(val: object) -> bool:

@@ -15,6 +15,7 @@ class NumberedStepTool(BaseTool):
 
     def __init__(self) -> None:
         super().__init__()
+        self._creation_defaults = {"start_number": 1}
         self._next_number: int = 1
 
     @property
@@ -35,7 +36,7 @@ class NumberedStepTool(BaseTool):
 
     def activate(self, scene: object, selection_manager: object) -> None:
         super().activate(scene, selection_manager)  # type: ignore[arg-type]
-        self._next_number = 1
+        self._next_number = int(self._creation_defaults.get("start_number", 1))
 
     def mouse_press(self, event: QMouseEvent) -> bool:
         if self._scene is None or event.button() != Qt.MouseButton.LeftButton:

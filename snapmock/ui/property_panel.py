@@ -1201,6 +1201,10 @@ class PropertyPanel(QDockWidget):
         self._tool_manager = tm
         tm.tool_changed.connect(self._on_tool_changed)
 
+    def refresh_tool_defaults(self) -> None:
+        """Re-read the active tool's creation defaults (Preferences > Tools changed)."""
+        self._refresh_from_selection()
+
     def _on_tool_changed(self, tool_id: str) -> None:
         """Track the active tool and refresh the panel."""
         self._active_tool_id = tool_id

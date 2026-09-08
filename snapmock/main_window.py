@@ -12,6 +12,7 @@ from PyQt6.QtGui import (
     QAction,
     QActionGroup,
     QCloseEvent,
+    QColor,
     QDesktopServices,
     QKeyEvent,
     QKeySequence,
@@ -52,8 +53,6 @@ from snapmock.capture.models import (
 from snapmock.capture.tray import make_tray_icon
 from snapmock.config.constants import (
     APP_NAME,
-    DEFAULT_CANVAS_HEIGHT,
-    DEFAULT_CANVAS_WIDTH,
     DEFAULT_PANEL_WIDTH,
     DOCUMENTATION_URL,
     ISSUES_URL,
@@ -125,7 +124,6 @@ from snapmock.ui.tool_options_bar import ToolOptionsBar
 from snapmock.ui.toolbar import SnapToolBar
 from snapmock.ui.unmet_requirements import check_requirements, show_not_available
 
-MAX_RECENT_FILES = 10
 DELAY_CHOICES = (0, 3, 5, 10)
 MODE_LABELS = {
     CaptureMode.REGION: "Capture &Region",
@@ -153,6 +151,11 @@ def create_capture_manager(settings: AppSettings) -> CaptureManager:
 
     backend, hotkeys = select_backends()
     return CaptureManager(backend, hotkeys, settings)
+
+
+def _as_color(value: object) -> QColor:
+    """A QColor from a preference change value (QColor or colour text)."""
+    return QColor(value) if isinstance(value, QColor) else QColor(str(value))
 
 
 class MainWindow(QMainWindow):
@@ -208,7 +211,7 @@ class MainWindow(QMainWindow):
         # There is always at least one document open.
         self._documents = DocumentManager(self)
         self._wired_docs: set[str] = set()
-        first = Document(SnapScene(), parent=self)
+        first = Document(self._new_scene(), parent=self)
         self._documents.add(first)
 
         # The tool manager is shared and rebound to the active document.
@@ -236,6 +239,7 @@ class MainWindow(QMainWindow):
         self._property_panel = PropertyPanel(self._selection_manager, self._scene, self)
         self._property_panel.setObjectName("PropertyPanel")
         self._property_panel.set_tool_manager(self._tool_manager)
+        self._apply_tool_defaults()
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._property_panel)
 
         self._library_panel = LibraryPanel(self._library, self._settings, self)
@@ -1524,9 +1528,16 @@ class MainWindow(QMainWindow):
 
     # ---- file operations ----
 
+    def _new_scene(self) -> SnapScene:
+        """An empty scene at the default canvas size and colour (Preferences > General)."""
+        width, height = self._settings.default_canvas_size()
+        scene = SnapScene(width, height)
+        scene.set_background_color(self._settings.default_canvas_color())
+        return scene
+
     def _file_new(self) -> None:
         """Open a new, empty, unsaved document in a new tab."""
-        self._add_document(Document(SnapScene(), parent=self))
+        self._add_document(Document(self._new_scene(), parent=self))
 
     def _file_open(self) -> None:
         """Open an existing .smk or .snagx project in a new tab."""
@@ -1787,8 +1798,11 @@ class MainWindow(QMainWindow):
             self._snap_grid_action.blockSignals(False)
 
         if "autosave_interval" in changes:
+            # 0 means disabled (PRD 11.3); the timer keeps its last positive interval.
             minutes = _int(changes["autosave_interval"][1])
-            self._settings.set_autosave_interval_minutes(minutes)
+            self._settings.set_autosave_enabled(minutes > 0)
+            if minutes > 0:
+                self._settings.set_autosave_interval_minutes(minutes)
 
         if "autosave_enabled" in changes:
             enabled = bool(changes["autosave_enabled"][1])
@@ -1823,7 +1837,112 @@ class MainWindow(QMainWindow):
             self._settings.set_library_default_sort(sort_id)
             self._library_panel.set_sort_id(sort_id)
 
+        self._apply_general_preference_changes(changes)
+        self._apply_appearance_preference_changes(changes)
+        self._apply_tool_preference_changes(changes)
         self._apply_capture_preference_changes(changes)
+
+    def _apply_general_preference_changes(self, changes: dict[str, tuple[object, object]]) -> None:
+        """Preferences > General and Performance (General UI PRD 11.3)."""
+        s = self._settings
+        if "language" in changes:
+            s.set_language(str(changes["language"][1]))
+        if "recent_files_count" in changes:
+            s.set_recent_files_count(int(str(changes["recent_files_count"][1])))
+            s.set_recent_files(s.recent_files()[: s.recent_files_count()])
+            self._update_recent_files_menu()
+        if "default_canvas_size" in changes:
+            size = changes["default_canvas_size"][1]
+            if isinstance(size, tuple) and len(size) == 2:
+                s.set_default_canvas_size(int(size[0]), int(size[1]))
+        if "default_canvas_color" in changes:
+            s.set_default_canvas_color(_as_color(changes["default_canvas_color"][1]))
+        if "confirm_delete_layers" in changes:
+            s.set_confirm_delete_layers(bool(changes["confirm_delete_layers"][1]))
+        if "undo_limit" in changes:
+            s.set_undo_limit(int(str(changes["undo_limit"][1])))
+            for doc in self._documents.documents:
+                doc.scene.command_stack.set_limit(s.undo_limit())
+        if "thumbnail_delay_ms" in changes:
+            s.set_thumbnail_delay_ms(int(str(changes["thumbnail_delay_ms"][1])))
+
+    def _apply_appearance_preference_changes(
+        self, changes: dict[str, tuple[object, object]]
+    ) -> None:
+        """Preferences > Appearance and Canvas & Grid, applied live (PRD 11.3, 13.4)."""
+        s = self._settings
+        if "theme_mode" in changes:
+            self.set_theme_mode(ThemeMode.from_value(str(changes["theme_mode"][1])))
+        if "icon_size" in changes:
+            s.set_icon_size(int(str(changes["icon_size"][1])))
+            self._theme.set_icon_size(s.icon_size())
+        if "ui_font_size" in changes:
+            s.set_ui_font_size(str(changes["ui_font_size"][1]))
+            self._theme.set_ui_font_size(s.ui_font_size())
+        if "checkerboard_size" in changes:
+            s.set_checkerboard_size(int(str(changes["checkerboard_size"][1])))
+        if "checkerboard_colors" in changes:
+            colors = changes["checkerboard_colors"][1]
+            if isinstance(colors, tuple) and len(colors) == 2:
+                s.set_checkerboard_colors((_as_color(colors[0]), _as_color(colors[1])))
+            else:
+                s.set_checkerboard_colors(None)
+        if "pasteboard_color" in changes:
+            value = changes["pasteboard_color"][1]
+            s.set_pasteboard_color(_as_color(value) if value is not None else None)
+        if "grid_color" in changes:
+            value = changes["grid_color"][1]
+            s.set_grid_color(_as_color(value) if value is not None else None)
+        if "grid_opacity" in changes:
+            value = changes["grid_opacity"][1]
+            s.set_grid_opacity(int(str(value)) if value is not None else None)
+        if "snap_tolerance" in changes:
+            s.set_snap_tolerance(int(str(changes["snap_tolerance"][1])))
+        if "pixel_grid_zoom" in changes:
+            s.set_pixel_grid_zoom(int(str(changes["pixel_grid_zoom"][1])))
+        if "guide_color" in changes:
+            s.set_guide_color(_as_color(changes["guide_color"][1]))
+        if "guide_opacity" in changes:
+            s.set_guide_opacity(int(str(changes["guide_opacity"][1])))
+        view_keys = (
+            "checkerboard_size",
+            "checkerboard_colors",
+            "pasteboard_color",
+            "grid_color",
+            "grid_opacity",
+            "pixel_grid_zoom",
+        )
+        if any(key in changes for key in view_keys):
+            for doc in self._documents.documents:
+                self._apply_view_preferences(doc.view)
+
+    def _apply_tool_preference_changes(self, changes: dict[str, tuple[object, object]]) -> None:
+        """Preferences > Tools: the defaults every tool starts a new item with."""
+        s = self._settings
+        touched = False
+        if "default_stroke_color" in changes:
+            s.set_default_stroke_color(_as_color(changes["default_stroke_color"][1]))
+            touched = True
+        if "default_stroke_width" in changes:
+            s.set_default_stroke_width(float(str(changes["default_stroke_width"][1])))
+            touched = True
+        if "default_fill_color" in changes:
+            s.set_default_fill_color(_as_color(changes["default_fill_color"][1]))
+            touched = True
+        if "default_font_family" in changes:
+            s.set_default_font_family(str(changes["default_font_family"][1]))
+            touched = True
+        if "default_font_size" in changes:
+            s.set_default_font_size(int(str(changes["default_font_size"][1])))
+            touched = True
+        if "freehand_smoothing" in changes:
+            s.set_freehand_smoothing(int(str(changes["freehand_smoothing"][1])))
+            touched = True
+        if "numbered_step_start" in changes:
+            s.set_numbered_step_start(int(str(changes["numbered_step_start"][1])))
+            touched = True
+        if touched:
+            self._apply_tool_defaults()
 
     def _apply_capture_preference_changes(self, changes: dict[str, tuple[object, object]]) -> None:
         """Capture preferences (Screen Capture PRD 8.1) take effect immediately."""
@@ -1884,7 +2003,7 @@ class MainWindow(QMainWindow):
                 continue
             self._library.detach_document(doc)
             if self._documents.count == 1:
-                self._documents.add(Document(SnapScene(), parent=self))
+                self._documents.add(Document(self._new_scene(), parent=self))
                 self._configure_view(self._active_document.view)
                 self._wire_document(self._active_document)
             self._documents.remove(doc)
@@ -1892,8 +2011,9 @@ class MainWindow(QMainWindow):
             doc.dispose()
 
     def _library_new_canvas(self, folder: Path) -> None:
+        width, height = self._settings.default_canvas_size()
         path = self._library.create_blank(
-            DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT, folder=folder
+            width, height, folder=folder, color=self._settings.default_canvas_color()
         )
         self._open_project(path)
 
@@ -2519,7 +2639,7 @@ class MainWindow(QMainWindow):
             for i in self._scene.items()
             if isinstance(i, SnapGraphicsItem) and i.layer_id == active.layer_id
         ]
-        if items:
+        if items and self._settings.confirm_delete_layers():
             count = len(items)
             noun = "item" if count == 1 else "items"
             answer = QMessageBox.question(
@@ -2866,7 +2986,7 @@ class MainWindow(QMainWindow):
         if path_str in recent:
             recent.remove(path_str)
         recent.insert(0, path_str)
-        self._settings.set_recent_files(recent[:MAX_RECENT_FILES])
+        self._settings.set_recent_files(recent[: self._settings.recent_files_count()])
         self._update_recent_files_menu()
 
     def _update_recent_files_menu(self) -> None:
@@ -2917,7 +3037,7 @@ class MainWindow(QMainWindow):
     def _active_document(self) -> Document:
         doc = self._documents.active
         if doc is None:  # pragma: no cover - invariant: one document always open
-            doc = Document(SnapScene(), parent=self)
+            doc = Document(self._new_scene(), parent=self)
             self._documents.add(doc)
         return doc
 
@@ -2948,12 +3068,46 @@ class MainWindow(QMainWindow):
         view.set_grid_visible(self._settings.grid_visible())
         view.set_grid_size(self._settings.grid_size())
         view.set_rulers_visible(self._settings.rulers_visible())
+        self._apply_view_preferences(view)
+
+    def _apply_view_preferences(self, view: SnapView) -> None:
+        """Canvas appearance from Preferences > General, Appearance, Canvas & Grid."""
+        s = self._settings
+        view.set_pasteboard_color(s.pasteboard_color())
+        view.set_checkerboard(s.checkerboard_size(), s.checkerboard_colors())
+        view.set_grid_style(s.grid_color(), s.grid_opacity())
+        view.set_pixel_grid_threshold(s.pixel_grid_zoom())
+
+    def _apply_tool_defaults(self) -> None:
+        """Push Preferences > Tools into every tool's creation defaults (PRD 11.3)."""
+        s = self._settings
+        for tool_id in self._tool_manager.tool_ids:
+            tool = self._tool_manager.tool(tool_id)
+            if tool is None:
+                continue
+            defaults = tool.creation_defaults
+            if "stroke_color" in defaults:
+                defaults["stroke_color"] = QColor(s.default_stroke_color())
+            if "stroke_width" in defaults:
+                defaults["stroke_width"] = s.default_stroke_width()
+            if "fill_color" in defaults:
+                defaults["fill_color"] = QColor(s.default_fill_color())
+            if "font_family" in defaults:
+                defaults["font_family"] = s.default_font_family()
+            if "font_size" in defaults:
+                defaults["font_size"] = s.default_font_size()
+            if "smoothing" in defaults:
+                defaults["smoothing"] = s.freehand_smoothing()
+            if "start_number" in defaults:
+                defaults["start_number"] = s.numbered_step_start()
+        self._property_panel.refresh_tool_defaults()
 
     def _wire_document(self, doc: Document) -> None:
         """Connect a document's signals to the window (once per document)."""
         if doc.tab_id in self._wired_docs:
             return
         self._wired_docs.add(doc.tab_id)
+        doc.scene.command_stack.set_limit(self._settings.undo_limit())
         doc.scene.command_stack.stack_changed.connect(self._on_stack_changed)
         lm = doc.scene.layer_manager
         lm.layer_lock_changed.connect(self._on_layer_lock_changed)
@@ -3019,7 +3173,7 @@ class MainWindow(QMainWindow):
         self._library.detach_document(doc)
         if self._documents.count == 1:
             # Keep one document open at all times
-            self._documents.add(Document(SnapScene(), parent=self))
+            self._documents.add(Document(self._new_scene(), parent=self))
             self._configure_view(self._active_document.view)
             self._wire_document(self._active_document)
         self._documents.remove(doc)

@@ -83,6 +83,20 @@ class CommandStack(QObject):
 
     # --- public API ---
 
+    @property
+    def limit(self) -> int:
+        return self._limit
+
+    def set_limit(self, limit: int) -> None:
+        """Change the history limit (Preferences > Performance); trims the oldest entries."""
+        self._limit = max(1, limit)
+        excess = len(self._commands) - self._limit
+        if excess > 0:
+            del self._commands[:excess]
+            self._index = max(0, self._index - excess)
+            self._clean_index = self._clean_index - excess
+            self.stack_changed.emit()
+
     def push(self, command: BaseCommand) -> None:
         """Execute *command* and push it onto the stack.
 

@@ -45,7 +45,8 @@ def test_capture_group_reads_and_reports_changes(qtbot: QtBot, qapp: QApplicatio
     dlg._capture_cursor_cb.setChecked(True)  # noqa: SLF001
     dlg._capture_scope_combo.setCurrentIndex(1)  # noqa: SLF001
     dlg._capture_tray_cb.setChecked(False)  # noqa: SLF001
-    assert dlg._capture_keep_running_cb.isEnabled() is False  # noqa: SLF001
+    # Never disabled (General UI PRD 1.3): the dependent row stays editable.
+    assert dlg._capture_keep_running_cb.isEnabled() is True  # noqa: SLF001
     changes = dlg.get_changes()
     assert changes["capture_default_mode"] == ("region", "full_screen")
     assert changes["capture_delay_seconds"] == (0, 7)

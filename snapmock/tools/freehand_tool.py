@@ -26,6 +26,8 @@ class FreehandTool(BaseTool):
             "fill_color": QColor(DEFAULT_FILL_COLOR),
             "stroke_width": DEFAULT_STROKE_WIDTH,
             "opacity_pct": 100.0,
+            # Read by the Tool Options Bar's Smoothing slider (General UI PRD 5.2)
+            "smoothing": 50,
         }
 
     @property

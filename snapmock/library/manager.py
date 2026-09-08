@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
-from PyQt6.QtGui import QImage, QPixmap
+from PyQt6.QtGui import QColor, QImage, QPixmap
 from send2trash import send2trash
 
 from snapmock.config.constants import (
@@ -203,9 +203,12 @@ class LibraryManager(QObject):
         *,
         folder: Path | None = None,
         when: datetime | None = None,
+        color: QColor | None = None,
     ) -> Path:
         """Create a new empty library file (source ``new``)."""
         scene = SnapScene(width=width, height=height)
+        if color is not None:
+            scene.set_background_color(color)
         return self.create_from_scene(scene, source="new", folder=folder, when=when)
 
     def create_from_scene(
