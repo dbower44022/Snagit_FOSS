@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import ctypes
 import logging
+import os
 import sys
 from collections.abc import Callable
 from ctypes import POINTER, Structure, byref, c_int, c_size_t, c_ssize_t, c_ubyte, c_void_p
@@ -33,6 +34,20 @@ from snapmock.capture.backend import (
 from snapmock.capture.models import BackendCapabilities, HotkeyBinding
 
 log = logging.getLogger("snapmock.capture")
+
+if sys.platform == "win32":
+    from ctypes import WinDLL, get_last_error, set_last_error
+else:
+    # Stand-ins so the module type-checks on Linux and macOS, where the ctypes
+    # stubs do not define these. Nothing here runs off Windows.
+    WinDLL = ctypes.CDLL
+
+    def get_last_error() -> int:
+        return 0
+
+    def set_last_error(value: int) -> int:
+        return 0
+
 
 # --- Win32 scalar types (see the module docstring) ---
 
@@ -150,11 +165,13 @@ class Win32:
     """
 
     def __init__(self) -> None:
-        if sys.platform != "win32":
+        # os.name rather than sys.platform: mypy treats a sys.platform test as
+        # a constant and would leave the attributes below untyped off Windows.
+        if os.name != "nt":
             raise OSError("not a Windows session")
-        self.user32 = ctypes.WinDLL("user32", use_last_error=True)
-        self.gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
-        self.dwmapi = ctypes.WinDLL("dwmapi", use_last_error=True)
+        self.user32 = WinDLL("user32", use_last_error=True)
+        self.gdi32 = WinDLL("gdi32", use_last_error=True)
+        self.dwmapi = WinDLL("dwmapi", use_last_error=True)
         self._bind()
 
     def _bind(self) -> None:
@@ -403,7 +420,7 @@ def disable_window_transitions(hwnd: int) -> bool:
     if hwnd in _TRANSITIONS_DISABLED:
         return True
     try:
-        dwmapi = ctypes.WinDLL("dwmapi")
+        dwmapi = WinDLL("dwmapi")
         enabled = BOOL(1)
         status = dwmapi.DwmSetWindowAttribute(
             HANDLE(hwnd),
@@ -631,7 +648,7 @@ class WindowsHotkeyBackend(HotkeyBackend):
             None,
         )
         if not hwnd:
-            log.warning("Could not create the hotkey window: error %d", ctypes.get_last_error())
+            log.warning("Could not create the hotkey window: error %d", get_last_error())
             return None
         self._hwnd = int(hwnd)
         app = QGuiApplication.instance()
@@ -659,13 +676,13 @@ class WindowsHotkeyBackend(HotkeyBackend):
             binding.failure_reason = KEY_IN_USE
             return False
         hotkey_id = self._next_id
-        ctypes.set_last_error(0)
+        set_last_error(0)
         # MOD_NOREPEAT: holding the key fires once, not once per repeat.
         registered = self._win32.user32.RegisterHotKey(
             HANDLE(hwnd), hotkey_id, UINT(modifiers | MOD_NOREPEAT), UINT(key)
         )
         if not registered:
-            error = ctypes.get_last_error()
+            error = get_last_error()
             binding.registered = False
             binding.failure_reason = (
                 KEY_IN_USE if error == ERROR_HOTKEY_ALREADY_REGISTERED else UNMAPPABLE_KEY
