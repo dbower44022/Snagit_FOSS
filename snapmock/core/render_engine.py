@@ -55,10 +55,15 @@ class RenderEngine:
         self,
         rect: QRectF,
         background: QColor | None = None,
+        scale: float = 1.0,
     ) -> QImage:
-        """Render a specific rectangular region of the scene to a QImage."""
-        w = max(1, int(rect.width()))
-        h = max(1, int(rect.height()))
+        """Render a specific rectangular region of the scene to a QImage.
+
+        *scale* multiplies the output size: 2.0 renders *rect* at twice its
+        scene dimensions (an export at 144 DPI when the scene is 72 DPI).
+        """
+        w = max(1, round(rect.width() * scale))
+        h = max(1, round(rect.height() * scale))
 
         image = QImage(w, h, QImage.Format.Format_ARGB32_Premultiplied)
         if background is not None:

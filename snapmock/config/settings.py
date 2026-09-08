@@ -1,5 +1,6 @@
 """Persistent application settings backed by QSettings."""
 
+import json
 from pathlib import Path
 
 from PyQt6.QtCore import QSettings
@@ -104,6 +105,37 @@ class AppSettings:
 
     def set_last_tool(self, tool_id: str) -> None:
         self._qs.setValue("session/lastTool", tool_id)
+
+    # --- export (General UI PRD 11.2, 15.4: last-used settings and directory per format) ---
+
+    def export_settings(self, fmt: str) -> dict[str, object] | None:
+        """The last-used Export dialog options for *fmt*, or None before the first export."""
+        raw = self._qs.value(f"export/{fmt}/settings", "")
+        if not isinstance(raw, str) or not raw:
+            return None
+        try:
+            data = json.loads(raw)
+        except ValueError:
+            return None
+        return data if isinstance(data, dict) else None
+
+    def set_export_settings(self, fmt: str, data: dict[str, object]) -> None:
+        self._qs.setValue(f"export/{fmt}/settings", json.dumps(data))
+
+    def export_last_directory(self, fmt: str) -> Path | None:
+        val = self._qs.value(f"export/{fmt}/lastDirectory", "")
+        if isinstance(val, str) and val:
+            return Path(val)
+        return None
+
+    def set_export_last_directory(self, fmt: str, path: Path) -> None:
+        self._qs.setValue(f"export/{fmt}/lastDirectory", str(path))
+
+    def export_last_format(self) -> str:
+        return str(self._qs.value("export/lastFormat", "png"))
+
+    def set_export_last_format(self, fmt: str) -> None:
+        self._qs.setValue("export/lastFormat", fmt)
 
     # --- autosave ---
 
