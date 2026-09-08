@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import Qt, QTimer, QUrl
+from PyQt6.QtCore import QRectF, Qt, QTimer, QUrl
 from PyQt6.QtGui import (
     QAction,
     QActionGroup,
@@ -2157,13 +2158,8 @@ class MainWindow(QMainWindow):
             self._scene.command_stack.push(cmd)
 
     def _image_crop_to_canvas(self) -> None:
-        """Remove items outside the canvas bounds."""
-        from snapmock.commands.remove_item import RemoveItemCommand
-
-        for scene_item in list(self._scene.items()):
-            if isinstance(scene_item, SnapGraphicsItem):
-                if not scene_item.sceneBoundingRect().intersects(self._scene.canvas_rect):
-                    self._scene.command_stack.push(RemoveItemCommand(self._scene, scene_item))
+        """Activate the crop tool to resize the canvas (General UI PRD 3.5)."""
+        self._tool_manager.activate("crop")
 
     def _image_rotate_cw(self) -> None:
         from snapmock.commands.canvas_transform_commands import RotateCanvasCommand
@@ -2189,8 +2185,34 @@ class MainWindow(QMainWindow):
         cmd = FlipCanvasCommand(self._scene, horizontal=False)
         self._scene.command_stack.push(cmd)
 
+    def _visible_content_bounds(self) -> QRectF:
+        """Union of the bounds of every item on a visible layer, clipped to the canvas."""
+        lm = self._scene.layer_manager
+        visible = {layer.layer_id for layer in lm.layers if layer.visible}
+        bounds = QRectF()
+        for item in self._scene.items():
+            if isinstance(item, SnapGraphicsItem) and item.layer_id in visible:
+                bounds = bounds.united(item.sceneBoundingRect())
+        return bounds.intersected(self._scene.canvas_rect)
+
     def _image_auto_trim(self) -> None:
-        QMessageBox.information(self, "Auto-Trim", "Auto-trim is coming soon.")
+        """Crop the canvas to the bounding box of all visible content (PRD 3.5)."""
+        from snapmock.commands.raster_commands import CropCanvasCommand
+
+        bounds = self._visible_content_bounds()
+        if not self._require("Auto-Trim", (not bounds.isEmpty(), "visible content on the canvas")):
+            return
+        rect = QRectF(
+            math.floor(bounds.left()),
+            math.floor(bounds.top()),
+            math.ceil(bounds.right()) - math.floor(bounds.left()),
+            math.ceil(bounds.bottom()) - math.floor(bounds.top()),
+        )
+        if not self._require(
+            "Auto-Trim", (rect != self._scene.canvas_rect, "empty borders to remove")
+        ):
+            return
+        self._scene.command_stack.push(CropCanvasCommand(self._scene, rect))
 
     # ---- layer operations ----
 
@@ -2207,11 +2229,10 @@ class MainWindow(QMainWindow):
         active = self._require_active_layer("Duplicate Layer")
         if active is None:
             return
-        from snapmock.commands.layer_commands import AddLayerCommand
+        from snapmock.commands.layer_commands import DuplicateLayerCommand
 
-        idx = lm.index_of(active.layer_id) + 1
-        cmd = AddLayerCommand(lm, f"{active.name} copy", idx)
-        self._scene.command_stack.push(cmd)
+        del lm
+        self._scene.command_stack.push(DuplicateLayerCommand(self._scene, active.layer_id))
 
     def _layer_delete(self) -> None:
         lm = self._scene.layer_manager
@@ -2224,9 +2245,30 @@ class MainWindow(QMainWindow):
             return
         assert active is not None
         from snapmock.commands.layer_commands import RemoveLayerCommand
+        from snapmock.commands.macro_command import MacroCommand
+        from snapmock.commands.remove_item import RemoveItemCommand
+        from snapmock.core.command_stack import BaseCommand
 
-        cmd = RemoveLayerCommand(lm, active.layer_id)
-        self._scene.command_stack.push(cmd)
+        items = [
+            i
+            for i in self._scene.items()
+            if isinstance(i, SnapGraphicsItem) and i.layer_id == active.layer_id
+        ]
+        if items:
+            count = len(items)
+            noun = "item" if count == 1 else "items"
+            answer = QMessageBox.question(
+                self,
+                "Delete Layer",
+                f'Delete layer "{active.name}" and the {count} {noun} on it?',
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if answer != QMessageBox.StandardButton.Yes:
+                return
+        cmds: list[BaseCommand] = [RemoveItemCommand(self._scene, i) for i in items]
+        cmds.append(RemoveLayerCommand(lm, active.layer_id))
+        self._scene.command_stack.push(MacroCommand(cmds, f'Delete layer "{active.name}"'))
 
     _MERGE_DEFERRAL = "Layer merging is scheduled for the raster operations follow-up."
 

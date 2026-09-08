@@ -6,9 +6,11 @@ from typing import TYPE_CHECKING
 
 from snapmock.core.command_stack import BaseCommand
 from snapmock.core.layer import Layer
+from snapmock.items.base_item import SnapGraphicsItem
 
 if TYPE_CHECKING:
     from snapmock.core.layer_manager import LayerManager
+    from snapmock.core.scene import SnapScene
 
 
 class AddLayerCommand(BaseCommand):
@@ -33,6 +35,51 @@ class AddLayerCommand(BaseCommand):
     @property
     def description(self) -> str:
         return f'Add layer "{self._name}"'
+
+
+class DuplicateLayerCommand(BaseCommand):
+    """Duplicate a layer and every item on it, above the original (General UI PRD 3.4)."""
+
+    def __init__(self, scene: SnapScene, layer_id: str) -> None:
+        self._scene = scene
+        self._mgr = scene.layer_manager
+        self._source_id = layer_id
+        self._layer: Layer | None = None
+        self._clones: list[SnapGraphicsItem] = []
+
+    def redo(self) -> None:
+        source = self._mgr.layer_by_id(self._source_id)
+        if source is None:
+            return
+        if self._layer is None:
+            self._layer = source.clone()
+            self._layer.item_ids = []
+            self._clones = [
+                item.clone()
+                for item in self._scene.items()
+                if isinstance(item, SnapGraphicsItem) and item.layer_id == self._source_id
+            ]
+        self._mgr.insert_layer(self._layer, self._mgr.index_of(self._source_id) + 1)
+        for clone in self._clones:
+            clone.layer_id = self._layer.layer_id
+            self._scene.addItem(clone)
+            if clone.item_id not in self._layer.item_ids:
+                self._layer.item_ids.append(clone.item_id)
+        self._mgr.set_active(self._layer.layer_id)
+
+    def undo(self) -> None:
+        if self._layer is None:
+            return
+        for clone in self._clones:
+            if clone.scene() is self._scene:
+                self._scene.removeItem(clone)
+        self._layer.item_ids.clear()
+        self._mgr.remove_layer(self._layer.layer_id)
+        self._mgr.set_active(self._source_id)
+
+    @property
+    def description(self) -> str:
+        return "Duplicate layer"
 
 
 class RemoveLayerCommand(BaseCommand):
