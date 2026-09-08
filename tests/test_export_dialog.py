@@ -270,3 +270,48 @@ def test_pdf_page_size_round_trips_through_the_dialog(dialog: ExportDialog) -> N
     index = dialog._pdf_page_size.findData(PdfPageSize.LETTER.value)  # noqa: SLF001
     dialog._pdf_page_size.setCurrentIndex(index)  # noqa: SLF001
     assert dialog.settings().pdf_page_size is PdfPageSize.LETTER
+
+
+# --- preview and size estimate (PRD 11.2, last step of Phase 2) ---
+
+
+def test_preview_and_size_estimate_follow_the_settings(dialog: ExportDialog) -> None:
+    dialog._refresh_preview()  # noqa: SLF001
+    pixmap = dialog.preview_pixmap()
+    assert pixmap is not None and not pixmap.isNull()
+    assert pixmap.width() <= export_dialog_module.PREVIEW_SIZE
+    assert pixmap.height() <= export_dialog_module.PREVIEW_SIZE
+    # 400 x 300 canvas keeps its aspect ratio in the thumbnail.
+    assert pixmap.width() == export_dialog_module.PREVIEW_SIZE
+    assert pixmap.height() == pytest.approx(export_dialog_module.PREVIEW_SIZE * 3 / 4, abs=1)
+    png_text = dialog.size_estimate_text()
+    assert png_text.startswith("≈ ") and png_text.endswith("400 × 300 px")
+
+    dialog._png_dpi.set_value(150)  # noqa: SLF001
+    dialog._refresh_preview()  # noqa: SLF001
+    assert dialog.size_estimate_text().endswith("833 × 625 px")
+
+    _choose(dialog, ExportFormat.SVG)
+    dialog._refresh_preview()  # noqa: SLF001
+    assert "px" not in dialog.size_estimate_text()
+    assert dialog.size_estimate_text().startswith("≈ ")
+
+
+def test_preview_is_debounced(qtbot: QtBot, dialog: ExportDialog) -> None:
+    timer = dialog._preview_timer  # noqa: SLF001
+    dialog._size_label.setText("stale")  # noqa: SLF001
+    dialog._png_transparency.toggle()  # noqa: SLF001
+    assert timer.isActive()
+    assert dialog.size_estimate_text() == "stale"
+    qtbot.waitUntil(lambda: dialog.size_estimate_text() != "stale", timeout=2000)
+    assert not timer.isActive()
+
+
+def test_preview_region_follows_the_radio(dialog: ExportDialog) -> None:
+    dialog._region_buttons[ExportRegion.VISIBLE].click()  # noqa: SLF001
+    dialog._refresh_preview()  # noqa: SLF001
+    assert dialog.size_estimate_text().endswith("200 × 150 px")
+    pixmap = dialog.preview_pixmap()
+    assert pixmap is not None
+    assert pixmap.width() == export_dialog_module.PREVIEW_SIZE
+    assert pixmap.height() == pytest.approx(export_dialog_module.PREVIEW_SIZE * 3 / 4, abs=1)
