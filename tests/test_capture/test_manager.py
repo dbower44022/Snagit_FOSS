@@ -7,7 +7,7 @@ from collections.abc import Callable
 import pytest
 from PyQt6.QtCore import QObject, QPoint, QRect, QSize, pyqtSignal
 from PyQt6.QtGui import QColor, QImage, QKeySequence
-from PyQt6.QtWidgets import QApplication, QDialog, QMainWindow
+from PyQt6.QtWidgets import QApplication, QDialog, QMainWindow, QWidget
 from pytestqt.qtbot import QtBot
 
 from snapmock.capture.backend import FakeCaptureBackend, FakeHotkeyBackend, NullCaptureBackend
@@ -414,6 +414,32 @@ def test_window_hider_skips_capture_ui_and_restores_once(qtbot: QtBot) -> None:
     hider.restore()
     assert window.isVisible() and not hider.is_hidden
     hider.restore()  # idempotent
+
+
+def test_hide_all_makes_hiding_immediate_for_every_window(
+    qtbot: QtBot, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Each window is handed to the platform before it is hidden (PRD 3.6).
+
+    Windows fades a window out and keeps compositing it, so a grab taken
+    straight after ``hide()`` catches SnapMock semi-transparent over the
+    capture. The hider disables that animation first.
+    """
+    first = QMainWindow()
+    qtbot.addWidget(first)
+    first.show()
+    second = QMainWindow()
+    qtbot.addWidget(second)
+    second.show()
+    asked: list[QWidget] = []
+    monkeypatch.setattr(
+        WindowHider, "_make_hiding_immediate", staticmethod(lambda w: asked.append(w))
+    )
+    hider = WindowHider()
+    hider.hide_all()
+    assert set(asked) == {first, second}
+    assert not first.isVisible() and not second.isVisible()
+    hider.restore()
 
 
 # --- hotkeys ---

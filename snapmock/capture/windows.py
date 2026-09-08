@@ -49,6 +49,7 @@ LPARAM = c_ssize_t
 
 CURSOR_SHOWING = 0x0001
 DWMWA_EXTENDED_FRAME_BOUNDS = 9
+DWMWA_TRANSITIONS_FORCEDISABLED = 3
 DIB_RGB_COLORS = 0
 BI_RGB = 0
 WM_HOTKEY = 0x0312
@@ -207,6 +208,8 @@ class Win32:
         g.DeleteObject.restype = BOOL
         d.DwmGetWindowAttribute.argtypes = [HANDLE, DWORD, c_void_p, DWORD]
         d.DwmGetWindowAttribute.restype = ctypes.c_long
+        d.DwmSetWindowAttribute.argtypes = [HANDLE, DWORD, c_void_p, DWORD]
+        d.DwmSetWindowAttribute.restype = ctypes.c_long
 
     # --- DPI (PRD 6.6) ---
 
@@ -379,6 +382,43 @@ def _apply_and_mask(image: QImage, mask: bytes) -> None:
         for x in range(image.width()):
             opaque = mask[row + x * 4] == 0  # black in the AND mask means draw
             image.setPixel(x, y, (image.pixel(x, y) & 0x00FFFFFF) | (0xFF000000 if opaque else 0))
+
+
+#: Windows whose close animation has already been turned off.
+_TRANSITIONS_DISABLED: set[int] = set()
+
+
+def disable_window_transitions(hwnd: int) -> bool:
+    """Turn off the DWM open and close animation for *hwnd* (PRD 3.6).
+
+    Windows fades a window out over roughly 150 ms after ``hide()``, and DWM
+    keeps compositing it for the whole fade. ``QWindow.isExposed()`` goes false
+    about 80 ms in, while the window is still almost fully on screen, so a grab
+    taken once it reports unexposed catches the window half faded and the
+    capture shows a ghost of SnapMock. With transitions disabled the window is
+    gone in the frame after ``hide()``.
+    """
+    if sys.platform != "win32":
+        return False
+    if hwnd in _TRANSITIONS_DISABLED:
+        return True
+    try:
+        dwmapi = ctypes.WinDLL("dwmapi")
+        enabled = BOOL(1)
+        status = dwmapi.DwmSetWindowAttribute(
+            HANDLE(hwnd),
+            DWORD(DWMWA_TRANSITIONS_FORCEDISABLED),
+            byref(enabled),
+            DWORD(ctypes.sizeof(enabled)),
+        )
+    except OSError as e:  # pragma: no cover - dwmapi is present on every supported Windows
+        log.info("Could not disable window transitions: %s", e)
+        return False
+    if status != 0:
+        log.info("DwmSetWindowAttribute refused for %d (0x%08X)", hwnd, status & 0xFFFFFFFF)
+        return False
+    _TRANSITIONS_DISABLED.add(hwnd)
+    return True
 
 
 # --- Qt key sequences to Windows virtual keys ---

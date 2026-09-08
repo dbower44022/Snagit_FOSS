@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 
 from PyQt6.QtCore import QRect, Qt
@@ -38,6 +39,23 @@ class WindowHider:
             return False
         return True
 
+    @staticmethod
+    def _make_hiding_immediate(widget: QWidget) -> None:
+        """Stop the platform animating *widget* away, where it would.
+
+        Windows fades a window out and keeps compositing it for the whole
+        fade, so a grab taken right after ``hide()`` catches SnapMock as a
+        semi-transparent ghost over the capture. Nothing to do elsewhere.
+        """
+        if sys.platform != "win32":
+            return
+        handle = widget.windowHandle()
+        if handle is None:
+            return
+        from snapmock.capture.windows import disable_window_transitions
+
+        disable_window_transitions(int(handle.winId()))
+
     def hide_all(self) -> None:
         """Record geometry and state of every visible window, then hide them."""
         if self._recorded:
@@ -50,6 +68,7 @@ class WindowHider:
             )
             if isinstance(widget, QMainWindow) and self._main is None:
                 self._main = widget
+            self._make_hiding_immediate(widget)
             widget.hide()
 
     def any_exposed(self) -> bool:

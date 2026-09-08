@@ -220,6 +220,38 @@ def test_live_own_window_is_not_reported_as_the_active_window(
 
 
 @live
+def test_live_disable_window_transitions(qapp: QApplication, win32: windows.Win32) -> None:
+    """The DWM close animation can be turned off, and asking twice is cheap.
+
+    Without this the window is still being composited when the grab happens
+    and SnapMock appears as a ghost over the capture (PRD 3.6).
+    """
+    hwnd = win32.user32.CreateWindowExW(
+        0,
+        ctypes.c_wchar_p("STATIC"),
+        ctypes.c_wchar_p("SnapMock Transition Test"),
+        0,
+        10,
+        10,
+        200,
+        150,
+        None,
+        None,
+        None,
+        None,
+    )
+    assert hwnd
+    try:
+        handle = int(hwnd)
+        assert windows.disable_window_transitions(handle) is True
+        assert handle in windows._TRANSITIONS_DISABLED  # noqa: SLF001
+        assert windows.disable_window_transitions(handle) is True  # cached, no second call
+    finally:
+        windows._TRANSITIONS_DISABLED.discard(int(hwnd))  # noqa: SLF001
+        win32.user32.DestroyWindow(windows.HANDLE(hwnd))
+
+
+@live
 def test_live_duplicate_key_is_refused(
     qapp: QApplication, hotkeys: windows.WindowsHotkeyBackend
 ) -> None:
