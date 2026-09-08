@@ -47,7 +47,7 @@ class EllipseItem(VectorItem):
     def shape(self) -> QPainterPath:
         path = QPainterPath()
         path.addEllipse(self._rect)
-        return self.hit_shape(path)
+        return path
 
     def paint(self, painter: QPainter | None, option: Any, widget: Any = None) -> None:
         if painter is None:

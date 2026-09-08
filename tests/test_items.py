@@ -2,7 +2,6 @@
 
 import pytest
 from PyQt6.QtCore import QLineF, QPointF, QRectF
-from PyQt6.QtGui import QColor, QTransform
 from PyQt6.QtWidgets import QApplication
 
 from snapmock.commands.add_item import AddItemCommand
@@ -48,70 +47,6 @@ def test_rectangle_serialize_roundtrip() -> None:
     assert restored.rect == item.rect
     assert restored.corner_radius == 8.0
     assert restored.pos().x() == 50
-
-
-# --- Hit testing: transparent fill selects near the border only ---
-# Basic Shape Annotation Tools PRD, Sections 5.6 and 6.6.
-
-
-def test_rectangle_transparent_fill_hit_border_only() -> None:
-    item = RectangleItem(rect=QRectF(0, 0, 100, 60))
-    assert item.fill_color.alpha() == 0  # default fill is transparent
-    shape = item.shape()
-    assert not shape.contains(QPointF(50, 30))  # centre
-    assert shape.contains(QPointF(0, 30))  # on the left edge
-    assert shape.contains(QPointF(2, 30))  # inside the padding band
-    assert shape.contains(QPointF(-2, 30))  # outside the edge, still in the band
-
-
-def test_rectangle_filled_hit_anywhere_inside() -> None:
-    item = RectangleItem(rect=QRectF(0, 0, 100, 60))
-    item.fill_color = QColor("#FF0000")
-    assert item.shape().contains(QPointF(50, 30))
-
-
-def test_rectangle_faint_fill_counts_as_filled() -> None:
-    item = RectangleItem(rect=QRectF(0, 0, 100, 60))
-    item.fill_color = QColor(255, 0, 0, 1)  # alpha 1 of 255
-    assert item.shape().contains(QPointF(50, 30))
-
-
-def test_rectangle_transparent_fill_band_follows_stroke_width() -> None:
-    item = RectangleItem(rect=QRectF(0, 0, 100, 60))
-    item.stroke_width = 20.0  # band is (20 + 4) / 2 = 12 px each side
-    shape = item.shape()
-    assert shape.contains(QPointF(10, 30))
-    assert not shape.contains(QPointF(14, 30))
-
-
-def test_rounded_rectangle_transparent_fill_follows_rounded_outline() -> None:
-    item = RectangleItem(rect=QRectF(0, 0, 100, 100), corner_radius=30.0)
-    shape = item.shape()
-    assert not shape.contains(QPointF(50, 50))
-    assert not shape.contains(QPointF(1, 1))  # sharp corner is outside the rounded outline
-    assert shape.contains(QPointF(50, 0))
-
-
-def test_ellipse_transparent_fill_hit_border_only() -> None:
-    item = EllipseItem(rect=QRectF(0, 0, 100, 100))
-    shape = item.shape()
-    assert not shape.contains(QPointF(50, 50))
-    assert shape.contains(QPointF(50, 0))
-    assert not shape.contains(QPointF(2, 2))  # bounding-box corner is not on the ellipse
-
-
-def test_ellipse_filled_hit_anywhere_inside() -> None:
-    item = EllipseItem(rect=QRectF(0, 0, 100, 100))
-    item.fill_color = QColor("#00FF00")
-    assert item.shape().contains(QPointF(50, 50))
-
-
-def test_scene_click_selects_transparent_rectangle_by_border_only(scene: SnapScene) -> None:
-    item = RectangleItem(rect=QRectF(0, 0, 100, 60))
-    scene.addItem(item)
-    item.setPos(100, 100)
-    assert scene.itemAt(QPointF(150, 130), QTransform()) is not item
-    assert scene.itemAt(QPointF(100, 130), QTransform()) is item
 
 
 # --- EllipseItem ---

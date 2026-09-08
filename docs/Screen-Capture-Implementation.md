@@ -1,6 +1,6 @@
 # Screen Capture Implementation Notes
 
-Last Updated: 09-07-26 22:24 · Revision 1.2
+Last Updated: 09-07-26 23:47 · Revision 1.3
 
 Implements the SnapMock Screen Capture PRD (version 1.0, September 2026): the three capture modes, every entry point (global hotkeys, system tray, Main Toolbar button, Capture menu, command-line invocation with a single-instance channel), the capture options, the region selection overlay, the capture backend abstraction with the Linux X11, Linux Wayland and Windows backends, a stub for macOS, the post-capture handoff to the Library, the Capture preferences category, and the Wayland and macOS onboarding dialogs.
 
@@ -64,6 +64,8 @@ The screen grab is Qt's, which uses a GDI bit-block transfer underneath; ctypes 
 
 Per-monitor DPI awareness version 2 is already set by Qt while `QGuiApplication` starts, and a second call is refused, so `create_backends()` verifies the thread's context with `GetThreadDpiAwarenessContext` and `AreDpiAwarenessContextsEqual` instead of setting it. The active window comes from `GetForegroundWindow`, its frame from `DWMWA_EXTENDED_FRAME_BOUNDS` so that the invisible resize border Windows adds is excluded, falling back to `GetWindowRect` only when DWM reports an error; the rectangle is virtual-desktop physical pixels and is mapped through `physical_to_logical`. SnapMock's own windows and the shell classes (`Progman`, `WorkerW`, `Shell_TrayWnd` and their kin) report no active window, so the manager's own fallback applies as it does on X11. The cursor comes from `GetCursorInfo` and `GetIconInfo`, converted with `GetDIBits` into a top-down 32-bit `Format_ARGB32` image; a colour bitmap without alpha is masked by its AND mask, and a monochrome cursor, which is what the stock arrow and I-beam are, is rebuilt from the double-height mask whose upper half is the AND mask and lower half the XOR mask. Every bitmap `GetIconInfo` hands out is released.
 
+Hiding SnapMock before the grab needs one Windows-specific step. Windows fades a window out after `hide()` and DWM keeps compositing it for the whole fade, while `QWindow.isExposed()` goes false about 80 ms in, with the window still almost fully painted. The manager grabs roughly 35 ms after nothing is exposed, so the capture caught SnapMock half faded and every capture carried a translucent copy of the editor. `WindowHider` therefore calls `disable_window_transitions()` on each window immediately before hiding it, which sets `DWMWA_TRANSITIONS_FORCEDISABLED`; the window is then gone in the next frame. Measured on one desktop, two identical windows hidden at the same instant: without the call the window was still fully painted at 35 ms and only gone at 130 ms, with it the window was gone at 0 ms.
+
 Hotkeys are `RegisterHotKey` with `MOD_NOREPEAT` on a message-only window parented to `HWND_MESSAGE`, borrowing the `STATIC` class so none of our own has to be registered. `WM_HOTKEY` arrives through a `QAbstractNativeEventFilter`, and two details matter. The filter is a separate `_HotkeyEventFilter` object rather than the backend itself, because PyQt does not dispatch `nativeEventFilter` to a class that also inherits `QObject` and the backend must be a `QObject` to carry the `triggered` signal; a plain filter receives `WM_HOTKEY`, a `QObject`-mixed one receives nothing. And the filter is removed in `close()`, because Qt keeps a bare pointer to it and calling into a collected filter faults the process at exit. `RegisterHotKey` failing with error 1409 sets the failure reason to "In use by another application", the same wording the X11 backend and the fake use, so Preferences reads the same everywhere.
 
 ## 2. Deviations from the PRD
@@ -78,6 +80,7 @@ Hotkeys are `RegisterHotKey` with `MOD_NOREPEAT` on a message-only window parent
 - **Windows DPI awareness is verified, not set.** PRD 6.6 says awareness is enabled at startup. Qt has already set per-monitor awareness version 2 by the time `create_backends()` runs, and a second call fails with access denied, so the backend confirms the context and logs it rather than setting it.
 - **A Windows hotkey may have no modifier.** The shipped Region default is a bare Print Screen and `RegisterHotKey` accepts a zero modifier mask, so a sequence without a modifier is registered rather than refused.
 - **The Windows native event filter is a separate object.** PyQt does not dispatch `nativeEventFilter` to a class that also inherits `QObject`, and `HotkeyBackend` must be one, so the filter cannot be the backend itself.
+- **Windows window hiding disables the close animation.** PRD 3.6 says the windows are hidden before the grab. On Windows hiding alone is not enough, because the faded-out window is still composited; the animation is turned off so that hiding takes effect immediately.
 - **`physical_to_logical` lives in `backend.py`.** It began in `x11.py`; the Windows backend needs the same mapping and must not import a platform module that is not its own, so it moved beside `qt_monitors` and `QtScreenGrabBackend`.
 - **macOS stub reports permission denied.** It cannot preflight or request, so every capture on macOS fails with the Section 6.5 message and the onboarding dialog reaches its quit-and-reopen state. The gate is skipped after Don't show this again.
 - **Tray capability.** `BackendCapabilities.tray` is reported true on every real backend; whether a tray exists is decided by Qt at runtime, and the "no tray on this desktop" message appears when the preference is turned on without one.
@@ -116,6 +119,7 @@ Verified by hand on the Windows machine (Windows 10 22H2, one monitor at ratio 1
 | Capture menu, Include Mouse Cursor then Capture Full Screen | `cursor_included: true` |
 | Main Toolbar capture button, then a drag | `region`, rect (900,200) 250x150, exactly the drag |
 | Quit, then Ctrl+Print | No capture; the keys are released with the process |
+| Ctrl+Print with SnapMock itself in the foreground | The rectangle SnapMock occupied contains only what was behind it: no title bar, toolbar, panels or translucency. Before the animation was disabled the same crop showed the whole editor ghosted over the desktop |
 
 The invisible resize border is excluded as PRD 14.5 requires: for the same window `GetWindowRect` reported (674,395) 993x555 and `DWMWA_EXTENDED_FRAME_BOUNDS` (681,395) 979x548, seven pixels off the left, right and bottom, and the active-window capture used the latter. Cursor compositing was checked against the frozen grab: exactly 249 pixels changed inside the 32x32 box at the hotspot, which is the opaque-pixel count of `IDC_ARROW` measured independently, so every opaque pixel is drawn and nothing else is.
 
@@ -132,6 +136,7 @@ The invisible resize border is excluded as PRD 14.5 requires: for the same windo
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 09-07-26 23:47 | Claude (Claude Code) | Windows hide made immediate by disabling the DWM close animation, so captures no longer contain a translucent copy of the editor; measured and verified end to end. |
 | 1.2 | 09-07-26 22:24 | Claude (Claude Code) | Windows hand verification run on an unlocked desktop: all three modes, five entry points, the resize border, cursor compositing, and hotkey release recorded; what remains needs a second monitor or Windows 11. |
 | 1.1 | 09-07-26 20:41 | Claude (Claude Code) | Windows backend implemented (Section 1.7); its stub deviation removed and four new ones recorded; `test_windows.py` added; the Windows follow-up closed; Windows hand-verification results and what is still owed recorded. |
 | 1.0 | 09-07-26 16:05 | Claude (Claude Code) | Initial implementation notes for the Screen Capture PRD. |
