@@ -1,8 +1,11 @@
-"""Tests for the Windows and macOS stubs and macOS onboarding (PRD 6.5, 6.6, 9.1)."""
+"""Tests for the Windows backend contract, the macOS stub and onboarding (PRD 6.5, 6.6, 9.1)."""
 
 from __future__ import annotations
 
+import sys
+
 import pytest
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import QApplication
 from pytestqt.qtbot import QtBot
@@ -11,10 +14,8 @@ from snapmock.capture import macos, windows
 from snapmock.capture.backend import CaptureError, FakeHotkeyBackend
 from snapmock.capture.manager import CaptureManager
 from snapmock.capture.models import (
-    HOTKEY_ACTION_REGION,
     CaptureMode,
     CaptureRequest,
-    HotkeyBinding,
     PermissionState,
 )
 from snapmock.capture.onboarding import (
@@ -26,17 +27,27 @@ from snapmock.config.settings import AppSettings
 from snapmock.main_window import MainWindow
 
 
-def test_windows_stub_reports_capabilities_and_refuses_grab(qapp: QApplication) -> None:
+def test_windows_backend_reports_capabilities(qapp: QApplication) -> None:
+    """The Windows backend activates only on Windows, and claims every mode there."""
+    if sys.platform != "win32":
+        with pytest.raises(OSError):
+            windows.create_backends()  # the module still imports everywhere
+        return
     capture, hotkeys = windows.create_backends()
     caps = capture.capabilities()
     assert caps.full_screen and caps.active_window and caps.region and caps.cursor
+    assert caps.hotkeys and caps.tray
     assert not caps.needs_permission
-    with pytest.raises(CaptureError, match="not yet implemented on this platform"):
-        capture.grab_screens(False)
-    assert hotkeys.supported is False
-    binding = HotkeyBinding(HOTKEY_ACTION_REGION, QKeySequence("Print"))
-    assert hotkeys.register(binding) is False
-    assert binding.failure_reason == "not yet implemented on this platform"
+    assert hotkeys.supported is True  # RegisterHotKey is wired, so no guidance text
+
+
+def test_windows_key_mapping_is_portable() -> None:
+    """The Qt-to-virtual-key mapping is pure, so it runs on every platform."""
+    assert windows.parse_key_sequence(QKeySequence("Print")) == (0x2C, 0)
+    assert windows.parse_key_sequence(QKeySequence("Alt+Print")) == (0x2C, windows.MOD_ALT)
+    assert windows.parse_key_sequence(QKeySequence("Ctrl+Print")) == (0x2C, windows.MOD_CONTROL)
+    assert windows.parse_key_sequence(QKeySequence()) is None
+    assert windows.virtual_key_for(Qt.Key.Key_Launch0) is None
 
 
 def test_macos_stub_permission_and_grab(qapp: QApplication) -> None:

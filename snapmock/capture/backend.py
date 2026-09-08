@@ -142,6 +142,27 @@ def qt_monitors() -> list[MonitorInfo]:
     return result
 
 
+def physical_to_logical(physical: QRect) -> QRect:
+    """Map a root-window (physical pixel) rectangle to Qt's logical virtual desktop."""
+    monitors = qt_monitors()
+    best = None
+    best_area = -1
+    for m in monitors:
+        area = m.physical_geometry.intersected(physical)
+        size = max(0, area.width()) * max(0, area.height())
+        if size > best_area:
+            best, best_area = m, size
+    if best is None:
+        return QRect(physical)
+    ratio = best.device_pixel_ratio
+    origin = best.physical_geometry.topLeft()
+    left = best.logical_geometry.x() + (physical.x() - origin.x()) / ratio
+    top = best.logical_geometry.y() + (physical.y() - origin.y()) / ratio
+    return QRect(
+        round(left), round(top), round(physical.width() / ratio), round(physical.height() / ratio)
+    )
+
+
 class QtScreenGrabBackend(CaptureBackend):
     """Grabs every screen through Qt's root-window grab (PRD 6.3, 6.5, 6.6).
 
