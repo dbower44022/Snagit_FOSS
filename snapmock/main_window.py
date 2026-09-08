@@ -2587,9 +2587,13 @@ class MainWindow(QMainWindow):
         QDesktopServices.openUrl(QUrl(DOCUMENTATION_URL))
 
     def _help_shortcuts(self) -> None:
-        QMessageBox.information(
-            self, "Keyboard Shortcuts", "Keyboard shortcuts reference is coming soon."
-        )
+        """The searchable shortcut reference (PRD 3.8), with the live capture hotkeys."""
+        from snapmock.ui.shortcuts_dialog import KeyboardShortcutsDialog
+
+        bindings = {b.action: b.key_text for b in self._capture.bindings}
+        dlg = KeyboardShortcutsDialog(self, capture_bindings=bindings)
+        dlg.exec()
+        dlg.deleteLater()
 
     def _help_report_bug(self) -> None:
         QDesktopServices.openUrl(QUrl(ISSUES_URL))
