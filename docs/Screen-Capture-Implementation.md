@@ -1,6 +1,6 @@
 # Screen Capture Implementation Notes
 
-Last Updated: 09-07-26 20:41 · Revision 1.1
+Last Updated: 09-07-26 22:24 · Revision 1.2
 
 Implements the SnapMock Screen Capture PRD (version 1.0, September 2026): the three capture modes, every entry point (global hotkeys, system tray, Main Toolbar button, Capture menu, command-line invocation with a single-instance channel), the capture options, the region selection overlay, the capture backend abstraction with the Linux X11, Linux Wayland and Windows backends, a stub for macOS, the post-capture handoff to the Library, the Capture preferences category, and the Wayland and macOS onboarding dialogs.
 
@@ -103,9 +103,23 @@ All under `tests/test_capture/`, run against the fake backends on the offscreen 
 
 Verified by hand on the X11 machine: struct sizes, EWMH active window with frame extents and title, XFixes cursor image, grab refusal from a second client, release after ungrab, and the portal protocol (handle path, Response signal).
 
-Verified on the Windows machine, from an automated session: the DPI context reported per-monitor v2 under the real platform plugin (`0x22`); `RegisterHotKey` accepted the default bindings and reported 1409 as in use for a key another registration held; a released key registered again; a posted `WM_HOTKEY` reached `triggered` with the right action; the stock arrow, I-beam and wait cursors converted to 32x32 images with correct hotspots through the monochrome mask path; and `window_frame_rect` and `window_title` returned the geometry and title of a window created for the test.
+Verified by hand on the Windows machine (Windows 10 22H2, one monitor at ratio 1.0, PyQt6 6.10.2). The live suite is 15 passing under the real platform plugin. Every capture below landed in the Library as a `.smk` whose `manifest.json` carries `backend: windows`.
 
-**Not yet verified on Windows, and still owed** (PRD 6.6, and the kickoff prompt's hand-verification list). The session that wrote this backend ran against a locked workstation with one monitor, so `GetForegroundWindow` returned 0, `GetCursorInfo` failed, GDI `CopyFromScreen` refused with an invalid handle, and no scale factor other than 1.0 was available. `select_backends()` did choose the Windows pair, and a full-screen grab returned a correctly sized 1920x1200 image with no error and entirely black pixels, which is exactly the secured-desktop degradation PRD 6.6 documents. The plumbing is therefore verified but the pixel content of a capture is not. Outstanding: the three modes from the menu, toolbar, tray and each hotkey; a real key press with another application focused, and hotkeys ceasing after Quit; the Print Screen conflict against Windows 11's own capture; the active window of a maximized window, of one with the invisible resize border compared against `GetWindowRect`, and of one on a second monitor; the cursor composited at a different scale factor; a mixed-DPI pair of monitors, including whether the composited region crosses the boundary without a seam; and `--capture region` reaching a running instance over the channel.
+| Path | Result |
+|---|---|
+| `--capture full` from a cold start | `full_screen`, 1920x1200, real pixels |
+| `--capture full` with an instance running | Forwarded over the single-instance channel; no second process, the running instance wrote the file |
+| Ctrl+Print with another application focused | `full_screen`; the hotkey fires without SnapMock in the foreground |
+| Alt+Print | `active_window`, rect (681,395) 979x548 and the window's title, including non-ASCII |
+| Print, then a drag on the overlay | `region`, rect (300,300) 400x300, exactly the drag |
+| Capture menu, Capture Full Screen | `full_screen`; menu shortcuts read Print, Alt+Print and Ctrl+Print from the preferences |
+| Capture menu, Include Mouse Cursor then Capture Full Screen | `cursor_included: true` |
+| Main Toolbar capture button, then a drag | `region`, rect (900,200) 250x150, exactly the drag |
+| Quit, then Ctrl+Print | No capture; the keys are released with the process |
+
+The invisible resize border is excluded as PRD 14.5 requires: for the same window `GetWindowRect` reported (674,395) 993x555 and `DWMWA_EXTENDED_FRAME_BOUNDS` (681,395) 979x548, seven pixels off the left, right and bottom, and the active-window capture used the latter. Cursor compositing was checked against the frozen grab: exactly 249 pixels changed inside the 32x32 box at the hotspot, which is the opaque-pixel count of `IDC_ARROW` measured independently, so every opaque pixel is drawn and nothing else is.
+
+**Still owed**, and not possible on this hardware. A second monitor is needed for the active window and the cursor at a different scale factor, and for whether a composited region crosses a monitor boundary without a seam; only ratio 1.0 was available here. Windows 11 is needed for the Print Screen conflict against its own capture, though the 1409 path itself is covered: a key held by another registration reports "In use by another application". The tray entry point was not exercised, since the tray preference is off by default.
 
 ## 4. Follow-ups
 
@@ -118,5 +132,6 @@ Verified on the Windows machine, from an automated session: the DPI context repo
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 09-07-26 22:24 | Claude (Claude Code) | Windows hand verification run on an unlocked desktop: all three modes, five entry points, the resize border, cursor compositing, and hotkey release recorded; what remains needs a second monitor or Windows 11. |
 | 1.1 | 09-07-26 20:41 | Claude (Claude Code) | Windows backend implemented (Section 1.7); its stub deviation removed and four new ones recorded; `test_windows.py` added; the Windows follow-up closed; Windows hand-verification results and what is still owed recorded. |
 | 1.0 | 09-07-26 16:05 | Claude (Claude Code) | Initial implementation notes for the Screen Capture PRD. |
