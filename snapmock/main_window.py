@@ -52,7 +52,6 @@ from snapmock.capture.models import (
 from snapmock.capture.tray import make_tray_icon
 from snapmock.config.constants import (
     APP_NAME,
-    APP_VERSION,
     DEFAULT_CANVAS_HEIGHT,
     DEFAULT_CANVAS_WIDTH,
     DOCUMENTATION_URL,
@@ -2604,13 +2603,11 @@ class MainWindow(QMainWindow):
         )
 
     def _help_about(self) -> None:
-        QMessageBox.about(
-            self,
-            f"About {APP_NAME}",
-            f"<h3>{APP_NAME} v{APP_VERSION}</h3>"
-            "<p>An open-source multi-platform screenshot annotation &amp; UI mockup tool.</p>"
-            "<p>Built with Python and PyQt6.</p>",
-        )
+        from snapmock.ui.about_dialog import AboutDialog
+
+        dlg = AboutDialog(self)
+        dlg.exec()
+        dlg.deleteLater()
 
     # ---- recent files ----
 

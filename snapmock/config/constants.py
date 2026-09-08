@@ -5,6 +5,10 @@ from pathlib import Path
 
 APP_NAME = "SnapMock"
 APP_VERSION = "0.1.0"
+# Set by the release process; the About dialog shows it beside the version (PRD 11.6).
+APP_BUILD_DATE = "2026-09-08"
+APP_LICENSE = "MIT License"
+COPYRIGHT = "Copyright (c) 2026 Doug Bower"
 ORG_NAME = "SnapMock"
 ORG_DOMAIN = "snapmock.org"
 REPOSITORY_URL = "https://github.com/dbower44022/Snagit_FOSS"

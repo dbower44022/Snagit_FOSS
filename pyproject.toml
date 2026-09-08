@@ -3,6 +3,9 @@ name = "snapmock"
 version = "0.1.0"
 description = "Open-source multi-platform screenshot annotation & UI mockup tool"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Doug Bower" }]
 requires-python = ">=3.12"
 dependencies = [
     "PyQt6",
@@ -10,6 +13,10 @@ dependencies = [
     "numpy",
     "send2trash>=2.1.0",
 ]
+
+[project.urls]
+Repository = "https://github.com/dbower44022/Snagit_FOSS"
+Issues = "https://github.com/dbower44022/Snagit_FOSS/issues"
 
 [dependency-groups]
 dev = [
