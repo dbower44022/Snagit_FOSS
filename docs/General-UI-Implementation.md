@@ -1,8 +1,8 @@
 # General UI Implementation Notes
 
-Last Updated: 09-08-26 13:21 · Revision 1.2
+Last Updated: 09-08-26 13:45 · Revision 1.3
 
-Implements the SnapMock General User Interface PRD (version 1.6, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
+Implements the SnapMock General User Interface PRD (version 1.8, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
 ## 1. Phase status
 
@@ -10,7 +10,7 @@ Implements the SnapMock General User Interface PRD (version 1.6, `PRDs/SnapMock-
 |---|---|---|---|
 | 0 | Inventory and notes | Done | 3972f47 |
 | 1 | Menus, shortcuts, help, and window | Done | 9073edc to c7b88ba |
-| 2 | Export | Not started | |
+| 2 | Export | Done | 8a34cad to c5ddfe5 |
 | 3 | Theme and Preferences | Not started | |
 | 4 | Toolbars and status bar | Not started | |
 | 5 | Canvas | Not started | |
@@ -169,7 +169,7 @@ The kickoff prompt's six decisions stand. The inventory adds three that pass the
 
 ## 6. Deviations from the PRD
 
-Each has its change-log row in `PRDs/SnapMock-General-UI-PRD.html` version 1.7 unless the entry says otherwise.
+Each has its change-log row in `PRDs/SnapMock-General-UI-PRD.html` version 1.7 (Phase 1) or 1.8 (Phase 2) unless the entry says otherwise.
 
 - **Tool shortcut letters** (Section 3.7). Six letters differ from the PRD tables by decision; rows in all five PRDs (the Basic Shape PRD's row for Line, PRD U and shipped L, followed once that file's other edits were committed).
 - **Merge Down, Merge Visible, Flatten All** (Section 3.4). Deferred; the rows check their requirement, then say the feature is not available yet.
@@ -180,9 +180,15 @@ Each has its change-log row in `PRDs/SnapMock-General-UI-PRD.html` version 1.7 u
 - **Last-used tool option values** (Section 15.4). Phase 1 persists the tool id only; option values persist with the preset work of Phase 7.
 - **Select All Text batch changes** (Section 3.2). Phase 1 selects the text-containing items; applying a font, size, or colour to the whole selection at once arrives with the Property Panel's multi-selection behaviour in Phase 6 (Section 8.6).
 - **Preferences dependent controls** (Section 1.3). The Autosave interval spinbox and Keep Running in Tray checkbox are disabled while their parent setting is off. Left for Phase 3, which rebuilds the dialog.
+- **Library variant of the Export dialog** (Section 11.2). No Export region group, since a file that is not open in a tab has no selection or visible area; a SnapMock Project format that copies the file, from Library PRD 7.1. With Apply to All unchecked the dialog reopens per file after the first, pre-filled with the directory (Library PRD 1.2 row).
+- **SVG Embed raster images unchecked** (Section 11.2). Raster regions and stamps are omitted so the file is vector-only; the PRD does not define the unchecked output and the SVG generator cannot link external files.
+- **SVG and PDF preview** (Section 11.2). The preview is the flattened raster of the region; the size estimate encodes the real export in memory (PDF through a temporary file).
+- **Export Quick destination** (Section 3.1). Beside a saved non-Library document as `.png`, otherwise the last-used PNG directory under the display name; overwrites; the path is shown in the status bar. The PRD names the settings but not the destination.
 - **Momentary eyedropper** (Section 12.2). Alt switches to the eyedropper and back, but the eyedropper's picked colour has no consumer until Phase 4 builds its options bar (Apply to Stroke / Apply to Fill).
 
 ## 7. Tests
+
+Phase 2 adds `tests/test_export_dialog.py` (17 tests: default path and format switching, custom DPI, the unmet-requirement messages for a missing path and for Selection Only without a selection, per-format persistence and restore, the Library variant's controls, File > Export and Export Quick through the dialog, the Library batch and its display-name targets, the SnapMock Project copy, Export Quick from the panel, the preview thumbnail, its debounce, and the size estimate) and ten tests to `tests/test_io/test_exporter.py` (settings round trip and tolerant load, region resolution, selection rectangle, PNG DPI and colour depth and transparency, JPEG quality, SVG viewbox and raster embedding, PDF page sizes, the project-file copy, byte-size text, `AppSettings` export keys). At the close of Phase 2 the suite passed 655 tests with 13 skipped and one environmental deselection (`test_font_combo_reflects_text_item_font`).
 
 Phase 1 adds `tests/test_layer_menu_actions.py`, `tests/test_shortcuts_dialog.py`, `tests/test_about_dialog.py`, `tests/test_window_layout.py`, `tests/test_find_replace_color.py`, and `tests/test_navigation_keys.py`; extends `tests/test_menus.py`, `tests/test_context_menus.py`, `tests/test_documents.py`, `tests/test_app.py`, and `tests/test_io/test_exporter.py`; and adds the `unmet_messages` fixture to `tests/conftest.py`, which captures the never-disabled message instead of showing it. At the close of Phase 1 the suite passed 628 tests with 13 skipped and one environmental deselection (`test_font_combo_reflects_text_item_font`); `test_main_window_default_size` passes again now that the window has a minimum size.
 
@@ -192,12 +198,17 @@ Phase 0 adds no tests. On 09-07-26 the working tree (commit `a198744` plus the u
 
 In commit order: the Redo and Deselect binding fix; the never-disabled audit with `snapmock/ui/unmet_requirements.py`; the menu bar aligned to Section 3 (order, labels, Open Recent with Clear Recent, Undo and Redo action names, Backspace for Delete, Show Status Bar, Group and Ungroup rows, Help labels and real links); Duplicate Layer copying items, Delete Layer confirming, Crop to Canvas as the crop tool, Auto-Trim; Print; the Keyboard Shortcuts dialog; the About dialog and the MIT licence; window management (object names so the layout persists, minimum size, 80 percent default, Reset Layout, the title pattern, the Unsaved Changes wording, the last-used tool); Select All Text and Find/Replace Color; Home and End, Tab cycling, the Alt eyedropper; and the PRD change-log rows. Technical Architecture PRD 1.5 lists the four new modules under `ui/`.
 
-**Next required step:** Phase 2, Export, in a new session pasting `docs/General-UI-Implementation-Kickoff-Prompt.md`.
+## 9. What Phase 2 built
+
+In commit order: the export engine (`ExportSettings`, `ExportFormat`, `ExportRegion`, `PdfPageSize`, `export_scene`, `resolve_region`, `selection_rect`, `estimate_export_size`, `format_byte_size` in `snapmock/io/exporter.py`; `RenderEngine.render_region` takes a scale for DPI; `AppSettings` keeps the last-used settings and directory per format and the last format); the Export dialog (`snapmock/ui/export_dialog.py`) with its format pages, region radios, output path or directory, Apply to All, preview and size estimate, and the never-disabled Export button, wired to File > Export, Export Quick (PNG), and the Library panel's Export... and Export Quick (PNG) with the progress dialog; and the preview and size-estimate tests. Technical Architecture PRD 1.6 lists the new module. The Library PRD is at 1.2 and its implementation notes at 1.2 for the delivered variant.
+
+**Next required step:** Phase 3, Theme and Preferences, in a new session pasting `docs/General-UI-Implementation-Kickoff-Prompt.md`. Phase 3 opens by presenting decision 1 (icon set) with the consequential decision template and waiting.
 
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 09-08-26 13:45 | Claude (Claude Code) | Phase 2 done: phase table, four deviations (Section 6), tests (Section 7), build summary and next step (Section 9). |
 | 1.2 | 09-08-26 13:21 | Claude (Claude Code) | Basic Shape PRD shortcut row delivered; the owed item is closed. |
 | 1.1 | 09-08-26 11:23 | Claude (Claude Code) | Phase 1 done: phase table, decisions taken (Section 5.1), ten deviations (Section 6), tests (Section 7), build summary and next step (Section 8). |
 | 1.0 | 09-08-26 00:10 | Claude (Claude Code) | Phase 0: verified inventory by PRD section, corrections to the kickoff inventory, PRD inconsistencies, three added Phase 1 decisions, empty deviations list. |

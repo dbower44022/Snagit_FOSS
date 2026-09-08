@@ -1,6 +1,6 @@
 # Kickoff Prompt: General UI Implementation
 
-Last Updated: 09-07-26 23:06 · Revision 1.0
+Last Updated: 09-08-26 13:45 · Revision 1.1
 
 Paste everything below the line into a new Claude Code session rooted in this repository on the Linux machine. Start it only when no other session is committing in this working directory: this work edits `snapmock/main_window.py`, the toolbars, the panels, and the settings module, which every other session touches too.
 
@@ -14,7 +14,7 @@ Read the project `CLAUDE.md` at the repository root. No other repository is invo
 
 ## Task
 
-Implement the General UI PRD version 1.6 (`PRDs/SnapMock-General-UI-PRD.html`) in the phases below, closing the gap between what the PRD specifies and what the application does today. Where the PRD is satisfied already, leave the code alone. Where an implementation departs from the PRD, record the departure in the PRD's change log, as `CLAUDE.md` requires, and in the implementation notes.
+Implement the General UI PRD (`PRDs/SnapMock-General-UI-PRD.html`, at the version its revision table shows; each phase bumps it) in the phases below, closing the gap between what the PRD specifies and what the application does today. Where the PRD is satisfied already, leave the code alone. Where an implementation departs from the PRD, record the departure in the PRD's change log, as `CLAUDE.md` requires, and in the implementation notes.
 
 ## Read first, in this order
 
@@ -109,4 +109,5 @@ Update the Phase status table in `docs/General-UI-Implementation.md`, bump its r
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 09-08-26 13:45 | Claude (Claude Code) | The PRD version is no longer fixed at 1.6 in the task statement; each phase bumps the PRD, and the notes name the current version. |
 | 1.0 | 09-07-26 23:06 | Claude (Claude Code) | Initial kickoff prompt: verified gap inventory, eight phases, six decisions to surface. |

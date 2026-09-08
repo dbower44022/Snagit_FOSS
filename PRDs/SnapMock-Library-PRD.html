@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Library</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.1</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.2</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Capture Library · Auto-Save · File Management · Tabbed Editing</dd>
-    <dt>Document version</dt><dd>1.1</dd>
-    <dt>Last Updated</dt>    <dd>09-07-26 23:15</dd>
+    <dt>Document version</dt><dd>1.2</dd>
+    <dt>Last Updated</dt>    <dd>09-08-26 13:45</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,15 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.2</td>
+        <td class="nowrap">09-08-26 13:45</td>
+        <td>Doug Bower</td>
+        <td>The Export dialog and the Library's multi-select variant are delivered by
+        General UI Phase 2; Section 7's interim behaviour is closed and the Apply to All
+        unchecked behaviour is recorded.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.1</td>
         <td class="nowrap">09-07-26 23:15</td>
@@ -74,6 +83,18 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-08-26 13:45</td>
+        <td>7, 7.2, 7.3</td>
+        <td>Resolved</td>
+        <td>Delivered by the General UI implementation, Phase 2 (General UI PRD 1.8). Export...
+        on one file opens the dialog for that file without opening a tab; on several files the
+        dialog shows Output Directory and Apply to All. With Apply to All unchecked the dialog
+        reopens for each file after the first, pre-filled with the directory, so each file can
+        take its own format and options; Cancel there stops the batch. Export Quick (PNG) from
+        the panel uses the last-used PNG settings and opens the dialog on first use. Files are
+        named by their display names; the SnapMock Project format copies the file.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-07-26 23:15</td>
         <td>3.8, 10.2, 12.2</td>
@@ -808,10 +829,8 @@ capture (Section 6.1), with these differences:</p>
 <p>The Export dialog is defined by the General UI PRD (Section 11.2) and is delivered by
 the General UI implementation, together with the Library's multi-select variant of it
 described in Section 7.2: the Output Directory selector, the Apply to All checkbox, and
-the progress dialog with cancel. Until that implementation lands, Export... from the
-Library panel on one file runs File &gt; Export for that file, and on several files
-prompts for an output directory and writes PNG files with a progress dialog and a
-per-file error summary. Export Quick (PNG) is unchanged.</p>
+the progress dialog with cancel. That implementation landed on 09-08-26 (General UI
+Phase 2); the change log records how Apply to All behaves when unchecked.</p>
 
 <h3 id="s7-1">Export Formats</h3>
 

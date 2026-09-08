@@ -1,6 +1,6 @@
 # Library Implementation Notes
 
-Last Updated: 09-07-26 23:20 · Revision 1.1
+Last Updated: 09-08-26 13:45 · Revision 1.2
 
 Implements the SnapMock Library PRD (version 1.1, 09-07-26): tabbed multi-document editing, the Library panel, continuous write-back, the Library menu, preferences, session persistence, drag-and-drop import and export, and library file commands.
 
@@ -65,7 +65,7 @@ Context menus follow PRD 3.14 for files, folders, and empty space. Unmet require
 - Library menu after Tools: Show Library Panel (Ctrl+L), Open Library, Move Library (progress dialog, re-points open tabs), New Folder, New Canvas (blank canvas at the default size in the folder the panel is showing, the same action as the panel's empty-space context-menu item), Reveal in File Manager, Library Preferences.
 - `MainWindow.add_to_library(image, source)` is the capture entry point (PRD 6.1): creates the file in the current library folder, opens it when Auto-open is on, and shows a toast with an Open link. There is no screen-capture feature yet; this is the hook for it.
 - Deleting a file from the panel closes its tab first, without a prompt. Undo restores the file but not the tab.
-- Export from the panel: one file opens it and runs File > Export; several files prompt for an output directory and export PNGs with a progress dialog and a per-file error summary. This is the interim behavior until the General UI implementation delivers the Export dialog (Section 4).
+- Export from the panel: the Export dialog's Library variant (`snapmock/ui/export_dialog.py`, General UI Phase 2). One file opens the dialog for that file without opening a tab; several files show Output Directory and Apply to All and run through the progress dialog with cancel and a per-file error summary. Export Quick (PNG) uses the last-used PNG settings, prompting for a directory, and opens the dialog on first use. `snapmock/library/render.py` gained `export_target` (display name plus suffix) and `export_file` (one file with an `ExportSettings`).
 - Dragging a library file onto the canvas opens it (`SnapView.library_files_dropped`).
 - Session: open tab paths and the active index are saved on close and restored when the app starts (`MainWindow(restore_session=True)` in `app.py`).
 - Preferences: a Library group (directory, auto-open, default view mode, default thumbnail size, default sort, toast notifications). Changes apply immediately.
@@ -86,7 +86,6 @@ Context menus follow PRD 3.14 for files, folders, and empty space. Unmet require
 ## 4. Follow-ups
 
 - Screen capture (hotkey, tray) feeding `MainWindow.add_to_library`.
-- Export dialog (General UI PRD 11.2), delivered by the General UI implementation together with the Library's multi-select variant: Output Directory selector, Apply to All, progress with cancel. The Library keeps its file-dialog fallback until then; nothing in export code changes for it.
 - Write-back on a worker thread for very large rasters.
 - Thumbnail refresh in the panel after write-back is immediate; a size recalculation runs on every change and could be throttled for very large libraries.
 
@@ -94,5 +93,6 @@ Context menus follow PRD 3.14 for files, folders, and empty space. Unmet require
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 09-08-26 13:45 | Claude (Claude Code) | Export dialog delivered by General UI Phase 2: Section 1.5 export bullet rewritten, the Section 4 follow-up closed. |
 | 1.1 | 09-07-26 23:20 | Claude (Claude Code) | Three deviations closed per the 09-07-26 decisions: delete is undoable through a session trash (Section 1.3, tests in Section 3); New Canvas joins the Library menu (Section 1.5); the Export dialog moves to Section 4 with the Library variant named. |
 | 1.0 | 09-07-26 01:30 | Claude (Claude Code) | Initial implementation notes for the Library PRD. |

@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.7</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.8</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>1.7</dd>
-    <dt>Last Updated</dt>    <dd>09-08-26 11:22</dd>
+    <dt>Document version</dt><dd>1.8</dd>
+    <dt>Last Updated</dt>    <dd>09-08-26 13:45</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.8</td>
+        <td class="nowrap">09-08-26 13:45</td>
+        <td>Doug Bower</td>
+        <td>Phase 2 of the implementation (Export): the Export dialog, Export Quick, and last-used export settings are built. Rows record where the PRD was silent and what was decided, and the Library variant's differences from Section 11.2. No requirement changed.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.7</td>
         <td class="nowrap">09-08-26 11:22</td>
@@ -105,6 +112,42 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-08-26 13:45</td>
+        <td>11.2</td>
+        <td>Departure</td>
+        <td>In the Library panel's variant of the dialog (Library PRD 7.2) the Export region group is not shown: a file that is not open in a tab has no selection and no visible area, so every Library export covers the entire canvas. The variant adds a SnapMock Project format that copies the file, as Library PRD 7.1 lists.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 13:45</td>
+        <td>11.2</td>
+        <td>Decided</td>
+        <td>SVG with Embed raster images unchecked omits raster items (raster regions and stamps) so the file holds vector content only. The PRD does not say what the unchecked state writes, and the SVG generator cannot link external image files.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 13:45</td>
+        <td>11.2</td>
+        <td>Decided</td>
+        <td>The preview for SVG and PDF is the flattened raster of the export region, not a rendering of the written SVG or PDF. The size estimate for every format is produced by encoding the export in memory (PDF through a temporary file).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 13:45</td>
+        <td>11.2</td>
+        <td>Decided</td>
+        <td>The DPI dropdown's Custom entry shows a spinbox from 1 to 2400. PNG transparency off composites onto the canvas colour, or white when the canvas is fully transparent; JPEG always does. PDF Match canvas makes the page the region's size in points; A4 and Letter fit the region on the page with the orientation auto-detected from the region.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 13:45</td>
+        <td>3.1</td>
+        <td>Decided</td>
+        <td>Export Quick (PNG) writes beside a saved, non-Library document under the document's name with a .png suffix, and otherwise into the last-used PNG directory under the display name, overwriting an existing file, and reports the path in the status bar. The PRD names the settings but not the destination.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 13:45</td>
+        <td>15.4</td>
+        <td>Resolved</td>
+        <td>Last-used export settings per format, the last-used directory per format, and the last-used format are persisted; a reopened dialog starts from them.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-08-26 11:22</td>
         <td>3.7</td>
