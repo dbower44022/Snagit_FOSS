@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 from PyQt6.QtCore import QMimeData, QModelIndex, QRectF, Qt
-from PyQt6.QtGui import QColor, QImage
+from PyQt6.QtGui import QAction, QColor, QImage
 from PyQt6.QtWidgets import QApplication, QMessageBox
 from pytestqt.qtbot import QtBot
 
@@ -350,6 +350,46 @@ def test_new_canvas_in_library(main_window: MainWindow) -> None:
     doc = main_window.active_document
     assert doc.is_library_file
     assert doc.file_path is not None and doc.file_path.name.startswith("Untitled_")
+    meta = read_library_metadata(doc.file_path)
+    assert meta is not None and meta["source"] == "new"
+
+
+def _library_menu_texts(main_window: MainWindow) -> list[str]:
+    menu_bar = main_window.menuBar()
+    assert menu_bar is not None
+    for menu_action in menu_bar.actions():
+        if menu_action.text().replace("&", "") != "Library":
+            continue
+        menu = menu_action.menu()
+        assert menu is not None
+        return [a.text().replace("&", "") for a in menu.actions()]
+    raise AssertionError("No Library menu")
+
+
+def _library_menu_action(main_window: MainWindow, text: str) -> QAction:
+    menu_bar = main_window.menuBar()
+    assert menu_bar is not None
+    for menu_action in menu_bar.actions():
+        menu = menu_action.menu()
+        if menu is None or menu_action.text().replace("&", "") != "Library":
+            continue
+        for action in menu.actions():
+            if action.text().replace("&", "") == text:
+                return action
+    raise AssertionError(f"No Library menu item named {text!r}")
+
+
+def test_library_menu_new_canvas_uses_shown_folder(main_window: MainWindow) -> None:
+    sub = main_window.library.create_folder(name="Sub")
+    main_window.library_panel.model.navigate_to(sub)
+    assert main_window.library_panel.current_path == sub
+    texts = _library_menu_texts(main_window)
+    assert texts.index("New Canvas") == texts.index("New Folder") + 1
+    _library_menu_action(main_window, "New Canvas").trigger()
+    doc = main_window.active_document
+    assert doc.is_library_file
+    assert doc.file_path is not None and doc.file_path.parent == sub
+    assert doc.file_path.name.startswith("Untitled_")
     meta = read_library_metadata(doc.file_path)
     assert meta is not None and meta["source"] == "new"
 

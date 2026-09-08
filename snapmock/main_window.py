@@ -870,6 +870,12 @@ class MainWindow(QMainWindow):
         if new_folder is not None:
             new_folder.triggered.connect(self._library_panel.create_folder)
 
+        new_canvas = library_menu.addAction("New &Canvas")
+        if new_canvas is not None:
+            new_canvas.triggered.connect(
+                lambda: self._library_new_canvas(self._library_panel.current_path)
+            )
+
         library_menu.addSeparator()
 
         reveal = library_menu.addAction("&Reveal in File Manager")
