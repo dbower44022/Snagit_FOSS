@@ -73,7 +73,14 @@ from snapmock.core.layer import Layer
 from snapmock.core.scene import SnapScene
 from snapmock.core.selection_manager import SelectionManager
 from snapmock.core.view import SnapView
-from snapmock.io.exporter import export_jpg, export_pdf, export_png, export_svg, print_scene
+from snapmock.io.exporter import (
+    ExportFormat,
+    ExportSettings,
+    export_scene,
+    print_scene,
+    resolve_region,
+    selection_rect,
+)
 from snapmock.io.importer import import_image
 from snapmock.io.project_serializer import (
     load_project,
@@ -85,7 +92,7 @@ from snapmock.io.snagit_reader import load_snagx
 from snapmock.io.snagit_writer import save_snagx
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.library.manager import LibraryManager
-from snapmock.library.render import export_files_to_png
+from snapmock.library.render import export_file, export_target
 from snapmock.tools.arrow_tool import ArrowTool
 from snapmock.tools.blur_tool import BlurTool
 from snapmock.tools.callout_tool import CalloutTool
@@ -106,6 +113,7 @@ from snapmock.tools.text_tool import TextTool
 from snapmock.tools.tool_manager import ToolManager
 from snapmock.tools.zoom_tool import ZoomTool
 from snapmock.ui.document_tabs import DocumentTabs
+from snapmock.ui.export_dialog import ExportDialog
 from snapmock.ui.layer_panel import LayerPanel
 from snapmock.ui.library_panel import LibraryPanel
 from snapmock.ui.property_panel import PropertyPanel
@@ -1614,37 +1622,65 @@ class MainWindow(QMainWindow):
             return
         import_image(self._scene, Path(path_str))
 
-    def _file_export(self) -> None:
-        """Export the scene to an image or document format."""
-        path_str, selected_filter = QFileDialog.getSaveFileName(
+    def _visible_scene_rect(self) -> QRectF:
+        view = self._view
+        viewport = view.viewport()
+        if viewport is None:  # pragma: no cover - a QGraphicsView always has one
+            return QRectF()
+        return view.mapToScene(viewport.rect()).boundingRect()
+
+    def _export_dialog(self) -> ExportDialog:
+        """The Export dialog for the active document (General UI PRD 11.2)."""
+        doc = self._active_document
+        directory = None
+        if doc.file_path is not None and not doc.is_library_file:
+            directory = doc.file_path.parent
+        return ExportDialog(
+            self._scene,
+            self._settings,
             self,
-            "Export",
-            "",
-            "PNG Image (*.png);;JPEG Image (*.jpg);;SVG Image (*.svg);;PDF Document (*.pdf)",
+            document_name=doc.display_name,
+            document_directory=directory,
+            selection=selection_rect(self._selection_manager.items),
+            visible=self._visible_scene_rect(),
         )
-        if not path_str:
+
+    def _file_export(self) -> None:
+        """File > Export: the Export dialog, then write the active document."""
+        dialog = self._export_dialog()
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return
-        path = Path(path_str)
-        suffix = path.suffix.lower()
-        if suffix == ".png" or "PNG" in selected_filter:
-            export_png(self._scene, path)
-        elif suffix in (".jpg", ".jpeg") or "JPEG" in selected_filter:
-            export_jpg(self._scene, path)
-        elif suffix == ".svg" or "SVG" in selected_filter:
-            export_svg(self._scene, path)
-        elif suffix == ".pdf" or "PDF" in selected_filter:
-            export_pdf(self._scene, path)
+        self._write_export(dialog.output_path(), dialog.settings(), dialog.region_rect())
+
+    def _write_export(self, path: Path, settings: ExportSettings, region: QRectF) -> bool:
+        try:
+            export_scene(self._scene, path, settings, region)
+        except OSError as exc:
+            QMessageBox.warning(self, "Export", f"Could not write {path}:\n{exc}")
+            return False
+        self._status_bar.set_hint(f"Exported {path}")
+        return True
 
     def _file_export_quick_png(self) -> None:
-        """Quick-export the scene as PNG next to the current file."""
-        if self._current_file is not None and not self._active_document.is_library_file:
-            path = self._current_file.with_suffix(".png")
+        """Export Quick (PNG): the last-used PNG settings; the dialog on first use (PRD 3.1)."""
+        stored = self._settings.export_settings(ExportFormat.PNG.value)
+        if stored is None:
+            self._file_export()
+            return
+        settings = ExportSettings.from_dict(stored).with_format(ExportFormat.PNG)
+        doc = self._active_document
+        if doc.file_path is not None and not doc.is_library_file:
+            path = doc.file_path.with_suffix(".png")
         else:
-            path_str, _ = QFileDialog.getSaveFileName(self, "Export PNG", "", "PNG Image (*.png)")
-            if not path_str:
-                return
-            path = Path(path_str)
-        export_png(self._scene, path)
+            directory = self._settings.export_last_directory(ExportFormat.PNG.value) or Path.home()
+            path = directory / f"{doc.display_name}.png"
+        region = resolve_region(
+            self._scene,
+            settings.region,
+            selection=selection_rect(self._selection_manager.items),
+            visible=self._visible_scene_rect(),
+        )
+        self._write_export(path, settings, region)
 
     def _file_print(self) -> None:
         """System print dialog with the flattened canvas, fitted to the page (PRD 3.1)."""
@@ -1865,25 +1901,76 @@ class MainWindow(QMainWindow):
             return
         self._toast.show_message(text, "Open", lambda: self._open_library_files([path]))
 
+    def _library_export_dialog(self, paths: list[Path]) -> tuple[ExportDialog, SnapScene] | None:
+        """The Library variant of the Export dialog, previewing the first of *paths*."""
+        try:
+            scene = load_project(paths[0])
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "Export", f"Could not open {paths[0].name}:\n{exc}")
+            return None
+        dialog = ExportDialog(
+            scene,
+            self._settings,
+            self,
+            document_name=export_target(paths[0], Path(), ExportSettings()).stem,
+            library_files=paths,
+        )
+        return dialog, scene
+
     def _export_library_files(self, paths: list[Path]) -> None:
-        """Export one file via the Export dialog, or many into a directory."""
-        if len(paths) == 1:
-            doc = self._open_project(paths[0])
-            if doc is not None:
-                self._file_export()
+        """Library panel > Export...: the dialog for one file or a batch (Library PRD 7.2)."""
+        if not paths:
             return
-        out = QFileDialog.getExistingDirectory(self, "Export To Directory", str(Path.home()))
-        if not out:
+        opened = self._library_export_dialog(paths)
+        if opened is None:
             return
-        self._export_paths_as_png(paths, Path(out))
+        dialog, scene = opened
+        try:
+            if dialog.exec() != QDialog.DialogCode.Accepted:
+                return
+            settings = dialog.settings()
+            if len(paths) == 1:
+                error = export_file(paths[0], dialog.output_path(), settings)
+                if error:
+                    QMessageBox.warning(self, "Export", error)
+                else:
+                    self._status_bar.set_hint(f"Exported {dialog.output_path()}")
+                return
+            out_dir = dialog.output_directory()
+            apply_to_all = dialog.apply_to_all()
+        finally:
+            scene.deleteLater()
+        self._export_library_batch(paths, out_dir, settings, per_file_dialog=not apply_to_all)
 
     def _export_library_files_quick(self, paths: list[Path]) -> None:
-        out = QFileDialog.getExistingDirectory(self, "Export PNGs To", str(Path.home()))
+        """Library panel > Export Quick (PNG): last-used PNG settings into a chosen directory."""
+        if not paths:
+            return
+        stored = self._settings.export_settings(ExportFormat.PNG.value)
+        if stored is None:
+            self._export_library_files(paths)
+            return
+        settings = ExportSettings.from_dict(stored).with_format(ExportFormat.PNG)
+        start = self._settings.export_last_directory(ExportFormat.PNG.value) or Path.home()
+        out = QFileDialog.getExistingDirectory(self, "Export PNGs To", str(start))
         if not out:
             return
-        self._export_paths_as_png(paths, Path(out))
+        self._settings.set_export_last_directory(ExportFormat.PNG.value, Path(out))
+        self._export_library_batch(paths, Path(out), settings)
 
-    def _export_paths_as_png(self, paths: list[Path], out_dir: Path) -> None:
+    def _export_library_batch(
+        self,
+        paths: list[Path],
+        out_dir: Path,
+        settings: ExportSettings,
+        *,
+        per_file_dialog: bool = False,
+    ) -> None:
+        """Export *paths* into *out_dir* with a cancellable progress dialog and a summary.
+
+        With *per_file_dialog* (Apply to All unchecked) the Export dialog reopens
+        for every file after the first so each can take its own settings.
+        """
         progress = QProgressDialog("Exporting…", "Cancel", 0, len(paths), self)
         progress.setWindowModality(Qt.WindowModality.WindowModal)
         progress.setMinimumDuration(400)
@@ -1894,9 +1981,27 @@ class MainWindow(QMainWindow):
                 break
             progress.setValue(i)
             QApplication.processEvents()
-            ok, errs = export_files_to_png([p], out_dir)
-            written.extend(ok)
-            errors.extend(errs)
+            file_settings = settings
+            if per_file_dialog and i > 0:
+                opened = self._library_export_dialog([p])
+                if opened is None:
+                    errors.append(f"{p.name}: could not be opened")
+                    continue
+                dialog, scene = opened
+                try:
+                    dialog.set_output_directory(out_dir)
+                    if dialog.exec() != QDialog.DialogCode.Accepted:
+                        break
+                    file_settings = dialog.settings()
+                    out_dir = dialog.output_directory()
+                finally:
+                    scene.deleteLater()
+            target = export_target(p, out_dir, file_settings)
+            error = export_file(p, target, file_settings)
+            if error:
+                errors.append(error)
+            else:
+                written.append(target)
         progress.setValue(len(paths))
         summary = f"Exported {len(written)} of {len(paths)} file(s) to {out_dir}"
         if errors:
