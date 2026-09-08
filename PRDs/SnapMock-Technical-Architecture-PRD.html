@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Technical Architecture</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.3</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.4</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
-    <dt>Document version</dt><dd>1.3</dd>
-    <dt>Last Updated</dt>    <dd>09-07-26 19:19</dd>
+    <dt>Document version</dt><dd>1.4</dd>
+    <dt>Last Updated</dt>    <dd>09-07-26 22:15</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -32,13 +32,22 @@
     </thead>
     <tbody>
       <tr>
+        <td>1.4</td>
+        <td class="nowrap">09-07-26 22:15</td>
+        <td>Doug Bower</td>
+        <td>Section 10 rewritten from the repository as it stands, and made a binding
+        target: a PRD that introduces a package or top-level module amends Section 10
+        in the same version.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
+      <tr>
         <td>1.3</td>
         <td class="nowrap">09-07-26 19:19</td>
         <td>Doug Bower</td>
         <td>fill_enabled removed from Common Vector Properties: a vector item has no fill
         exactly when its fill color is transparent. Converted from Word to HTML in the
         same revision.</td>
-        <td><span class="status open">Pending</span></td>
+        <td><span class="status closed">Superseded</span></td>
       </tr>
       <tr>
         <td>1.2</td>
@@ -80,6 +89,32 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-07-26 22:15</td>
+        <td>10</td>
+        <td>Changed</td>
+        <td>Directory structure rewritten from the repository as of this version. Adds
+        the capture and library packages, the Snagit reader and writer and RTF utilities
+        under io, the lasso, pan, and zoom tools, eleven command modules, path utilities,
+        the document and document manager, the rich text mixin, and the dialogs, overlays,
+        and panels added under ui since version 1.0. One-line descriptions are taken from
+        each module's docstring.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 22:15</td>
+        <td>10</td>
+        <td>Added</td>
+        <td>Section 10 is now a binding target, not a snapshot: a PRD that introduces a
+        package or a top-level module amends Section 10 in the same version. Decision
+        taken after the section had been silently overtaken twice (Library, Screen
+        Capture).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-07-26 22:15</td>
+        <td>12</td>
+        <td>Resolved</td>
+        <td>The directory-structure drift open issue is closed by the rewrite above.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-07-26 19:19</td>
         <td>All</td>
@@ -1217,88 +1252,179 @@ and reduces supply chain risk for an open source project.</p>
 
 <h2 id="s10">Directory Structure</h2>
 
-<p>The following is the target source directory layout:</p>
+<p>The following is the source directory layout as of version 1.4. It is a target, not a
+snapshot: code lands in the package named here, and a product requirements document that
+introduces a new package or a new top-level module amends this section in the same version.
+Test modules mirror the package they exercise. One-line descriptions are each module's own
+docstring.</p>
 
 <pre><code>snapmock/
-    __init__.py
-    app.py                    # Application entry point, QApplication setup
-    main_window.py            # QMainWindow subclass, menu bar, toolbar, dock layout
-    config/
-        settings.py           # Application settings (QSettings wrapper)
-        shortcuts.py          # Keyboard shortcut definitions
-        constants.py          # Application constants (app name, version, default values)
-    core/
-        scene.py              # SnapScene (QGraphicsScene subclass)
-        view.py               # SnapView (QGraphicsView subclass)
-        layer.py              # Layer data model
-        layer_manager.py      # LayerManager singleton
-        selection_manager.py  # SelectionManager
-        command_stack.py      # CommandStack and BaseCommand
-        clipboard_manager.py  # ClipboardManager
-        render_engine.py      # Display and export rendering
-    items/
-        base_item.py          # SnapGraphicsItem base class
-        vector_item.py        # VectorItem abstract base
-        arrow_item.py         # ArrowItem
-        line_item.py          # LineItem
-        rectangle_item.py     # RectangleItem
-        ellipse_item.py       # EllipseItem
-        freehand_item.py      # FreehandItem
-        text_item.py          # TextItem
-        callout_item.py       # CalloutItem
-        blur_item.py          # BlurItem
-        highlight_item.py     # HighlightItem
-        numbered_step_item.py # NumberedStepItem
-        stamp_item.py         # StampItem
-        raster_region_item.py # RasterRegionItem
-    tools/
-        base_tool.py          # BaseTool abstract base class
-        tool_manager.py       # ToolManager singleton
-        select_tool.py        # Select / Move tool
-        raster_select_tool.py # Raster selection (rect + freeform)
-        crop_tool.py          # Crop tool
-        arrow_tool.py         # Arrow creation tool
-        line_tool.py          # Line creation tool
-        rectangle_tool.py     # Rectangle creation tool
-        ellipse_tool.py       # Ellipse creation tool
-        freehand_tool.py      # Freehand drawing tool
-        text_tool.py          # Text creation tool
-        callout_tool.py       # Callout creation tool
-        blur_tool.py          # Blur/Pixelate tool
-        highlight_tool.py     # Highlighter tool
-        numbered_step_tool.py # Numbered step tool
-        stamp_tool.py         # Stamp/Sticker tool
-        eyedropper_tool.py    # Color picker tool
-    commands/
-        add_item.py           # AddItemCommand
-        remove_item.py        # RemoveItemCommand
-        move_items.py         # MoveItemsCommand
-        transform_item.py     # TransformItemCommand
-        modify_property.py    # ModifyPropertyCommand
-        layer_commands.py     # Add/Remove/Reorder layer commands
-        raster_commands.py    # Raster cut, crop commands
-        macro_command.py      # MacroCommand
-    io/
-        project_serializer.py # Save/Load .smk files
-        exporter.py           # Export to PNG/JPG/SVG/PDF
-        importer.py           # Import images
-    ui/
-        toolbar.py            # Main toolbar
-        tool_options_bar.py   # Context-sensitive tool options
-        layer_panel.py        # Layer panel (dock widget)
-        property_panel.py     # Property inspector (dock widget)
-        status_bar.py         # Status bar (zoom, cursor pos, selection info)
-        color_picker.py       # Color picker dialog/widget
-    resources/
-        icons/                # SVG/PNG icons for tools and UI
-        stamps/               # Built-in stamp/sticker images
-        themes/               # Light and dark theme stylesheets
+    __main__.py                   # Entry point for python -m snapmock
+    app.py                        # QApplication bootstrap, the single-instance channel, and…
+    main_window.py                # primary application window
+    capture/                      # Screen capture: modes, entry points, the region overlay,…
+        backend.py                # The capture backend abstraction
+        cli.py                    # Command-line invocation: snapmock --capture &lt;mode&gt;…
+        compositing.py            # Pure image operations on a ScreenGrab
+        countdown.py              # The delay countdown badge
+        macos.py                  # macOS backend stub
+        manager.py                # CaptureManager: the coordinator between entry points,…
+        models.py                 # Application-level data models for screen capture
+        onboarding.py             # First-run onboarding dialogs
+        overlay.py                # The region selection overlay
+        single_instance.py        # The single-instance channel
+        sound.py                  # The capture sound
+        tray.py                   # The system tray icon image
+        wayland_portal.py         # Linux Wayland backend: the desktop portal&#x27;s Screenshot…
+        window_state.py           # Hide-and-restore of the application&#x27;s windows around a…
+        windows.py                # Windows backend and Windows hotkey backend through ctypes
+        x11.py                    # Linux X11 backend and X11 hotkey backend through ctypes
+    commands/                     # Command objects for the undo/redo system
+        add_item.py               # adds a SnapGraphicsItem to the scene
+        arrange_commands.py       # Arrange commands — z-order, alignment, and distribution
+        canvas_transform_commands.py # Canvas transform commands — rotate and flip the entire…
+        layer_commands.py         # Layer commands — undoable layer add, remove, reorder,…
+        macro_command.py          # MacroCommand groups multiple sub-commands into a single…
+        modify_property.py        # change a single property on an item (with merge support)
+        move_item_layer.py        # move items between layers
+        move_items.py             # undoable movement of one or more items
+        move_tail_command.py      # undo/redo for callout tail adjustments
+        raster_commands.py        # Raster commands — CropCanvas, RasterCut, ResizeCanvas,…
+        remove_item.py            # removes a SnapGraphicsItem from the scene
+        scale_geometry_command.py # resize an item by scaling its internal geometry
+        text_edit_command.py      # undo/redo for rich text editing sessions
+        text_format_command.py    # undo/redo for text formatting changes
+        transform_item.py         # record a before/after QTransform for an item
+    config/                       # Application configuration: constants, settings, keyboard…
+        constants.py              # Application-wide constants
+        settings.py               # Persistent application settings backed by QSettings
+        shortcuts.py              # Keyboard shortcut definitions
+    core/                         # Core subsystems: scene graph, layers, commands,…
+        clipboard_manager.py      # internal and system clipboard operations
+        command_stack.py          # Undo/redo command infrastructure
+        document.py               # one open file: its scene, view, selection, and clipboard
+        document_manager.py       # ordered set of open documents and the active one
+        layer.py                  # Layer data model
+        layer_manager.py          # owns the ordered layer stack and emits change signals
+        path_utils.py             # Path utilities — point simplification and smoothing…
+        render_engine.py          # layer compositing for display and export
+        rich_text_mixin.py        # shared QTextDocument-based rich text for TextItem and…
+        scene.py                  # the backbone QGraphicsScene that owns LayerManager +…
+        selection_manager.py      # tracks the set of currently selected scene items
+        view.py                   # QGraphicsView with zoom, pan, and tool event routing
+    io/                           # File I/O — project save/load, import/export, Snagit…
+        exporter.py               # export scene to PNG, JPG, SVG, PDF
+        importer.py               # import images into the scene
+        project_serializer.py     # save/load .smk ZIP archives
+        rtf_utils.py              # RTF utilities for Snagit .snagx text fields
+        snagit_reader.py          # load Snagit .snagx ZIP archives into a SnapScene
+        snagit_writer.py          # save a SnapScene as a Snagit .snagx ZIP archive
+    items/                        # Scene items — SnapGraphicsItem subclasses for annotations
+        arrow_item.py             # line with arrowhead annotation
+        base_item.py              # abstract base class for all scene annotation items
+        blur_item.py              # region that applies blur/pixelate effect to layers below
+        callout_item.py           # speech-bubble annotation with configurable shape and tail
+        ellipse_item.py           # ellipse / circle annotation
+        freehand_item.py          # freehand drawn path annotation
+        highlight_item.py         # semi-transparent wide stroke annotation
+        line_item.py              # straight line annotation
+        numbered_step_item.py     # circled number with optional label
+        raster_region_item.py     # extracted pixel region from raster selection/cut/paste
+        rectangle_item.py         # rectangle / square annotation with optional corner radius
+        stamp_item.py             # pre-defined or custom image stamp
+        text_item.py              # editable rich text annotation with optional frame
+        vector_item.py            # abstract base for items defined by vector paths
+    library/                      # auto-saved capture workspace
+        commands.py               # Undoable library file operations
+        file_info.py              # in-memory facts about one .smk file in the library
+        manager.py                # the active library directory and every operation on it
+        model.py                  # table model over one library folder (files and subfolders)
+        render.py                 # Render library files without opening them in a tab
+    resources/                    # Application resources — icons, stamps, themes
+        icons/
+        sounds/
+        stamps/
+        themes/
+        icons/
+        sounds/
+        stamps/
+        themes/
+    tools/                        # Tool engine — BaseTool subclasses and ToolManager
+        arrow_tool.py             # click-and-drag to create arrows
+        base_tool.py              # abstract base class for all interactive tools
+        blur_tool.py              # click-and-drag to create blur regions
+        callout_tool.py           # drag to place tail tip then position bubble, or click for…
+        crop_tool.py              # interactive crop with overlay, handles, and state machine
+        ellipse_tool.py           # click-and-drag to create ellipses
+        eyedropper_tool.py        # pick a color from the canvas
+        freehand_tool.py          # click-and-drag to draw freehand paths
+        highlight_tool.py         # click-and-drag to draw highlight strokes
+        lasso_select_tool.py      # freeform and polygonal raster selection
+        line_tool.py              # click-and-drag to create lines
+        numbered_step_tool.py     # click to place numbered step items
+        pan_tool.py               # click-drag to pan the viewport
+        raster_select_tool.py     # rectangular pixel selection with marching ants
+        rectangle_tool.py         # click-and-drag to create rectangles
+        select_tool.py            # click-select, drag-move, rubber-band multi-select, nudge,…
+        stamp_tool.py             # click to place a stamp item
+        text_tool.py              # click to place or drag to define a text box, click…
+        tool_manager.py           # registry and active-tool switching
+        zoom_tool.py              # click to zoom in/out, drag to zoom to rectangle
+    ui/                           # UI panels — toolbar, layer panel, property panel, status…
+        collapsible_section.py    # reusable collapsible section widget for panels
+        color_picker.py           # color swatch widget with QColorDialog integration
+        context_menus.py          # Context menu builder functions for canvas, items, and…
+        crop_overlay.py           # visual overlay showing the crop region with handles and…
+        document_tabs.py          # tab bar plus stacked views for the open documents
+        find_replace_bar.py       # inline find/replace bar for rich text editing
+        item_properties_dialog.py # inspect and edit properties of a SnapGraphicsItem
+        layer_panel.py            # dock widget showing the layer stack
+        layer_properties_dialog.py # inspect and edit properties of a Layer
+        library_panel.py          # dockable file browser for the active library
+        preferences_dialog.py     # view and edit persistent application settings
+        property_panel.py         # dock widget showing selected item properties
+        resize_canvas_dialog.py   # Resize Canvas dialog — change canvas dimensions with…
+        resize_image_dialog.py    # Resize Image dialog — scale the entire image/canvas
+        ruler_widget.py           # pixel ruler for horizontal and vertical axes
+        selection_overlay.py      # marching ants border for raster selections
+        status_bar.py             # displays cursor position, zoom level, selection info, and…
+        toast.py                  # transient notification shown at the bottom of the main…
+        tool_options_bar.py       # context-sensitive per-tool options widget
+        toolbar.py                # main toolbar synced with ToolManager
+        transform_handles.py      # resize/rotate handles displayed around selected items
 tests/
-    test_scene.py
-    test_layer_manager.py
+    __init__.py
+    conftest.py
+    test_app.py
+    test_arrange_commands.py
+    test_canvas_area.py
+    test_canvas_transform_commands.py
+    test_capture/
+    test_clipboard.py
+    test_clipboard_raster.py
     test_command_stack.py
+    test_constants.py
+    test_context_menus.py
+    test_documents.py
+    test_integration.py
+    test_inter_tool.py
+    test_io/
+    test_item_properties_dialog.py
+    test_items.py
+    test_layer_manager.py
+    test_layer_properties_dialog.py
+    test_library_manager.py
+    test_library_panel.py
+    test_menus.py
+    test_preferences_dialog.py
+    test_property_panel.py
+    test_raster_commands.py
+    test_raster_operations.py
+    test_render_engine.py
+    test_rich_text.py
+    test_scene.py
     test_tools/
-    test_io/</code></pre>
+    test_transform_resize.py</code></pre>
 
 <h2 id="s11">Acceptance Criteria</h2>
 
@@ -1363,16 +1489,6 @@ RAM, integrated GPU).</p>
 requirement; each needs a decision before this document leaves draft.</p>
 
 <div class="note issue">
-  <span class="note-label">Open — directory structure has drifted from the implementation</span>
-  <p>Section 10 describes the target source layout as of version 1.0. The repository now
-  also contains a <code>library</code> package, a <code>capture</code> package, a Snagit
-  file reader under <code>io</code>, and a lasso selection tool, none of which appear in
-  Section 10. Inferred from the repository file listing, not from a design review. Decide
-  whether Section 10 is a target that the implementation should be brought back to, or a
-  record that should be updated to match the implementation.</p>
-</div>
-
-<div class="note issue">
   <span class="note-label">Open — conflicting document dates</span>
   <p>The Word title page carried February 2026 while the change log placed version 1.1 in
   March 2026. Exact dates are needed to bring the revision control table up to the
@@ -1381,7 +1497,7 @@ requirement; each needs a decision before this document leaves draft.</p>
 
 <div class="note issue">
   <span class="note-label">Open — approval status never recorded</span>
-  <p>The original carried no approval record. Version 1.3 is shown as pending. Confirm
+  <p>The original carried no approval record. Version 1.4 is shown as pending. Confirm
   whether any earlier version was formally approved.</p>
 </div>
 
