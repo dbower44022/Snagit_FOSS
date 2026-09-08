@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.6</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.7</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>1.6</dd>
-    <dt>Last Updated</dt>    <dd>09-07-26 19:31</dd>
+    <dt>Document version</dt><dd>1.7</dd>
+    <dt>Last Updated</dt>    <dd>09-08-26 11:22</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -32,12 +32,19 @@
     </thead>
     <tbody>
       <tr>
+        <td>1.7</td>
+        <td class="nowrap">09-08-26 11:22</td>
+        <td>Doug Bower</td>
+        <td>Phase 1 of the implementation: departures recorded for the tool shortcut letters, the deferred merge, group, and update rows, the Align and Distribute submenus, and the licence decision. No requirement changed except where a row says so.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
+      <tr>
         <td>1.6</td>
         <td class="nowrap">09-07-26 19:31</td>
         <td>Doug Bower</td>
         <td>Converted from Word to HTML. Content unchanged except for corrections
         noted in the change log below.</td>
-        <td><span class="status open">Pending</span></td>
+        <td><span class="status closed">Superseded</span></td>
       </tr>
       <tr>
         <td>1.6</td>
@@ -98,6 +105,72 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-08-26 11:22</td>
+        <td>3.7</td>
+        <td>Departure</td>
+        <td>Decision 09-08-26: the shipped shortcut map keeps its letters rather than moving to this table. Line is L (table: U), Callout is C (B), Blur is B (Z), Crop Canvas is X (C), Raster Selection (Freeform) is Shift+M (L), and Zoom is the letter Z (Ctrl+Space held). The same departure is recorded in the Text and Callout, Blur, and Navigation PRDs; the Basic Shape PRD's row is owed. The Keyboard Shortcuts dialog shows the shipped letters.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 11:22</td>
+        <td>3.7</td>
+        <td>Flagged</td>
+        <td>This table gives the Blur / Pixelate tool the letter Z; the Blur, Highlighter, and Eyedropper PRD gives it D. Neither is shipped (see the departure above). Open issue added to Section 18.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 11:22</td>
+        <td>3.4</td>
+        <td>Deferred</td>
+        <td>Decision 09-08-26: Merge Down, Merge Visible, and Flatten All are deferred to a Navigation and Raster Operations follow-up. The rows are present with their shortcuts, check their requirements, and then say the feature is not yet available.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 11:22</td>
+        <td>3.6</td>
+        <td>Deferred</td>
+        <td>Decision 09-08-26: Group and Ungroup need a group item type and get their own kickoff after Phase 8. The rows are present with Ctrl+G and Ctrl+Shift+G and say so when used.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 11:22</td>
+        <td>3.6</td>
+        <td>Departure</td>
+        <td>Align Left through Align Bottom and the two Distribute rows are grouped in Align and Distribute submenus rather than listed flat. Their order and separators otherwise follow the table.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 11:22</td>
+        <td>3.8</td>
+        <td>Deferred</td>
+        <td>Check for Updates is present and says it is scheduled for a later phase; the GitHub releases query is not built in Phase 1.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 11:22</td>
+        <td>3.1</td>
+        <td>Resolved</td>
+        <td>Print opens the system print dialog with the flattened canvas fitted to the page (decision 09-08-26).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 11:22</td>
+        <td>3.5</td>
+        <td>Resolved</td>
+        <td>Crop to Canvas activates the crop tool and Auto-Trim crops to the visible content bounds; both were stubs before Phase 1.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 11:22</td>
+        <td>11.6</td>
+        <td>Resolved</td>
+        <td>Licence decided 09-08-26: MIT. The About dialog shows it with the version, build date, links, credits, and Copy Version Info.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 11:22</td>
+        <td>11.7</td>
+        <td>Resolved</td>
+        <td>The Unsaved Changes dialog uses this section's wording and buttons; the canvas preview is owed by Phase 8.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 11:22</td>
+        <td>6.1, 13.2, 13.3</td>
+        <td>Flagged</td>
+        <td>The pasteboard default is #808080 in 6.1 and #E0E0E0 / #1E1E1E in the theme tables. Open issue added to Section 18; the theme tables are expected to win when the theme manager lands in Phase 3.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-07-26 19:31</td>
         <td>All</td>
@@ -1813,6 +1886,16 @@ of the empty canvas:</p>
 
 <p>These items were raised by the conversion from Word. None of them changes a
 requirement; each needs a decision before this document leaves draft.</p>
+
+<div class="note issue">
+  <span class="note-label">Open — Blur / Pixelate shortcut letter</span>
+  <p>Section 3.7 says Z; the Blur, Highlighter, and Eyedropper PRD says D; the shipped map says B and stays there by the 09-08-26 decision. Decide which letter the two tables should carry.</p>
+</div>
+
+<div class="note issue">
+  <span class="note-label">Open — pasteboard colour</span>
+  <p>Section 6.1 gives #808080 as the default pasteboard colour; Sections 13.2 and 13.3 give #E0E0E0 for the light theme and #1E1E1E for the dark theme. Confirm that the theme tables are authoritative.</p>
+</div>
 
 <div class="note issue">
   <span class="note-label">Open — The title page carried September 2026 while the change log placed vers</span>
