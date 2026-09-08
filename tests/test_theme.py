@@ -144,3 +144,57 @@ class TestDarkModeMenu:
         main_window.set_theme_mode(ThemeMode.DARK)
         assert self._dark_mode_action(main_window).isChecked() is True
         assert AppSettings().theme_mode() == "dark"
+
+
+class TestCanvasReadsTheme:
+    def test_view_pasteboard_follows_the_theme(self, qtbot: QtBot, view) -> None:  # type: ignore[no-untyped-def]
+        manager = theme_manager()
+        manager.apply()
+        assert view.pasteboard_color.name().upper() == "#E0E0E0"
+        manager.set_mode(ThemeMode.DARK)
+        assert view.pasteboard_color.name().upper() == "#1E1E1E"
+
+    def test_pasteboard_override_wins_over_the_theme(self, qtbot: QtBot, view) -> None:  # type: ignore[no-untyped-def]
+        from PyQt6.QtGui import QColor
+
+        view.set_pasteboard_color(QColor("#808080"))
+        assert view.pasteboard_color.name().upper() == "#808080"
+        view.set_pasteboard_color(None)
+        assert view.pasteboard_color.name().upper() == "#E0E0E0"
+
+    def test_grid_pens_use_theme_alpha_unless_overridden(self, qtbot: QtBot, view) -> None:  # type: ignore[no-untyped-def]
+        from PyQt6.QtGui import QColor
+
+        minor, major = view._grid_pens()
+        assert minor.color().alpha() == 0x33
+        assert major.color().alpha() == 0x55
+        view.set_grid_style(QColor("#FF0000"), 50)
+        minor, major = view._grid_pens()
+        assert minor.color().red() == 255
+        assert minor.color().alpha() == round(50 * 2.55)
+
+    def test_checkerboard_tile_uses_theme_colours_and_size(self, qtbot: QtBot, view) -> None:  # type: ignore[no-untyped-def]
+        tile = view._get_checkerboard_tile()
+        assert tile.width() == 16
+        assert tile.toImage().pixelColor(0, 0).name().upper() == "#CCCCCC"
+        assert tile.toImage().pixelColor(12, 4).name().upper() == "#FFFFFF"
+        view.set_checkerboard(4, None)
+        assert view._get_checkerboard_tile().width() == 8
+
+    def test_handles_recolour_on_theme_change(self, main_window: MainWindow) -> None:
+        from snapmock.tools.select_tool import SelectTool
+
+        tool = main_window._tool_manager.tool("select")
+        assert isinstance(tool, SelectTool)
+        assert tool._handles is not None
+        assert tool._handles._border.pen().color().name().upper() == "#2B579A"
+        theme_manager().set_mode(ThemeMode.DARK)
+        assert tool._handles._border.pen().color().name().upper() == "#5B9BD5"
+
+    def test_capture_accent_is_the_theme_accent(self, qtbot: QtBot) -> None:
+        from snapmock.capture.overlay import accent_color
+
+        theme_manager().apply()
+        assert accent_color().name().upper() == "#2B579A"
+        theme_manager().set_mode(ThemeMode.DARK)
+        assert accent_color().name().upper() == "#5B9BD5"

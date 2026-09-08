@@ -20,7 +20,6 @@ from PyQt6.QtCore import (
 )
 from PyQt6.QtGui import (
     QAction,
-    QColor,
     QDesktopServices,
     QDragEnterEvent,
     QDropEvent,
@@ -63,6 +62,7 @@ from snapmock.config.constants import (
     LIBRARY_THUMBNAIL_MIN,
 )
 from snapmock.config.settings import AppSettings
+from snapmock.core.theme_manager import current_theme
 from snapmock.library.commands import (
     CreateFolderCommand,
     DeleteLibraryFileCommand,
@@ -132,7 +132,8 @@ class _GridDelegate(QStyledItemDelegate):
         )
         sub = str(index.data(SUBTITLE_ROLE) or "")
         sub_rect = QRect(name_rect.x(), name_rect.bottom() + 1, name_rect.width(), fm.height())
-        painter.setPen(QColor(200, 200, 200) if selected else QColor(128, 128, 128))
+        theme = current_theme()
+        painter.setPen(theme.accent_text if selected else theme.text_secondary)
         small = painter.font()
         small.setPointSizeF(max(6.0, small.pointSizeF() - 1))
         painter.setFont(small)
@@ -143,7 +144,7 @@ class _GridDelegate(QStyledItemDelegate):
         )
         if bool(index.data(IS_OPEN_ROLE)):
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.setBrush(QColor("#2f80ed"))
+            painter.setBrush(theme.accent)
             painter.drawEllipse(rect.right() - 14, rect.y() + 6, 8, 8)
         painter.restore()
 
@@ -260,7 +261,7 @@ class _EmptyLabel(QLabel):
         super().__init__(EMPTY_TEXT, parent)
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setWordWrap(True)
-        self.setStyleSheet("color: #888;")
+        self.setProperty("role", "secondary")
         self.setAcceptDrops(True)
 
     def dragEnterEvent(self, e: QDragEnterEvent | None) -> None:  # noqa: N802

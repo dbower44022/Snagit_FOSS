@@ -56,8 +56,10 @@ MSG_OVERLAY_ERROR_EXPORT = OVERLAY_ERROR
 
 
 def accent_color() -> QColor:
-    """The theme accent. There is no ThemeManager yet; the palette highlight stands in."""
-    return QApplication.palette().color(QApplication.palette().ColorRole.Highlight)
+    """The theme accent (General UI PRD 13), read from the ThemeManager."""
+    from snapmock.core.theme_manager import current_theme
+
+    return QColor(current_theme().accent)
 
 
 class SelectionModel:

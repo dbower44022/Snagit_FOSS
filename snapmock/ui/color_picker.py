@@ -93,10 +93,7 @@ class ColorPicker(QWidget):
             btn.setCheckable(True)
             btn.setChecked(self._color.alpha() == 0)
             btn.setToolTip("Transparent (no color)")
-            btn.setStyleSheet(
-                "QPushButton { font-size: 14px; }"
-                "QPushButton:checked { background-color: #cde; border: 1px solid #68a; }"
-            )
+            btn.setStyleSheet("QPushButton { font-size: 14px; }")
             btn.clicked.connect(self._on_transparent_toggled)
             layout.addWidget(btn)
             self._transparent_btn = btn

@@ -23,21 +23,14 @@ from PyQt6.QtGui import (
 from PyQt6.QtWidgets import QGraphicsView, QWidget
 
 from snapmock.config.constants import (
-    CANVAS_SHADOW_COLOR,
     CANVAS_SHADOW_OFFSET,
     CHECKERBOARD_CELL_SIZE,
-    CHECKERBOARD_COLOR_A,
-    CHECKERBOARD_COLOR_B,
     EMPTY_CANVAS_FONT_SIZE,
     EMPTY_CANVAS_TEXT,
-    EMPTY_CANVAS_TEXT_COLOR,
-    GRID_COLOR,
-    GRID_COLOR_MAJOR,
     GRID_MAJOR_MULTIPLE,
     GRID_MIN_PIXEL_SPACING,
     GRID_SIZE_DEFAULT,
     LIBRARY_PATHS_MIME,
-    PASTEBOARD_COLOR,
     RULER_SIZE,
     ZOOM_DEFAULT,
     ZOOM_MAX,
@@ -46,6 +39,7 @@ from snapmock.config.constants import (
     ZOOM_STEPS,
 )
 from snapmock.core.scene import SnapScene
+from snapmock.core.theme_manager import current_theme
 
 if TYPE_CHECKING:
     from snapmock.tools.tool_manager import ToolManager
@@ -80,8 +74,16 @@ class SnapView(QGraphicsView):
         self._grid_size: int = GRID_SIZE_DEFAULT
         self._rulers_visible: bool = False
 
-        # Cached checkerboard tile
+        # Cached checkerboard tile, rebuilt when the theme or its preferences change
         self._checkerboard_tile: QPixmap | None = None
+
+        # Preferences that override the theme (General UI PRD 11.3); None = theme value
+        self._pasteboard_override: QColor | None = None
+        self._grid_color_override: QColor | None = None
+        self._grid_opacity_override: int | None = None
+        self._checkerboard_size: int = CHECKERBOARD_CELL_SIZE
+        self._checkerboard_override: tuple[QColor, QColor] | None = None
+        self._pixel_grid_threshold: int = ZOOM_PIXEL_GRID_THRESHOLD
 
         # Ruler widgets (created lazily by set_rulers_visible)
         self._h_ruler: QWidget | None = None
@@ -153,6 +155,70 @@ class SnapView(QGraphicsView):
             if vp is not None:
                 vp.update()
 
+    # --- theme and appearance preferences (General UI PRD 11.3, 13.4) ---
+
+    def apply_theme(self) -> None:
+        """Repaint after a theme change; the paint paths read the theme each time."""
+        self._checkerboard_tile = None
+        if self._ruler_corner is not None:
+            self._ruler_corner.setStyleSheet(
+                f"background-color: {current_theme().ruler_bg.name()};"
+            )
+        for ruler in (self._h_ruler, self._v_ruler):
+            if ruler is not None:
+                ruler.update()
+        vp = self.viewport()
+        if vp is not None:
+            vp.update()
+
+    def set_pasteboard_color(self, color: QColor | None) -> None:
+        """Override the theme's pasteboard colour; None returns to the theme."""
+        self._pasteboard_override = QColor(color) if color is not None else None
+        self._repaint()
+
+    def set_grid_style(self, color: QColor | None, opacity_pct: int | None) -> None:
+        """Override the theme's grid colour and/or opacity; None keeps the theme value."""
+        self._grid_color_override = QColor(color) if color is not None else None
+        self._grid_opacity_override = opacity_pct
+        self._repaint()
+
+    def set_checkerboard(self, size: int, colors: tuple[QColor, QColor] | None) -> None:
+        """Checkerboard cell size and, optionally, the two colours (None = theme)."""
+        self._checkerboard_size = max(1, size)
+        self._checkerboard_override = (
+            (QColor(colors[0]), QColor(colors[1])) if colors is not None else None
+        )
+        self._checkerboard_tile = None
+        self._repaint()
+
+    def set_pixel_grid_threshold(self, zoom_pct: int) -> None:
+        """Zoom percentage at and above which the grid shows every pixel."""
+        self._pixel_grid_threshold = max(100, zoom_pct)
+        self._repaint()
+
+    @property
+    def pasteboard_color(self) -> QColor:
+        return QColor(self._pasteboard_override or current_theme().pasteboard)
+
+    def _grid_pens(self) -> tuple[QPen, QPen]:
+        theme = current_theme().grid_lines
+        base = self._grid_color_override or theme
+        alpha = (
+            round(self._grid_opacity_override * 2.55)
+            if self._grid_opacity_override is not None
+            else theme.alpha()
+        )
+        minor = QColor(base)
+        minor.setAlpha(max(0, min(255, alpha)))
+        major = QColor(base)
+        major.setAlpha(max(0, min(255, round(alpha * 5 / 3))))
+        return QPen(minor, 0), QPen(major, 0)
+
+    def _repaint(self) -> None:
+        vp = self.viewport()
+        if vp is not None:
+            vp.update()
+
     def set_rulers_visible(self, visible: bool) -> None:
         self._rulers_visible = visible
         self._ensure_rulers()
@@ -175,9 +241,7 @@ class SnapView(QGraphicsView):
         self._v_ruler = RulerWidget(Qt.Orientation.Vertical, self, parent=self)
         self._ruler_corner = QWidget(self)
         self._ruler_corner.setFixedSize(RULER_SIZE, RULER_SIZE)
-        from snapmock.config.constants import RULER_BG_COLOR
-
-        self._ruler_corner.setStyleSheet(f"background-color: {RULER_BG_COLOR};")
+        self._ruler_corner.setStyleSheet(f"background-color: {current_theme().ruler_bg.name()};")
         self._ruler_corner.setVisible(False)
 
         # Wire signals
@@ -377,24 +441,31 @@ class SnapView(QGraphicsView):
             return
 
         canvas = snap.canvas_rect
+        theme = current_theme()
 
         # 1. Pasteboard fill
-        painter.fillRect(rect, QColor(PASTEBOARD_COLOR))
+        painter.fillRect(rect, self.pasteboard_color)
 
         # 2. Drop shadow behind canvas
         shadow_rect = canvas.translated(CANVAS_SHADOW_OFFSET, CANVAS_SHADOW_OFFSET)
-        painter.fillRect(shadow_rect, QColor(CANVAS_SHADOW_COLOR))
+        painter.fillRect(shadow_rect, theme.canvas_shadow)
 
-        # 3. Canvas background
-        painter.fillRect(canvas, snap.background_color)
+        # 3. Canvas background: checkerboard shows through any transparency (PRD 6.2)
+        background = snap.background_color
+        if background.alpha() < 255:
+            painter.save()
+            painter.setClipRect(canvas)
+            painter.drawTiledPixmap(canvas, self._get_checkerboard_tile())
+            painter.restore()
+        painter.fillRect(canvas, background)
 
         # 4. Canvas border (1px)
-        painter.setPen(QPen(QColor(180, 180, 180), 0))
+        painter.setPen(QPen(theme.canvas_border, 0))
         painter.drawRect(canvas)
 
         # 5. Empty canvas prompt
         if self._scene_has_no_user_items(snap):
-            painter.setPen(QPen(QColor(EMPTY_CANVAS_TEXT_COLOR)))
+            painter.setPen(QPen(theme.empty_canvas_text))
             font = QFont()
             font.setPixelSize(EMPTY_CANVAS_FONT_SIZE)
             painter.setFont(font)
@@ -410,24 +481,18 @@ class SnapView(QGraphicsView):
 
     def _get_checkerboard_tile(self) -> QPixmap:
         if self._checkerboard_tile is None:
-            size = CHECKERBOARD_CELL_SIZE * 2
+            cell = self._checkerboard_size
+            theme = current_theme()
+            color_a, color_b = self._checkerboard_override or (
+                theme.checkerboard_a,
+                theme.checkerboard_b,
+            )
+            size = cell * 2
             tile = QPixmap(size, size)
             p = QPainter(tile)
-            p.fillRect(0, 0, size, size, QColor(CHECKERBOARD_COLOR_A))
-            p.fillRect(
-                0,
-                0,
-                CHECKERBOARD_CELL_SIZE,
-                CHECKERBOARD_CELL_SIZE,
-                QColor(CHECKERBOARD_COLOR_B),
-            )
-            p.fillRect(
-                CHECKERBOARD_CELL_SIZE,
-                CHECKERBOARD_CELL_SIZE,
-                CHECKERBOARD_CELL_SIZE,
-                CHECKERBOARD_CELL_SIZE,
-                QColor(CHECKERBOARD_COLOR_B),
-            )
+            p.fillRect(0, 0, size, size, color_a)
+            p.fillRect(0, 0, cell, cell, color_b)
+            p.fillRect(cell, cell, cell, cell, color_b)
             p.end()
             self._checkerboard_tile = tile
         return self._checkerboard_tile
@@ -450,12 +515,13 @@ class SnapView(QGraphicsView):
 
         zoom_factor = self._zoom_pct / 100.0
         grid_size = self._grid_size
+        minor_pen, major_pen = self._grid_pens()
 
         # Pixel grid at extreme zoom
-        if self._zoom_pct >= ZOOM_PIXEL_GRID_THRESHOLD:
+        if self._zoom_pct >= self._pixel_grid_threshold:
             pixel_screen = zoom_factor
             if pixel_screen >= GRID_MIN_PIXEL_SPACING:
-                painter.setPen(QPen(QColor(GRID_COLOR), 0))
+                painter.setPen(minor_pen)
                 px_left = int(clip.left())
                 px_right = int(clip.right()) + 1
                 px_top = int(clip.top())
@@ -472,8 +538,6 @@ class SnapView(QGraphicsView):
             return
 
         painter.save()
-        minor_pen = QPen(QColor(GRID_COLOR), 0)
-        major_pen = QPen(QColor(GRID_COLOR_MAJOR), 0)
 
         left = int(clip.left() / grid_size) * grid_size
         top_val = int(clip.top() / grid_size) * grid_size

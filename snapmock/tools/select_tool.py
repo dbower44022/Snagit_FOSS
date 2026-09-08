@@ -87,6 +87,11 @@ class SelectTool(BaseTool):
         if selection_manager is not None:
             selection_manager.selection_changed.connect(self._on_selection_changed)
 
+    def apply_theme(self) -> None:
+        """Recolour the transform handles after a theme switch (General UI PRD 13.4)."""
+        if self._handles is not None:
+            self._handles.apply_theme()
+
     def deactivate(self) -> None:
         self.cancel()
         if self._selection_manager is not None:

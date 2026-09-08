@@ -259,7 +259,7 @@ class PreferencesDialog(QDialog):
                 "PrintScreen by default."
             )
             conflicts.setWordWrap(True)
-            conflicts.setStyleSheet("color: gray")
+            conflicts.setProperty("role", "secondary")
             form.addRow("", conflicts)
 
         self._capture_delay_spin = QSpinBox()
@@ -274,7 +274,7 @@ class PreferencesDialog(QDialog):
         cursor_row.addWidget(self._capture_cursor_cb)
         if not caps.cursor:
             note = QLabel(CURSOR_UNAVAILABLE)
-            note.setStyleSheet("color: gray")
+            note.setProperty("role", "secondary")
             cursor_row.addWidget(note)
         cursor_row.addStretch(1)
         form.addRow("Include mouse cursor:", cursor_row)
@@ -320,7 +320,7 @@ class PreferencesDialog(QDialog):
         self._capability_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
-        self._capability_label.setStyleSheet("color: gray")
+        self._capability_label.setProperty("role", "secondary")
         form.addRow(self._capability_label)
 
         group.setLayout(form)
@@ -337,7 +337,7 @@ class PreferencesDialog(QDialog):
         if binding is not None:
             edit.setKeySequence(binding.key_sequence)
         status = QLabel("")
-        status.setStyleSheet("color: #c0392b")
+        status.setProperty("role", "error")
         clear = QPushButton("Clear")
         clear.clicked.connect(lambda: self._change_hotkey(action, QKeySequence()))
         edit.editingFinished.connect(lambda: self._change_hotkey(action, edit.keySequence()))

@@ -14,6 +14,8 @@ from PyQt6.QtWidgets import (
     QGraphicsSimpleTextItem,
 )
 
+from snapmock.core.theme_manager import current_theme
+
 if TYPE_CHECKING:
     from snapmock.core.scene import SnapScene
 
@@ -28,7 +30,7 @@ class CropHandleItem(QGraphicsRectItem):
         super().__init__(-HANDLE_HALF, -HANDLE_HALF, HANDLE_SIZE, HANDLE_SIZE)
         self.position = position
         self.setPen(QPen(QColor(255, 255, 255), 1))
-        self.setBrush(QBrush(QColor(0, 120, 215)))
+        self.setBrush(QBrush(current_theme().accent))
         self.setZValue(999999)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, False)
 
@@ -51,7 +53,7 @@ class CropOverlay(QGraphicsItemGroup):
 
         # Crop border
         self._border = QGraphicsRectItem()
-        self._border.setPen(QPen(QColor(0, 120, 215), 2))
+        self._border.setPen(QPen(current_theme().accent, 2))
         self._border.setBrush(Qt.GlobalColor.transparent)
         self._border.setZValue(999991)
         self.addToGroup(self._border)

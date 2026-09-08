@@ -379,9 +379,10 @@ class MainWindow(QMainWindow):
         self._dark_mode_action.setChecked(resolved == "dark")
         self._dark_mode_action.blockSignals(False)
         for doc in self._documents.documents:
-            vp = doc.view.viewport()
-            if vp is not None:
-                vp.update()
+            doc.view.apply_theme()
+        select_tool = self._tool_manager.tool("select")
+        if isinstance(select_tool, SelectTool):
+            select_tool.apply_theme()
 
     def _view_reset_layout(self) -> None:
         """Restore every panel and toolbar to its default position, size, and visibility."""

@@ -20,6 +20,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from snapmock.core.theme_manager import current_theme
+
 
 class ResizeCanvasDialog(QDialog):
     """Dialog for resizing the canvas with anchor point and fill color."""
@@ -143,7 +145,8 @@ class ResizeCanvasDialog(QDialog):
 
     def _update_color_button(self) -> None:
         self._color_btn.setStyleSheet(
-            f"background-color: {self._fill_color.name()}; border: 1px solid gray;"
+            f"background-color: {self._fill_color.name()};"
+            f" border: 1px solid {current_theme().border.name()};"
         )
 
     # --- results ---

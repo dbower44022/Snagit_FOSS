@@ -15,6 +15,8 @@ from PyQt6.QtWidgets import (
     QGraphicsRectItem,
 )
 
+from snapmock.core.theme_manager import current_theme
+
 if TYPE_CHECKING:
     from snapmock.core.scene import SnapScene
 
@@ -71,13 +73,17 @@ class HandleItem(QGraphicsRectItem):
     def __init__(self, position: HandlePosition) -> None:
         super().__init__(-HANDLE_HALF, -HANDLE_HALF, HANDLE_SIZE, HANDLE_SIZE)
         self.position = position
-        self.setPen(QPen(QColor(0, 120, 215), 1))
-        self.setBrush(QBrush(QColor(255, 255, 255)))
+        self.apply_theme()
         self.setZValue(999998)
         cursor = _CURSOR_MAP.get(position, Qt.CursorShape.ArrowCursor)
         self.setCursor(cursor)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, False)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
+
+    def apply_theme(self) -> None:
+        """Handle squares in the theme's selection-handle colour (PRD 13.2, 13.3)."""
+        self.setPen(QPen(current_theme().selection_handle, 1))
+        self.setBrush(QBrush(QColor(255, 255, 255)))
 
 
 class RotateHandleItem(QGraphicsEllipseItem):
@@ -87,12 +93,15 @@ class RotateHandleItem(QGraphicsEllipseItem):
         r = ROTATE_HANDLE_RADIUS
         super().__init__(-r, -r, r * 2, r * 2)
         self.position = HandlePosition.ROTATE
-        self.setPen(QPen(QColor(0, 120, 215), 1))
-        self.setBrush(QBrush(QColor(255, 255, 255)))
+        self.apply_theme()
         self.setZValue(999998)
         self.setCursor(Qt.CursorShape.CrossCursor)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, False)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
+
+    def apply_theme(self) -> None:
+        self.setPen(QPen(current_theme().selection_handle, 1))
+        self.setBrush(QBrush(QColor(255, 255, 255)))
 
 
 class TransformHandles(QGraphicsItemGroup):
@@ -123,17 +132,24 @@ class TransformHandles(QGraphicsItemGroup):
 
         # Line from top-center to rotate handle
         self._rotate_line = QGraphicsLineItem()
-        self._rotate_line.setPen(QPen(QColor(0, 120, 215), 1))
         self._rotate_line.setZValue(999997)
         self.addToGroup(self._rotate_line)
 
         self._border = QGraphicsRectItem()
-        self._border.setPen(QPen(QColor(0, 120, 215), 1, Qt.PenStyle.DashLine))
         self._border.setBrush(Qt.GlobalColor.transparent)
         self._border.setZValue(999996)
         self.addToGroup(self._border)
+        self.apply_theme()
 
         self._current_rect = QRectF()
+
+    def apply_theme(self) -> None:
+        """Re-read the selection colours after a theme switch (PRD 13.4)."""
+        theme = current_theme()
+        for handle in self._handles.values():
+            handle.apply_theme()
+        self._rotate_line.setPen(QPen(theme.selection_handle, 1))
+        self._border.setPen(QPen(theme.selection_outline, 1, Qt.PenStyle.DashLine))
 
     @property
     def current_rect(self) -> QRectF:

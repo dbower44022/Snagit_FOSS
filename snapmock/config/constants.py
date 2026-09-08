@@ -146,31 +146,21 @@ ZOOM_STEPS = [
 # Minimum pixels of mouse movement before a drag is recognised
 DRAG_THRESHOLD = 3
 
-# Pasteboard (gray area around canvas)
-PASTEBOARD_COLOR = "#505050"
+# Canvas chrome. Colours live in the theme files (resources/themes/*.qss) and are
+# read through core/theme_manager.py (General UI PRD 13.4).
 PASTEBOARD_MARGIN = 2000
 CANVAS_SHADOW_OFFSET = 4
-CANVAS_SHADOW_COLOR = "#66000000"
 
-# Checkerboard transparency
+# Checkerboard transparency (cell size; Preferences > Appearance can change it)
 CHECKERBOARD_CELL_SIZE = 8
-CHECKERBOARD_COLOR_A = "#FFFFFF"
-CHECKERBOARD_COLOR_B = "#CCCCCC"
 
 # Rulers
 RULER_SIZE = 20
-RULER_BG_COLOR = "#F0F0F0"
-RULER_TEXT_COLOR = "#333333"
-RULER_TICK_COLOR = "#999999"
-RULER_CURSOR_COLOR = "#FF0000"
 
 # Grid overlay
-GRID_COLOR = "#33000000"
-GRID_COLOR_MAJOR = "#55000000"
 GRID_MAJOR_MULTIPLE = 10
 GRID_MIN_PIXEL_SPACING = 4
 
 # Empty canvas prompt
 EMPTY_CANVAS_TEXT = "Drag an image here, paste from clipboard, or use File > Import Image"
-EMPTY_CANVAS_TEXT_COLOR = "#AAAAAA"
 EMPTY_CANVAS_FONT_SIZE = 18

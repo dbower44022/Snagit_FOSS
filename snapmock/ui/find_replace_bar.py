@@ -17,6 +17,8 @@ from PyQt6.QtWidgets import (
 if TYPE_CHECKING:
     pass
 
+from snapmock.core.theme_manager import current_theme
+
 _HIGHLIGHT_COLOR = QColor("#FFFF00")  # Yellow match highlight
 _CURRENT_HIGHLIGHT_COLOR = QColor("#FF8C00")  # Orange for current match
 
@@ -107,8 +109,10 @@ class FindReplaceBar(QWidget):
         layout.addWidget(close_btn)
 
         layout.addStretch()
+        theme = current_theme()
         self.setStyleSheet(
-            "FindReplaceBar {  background: #f0f0f0;  border: 1px solid #ccc;  border-radius: 3px;}"
+            f"FindReplaceBar {{ background: {theme.toolbar_bg.name()};"
+            f" border: 1px solid {theme.border.name()}; border-radius: 3px; }}"
         )
 
     def attach(self, document: QTextDocument) -> None:

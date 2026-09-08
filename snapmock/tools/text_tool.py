@@ -42,6 +42,7 @@ from snapmock.config.constants import (
     MIN_DRAG_TEXT_BOX,
     VerticalAlign,
 )
+from snapmock.core.theme_manager import current_theme
 from snapmock.items.callout_item import CalloutItem
 from snapmock.items.text_item import TextItem
 from snapmock.tools.base_tool import BaseTool
@@ -629,7 +630,7 @@ class TextTool(BaseTool):
         editor.setStyleSheet(
             "_RichTextEditor {"
             "  background: rgba(255, 255, 255, 200);"
-            "  border: 1px solid #0078d7;"
+            f"  border: 1px solid {current_theme().accent.name()};"
             "  padding: 0px;"
             "}"
         )

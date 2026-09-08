@@ -5,16 +5,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QPointF, Qt
-from PyQt6.QtGui import QColor, QFont, QPainter, QPaintEvent, QPen, QPolygonF
+from PyQt6.QtGui import QFont, QPainter, QPaintEvent, QPen, QPolygonF
 from PyQt6.QtWidgets import QWidget
 
-from snapmock.config.constants import (
-    RULER_BG_COLOR,
-    RULER_CURSOR_COLOR,
-    RULER_SIZE,
-    RULER_TEXT_COLOR,
-    RULER_TICK_COLOR,
-)
+from snapmock.config.constants import RULER_SIZE
+from snapmock.core.theme_manager import current_theme
 
 if TYPE_CHECKING:
     from snapmock.core.view import SnapView
@@ -60,7 +55,8 @@ class RulerWidget(QWidget):
             return
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-        painter.fillRect(self.rect(), QColor(RULER_BG_COLOR))
+        theme = current_theme()
+        painter.fillRect(self.rect(), theme.ruler_bg)
 
         view = self._view
         t = view.transform()
@@ -111,8 +107,8 @@ class RulerWidget(QWidget):
             first_major -= interval
 
         painter.setFont(self._font)
-        tick_pen = QPen(QColor(RULER_TICK_COLOR), 1)
-        text_pen = QPen(QColor(RULER_TEXT_COLOR))
+        tick_pen = QPen(theme.ruler_tick, 1)
+        text_pen = QPen(theme.ruler_text)
 
         # Draw minor ticks
         painter.setPen(tick_pen)
@@ -152,7 +148,7 @@ class RulerWidget(QWidget):
 
         # Cursor marker (red triangle)
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QColor(RULER_CURSOR_COLOR))
+        painter.setBrush(theme.ruler_cursor)
         if horizontal:
             cx = self._scene_to_widget(self._cursor_scene_pos.x(), True)
             if 0 <= cx <= length:
