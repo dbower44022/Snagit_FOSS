@@ -1,12 +1,12 @@
-"""Exporter — export scene to PNG, JPG, SVG, PDF."""
+"""Exporter — export scene to PNG, JPG, SVG, PDF, and print the flattened canvas."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QMarginsF, QRectF, QSize
-from PyQt6.QtGui import QColor, QPageLayout, QPageSize, QPainter
+from PyQt6.QtCore import QMarginsF, QRectF, QSize, QSizeF
+from PyQt6.QtGui import QColor, QPageLayout, QPageSize, QPaintDevice, QPainter
 
 from snapmock.core.render_engine import RenderEngine
 
@@ -69,3 +69,29 @@ def export_svg(scene: SnapScene, path: Path) -> None:
         source=QRectF(0, 0, canvas.width(), canvas.height()),
     )
     painter.end()
+
+
+def fit_to_page(content: QSizeF, page: QRectF) -> QRectF:
+    """The largest rectangle of *content*'s aspect ratio centred inside *page* (PRD 3.1 Print)."""
+    if content.width() <= 0 or content.height() <= 0 or page.isEmpty():
+        return QRectF()
+    scale = min(page.width() / content.width(), page.height() / content.height())
+    w = content.width() * scale
+    h = content.height() * scale
+    return QRectF(page.left() + (page.width() - w) / 2, page.top() + (page.height() - h) / 2, w, h)
+
+
+def print_scene(scene: SnapScene, device: QPaintDevice, page: QRectF | None = None) -> QRectF:
+    """Paint the flattened canvas onto a printer or any paint device, scaled to fit the page.
+
+    Returns the rectangle the canvas was painted into, in device pixels.
+    """
+    engine = RenderEngine(scene)
+    image = engine.render_to_image(background=scene.background_color)
+    target_page = page if page is not None else QRectF(0, 0, device.width(), device.height())
+    target = fit_to_page(QSizeF(image.size()), target_page)
+    painter = QPainter(device)
+    painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+    painter.drawImage(target, image)
+    painter.end()
+    return target

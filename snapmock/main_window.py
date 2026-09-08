@@ -15,6 +15,7 @@ from PyQt6.QtGui import (
     QDesktopServices,
     QKeyEvent,
     QKeySequence,
+    QPageLayout,
 )
 from PyQt6.QtWidgets import (
     QApplication,
@@ -70,7 +71,7 @@ from snapmock.core.layer import Layer
 from snapmock.core.scene import SnapScene
 from snapmock.core.selection_manager import SelectionManager
 from snapmock.core.view import SnapView
-from snapmock.io.exporter import export_jpg, export_pdf, export_png, export_svg
+from snapmock.io.exporter import export_jpg, export_pdf, export_png, export_svg, print_scene
 from snapmock.io.importer import import_image
 from snapmock.io.project_serializer import (
     load_project,
@@ -1576,7 +1577,23 @@ class MainWindow(QMainWindow):
         export_png(self._scene, path)
 
     def _file_print(self) -> None:
-        QMessageBox.information(self, "Print", "Print support is coming soon.")
+        """System print dialog with the flattened canvas, fitted to the page (PRD 3.1)."""
+        from PyQt6.QtPrintSupport import QPrintDialog, QPrinter
+
+        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+        canvas = self._scene.canvas_size
+        orientation = (
+            QPageLayout.Orientation.Landscape
+            if canvas.width() > canvas.height()
+            else QPageLayout.Orientation.Portrait
+        )
+        printer.setPageOrientation(orientation)
+        printer.setDocName(self._active_document.display_name)
+        dialog = QPrintDialog(printer, self)
+        dialog.setWindowTitle("Print")
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        print_scene(self._scene, printer)
 
     def _file_preferences(
         self, *, focus_library: bool = False, focus_capture: bool = False
