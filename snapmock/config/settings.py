@@ -99,6 +99,12 @@ class AppSettings:
     def set_status_bar_visible(self, visible: bool) -> None:
         self._qs.setValue("view/statusBarVisible", visible)
 
+    def last_tool(self) -> str:
+        return str(self._qs.value("session/lastTool", ""))
+
+    def set_last_tool(self, tool_id: str) -> None:
+        self._qs.setValue("session/lastTool", tool_id)
+
     # --- autosave ---
 
     def autosave_enabled(self) -> bool:

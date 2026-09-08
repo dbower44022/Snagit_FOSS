@@ -7,7 +7,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QRectF, Qt, QTimer, QUrl
+from PyQt6.QtCore import QRectF, QSize, Qt, QTimer, QUrl
 from PyQt6.QtGui import (
     QAction,
     QActionGroup,
@@ -54,8 +54,11 @@ from snapmock.config.constants import (
     APP_NAME,
     DEFAULT_CANVAS_HEIGHT,
     DEFAULT_CANVAS_WIDTH,
+    DEFAULT_PANEL_WIDTH,
     DOCUMENTATION_URL,
     ISSUES_URL,
+    MIN_WINDOW_HEIGHT,
+    MIN_WINDOW_WIDTH,
     PROJECT_EXTENSION,
     SNAGIT_EXTENSION,
     ZOOM_MAX,
@@ -124,6 +127,8 @@ MODE_ACTIONS = {
     CaptureMode.ACTIVE_WINDOW: HOTKEY_ACTION_WINDOW,
     CaptureMode.FULL_SCREEN: HOTKEY_ACTION_FULL_SCREEN,
 }
+# Tools that are held or momentary and never restored as the last-used tool.
+TRANSIENT_TOOLS = frozenset({"pan", "zoom", "eyedropper"})
 TRAY_UNAVAILABLE_MESSAGE = (
     "This desktop does not provide a system tray. Global hotkeys and the Capture menu still work."
 )
@@ -159,7 +164,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._settings = AppSettings()
         self.setWindowTitle(APP_NAME)
-        self.resize(1200, 800)
+        self.setMinimumSize(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
+        self.resize(self._default_window_size())
 
         # Screen capture (Screen Capture PRD): one manager per process. Only the
         # primary window connects its results, owns the tray icon, and quits.
@@ -195,16 +201,21 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self._tabs)
 
         # UI panels
+        # Object names let saveState / restoreState persist the layout (PRD 2.3, 15.4).
         self._toolbar = SnapToolBar(self._tool_manager, self)
+        self._toolbar.setObjectName("ToolPalette")
         self.addToolBar(self._toolbar)
 
         self._tool_options = ToolOptionsBar(self._tool_manager, self)
+        self._tool_options.setObjectName("ToolOptionsBar")
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self._tool_options)
 
         self._layer_panel = LayerPanel(self._scene.layer_manager, self)
+        self._layer_panel.setObjectName("LayerPanel")
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._layer_panel)
 
         self._property_panel = PropertyPanel(self._selection_manager, self._scene, self)
+        self._property_panel.setObjectName("PropertyPanel")
         self._property_panel.set_tool_manager(self._tool_manager)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._property_panel)
 
@@ -292,23 +303,21 @@ class MainWindow(QMainWindow):
         # Per-document signal wiring (title, layer state, menu state)
         self._wire_document(first)
 
-        # Restore window geometry
+        # The default arrangement, kept for View > Reset Layout (PRD 2.3).
+        self._apply_default_dock_sizes()
+        self._default_layout_state = bytes(self.saveState().data())
+
+        # Restore window geometry and layout
         geo = self._settings.window_geometry()
         if geo is not None:
             self.restoreGeometry(geo)
         state = self._settings.window_state()
         if state is not None:
             self.restoreState(state)
-        self.resizeDocks([self._library_panel], [250], Qt.Orientation.Vertical)
+        else:
+            self._apply_default_dock_sizes()
 
-        # Size the layer panel: auto-fit to the number of layers (capped at 10 rows).
-        layer_h = self._layer_panel.preferred_height()
-        self.resizeDocks(
-            [self._layer_panel],
-            [layer_h],
-            Qt.Orientation.Vertical,
-        )
-
+        self._restore_last_tool()
         self._update_title()
 
         if self._primary_capture:
@@ -322,6 +331,50 @@ class MainWindow(QMainWindow):
 
         if restore_session:
             self._restore_session()
+
+    @staticmethod
+    def _default_window_size() -> QSize:
+        """80 percent of the primary screen (PRD 17.1), never below the minimum size."""
+        screen = QApplication.primaryScreen()
+        if screen is None:
+            return QSize(1200, 800)
+        available = screen.availableGeometry().size()
+        return QSize(
+            max(MIN_WINDOW_WIDTH, int(available.width() * 0.8)),
+            max(MIN_WINDOW_HEIGHT, int(available.height() * 0.8)),
+        )
+
+    def _apply_default_dock_sizes(self) -> None:
+        """The default proportions of PRD 2.2: 300 px right stack, Library 250 px tall."""
+        self.resizeDocks(
+            [self._layer_panel, self._property_panel],
+            [DEFAULT_PANEL_WIDTH, DEFAULT_PANEL_WIDTH],
+            Qt.Orientation.Horizontal,
+        )
+        self.resizeDocks([self._library_panel], [250], Qt.Orientation.Vertical)
+        layer_h = self._layer_panel.preferred_height()
+        self.resizeDocks([self._layer_panel], [layer_h], Qt.Orientation.Vertical)
+
+    def _view_reset_layout(self) -> None:
+        """Restore every panel and toolbar to its default position, size, and visibility."""
+        self.restoreState(self._default_layout_state)
+        for widget in (
+            self._toolbar,
+            self._tool_options,
+            self._layer_panel,
+            self._property_panel,
+            self._library_panel,
+        ):
+            widget.setVisible(True)
+        if self._status_bar_action is not None:
+            self._status_bar_action.setChecked(True)
+        self._apply_default_dock_sizes()
+
+    def _restore_last_tool(self) -> None:
+        """Reactivate the tool that was active when the last session ended (PRD 15.4)."""
+        tool_id = self._settings.last_tool()
+        if tool_id and tool_id not in TRANSIENT_TOOLS and self._tool_manager.tool(tool_id):
+            self._tool_manager.activate(tool_id)
 
     def _register_tools(self) -> None:
         """Register all built-in tools with the ToolManager."""
@@ -591,6 +644,12 @@ class MainWindow(QMainWindow):
         self._status_bar_action.setChecked(True)
         self._status_bar_action.toggled.connect(self._toggle_status_bar)
         view_menu.addAction(self._status_bar_action)
+
+        view_menu.addSeparator()
+
+        reset_layout = view_menu.addAction("Reset &Layout")
+        if reset_layout is not None:
+            reset_layout.triggered.connect(self._view_reset_layout)
 
         view_menu.addSeparator()
 
@@ -1889,6 +1948,13 @@ class MainWindow(QMainWindow):
         if paths and 0 <= idx < self._documents.count:
             self._documents.set_active_index(idx)
 
+    def _save_window_state(self) -> None:
+        self._settings.save_window_geometry(self.saveGeometry().data())
+        self._settings.save_window_state(self.saveState().data())
+        tool_id = self._tool_manager.active_tool_id
+        if tool_id and tool_id not in TRANSIENT_TOOLS:
+            self._settings.set_last_tool(tool_id)
+
     def _save_session(self) -> None:
         open_files = [str(d.file_path) for d in self._documents.documents if d.file_path]
         self._settings.set_session_open_files(open_files)
@@ -2796,18 +2862,10 @@ class MainWindow(QMainWindow):
                 return
 
     def _maybe_save_before_close(self, doc: Document) -> bool:
-        """Prompt Save / Discard / Cancel for a dirty non-library document."""
+        """The Unsaved Changes dialog (PRD 11.7): Save, Don't Save, Cancel."""
         if not doc.is_dirty:
             return True
-        result = QMessageBox.question(
-            self,
-            "Unsaved Changes",
-            f'Save changes to "{doc.display_name}" before closing?',
-            QMessageBox.StandardButton.Save
-            | QMessageBox.StandardButton.Discard
-            | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Save,
-        )
+        result = self._ask_unsaved_changes(doc.display_name)
         if result == QMessageBox.StandardButton.Cancel:
             return False
         if result == QMessageBox.StandardButton.Save:
@@ -2815,6 +2873,28 @@ class MainWindow(QMainWindow):
             self._file_save()
             return not doc.is_dirty
         return True
+
+    def _ask_unsaved_changes(self, name: str) -> QMessageBox.StandardButton:
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setWindowTitle("Unsaved Changes")
+        box.setText(f"You have unsaved changes to {name}. Do you want to save before closing?")
+        box.setStandardButtons(
+            QMessageBox.StandardButton.Save
+            | QMessageBox.StandardButton.Discard
+            | QMessageBox.StandardButton.Cancel
+        )
+        discard = box.button(QMessageBox.StandardButton.Discard)
+        if discard is not None:
+            discard.setText("Don't Save")
+        box.setDefaultButton(QMessageBox.StandardButton.Save)
+        box.exec()
+        clicked = box.clickedButton()
+        result = box.standardButton(clicked) if clicked is not None else None
+        box.deleteLater()
+        if result in (QMessageBox.StandardButton.Save, QMessageBox.StandardButton.Discard):
+            return result
+        return QMessageBox.StandardButton.Cancel
 
     def _reveal_document_in_file_manager(self, doc: Document) -> None:
         if doc.file_path is None:
@@ -2839,7 +2919,7 @@ class MainWindow(QMainWindow):
     def _update_title(self) -> None:
         doc = self._active_document
         dirty = "*" if doc.is_dirty else ""
-        self.setWindowTitle(f"{dirty}{doc.display_name} — {APP_NAME}")
+        self.setWindowTitle(f"{dirty}{doc.display_name} - {APP_NAME}")
 
     # ---- key event routing ----
 
@@ -2919,8 +2999,7 @@ class MainWindow(QMainWindow):
             and not self._quit_requested
         )
         if keep_running:
-            self._settings.save_window_geometry(self.saveGeometry().data())
-            self._settings.save_window_state(self.saveState().data())
+            self._save_window_state()
             self._hidden_in_tray = True
             self.hide()
             if event is not None:
@@ -2936,8 +3015,7 @@ class MainWindow(QMainWindow):
         self._library.flush()
         self._library.purge_session_trash()
         self._save_session()
-        self._settings.save_window_geometry(self.saveGeometry().data())
-        self._settings.save_window_state(self.saveState().data())
+        self._save_window_state()
         if self._primary_capture:
             self._teardown_tray()
             self._capture.shutdown()

@@ -4,9 +4,14 @@ from snapmock.main_window import MainWindow
 
 
 def test_main_window_title(main_window: MainWindow) -> None:
-    """Window title should be set correctly."""
-    assert "SnapMock" in main_window.windowTitle()
-    assert "Untitled" in main_window.windowTitle()
+    """Window title follows the PRD 2.4 pattern: [Project Name] - SnapMock."""
+    assert main_window.windowTitle() == "Untitled - SnapMock"
+
+
+def test_main_window_minimum_size(main_window: MainWindow) -> None:
+    """PRD 15.1: the window cannot shrink below 1024x600."""
+    assert main_window.minimumWidth() == 1024
+    assert main_window.minimumHeight() == 600
 
 
 def test_main_window_default_size(main_window: MainWindow) -> None:
