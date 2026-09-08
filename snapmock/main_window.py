@@ -442,7 +442,7 @@ class MainWindow(QMainWindow):
         redo_action = edit_menu.addAction("&Redo")
         if redo_action is not None:
             redo_action.setShortcut(QKeySequence(SHORTCUTS["edit.redo"]))
-            redo_action.triggered.connect(self._scene.command_stack.redo)
+            redo_action.triggered.connect(self._edit_redo)
 
         edit_menu.addSeparator()
 
@@ -493,7 +493,7 @@ class MainWindow(QMainWindow):
         deselect_action = edit_menu.addAction("D&eselect")
         if deselect_action is not None:
             deselect_action.setShortcut(QKeySequence(SHORTCUTS["edit.deselect"]))
-            deselect_action.triggered.connect(self._selection_manager.deselect_all)
+            deselect_action.triggered.connect(self._edit_deselect)
 
     def _setup_view_menu(self, menu_bar: QMenuBar) -> None:
         view_menu = menu_bar.addMenu("&View")
@@ -1863,6 +1863,12 @@ class MainWindow(QMainWindow):
             active.cancel()
             return  # first Ctrl+Z cancels active operation
         self._scene.command_stack.undo()
+
+    def _edit_redo(self) -> None:
+        self._scene.command_stack.redo()
+
+    def _edit_deselect(self) -> None:
+        self._selection_manager.deselect_all()
 
     def _edit_cut(self) -> None:
         active = self._tool_manager.active_tool

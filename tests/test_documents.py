@@ -187,3 +187,27 @@ def test_close_clean_tab_without_prompt(main_window: MainWindow) -> None:
     assert main_window._close_document(second)  # noqa: SLF001
     assert main_window.documents.count == 1
     assert main_window.active_document is first
+
+
+def test_redo_and_deselect_follow_the_active_document(qtbot: QtBot) -> None:
+    """Edit > Redo and Edit > Deselect act on the active tab, not the first one."""
+    window = MainWindow()
+    qtbot.addWidget(window)
+    first = window.active_document
+    window._file_new()  # noqa: SLF001
+    second = window.active_document
+    assert second is not first
+    layer = second.scene.layer_manager.active_layer
+    assert layer is not None
+    item = RectangleItem(rect=QRectF(0, 0, 10, 10))
+    second.scene.command_stack.push(AddItemCommand(second.scene, item, layer.layer_id))
+    second.selection_manager.select(item)
+    assert second.selection_manager.count == 1
+    window._edit_deselect()  # noqa: SLF001
+    assert second.selection_manager.count == 0
+    second.scene.command_stack.undo()
+    assert not second.scene.command_stack.can_undo
+    window._edit_redo()  # noqa: SLF001
+    assert second.scene.command_stack.can_undo
+    assert not first.scene.command_stack.can_undo
+    second.scene.command_stack.mark_clean()
