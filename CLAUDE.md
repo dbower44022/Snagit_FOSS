@@ -23,6 +23,8 @@ All commands use `uv run` to execute within the managed virtual environment:
 
 ## Project Structure
 
+The binding layout is Section 10 of `PRDs/SnapMock-Technical-Architecture-PRD.html`. Code lands in the package named there. A PRD that introduces a new package or a new top-level module amends Section 10 in the same version; an implementation session that finds itself creating one without that amendment stops and raises it. The summary below is a convenience and is not authoritative.
+
 ```
 snapmock/              # Main application package
     __init__.py        # Package root, exports __version__
@@ -32,14 +34,20 @@ snapmock/              # Main application package
     config/            # Constants, settings (QSettings), keyboard shortcuts
     core/              # Scene, view, layers, command stack, selection, clipboard, rendering
     items/             # SnapGraphicsItem subclasses (vector, text, raster, etc.)
-    tools/             # BaseTool subclasses and ToolManager (15 tools)
+    tools/             # BaseTool subclasses and ToolManager (18 tools)
     commands/          # Command objects for undo/redo (all scene mutations)
-    io/                # File I/O — .smk project save/load, PNG/JPG/SVG/PDF export, image import
+    io/                # File I/O — .smk project save/load, PNG/JPG/SVG/PDF export, image import, Snagit .snagx read/write
+    capture/           # Screen capture — CaptureManager, region overlay, X11/Wayland/Windows/macOS backends, hotkeys, tray
     library/           # Library — LibraryManager, LibraryModel, LibraryFileInfo, commands, render
-    ui/                # UI panels — toolbar, layer panel, property panel, library panel, tabs, status bar
-    resources/         # Icons, stamps, themes (placeholder)
+    ui/                # UI panels — toolbar, layer panel, property panel, library panel, tabs, status bar, dialogs, overlays
+    resources/         # Icons, sounds, stamps, themes
 tests/                 # Test suite (pytest + pytest-qt)
 ```
+
+## PRDs
+
+- The HTML files under `PRDs/` are the single source of truth; there are no Word originals. Read them directly.
+- Every PRD carries a revision control table and a change log in its front matter. An implementation that departs from a PRD records the departure in that PRD's change log, not only in code comments.
 
 ## Conventions
 
