@@ -48,6 +48,7 @@ ACTION_LABELS: dict[str, str] = {
     "file.preferences": "Preferences...",
     "file.close_tab": "Close",
     "edit.delete": "Delete",
+    "edit.select_all_text": "Select All Text",
     "view.fit_window": "Fit to Window",
     "view.actual_size": "Zoom to 100%",
     "view.toggle_grid": "Show Grid",

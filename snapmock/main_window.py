@@ -555,6 +555,17 @@ class MainWindow(QMainWindow):
             deselect_action.setShortcut(QKeySequence(SHORTCUTS["edit.deselect"]))
             deselect_action.triggered.connect(self._edit_deselect)
 
+        select_all_text_action = edit_menu.addAction("Select All &Text")
+        if select_all_text_action is not None:
+            select_all_text_action.setShortcut(QKeySequence(SHORTCUTS["edit.select_all_text"]))
+            select_all_text_action.triggered.connect(self._edit_select_all_text)
+
+        edit_menu.addSeparator()
+
+        find_color_action = edit_menu.addAction("&Find/Replace Color...")
+        if find_color_action is not None:
+            find_color_action.triggered.connect(self._edit_find_replace_color)
+
     def _setup_view_menu(self, menu_bar: QMenuBar) -> None:
         view_menu = menu_bar.addMenu("&View")
         if view_menu is None:
@@ -2213,6 +2224,36 @@ class MainWindow(QMainWindow):
         ]
         if self._require("Select All Layers", (bool(items), "at least one item on the canvas")):
             self._selection_manager.select_items(items)
+
+    def _edit_select_all_text(self) -> None:
+        """Select every text-containing item on visible, unlocked layers (PRD 3.2).
+
+        Batch changes to the selection's font, size, and colour arrive with the
+        Property Panel's multi-selection behaviour (PRD 8.6, Phase 6).
+        """
+        from snapmock.items.callout_item import CalloutItem
+        from snapmock.items.text_item import TextItem
+
+        lm = self._scene.layer_manager
+        usable = {layer.layer_id for layer in lm.layers if layer.visible and not layer.locked}
+        items: list[QGraphicsItem] = [
+            i
+            for i in self._scene.items()
+            if isinstance(i, (TextItem, CalloutItem)) and i.layer_id in usable and not i.locked
+        ]
+        if self._require("Select All Text", (bool(items), "at least one text-containing item")):
+            self._tool_manager.activate("select")
+            self._selection_manager.select_items(items)
+
+    def _edit_find_replace_color(self) -> None:
+        from snapmock.ui.find_replace_color_dialog import FindReplaceColorDialog
+
+        has_items = any(isinstance(i, SnapGraphicsItem) for i in self._scene.items())
+        if not self._require("Find/Replace Color", (has_items, "at least one item on the canvas")):
+            return
+        dlg = FindReplaceColorDialog(self._scene, self)
+        dlg.exec()
+        dlg.deleteLater()
 
     # ---- image operations ----
 

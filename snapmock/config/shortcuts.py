@@ -32,6 +32,7 @@ SHORTCUTS: dict[str, str] = {
     "edit.select_all": "Ctrl+A",
     "edit.select_all_layers": "Ctrl+Shift+A",
     "edit.deselect": "Escape",
+    "edit.select_all_text": "Ctrl+T",
     # View
     "view.zoom_in": "Ctrl+=",
     "view.zoom_out": "Ctrl+-",
