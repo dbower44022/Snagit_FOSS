@@ -6,13 +6,14 @@ import bisect
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QMimeData, QPoint, QPointF, QRectF, Qt, QTimeLine, pyqtSignal
+from PyQt6.QtCore import QEvent, QMimeData, QPoint, QPointF, QRectF, Qt, QTimeLine, pyqtSignal
 from PyQt6.QtGui import (
     QColor,
     QDragEnterEvent,
     QDragMoveEvent,
     QDropEvent,
     QFont,
+    QKeyEvent,
     QMouseEvent,
     QPainter,
     QPen,
@@ -508,6 +509,20 @@ class SnapView(QGraphicsView):
         painter.restore()
 
     # --- resize / scroll → ruler reposition ---
+
+    def event(self, event: QEvent | None) -> bool:
+        """Give the active tool Tab and Shift+Tab before Qt uses them for focus (PRD 12.3)."""
+        if (
+            event is not None
+            and event.type() == QEvent.Type.KeyPress
+            and isinstance(event, QKeyEvent)
+            and event.key() in (Qt.Key.Key_Tab, Qt.Key.Key_Backtab)
+            and self._tool_manager is not None
+            and self._tool_manager.handle_key_press(event)
+        ):
+            event.accept()
+            return True
+        return super().event(event)
 
     def resizeEvent(self, event: object) -> None:  # noqa: N802
         super().resizeEvent(event)  # type: ignore[arg-type]

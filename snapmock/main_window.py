@@ -181,6 +181,7 @@ class MainWindow(QMainWindow):
         self._delay_groups: list[QActionGroup] = []
         self._capture_toggle_actions: list[tuple[str, QAction]] = []
         self._capture_button: QToolButton | None = None
+        self._momentary_tool: str | None = None
 
         # Library: auto-saved capture workspace (Library PRD)
         self._library = LibraryManager(self._settings.library_directory(), parent=self)
@@ -2964,6 +2965,21 @@ class MainWindow(QMainWindow):
 
     # ---- key event routing ----
 
+    def _pan_to_corner(self, *, top_left: bool) -> None:
+        """Home scrolls the canvas origin to the viewport corner; End its bottom-right corner."""
+        view = self._view
+        viewport = view.viewport()
+        if viewport is None:
+            return
+        scale = view.zoom_percent / 100.0
+        half_w = viewport.width() / 2.0 / scale
+        half_h = viewport.height() / 2.0 / scale
+        if top_left:
+            view.centerOn(half_w, half_h)
+        else:
+            canvas = self._scene.canvas_size
+            view.centerOn(canvas.width() - half_w, canvas.height() - half_h)
+
     def _space_held(self) -> bool:
         """Whether Space is currently held for temporary pan."""
         return self._tool_manager._previous_tool_id is not None  # noqa: SLF001
@@ -2980,13 +2996,38 @@ class MainWindow(QMainWindow):
                 event.accept()
                 return
 
+        # Alt held: momentary eyedropper (PRD 12.2), unless a drag is in progress
+        if (
+            event.key() == Qt.Key.Key_Alt
+            and not event.isAutoRepeat()
+            and self._momentary_tool is None
+            and self._tool_manager.active_tool_id not in ("eyedropper", "pan")
+        ):
+            active = self._tool_manager.active_tool
+            if active is None or not active.is_active_operation:
+                self._momentary_tool = "eyedropper"
+                self._tool_manager.activate_temporary("eyedropper")
+                event.accept()
+                return
+
         # Delegate to active tool
         if self._tool_manager.handle_key_press(event):
             event.accept()
             return
 
-        # Arrow key viewport pan when no selection
         key = event.key()
+
+        # Home / End pan to the canvas corners (PRD 12.3)
+        if key == Qt.Key.Key_Home:
+            self._pan_to_corner(top_left=True)
+            event.accept()
+            return
+        if key == Qt.Key.Key_End:
+            self._pan_to_corner(top_left=False)
+            event.accept()
+            return
+
+        # Arrow key viewport pan when no selection
         if key in (
             Qt.Key.Key_Left,
             Qt.Key.Key_Right,
@@ -3016,6 +3057,12 @@ class MainWindow(QMainWindow):
             return
         # Space-bar release → restore previous tool
         if event.key() == Qt.Key.Key_Space and not event.isAutoRepeat() and self._space_held():
+            self._tool_manager.restore_previous()
+            event.accept()
+            return
+        # Alt release → back from the momentary eyedropper
+        if event.key() == Qt.Key.Key_Alt and not event.isAutoRepeat() and self._momentary_tool:
+            self._momentary_tool = None
             self._tool_manager.restore_previous()
             event.accept()
             return

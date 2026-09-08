@@ -896,7 +896,42 @@ class SelectTool(BaseTool):
                 self._delete_items(items)
             return True
 
+        # Tab / Shift+Tab cycle the selection through the active layer (General UI PRD 12.3)
+        if key in (Qt.Key.Key_Tab, Qt.Key.Key_Backtab):
+            return self.cycle_selection(forward=key == Qt.Key.Key_Tab and not shift)
+
         return False
+
+    def cycle_selection(self, *, forward: bool = True) -> bool:
+        """Select the next (or previous) item on the active layer in z-order.
+
+        Returns False when the layer has no selectable items.
+        """
+        if self._scene is None or self._selection_manager is None:
+            return False
+        active = self._scene.layer_manager.active_layer
+        if active is None:
+            return False
+        order = {item_id: n for n, item_id in enumerate(active.item_ids)}
+        candidates = sorted(
+            (
+                i
+                for i in self._scene.items()
+                if isinstance(i, SnapGraphicsItem) and i.layer_id == active.layer_id
+            ),
+            key=lambda i: (order.get(i.item_id, len(order)), i.zValue()),
+        )
+        if not candidates:
+            return False
+        current = [i for i in candidates if i in self._selection_manager.items]
+        if current:
+            index = candidates.index(current[-1] if forward else current[0])
+            index = (index + 1) % len(candidates) if forward else (index - 1) % len(candidates)
+        else:
+            index = 0 if forward else len(candidates) - 1
+        self._selection_manager.select(candidates[index])
+        self._update_handles()
+        return True
 
     def _delete_items(self, items: list[SnapGraphicsItem]) -> None:
         if self._scene is None or self._selection_manager is None:
