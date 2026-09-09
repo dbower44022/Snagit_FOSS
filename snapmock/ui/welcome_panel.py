@@ -102,6 +102,9 @@ class CanvasSizeDialog(QDialog):
         ok = buttons.button(QDialogButtonBox.StandardButton.Ok)
         if ok is not None:
             ok.setAccessibleName("Create canvas")
+        cancel = buttons.button(QDialogButtonBox.StandardButton.Cancel)
+        if cancel is not None:
+            cancel.setAccessibleName("Cancel")
         layout.addWidget(buttons)
 
         self._width.valueChanged.connect(self._on_width_changed)

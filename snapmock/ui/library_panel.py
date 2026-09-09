@@ -86,6 +86,7 @@ from snapmock.library.model import (
     human_size,
 )
 from snapmock.library.render import export_for_drag, render_file_to_image
+from snapmock.ui.accessibility import apply_default_names
 
 EMPTY_TEXT = "No files in library. Capture a screenshot or drag images here to get started."
 
@@ -357,16 +358,19 @@ class LibraryPanel(QDockWidget):
         self._change_btn = QToolButton()
         self._change_btn.setIcon(self._icon(QStyle.StandardPixmap.SP_DirOpenIcon))
         self._change_btn.setToolTip("Change library folder…")
+        self._change_btn.setAccessibleName("Change library folder")
         self._change_btn.clicked.connect(self.choose_library_directory)
         header.addWidget(self._change_btn)
 
         self._grid_btn = QToolButton()
         self._grid_btn.setText("▦")
         self._grid_btn.setToolTip("Grid view")
+        self._grid_btn.setAccessibleName("Grid view")
         self._grid_btn.setCheckable(True)
         self._list_btn = QToolButton()
         self._list_btn.setText("☰")
         self._list_btn.setToolTip("Preview list view")
+        self._list_btn.setAccessibleName("Preview list view")
         self._list_btn.setCheckable(True)
         group = QButtonGroup(self)
         group.setExclusive(True)
@@ -380,11 +384,13 @@ class LibraryPanel(QDockWidget):
         self._size_slider = QSlider(Qt.Orientation.Horizontal)
         self._size_slider.setFixedWidth(90)
         self._size_slider.setToolTip("Thumbnail size")
+        self._size_slider.setAccessibleName("Thumbnail size")
         self._size_slider.valueChanged.connect(self._on_size_changed)
         header.addWidget(self._size_slider)
 
         self._search = QLineEdit()
         self._search.setPlaceholderText("🔍 Search")
+        self._search.setAccessibleName("Search library")
         self._search.setClearButtonEnabled(True)
         self._search.setFixedWidth(140)
         self._search.textChanged.connect(self._model.set_filter)
@@ -398,6 +404,7 @@ class LibraryPanel(QDockWidget):
         self._back_btn = QToolButton()
         self._back_btn.setIcon(self._icon(QStyle.StandardPixmap.SP_ArrowBack))
         self._back_btn.setToolTip("Back to parent folder")
+        self._back_btn.setAccessibleName("Back to parent folder")
         self._back_btn.clicked.connect(self._model.go_up)
         nav.addWidget(self._back_btn)
         self._crumbs = QHBoxLayout()
@@ -409,6 +416,7 @@ class LibraryPanel(QDockWidget):
         # --- content ---
         self._stack = QStackedWidget()
         self._grid = _GridView(self)
+        self._grid.setAccessibleName("Library files")
         self._grid.setModel(self._model)
         self._grid.setViewMode(QListView.ViewMode.IconMode)
         self._grid.setFlow(QListView.Flow.LeftToRight)
@@ -429,6 +437,7 @@ class LibraryPanel(QDockWidget):
         self._stack.addWidget(self._grid)
 
         self._list = _ListView(self)
+        self._list.setAccessibleName("Library files")
         self._list.setModel(self._model)
         self._list.setSelectionModel(self._grid.selectionModel())
         self._list.setRootIsDecorated(False)
@@ -469,6 +478,7 @@ class LibraryPanel(QDockWidget):
         footer.addStretch(1)
         footer.addWidget(self._size_label)
         self._sort_combo = QComboBox()
+        self._sort_combo.setAccessibleName("Sort by")
         for sort_id, label in SORT_OPTIONS:
             self._sort_combo.addItem(label, sort_id)
         self._sort_combo.currentIndexChanged.connect(self._on_sort_combo_changed)
@@ -476,6 +486,8 @@ class LibraryPanel(QDockWidget):
         root_layout.addLayout(footer)
 
         self.setWidget(body)
+        self.setAccessibleName("Library Panel")
+        apply_default_names(self)
 
         # --- wiring ---
         self._model.current_path_changed.connect(lambda _p: self._on_path_changed())
@@ -957,6 +969,7 @@ class LibraryPanel(QDockWidget):
         for i, (label, path) in enumerate(crumbs):
             btn = QToolButton()
             btn.setText(label if i == 0 else f"› {label}")
+            btn.setAccessibleName(label)
             btn.setAutoRaise(True)
             btn.clicked.connect(lambda _c=False, p=path: self._model.navigate_to(p))
             self._crumbs.addWidget(btn)

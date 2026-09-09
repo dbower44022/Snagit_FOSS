@@ -26,6 +26,7 @@ class Toast(QWidget):
         layout.setContentsMargins(14, 8, 14, 8)
         self._label = QLabel("")
         self._link = QPushButton("")
+        self._link.setAccessibleName("Toast action")
         self._link.setCursor(Qt.CursorShape.PointingHandCursor)
         self._link.clicked.connect(self._activate)
         layout.addWidget(self._label)
@@ -44,6 +45,7 @@ class Toast(QWidget):
     ) -> None:
         self._label.setText(text)
         self._link.setText(link_text)
+        self._link.setAccessibleName(link_text)
         self._link.setVisible(bool(link_text))
         self._on_click = on_click
         self.adjustSize()

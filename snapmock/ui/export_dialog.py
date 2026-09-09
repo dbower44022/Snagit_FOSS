@@ -47,6 +47,7 @@ from snapmock.io.exporter import (
     render_export_image,
     resolve_region,
 )
+from snapmock.ui.accessibility import apply_default_names
 from snapmock.ui.unmet_requirements import check_requirements
 
 if TYPE_CHECKING:
@@ -148,7 +149,8 @@ class ExportDialog(QDialog):
         self._preview_timer.timeout.connect(self._refresh_preview)
         self._on_format_changed()
 
-    # ----- construction ---------------------------------------------------
+        # ----- construction ---------------------------------------------------
+        apply_default_names(self)
 
     def formats(self) -> list[ExportFormat]:
         base = [ExportFormat.PNG, ExportFormat.JPEG, ExportFormat.SVG, ExportFormat.PDF]
@@ -214,6 +216,7 @@ class ExportDialog(QDialog):
         output_layout = QVBoxLayout(output_box)
         path_row = QHBoxLayout()
         self._path_edit = QLineEdit()
+        self._path_edit.setAccessibleName("Output directory" if self._multi else "Output path")
         self._path_edit.setObjectName("output_path")
         self._path_edit.textEdited.connect(self._on_path_edited)
         browse = QPushButton("Browse...")

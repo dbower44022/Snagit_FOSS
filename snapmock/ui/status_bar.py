@@ -42,8 +42,12 @@ class SnapStatusBar(QStatusBar):
         self._selection: SelectionManager = document.selection_manager
         self._scene: SnapScene = document.scene
         self.setFixedHeight(STATUS_BAR_HEIGHT)
+        self.setAccessibleName("Status bar")
 
+        # The hint zone is the message a screen reader hears (PRD 14): a QLabel with
+        # no accessible name of its own reports each text change as a name change.
         self._hint_label = QLabel("")
+        self._hint_label.setAccessibleDescription("Status message")
         self._cursor_label = self._zone(CURSOR_ZONE_WIDTH)
         self._selection_label = self._zone(SELECTION_ZONE_WIDTH)
         self._canvas_label = self._zone(CANVAS_ZONE_WIDTH)
@@ -51,6 +55,8 @@ class SnapStatusBar(QStatusBar):
         self._zoom_button.setAutoRaise(True)
         self._zoom_button.setFixedWidth(ZOOM_ZONE_WIDTH)
         self._zoom_button.setToolTip("Zoom level. Click to choose a preset.")
+        self._zoom_button.setAccessibleName("Zoom level")
+        self._zoom_button.setAccessibleDescription("Opens the zoom preset menu.")
         self._zoom_button.clicked.connect(self._show_zoom_menu)
         self._memory_label = self._zone(MEMORY_ZONE_WIDTH)
         self._memory_label.setToolTip("Memory used by SnapMock")

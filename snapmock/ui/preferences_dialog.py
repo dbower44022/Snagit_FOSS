@@ -50,6 +50,7 @@ from snapmock.config.constants import LIBRARY_THUMBNAIL_MAX, LIBRARY_THUMBNAIL_M
 from snapmock.config.settings import AppSettings
 from snapmock.core.theme_manager import current_theme
 from snapmock.library.model import SORT_OPTIONS
+from snapmock.ui.accessibility import apply_default_names
 from snapmock.ui.color_picker import ColorPicker
 
 if TYPE_CHECKING:
@@ -190,6 +191,7 @@ class PreferencesDialog(QDialog):
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         outer.addWidget(buttons)
+        apply_default_names(self)
 
     # --- pages ---
 

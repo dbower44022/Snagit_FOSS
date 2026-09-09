@@ -115,6 +115,7 @@ from snapmock.tools.stamp_tool import StampTool
 from snapmock.tools.text_tool import TextTool
 from snapmock.tools.tool_manager import ToolManager
 from snapmock.tools.zoom_tool import ZoomTool
+from snapmock.ui.accessibility import set_tab_order
 from snapmock.ui.color_picker import ColorPicker
 from snapmock.ui.document_tabs import DocumentTabs
 from snapmock.ui.export_dialog import ExportDialog
@@ -323,6 +324,9 @@ class MainWindow(QMainWindow):
         # Menu actions the Main Toolbar reuses, keyed like SHORTCUTS (PRD 4.2)
         self._actions: dict[str, QAction] = {}
         self._setup_menus()
+        menu_bar = self.menuBar()
+        if menu_bar is not None:
+            menu_bar.setAccessibleName("Menu bar")
         self._populate_main_toolbar()
         bar_actions = {
             "New Layer": self._layer_new_action,
@@ -365,6 +369,8 @@ class MainWindow(QMainWindow):
 
         self._restore_last_tool()
         self._update_title()
+        self._apply_tab_order()
+        self._tool_manager.tool_changed.connect(self._on_tool_changed_for_tab_order)
 
         if self._primary_capture:
             self._capture.set_onboarding_gate(self._capture_onboarding_gate)
@@ -1740,6 +1746,30 @@ class MainWindow(QMainWindow):
             return
         tool.creation_defaults["stroke_color"] = eyedropper.picked_color
         self._tool_manager.tool_defaults_changed.emit(tool.tool_id)
+
+    def _apply_tab_order(self) -> None:
+        """PRD 14: Main Toolbar > Tool Options Bar > Left Tool Palette > Canvas > Layer
+        Panel > Property Panel, then the Library Panel and the status bar.
+
+        Re-run when the Tool Options Bar rebuilds or the active document changes,
+        since both replace Tab stops. The menu bar is reached with Alt or F10, as
+        on every platform, and is not a Tab stop.
+        """
+        set_tab_order(
+            [
+                self._main_toolbar,
+                self._tool_options,
+                self._toolbar,
+                self._view,
+                self._layer_panel,
+                self._property_panel,
+                self._library_panel,
+                self._status_bar,
+            ]
+        )
+
+    def _on_tool_changed_for_tab_order(self, _tool_id: str) -> None:
+        self._apply_tab_order()
 
     def _on_tool_changed_for_hint(self, _tool_id: str) -> None:
         tool = self._tool_manager.active_tool
@@ -3537,6 +3567,8 @@ class MainWindow(QMainWindow):
         self._update_title()
         if hasattr(self, "_undo_action"):
             self._update_undo_redo_text()
+        if hasattr(self, "_status_bar"):
+            self._apply_tab_order()
 
     def _file_close_tab(self) -> None:
         self._close_document(self._active_document)

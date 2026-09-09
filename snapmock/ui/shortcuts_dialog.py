@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 )
 
 from snapmock.config.shortcuts import ALTERNATE_SHORTCUTS, SHORTCUTS
+from snapmock.ui.accessibility import apply_default_names
 
 CATEGORY_NAMES: dict[str, str] = {
     "file": "File",
@@ -167,12 +168,14 @@ class KeyboardShortcutsDialog(QDialog):
 
         layout = QVBoxLayout(self)
         self._search = QLineEdit()
+        self._search.setAccessibleName("Search shortcuts")
         self._search.setPlaceholderText("Search actions or keys…")
         self._search.setClearButtonEnabled(True)
         self._search.textChanged.connect(self._apply_filter)
         layout.addWidget(self._search)
 
         self._table = QTableWidget(len(self._rows), 3)
+        self._table.setAccessibleName("Shortcuts")
         self._table.setHorizontalHeaderLabels(["Category", "Action", "Shortcut"])
         self._table.verticalHeader().setVisible(False)  # type: ignore[union-attr]
         self._table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -195,6 +198,7 @@ class KeyboardShortcutsDialog(QDialog):
         buttons.accepted.connect(self.accept)
         layout.addWidget(buttons)
         self._search.setFocus()
+        apply_default_names(self)
 
     @property
     def rows(self) -> list[ShortcutRow]:

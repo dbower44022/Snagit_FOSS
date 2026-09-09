@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from snapmock.ui.accessibility import apply_default_names
 from snapmock.ui.color_picker import ColorPicker
 
 if TYPE_CHECKING:
@@ -197,6 +198,7 @@ class ItemPropertiesDialog(QDialog):
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+        apply_default_names(self)
 
     def _resolve_layer_name(self) -> str:
         layer = self._scene.layer_manager.layer_by_id(self._item.layer_id)

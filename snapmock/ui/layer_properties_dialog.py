@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
 )
 
 from snapmock.core.layer import Layer
+from snapmock.ui.accessibility import apply_default_names
 
 
 class LayerPropertiesDialog(QDialog):
@@ -73,6 +74,7 @@ class LayerPropertiesDialog(QDialog):
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+        apply_default_names(self)
 
     def get_changes(self) -> dict[str, tuple[object, object]]:
         """Return only properties that actually changed.

@@ -21,6 +21,19 @@ from PyQt6.QtWidgets import (
 )
 
 from snapmock.core.theme_manager import current_theme
+from snapmock.ui.accessibility import apply_default_names
+
+ANCHOR_NAMES = (
+    "top left",
+    "top",
+    "top right",
+    "left",
+    "center",
+    "right",
+    "bottom left",
+    "bottom",
+    "bottom right",
+)
 
 
 class ResizeCanvasDialog(QDialog):
@@ -51,6 +64,7 @@ class ResizeCanvasDialog(QDialog):
 
         size_layout.addWidget(QLabel("Width:"), 0, 0)
         self._w_spin = QSpinBox()
+        self._w_spin.setAccessibleName("Width")
         self._w_spin.setRange(1, 32000)
         self._w_spin.setValue(self._original_w)
         self._w_spin.setSuffix(" px")
@@ -58,6 +72,7 @@ class ResizeCanvasDialog(QDialog):
 
         size_layout.addWidget(QLabel("Height:"), 1, 0)
         self._h_spin = QSpinBox()
+        self._h_spin.setAccessibleName("Height")
         self._h_spin.setRange(1, 32000)
         self._h_spin.setValue(self._original_h)
         self._h_spin.setSuffix(" px")
@@ -79,6 +94,7 @@ class ResizeCanvasDialog(QDialog):
         self._anchor_buttons: list[QRadioButton] = []
         for i in range(9):
             btn = QRadioButton()
+            btn.setAccessibleName(f"Anchor {ANCHOR_NAMES[i]}")
             btn.setChecked(i == 4)
             row, col = divmod(i, 3)
             anchor_layout.addWidget(btn, row, col)
@@ -91,6 +107,7 @@ class ResizeCanvasDialog(QDialog):
         color_layout = QHBoxLayout()
         color_layout.addWidget(QLabel("Fill color:"))
         self._color_btn = QPushButton()
+        self._color_btn.setAccessibleName("Fill color")
         self._color_btn.setFixedSize(60, 24)
         self._update_color_button()
         self._color_btn.clicked.connect(self._pick_color)
@@ -109,6 +126,7 @@ class ResizeCanvasDialog(QDialog):
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+        apply_default_names(self)
 
     def _make_anchor_setter(self, index: int):  # type: ignore[no-untyped-def]
         def _set() -> None:

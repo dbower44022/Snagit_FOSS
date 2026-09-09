@@ -74,6 +74,10 @@ class SnapView(QGraphicsView):
     def __init__(self, scene: SnapScene) -> None:
         super().__init__(scene)
         self._zoom_pct: int = ZOOM_DEFAULT
+        self.setAccessibleName("Canvas")
+        self.setAccessibleDescription(
+            "The document canvas. Drawing tools act here; arrow keys nudge the selection."
+        )
         self._panning: bool = False
         self._pan_start: QPoint = QPoint()
         self._tool_manager: ToolManager | None = None

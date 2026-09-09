@@ -16,6 +16,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from snapmock.ui.accessibility import apply_default_names
+
 
 class ResizeImageDialog(QDialog):
     """Dialog for resizing the entire image (scaling all content)."""
@@ -43,6 +45,7 @@ class ResizeImageDialog(QDialog):
 
         size_layout.addWidget(QLabel("Width:"), 0, 0)
         self._w_spin = QSpinBox()
+        self._w_spin.setAccessibleName("Width")
         self._w_spin.setRange(1, 32000)
         self._w_spin.setValue(self._original_w)
         self._w_spin.setSuffix(" px")
@@ -50,6 +53,7 @@ class ResizeImageDialog(QDialog):
 
         size_layout.addWidget(QLabel("Height:"), 1, 0)
         self._h_spin = QSpinBox()
+        self._h_spin.setAccessibleName("Height")
         self._h_spin.setRange(1, 32000)
         self._h_spin.setValue(self._original_h)
         self._h_spin.setSuffix(" px")
@@ -63,6 +67,7 @@ class ResizeImageDialog(QDialog):
         # Percentage mode
         size_layout.addWidget(QLabel("Scale:"), 3, 0)
         self._pct_spin = QSpinBox()
+        self._pct_spin.setAccessibleName("Scale percent")
         self._pct_spin.setRange(1, 10000)
         self._pct_spin.setValue(100)
         self._pct_spin.setSuffix(" %")
@@ -80,6 +85,7 @@ class ResizeImageDialog(QDialog):
         interp_layout = QGridLayout()
         interp_layout.addWidget(QLabel("Method:"), 0, 0)
         self._interp_combo = QComboBox()
+        self._interp_combo.setAccessibleName("Resampling")
         self._interp_combo.addItems(["Nearest", "Bilinear", "Bicubic", "Lanczos"])
         self._interp_combo.setCurrentText("Bilinear")
         interp_layout.addWidget(self._interp_combo, 0, 1)
@@ -102,6 +108,7 @@ class ResizeImageDialog(QDialog):
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+        apply_default_names(self)
 
     def _on_lock_toggled(self, checked: bool) -> None:
         self._lock_aspect = checked

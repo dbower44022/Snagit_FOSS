@@ -441,6 +441,7 @@ class LayerPanel(QDockWidget):
 
     def __init__(self, scene: SnapScene, parent: QWidget | None = None) -> None:
         super().__init__("Layers", parent)
+        self.setAccessibleName("Layer Panel")
         self._scene = scene
         self._layer_manager = scene.layer_manager
         self._settings = AppSettings()

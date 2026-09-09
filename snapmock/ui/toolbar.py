@@ -58,6 +58,7 @@ class MainToolBar(QToolBar):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__("Main Toolbar", parent)
+        self.setAccessibleName("Main Toolbar")
         self.setMovable(False)
         self.setIconSize(QSize(MAIN_TOOLBAR_ICON_SIZE, MAIN_TOOLBAR_ICON_SIZE))
         self.setFixedHeight(MAIN_TOOLBAR_HEIGHT)
@@ -84,6 +85,9 @@ class MainToolBar(QToolBar):
         button = self.widgetForAction(action)
         if isinstance(button, QToolButton):
             button.setFixedSize(MAIN_TOOLBAR_BUTTON_SIZE, MAIN_TOOLBAR_BUTTON_SIZE)
+            # Qt gives a toolbar's action buttons no focus; PRD 14 and 17 want every
+            # control on the Tab chain.
+            button.setFocusPolicy(Qt.FocusPolicy.TabFocus)
 
     def add_group(self, actions: Sequence[QAction]) -> None:
         """Append a group of buttons, preceded by a divider unless it is the first."""
@@ -126,6 +130,8 @@ class MainToolBar(QToolBar):
         first = actions[0] if actions else None
         button.setParent(self)
         button.setFixedHeight(MAIN_TOOLBAR_BUTTON_SIZE)
+        if not button.accessibleName():
+            button.setAccessibleName("Capture")
         self.insertWidget(first, button)
         self.insertSeparator(first)
         self._capture_button = button
@@ -188,6 +194,7 @@ class SnapToolBar(QToolBar):
 
     def __init__(self, tool_manager: ToolManager, parent: QWidget | None = None) -> None:
         super().__init__("Tool Palette", parent)
+        self.setAccessibleName("Tool Palette")
         self._tool_manager = tool_manager
         self._buttons: dict[str, QToolButton] = {}
         self.setMovable(False)
@@ -202,6 +209,8 @@ class SnapToolBar(QToolBar):
             btn = QToolButton(self)
             btn.setText(tool.display_name)
             btn.setToolTip(tool_tooltip(tid, tool.display_name))
+            btn.setAccessibleName(tool.display_name)
+            btn.setAccessibleDescription(f"Activate the {tool.display_name} tool.")
             btn.setCheckable(True)
             btn.clicked.connect(self._make_activator(tid))
             self.addWidget(btn)
@@ -259,6 +268,8 @@ class ZoomDropdown(QComboBox):
         self.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         self.setMaximumWidth(100)
         self.setToolTip("Zoom")
+        self.setAccessibleName("Zoom level")
+        self.setAccessibleDescription("A zoom preset, or a percentage typed and entered.")
 
         for step in ZOOM_PRESETS:
             self.addItem(f"{step}%", step)

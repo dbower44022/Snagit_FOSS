@@ -161,6 +161,12 @@
     </thead>
     <tbody>
       <tr>
+        <td class="nowrap">09-09-26 23:30</td>
+        <td>10</td>
+        <td>Added</td>
+        <td>General UI implementation, Phase 8: <code>ui/accessibility.py</code>, the accessible-name helpers of General UI PRD Section 14 (a form row's field takes its label, a toolbar widget takes the label before it, a button takes its text), the Tab-order chain over the window's zones, and the audit the test suite runs over the main window and every dialog.</td>
+      </tr>
+      <tr>
         <td class="nowrap">09-09-26 22:40</td>
         <td>10</td>
         <td>Added</td>
@@ -1600,6 +1606,7 @@ docstring.</p>
         tool_manager.py           # registry and active-tool switching
         zoom_tool.py              # click to zoom in/out, drag to zoom to rectangle
     ui/                           # UI panels — toolbar, layer panel, property panel, status…
+        accessibility.py          # accessible names, the Tab order, and the audit of General UI PRD 14
         about_dialog.py           # About dialog: version, build date, licence, links, Copy Version Info
         collapsible_section.py    # reusable collapsible section widget for panels
         color_picker.py           # color swatch widget with QColorDialog integration

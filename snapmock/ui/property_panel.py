@@ -110,6 +110,7 @@ class PropertyPanel(QDockWidget):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__("Properties", parent)
+        self.setAccessibleName("Property Panel")
         self._selection_manager = selection_manager
         self._scene = scene
         self._settings = AppSettings()

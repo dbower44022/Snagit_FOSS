@@ -18,6 +18,7 @@ from snapmock.commands.macro_command import MacroCommand
 from snapmock.commands.modify_property import ModifyPropertyCommand
 from snapmock.core.command_stack import BaseCommand
 from snapmock.items.base_item import SnapGraphicsItem
+from snapmock.ui.accessibility import apply_default_names
 from snapmock.ui.color_picker import ColorPicker
 
 if TYPE_CHECKING:
@@ -84,6 +85,7 @@ class FindReplaceColorDialog(QDialog):
 
         self._find_picker.color_changed.connect(lambda _c: self.refresh())
         self.refresh()
+        apply_default_names(self)
 
     @property
     def find_color(self) -> QColor:

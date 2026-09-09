@@ -29,6 +29,7 @@ from snapmock.config.constants import (
     ISSUES_URL,
     REPOSITORY_URL,
 )
+from snapmock.ui.accessibility import apply_default_names
 
 TAGLINE = "Screenshot Annotation & UI Mockup Tool"
 CREDITS = ["Doug Bower", "Tabler Icons by Paweł Kuna (MIT)"]
@@ -111,6 +112,7 @@ class AboutDialog(QDialog):
         buttons.rejected.connect(self.reject)
         buttons.accepted.connect(self.accept)
         layout.addWidget(buttons)
+        apply_default_names(self)
 
     def copy_version_info(self) -> None:
         clipboard = QApplication.clipboard()

@@ -42,6 +42,7 @@ from snapmock.commands.macro_command import MacroCommand
 from snapmock.commands.modify_property import ModifyPropertyCommand
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.tools.eyedropper_tool import EyedropperTool
+from snapmock.ui.accessibility import apply_default_names
 from snapmock.ui.color_picker import ColorPicker
 from snapmock.ui.unmet_requirements import check_requirements
 
@@ -101,6 +102,7 @@ class ToolOptionsBar(QToolBar):
 
     def __init__(self, tool_manager: ToolManager, parent: QWidget | None = None) -> None:
         super().__init__("Tool Options", parent)
+        self.setAccessibleName("Tool Options")
         self._tool_manager = tool_manager
         self._tool: BaseTool | None = None
         self._updating = False
@@ -212,6 +214,7 @@ class ToolOptionsBar(QToolBar):
             self._build_control(spec)
         self._read_defaults(tool)
         self._update_selection_widgets()
+        apply_default_names(self)
 
     def _add_labelled(self, label: str, widget: QWidget) -> None:
         if label:
@@ -224,6 +227,7 @@ class ToolOptionsBar(QToolBar):
         if spec.kind == "color":
             picker = ColorPicker(swatch_size=SWATCH_SIZE)
             picker.setToolTip(f"{spec.label} colour")
+            picker.setAccessibleName(f"{spec.label} color")
             picker.color_changed.connect(lambda c, k=spec.key: self._write(k, QColor(c)))
             self._add_labelled(spec.label, picker)
             self._shared[spec.key] = picker
@@ -234,6 +238,7 @@ class ToolOptionsBar(QToolBar):
             dspin.setDecimals(spec.decimals)
             dspin.setSuffix(spec.suffix)
             dspin.setMaximumWidth(80)
+            dspin.setAccessibleName(spec.label)
             dspin.valueChanged.connect(lambda v, k=spec.key: self._write(k, float(v)))
             self._add_labelled(spec.label, dspin)
             self._shared[spec.key] = dspin
@@ -243,6 +248,7 @@ class ToolOptionsBar(QToolBar):
             spin.setSingleStep(int(spec.step))
             spin.setSuffix(spec.suffix)
             spin.setMaximumWidth(80)
+            spin.setAccessibleName(spec.label)
             spin.valueChanged.connect(lambda v, k=spec.key: self._write(k, int(v)))
             self._add_labelled(spec.label, spin)
             self._shared[spec.key] = spin
@@ -250,10 +256,12 @@ class ToolOptionsBar(QToolBar):
             slider = QSlider(Qt.Orientation.Horizontal)
             slider.setRange(int(spec.minimum), int(spec.maximum))
             slider.setFixedWidth(80)
+            slider.setAccessibleName(f"{spec.label} slider")
             spin = QSpinBox()
             spin.setRange(int(spec.minimum), int(spec.maximum))
             spin.setSuffix(spec.suffix)
             spin.setMaximumWidth(64)
+            spin.setAccessibleName(spec.label)
             slider.valueChanged.connect(spin.setValue)
             spin.valueChanged.connect(slider.setValue)
             spin.valueChanged.connect(lambda v, k=spec.key: self._write(k, v))
@@ -264,6 +272,7 @@ class ToolOptionsBar(QToolBar):
         elif spec.kind == "font":
             font_combo = QFontComboBox()
             font_combo.setMaximumWidth(160)
+            font_combo.setAccessibleName(spec.label)
             font_combo.currentFontChanged.connect(
                 lambda f, k=spec.key: self._write(k, str(f.family()))
             )
@@ -274,6 +283,7 @@ class ToolOptionsBar(QToolBar):
                 button = QToolButton()
                 button.setText(text)
                 button.setToolTip(tip)
+                button.setAccessibleName(tip)
                 button.setCheckable(True)
                 button.setFixedSize(_CONTROL_HEIGHT, _CONTROL_HEIGHT)
                 font = button.font()
@@ -483,6 +493,7 @@ class ToolOptionsBar(QToolBar):
             button = self.widgetForAction(copy)
             if isinstance(button, QToolButton):
                 button.setFixedSize(_CONTROL_HEIGHT, _CONTROL_HEIGHT)
+                button.setFocusPolicy(Qt.FocusPolicy.TabFocus)
             self._selection_copies.append(copy)
 
     def _on_selection_changed(self, _items: list[object]) -> None:

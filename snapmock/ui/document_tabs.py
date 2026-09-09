@@ -71,6 +71,8 @@ class DocumentTabs(QWidget):
         self._tab_bar.setExpanding(False)
         self._tab_bar.setElideMode(Qt.TextElideMode.ElideRight)
         self._tab_bar.setDocumentMode(True)
+        self._tab_bar.setAccessibleName("Document tabs")
+        self._tab_bar.setAccessibleDescription("One tab per open document.")
         self._tab_bar.hide()
 
         self._stack = QStackedWidget(self)
@@ -149,6 +151,7 @@ class DocumentTabs(QWidget):
             idx = self._tab_bar.addTab(doc.tab_title)
             self._tab_bar.setTabData(idx, doc.tab_id)
             self._tab_bar.setTabToolTip(idx, str(doc.file_path) if doc.file_path else "Unsaved")
+            self._name_close_button(idx, doc)
         finally:
             self._syncing = False
         self._update_bar_visibility()
@@ -184,6 +187,7 @@ class DocumentTabs(QWidget):
         if idx >= 0:
             self._tab_bar.setTabText(idx, doc.tab_title)
             self._tab_bar.setTabToolTip(idx, str(doc.file_path) if doc.file_path else "Unsaved")
+            self._name_close_button(idx, doc)
 
     # --- widget -> manager ---
 
@@ -233,6 +237,11 @@ class DocumentTabs(QWidget):
             self.reveal_in_file_manager_requested.emit(doc)
 
     # --- helpers ---
+
+    def _name_close_button(self, index: int, doc: Document) -> None:
+        button = self._tab_bar.tabButton(index, QTabBar.ButtonPosition.RightSide)
+        if button is not None:
+            button.setAccessibleName(f"Close {doc.display_name}")
 
     def _tab_index_for(self, doc: Document) -> int:
         for i in range(self._tab_bar.count()):

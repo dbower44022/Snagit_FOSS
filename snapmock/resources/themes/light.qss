@@ -22,8 +22,8 @@
 @toolbar-separator: #CCCCCC;
 @button-hover: #D8D8D8;
 @button-pressed: #C0C0C0;
-@error: #D32F2F;
-@warning: #F57C00;
+@error: #C62828;
+@warning: #A34A00;
 @grid-lines: #33000000;
 @grid-lines-major: #55000000;
 
@@ -36,7 +36,7 @@
 @ruler-cursor: #D32F2F;
 @canvas-border: #B4B4B4;
 @canvas-shadow: #66000000;
-@empty-canvas-text: #999999;
+@empty-canvas-text: #6F6F6F;
 @checkerboard-a: #FFFFFF;
 @checkerboard-b: #CCCCCC;
 @guide: #00BFFF;
@@ -324,4 +324,36 @@ QProgressBar {
 
 QProgressBar::chunk {
     background-color: @accent;
+}
+
+/* --- Focus outline (General UI PRD 14): 2 px accent on every focusable control --- */
+
+QToolButton:focus {
+    border: 2px solid @accent;
+}
+
+QCheckBox:focus, QRadioButton:focus {
+    border: 2px solid @accent;
+    border-radius: 3px;
+}
+
+QSlider:focus {
+    border: 2px solid @accent;
+    border-radius: 3px;
+}
+
+QListWidget:focus, QListView:focus, QTreeView:focus, QTableView:focus, QTableWidget:focus, QTextEdit:focus, QPlainTextEdit:focus {
+    border: 2px solid @accent;
+}
+
+QGraphicsView:focus, QAbstractScrollArea:focus {
+    border: 2px solid @accent;
+}
+
+QTabBar::tab:focus {
+    border: 2px solid @accent;
+}
+
+QFontComboBox:focus {
+    border: 2px solid @accent;
 }
