@@ -1,6 +1,6 @@
 # General UI Implementation Notes
 
-Last Updated: 09-09-26 21:25 · Revision 1.11
+Last Updated: 09-09-26 22:05 · Revision 1.12
 
 Implements the SnapMock General User Interface PRD (version 2.3, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
@@ -16,7 +16,7 @@ Implements the SnapMock General User Interface PRD (version 2.3, `PRDs/SnapMock-
 | 5 | Canvas | Done | 155f908 to 620da91, then this close-out commit |
 | 6 | Panels and colour picker | Done | 485d496 to 0a488d1, then this close-out commit |
 | 7 | Tool themes and presets | Done | 443ce55 to 2c3cc23, then this close-out commit |
-| 8 | First run, accessibility, responsive behaviour | Not started | |
+| 8 | First run, accessibility, responsive behaviour | In progress | |
 
 Phase 0 was verified against the repository at commit `a198744` on 09-07-26. The working tree also carried uncommitted Basic Shape Annotation Tools work in `snapmock/items/` and `tests/test_items.py`; it was left untouched and is not part of this inventory.
 
@@ -194,7 +194,12 @@ Taken at the start of Phase 7 (09-09-26), from `docs/General-UI-Phase-7-Kickoff-
 | 7.1 Overrides saved with the project | B, application data directory only | Per-tool preset overrides and option values persist per user in the application data directory and never in `manifest.json`; a project file never carries tool settings, since one tool set is shared by every open tab and a per-project snapshot would overwrite the user's own setup on open. Technical Architecture PRD Section 6.1 is untouched. General UI PRD 2.3 row against Section 5.2. |
 | 7.2 Preferences > Tools and the Default theme | A, Preferences edits the Default theme | The seven Preferences > Tools values are the Default theme's values for the keys they cover; the rest of Default comes from the tools' built-in constants. Startup loads the active theme instead of pushing Preferences into every tool; a Preferences change rewrites Default and reaches the tools only while Default is the active theme, and then only the tools without an override. The page names the active theme. General UI PRD 2.3 row against Section 11.3. |
 
-The kickoff's remaining decision (welcome-panel card) is presented at the start of Phase 8.
+Taken at the start of Phase 8 (09-09-26), from `docs/General-UI-Phase-8-Kickoff-Prompt.md`:
+
+| Decision | Choice | Effect |
+|---|---|---|
+| 5 Welcome panel's New Blank Canvas card | B, an unsaved document | The card takes the File > New route: all three cards land in the same Untitled document, nothing is written to disk that the user did not ask to save, and the model the panel teaches is the File menu's. The Library's New Canvas stays in its own menu. The card opens a size dialog first (Section 16.1): width and height from the Preferences default canvas size, Lock aspect ratio, OK and Cancel; Cancel creates nothing. The cost is the Unsaved Changes prompt on the user's first close, softened by the canvas preview this phase adds to that dialog. General UI PRD 2.4 row against Section 16.1. |
+
 
 ### 5.2 As raised by Phase 0
 
@@ -309,6 +314,7 @@ In commit order: decisions 7.1 and 7.2 (Section 5.1); the model and storage (`sn
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.12 | 09-09-26 22:05 | Claude (Claude Code) | Phase 8 in progress: decision 5 (Section 5.1), the phase table. |
 | 1.11 | 09-09-26 21:25 | Claude (Claude Code) | Next step points at `docs/General-UI-Phase-8-Kickoff-Prompt.md`. |
 | 1.10 | 09-09-26 20:45 | Claude (Claude Code) | Phase 7 done: phase table, decisions 7.1 and 7.2 (Section 5.1), seven deviations added and one closed (Section 6), tests (Section 7), build summary and next step (Section 14). General UI PRD 2.3, Technical Architecture PRD 1.12. |
 | 1.9 | 09-09-26 16:30 | Claude (Claude Code) | Phase 6 done: phase table, nine deviations added and two closed (Section 6), tests (Section 7), build summary and next step (Section 13). General UI PRD 2.2, Technical Architecture PRD 1.11. |
