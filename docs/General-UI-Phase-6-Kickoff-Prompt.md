@@ -1,6 +1,6 @@
 # Kickoff Prompt: General UI Phase 6, Panels and Colour Picker
 
-Last Updated: 09-09-26 00:05 · Revision 1.0
+Last Updated: 09-09-26 09:40 · Revision 1.1
 
 Paste everything below the line into a new Claude Code session rooted in this repository on the Linux machine. Start it only when no other session is committing in this working directory: this work edits `snapmock/main_window.py`, `snapmock/ui/layer_panel.py`, `snapmock/ui/property_panel.py`, `snapmock/ui/color_picker.py`, and the layer model, which every other session touches too.
 
@@ -45,6 +45,18 @@ Do not write code until all five are read.
 - Slots connected to the process-wide `ThemeManager` must be bound methods of a `QObject`, never lambdas. Avoid Python reference cycles between a widget and its children (`RulerWidget` holds its view weakly for this reason): the garbage collector clears a widget's attributes while Qt is still destroying it.
 - Guides live on `SnapScene` and change only through `commands/guide_commands.py`; the Property Panel does not show them.
 
+Corrections found when the phase opened on 09-09-26 (revision 1.1):
+
+- Collapse state of the Property Panel sections is not persisted; `CollapsibleSection` keeps an in-memory flag and no settings key exists. PRD 8.2 requires persistence; step 5 builds it.
+- `RenderEngine.render_layer_region` renders one layer's items by hiding the others; step 3 reuses it for thumbnails.
+- Layer visibility and layer opacity have no effect on rendering: nothing consumes `layer_visibility_changed` or `layer_opacity_changed` except the main window's deselection, so a hidden layer still draws and a layer's opacity is ignored. The Select tool alone honours them for hit testing. Step 3 makes the scene apply both to items (Technical Architecture PRD 3.9.1).
+- The Layer Panel's plus and minus buttons call the layer manager directly, with no command, no confirmation, and no last-layer message; step 4's action bar replaces them with the menu actions.
+- The Property Panel writes the canvas background colour to the scene directly and text alignment outside edit mode to the item directly; step 5 routes both through commands.
+- `LayerPanel.set_manager` and `PropertyPanel.set_scene` never disconnect the previous manager or scene; step 3 disconnects on rebinding.
+- PRD 8.4 shows Text Alignment as a Left, Center, Right toggle group; the code is a dropdown with Justify. A fifth PRD silence for step 5 to decide and record.
+- The vendored Tabler set lacks `link` and `link-off`; step 5 vendors them under the Phase 3 icon decision.
+- Technical Architecture PRD 3.2 already lists `blend_mode` and `layer_type` on the Layer and 6.1 says `layers.json` carries every property, so option A of decision 6.1 would not change that PRD's data model; its cost is the per-layer compositing pass the display path lacks.
+
 ## Steps, one commit each
 
 1. **Decisions.** Present decision 6.1 (layer blend mode) and then decision 6.2 (item properties without a home) and wait after each.
@@ -88,4 +100,5 @@ Update the Phase status table in `docs/General-UI-Implementation.md`, bump its r
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 09-09-26 09:40 | Claude (Claude Code) | Nine corrections to the starting state, verified at commit a180b07 when the phase opened; decisions 6.1 and 6.2 both taken as option B. |
 | 1.0 | 09-09-26 00:05 | Claude (Claude Code) | Initial Phase 6 prompt: starting state at commit 120456f, seven steps, decisions 6.1 and 6.2, the four known PRD silences. |

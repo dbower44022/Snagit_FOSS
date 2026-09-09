@@ -1,6 +1,6 @@
 # General UI Implementation Notes
 
-Last Updated: 09-08-26 23:45 · Revision 1.7
+Last Updated: 09-09-26 09:40 · Revision 1.8
 
 Implements the SnapMock General User Interface PRD (version 2.0, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
@@ -14,7 +14,7 @@ Implements the SnapMock General User Interface PRD (version 2.0, `PRDs/SnapMock-
 | 3 | Theme and Preferences | Done | a3d19a2 to 4e15e66 |
 | 4 | Toolbars and status bar | Done | 4ddcf86 to a9ca773, then this close-out commit |
 | 5 | Canvas | Done | 155f908 to 620da91, then this close-out commit |
-| 6 | Panels and colour picker | Not started | |
+| 6 | Panels and colour picker | In progress | from the commit after a180b07 |
 | 7 | Tool themes and presets | Not started | |
 | 8 | First run, accessibility, responsive behaviour | Not started | |
 
@@ -135,6 +135,10 @@ Missing. No welcome panel and no first-launch detection; Help > Welcome is a mes
 - Edit menu: Redo and Deselect act on the first document after a tab switch. A bug, not a gap.
 - The zoom dropdown class exists but is unused; the prompt implied it was wired.
 
+### 3.1 Corrections found at the start of Phase 6
+
+Verified at commit a180b07 on 09-09-26 and recorded in revision 1.1 of the Phase 6 kickoff prompt: the Property Panel's section collapse state is not persisted (Section 2.8 above said it was); a per-layer render exists in `RenderEngine.render_layer_region`; layer visibility and layer opacity have no effect on rendering, only on the Select tool's hit testing; the Layer Panel's own two buttons bypass the command stack; the Property Panel writes the canvas background colour and the text alignment directly; panel rebinding never disconnects the previous manager or scene; PRD 8.4's alignment toggle group is a dropdown in the code; the icon set lacks the chain-link glyphs.
+
 ## 4. PRD inconsistencies found during the inventory
 
 Recorded here so Phase 1 can propose change-log rows for the General UI PRD; none is resolved by this note.
@@ -175,6 +179,13 @@ Taken in Phase 5 (09-08-26):
 | Decision | Choice | Effect |
 |---|---|---|
 | Guide persistence | A, in the project file | `manifest.json` carries an optional `guides` list; `format_version` stays 1; guide changes are undoable commands that dirty the document. Technical Architecture PRD 1.10 records the format change in Section 6.1. |
+
+Taken at the start of Phase 6 (09-09-26), from `docs/General-UI-Phase-6-Kickoff-Prompt.md`:
+
+| Decision | Choice | Effect |
+|---|---|---|
+| 6.1 Layer blend mode | B, defer | The Layer has no blend mode or layer type in this phase. The action bar's blend-mode dropdown and the BG and raster badges of Section 7.4 and 7.5 go to the Navigation and Raster Operations follow-up that owns merging, since both need the per-layer compositing pass the display path lacks. General UI PRD 2.2 row. |
+| 6.2 Item properties without a home | B, keep the Phase 4 deferral | Stroke Style, Fill Opacity, Stroke Opacity, the Shadow section, Blend Mode, and Line Spacing arrive with the Basic Shape and Text PRDs' item work. Every other Property Panel control of Section 8 is built here. General UI PRD 2.2 row. |
 
 The kickoff's remaining decision (welcome-panel card) is presented at the start of Phase 8.
 
@@ -263,6 +274,7 @@ Then the guides (commit 620da91): `snapmock/core/guides.py` (`Guide`, `GuideOrie
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.8 | 09-09-26 09:40 | Claude (Claude Code) | Phase 6 in progress: decisions 6.1 and 6.2 (Section 5.1), the corrections found at the phase's start (Section 3.1). |
 | 1.7 | 09-08-26 23:45 | Claude (Claude Code) | Phase 5 done: phase table, the guide-persistence decision (Section 5.1), three deviations added (Section 6), the guides build and next step (Section 12). General UI PRD 2.1, Technical Architecture PRD 1.10. |
 | 1.6 | 09-08-26 22:20 | Claude (Claude Code) | Phase 5 in progress: phase table, three deviations (Section 6), what is built and what remains (Section 12), the Snap to Grid finding. |
 | 1.5 | 09-08-26 19:40 | Claude (Claude Code) | Phase 4 done: phase table, the memory-zone decision (Section 5.1), seven deviations added and two closed (Section 6), a Section 4 inconsistency, tests (Section 7), build summary and next step (Section 11). |
