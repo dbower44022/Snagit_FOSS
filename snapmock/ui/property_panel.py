@@ -595,6 +595,7 @@ class PropertyPanel(QDockWidget):
             d = self._active_tool_defaults()
             if d is not None:
                 d["stroke_color"] = QColor(color)
+                self._notify_defaults_changed()
             return
         item = self._first_selected_item()
         if not isinstance(item, VectorItem):
@@ -612,6 +613,7 @@ class PropertyPanel(QDockWidget):
             d = self._active_tool_defaults()
             if d is not None:
                 d["stroke_width"] = float(value)
+                self._notify_defaults_changed()
             return
         item = self._first_selected_item()
         if not isinstance(item, VectorItem):
@@ -629,6 +631,7 @@ class PropertyPanel(QDockWidget):
             d = self._active_tool_defaults()
             if d is not None:
                 d["stroke_width"] = value
+                self._notify_defaults_changed()
             return
         item = self._first_selected_item()
         if not isinstance(item, VectorItem):
@@ -643,6 +646,7 @@ class PropertyPanel(QDockWidget):
             d = self._active_tool_defaults()
             if d is not None:
                 d["fill_color"] = QColor(color)
+                self._notify_defaults_changed()
             return
         item = self._first_selected_item()
         if not isinstance(item, VectorItem):
@@ -660,6 +664,7 @@ class PropertyPanel(QDockWidget):
             d = self._active_tool_defaults()
             if d is not None:
                 d["opacity_pct"] = float(value)
+                self._notify_defaults_changed()
             return
         item = self._first_selected_item()
         if item is None:
@@ -677,6 +682,7 @@ class PropertyPanel(QDockWidget):
             d = self._active_tool_defaults()
             if d is not None:
                 d["opacity_pct"] = float(value)
+                self._notify_defaults_changed()
             return
         item = self._first_selected_item()
         if item is None:
@@ -919,6 +925,7 @@ class PropertyPanel(QDockWidget):
             d = self._active_tool_defaults()
             if d is not None:
                 d["font_family"] = font.family()
+                self._notify_defaults_changed()
             return
         item = self._text_item()
         if item is None:
@@ -942,6 +949,7 @@ class PropertyPanel(QDockWidget):
             d = self._active_tool_defaults()
             if d is not None:
                 d["font_size"] = value
+                self._notify_defaults_changed()
             return
         item = self._text_item()
         if item is None:
@@ -966,6 +974,7 @@ class PropertyPanel(QDockWidget):
             d = self._active_tool_defaults()
             if d is not None:
                 d["bold"] = checked
+                self._notify_defaults_changed()
             return
         item = self._text_item()
         if item is None:
@@ -990,6 +999,7 @@ class PropertyPanel(QDockWidget):
             d = self._active_tool_defaults()
             if d is not None:
                 d["italic"] = checked
+                self._notify_defaults_changed()
             return
         item = self._text_item()
         if item is None:
@@ -1014,6 +1024,7 @@ class PropertyPanel(QDockWidget):
             d = self._active_tool_defaults()
             if d is not None:
                 d["underline"] = checked
+                self._notify_defaults_changed()
             return
         item = self._text_item()
         if item is None:
@@ -1037,6 +1048,7 @@ class PropertyPanel(QDockWidget):
             d = self._active_tool_defaults()
             if d is not None:
                 d["text_color"] = QColor(color)
+                self._notify_defaults_changed()
             return
         item = self._text_item()
         if item is None:
@@ -1062,6 +1074,7 @@ class PropertyPanel(QDockWidget):
             d = self._active_tool_defaults()
             if d is not None:
                 d["horizontal_align"] = alignment
+                self._notify_defaults_changed()
             return
         item = self._text_item()
         if item is None:
@@ -1082,6 +1095,7 @@ class PropertyPanel(QDockWidget):
             d = self._active_tool_defaults()
             if d is not None:
                 d["bg_color"] = QColor(color)
+                self._notify_defaults_changed()
             return
         item = self._first_selected_item()
         if not isinstance(item, (TextItem, CalloutItem)):
@@ -1096,6 +1110,7 @@ class PropertyPanel(QDockWidget):
             d = self._active_tool_defaults()
             if d is not None:
                 d["border_color"] = QColor(color)
+                self._notify_defaults_changed()
             return
         item = self._first_selected_item()
         if not isinstance(item, (TextItem, CalloutItem)):
@@ -1110,6 +1125,7 @@ class PropertyPanel(QDockWidget):
             d = self._active_tool_defaults()
             if d is not None:
                 d["border_width"] = value
+                self._notify_defaults_changed()
             return
         item = self._first_selected_item()
         if not isinstance(item, (TextItem, CalloutItem)):
@@ -1124,6 +1140,7 @@ class PropertyPanel(QDockWidget):
             d = self._active_tool_defaults()
             if d is not None:
                 d["border_radius"] = value
+                self._notify_defaults_changed()
             return
         item = self._first_selected_item()
         if not isinstance(item, (TextItem, CalloutItem)):
@@ -1138,6 +1155,7 @@ class PropertyPanel(QDockWidget):
             d = self._active_tool_defaults()
             if d is not None:
                 d["padding"] = value
+                self._notify_defaults_changed()
             return
         item = self._first_selected_item()
         if not isinstance(item, (TextItem, CalloutItem)):
@@ -1170,6 +1188,7 @@ class PropertyPanel(QDockWidget):
             d = self._active_tool_defaults()
             if d is not None:
                 d["auto_size"] = checked
+                self._notify_defaults_changed()
             return
         item = self._first_selected_item()
         if not isinstance(item, TextItem):
@@ -1200,6 +1219,19 @@ class PropertyPanel(QDockWidget):
         """Wire the property panel to the tool manager for tool-defaults mode."""
         self._tool_manager = tm
         tm.tool_changed.connect(self._on_tool_changed)
+        tm.tool_defaults_changed.connect(self._on_tool_defaults_changed)
+
+    def _notify_defaults_changed(self) -> None:
+        """Tell the Tool Options Bar a creation default changed here (PRD 5.1, 8.5)."""
+        if self._tool_manager is not None:
+            self._tool_manager.tool_defaults_changed.emit(self._active_tool_id)
+
+    def _on_tool_defaults_changed(self, tool_id: str) -> None:
+        """Re-read the defaults another surface edited, when this panel is showing them."""
+        if self._updating or tool_id != self._active_tool_id:
+            return
+        if self._in_tool_defaults_mode() or self._in_vector_defaults_mode():
+            self._refresh_from_selection()
 
     def refresh_tool_defaults(self) -> None:
         """Re-read the active tool's creation defaults (Preferences > Tools changed)."""

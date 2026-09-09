@@ -1,39 +1,405 @@
-"""ToolOptionsBar — context-sensitive per-tool options widget."""
+"""ToolOptionsBar — the shared control set and per-tool options (General UI PRD Section 5).
+
+The bar composes each tool's options from the tool's :attr:`BaseTool.options_controls`
+declaration: every shared control (colour swatches, stroke width, opacity, font
+family and size, bold/italic/underline, smoothing, starting number) is built by one
+factory here and bound to the key of the same name in the tool's ``creation_defaults``.
+The tool's own :meth:`BaseTool.build_options_widgets` adds what only it has.
+
+The Select tool's bar and the Eyedropper's bar are composed here too, because both
+act on things a tool cannot reach: the Arrange actions and the other tools' defaults.
+"""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtWidgets import QLabel, QToolBar
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QAction, QColor, QFont, QPainter, QPixmap
+from PyQt6.QtWidgets import (
+    QDoubleSpinBox,
+    QFontComboBox,
+    QLabel,
+    QPushButton,
+    QSlider,
+    QSpinBox,
+    QToolBar,
+    QToolButton,
+    QWidget,
+)
+
+from snapmock.commands.macro_command import MacroCommand
+from snapmock.commands.modify_property import ModifyPropertyCommand
+from snapmock.items.base_item import SnapGraphicsItem
+from snapmock.tools.eyedropper_tool import EyedropperTool
+from snapmock.ui.color_picker import ColorPicker
 
 if TYPE_CHECKING:
-    from PyQt6.QtWidgets import QWidget
-
+    from snapmock.core.command_stack import BaseCommand
+    from snapmock.core.selection_manager import SelectionManager
+    from snapmock.tools.base_tool import BaseTool
     from snapmock.tools.tool_manager import ToolManager
+
+TOOL_OPTIONS_BAR_HEIGHT = 36
+SWATCH_SIZE = 24
+_CONTROL_HEIGHT = 26
+
+
+@dataclass(frozen=True)
+class ControlSpec:
+    """One shared control: its widget kind, label, and range (PRD 5.2)."""
+
+    key: str
+    label: str
+    kind: str  # color | double | int | slider | font | text_style
+    minimum: float = 0.0
+    maximum: float = 100.0
+    step: float = 1.0
+    suffix: str = ""
+    decimals: int = 0
+
+
+SHARED_CONTROLS: dict[str, ControlSpec] = {
+    "stroke_color": ControlSpec("stroke_color", "Stroke", "color"),
+    "fill_color": ControlSpec("fill_color", "Fill", "color"),
+    "stroke_width": ControlSpec(
+        "stroke_width", "Width", "double", 0.5, 50.0, 0.5, " px", decimals=1
+    ),
+    "opacity_pct": ControlSpec("opacity_pct", "Opacity", "slider", 0, 100, 1, "%"),
+    "font_family": ControlSpec("font_family", "Font", "font"),
+    "font_size": ControlSpec("font_size", "Size", "int", 6, 200, 1, " pt"),
+    "text_style": ControlSpec("text_style", "", "text_style"),
+    "text_color": ControlSpec("text_color", "Text", "color"),
+    "bg_color": ControlSpec("bg_color", "Background", "color"),
+    "border_color": ControlSpec("border_color", "Border", "color"),
+    "border_width": ControlSpec("border_width", "Border", "double", 0.0, 20.0, 0.5, " px", 1),
+    "smoothing": ControlSpec("smoothing", "Smoothing", "slider", 0, 100, 1, "%"),
+    "start_number": ControlSpec("start_number", "Start at", "int", 1, 999, 1),
+}
+
+_TEXT_STYLE_KEYS: tuple[tuple[str, str, str], ...] = (
+    ("bold", "B", "Bold"),
+    ("italic", "I", "Italic"),
+    ("underline", "U", "Underline"),
+)
 
 
 class ToolOptionsBar(QToolBar):
-    """Displays context-sensitive options for the active tool."""
+    """Context-sensitive options for the active tool, 36 px tall (PRD 2.2)."""
 
     def __init__(self, tool_manager: ToolManager, parent: QWidget | None = None) -> None:
         super().__init__("Tool Options", parent)
         self._tool_manager = tool_manager
+        self._tool: BaseTool | None = None
+        self._updating = False
+        self._shared: dict[str, QWidget] = {}
+        self._style_buttons: dict[str, QToolButton] = {}
+        self._selection: SelectionManager | None = None
+        self._selection_actions: list[QAction] = []
+        self._selection_copies: list[QAction] = []
+        self._selection_label: QLabel | None = None
+        self._eyedropper_swatch: QLabel | None = None
+        self._eyedropper_hex: QLabel | None = None
+        self._eyedropper_rgb: QLabel | None = None
         self._label = QLabel("No tool selected")
         self.addWidget(self._label)
         self.setMovable(False)
+        self.setFixedHeight(TOOL_OPTIONS_BAR_HEIGHT)
 
         tool_manager.tool_changed.connect(self._on_tool_changed)
+        tool_manager.tool_defaults_changed.connect(self._on_tool_defaults_changed)
         self._on_tool_changed(tool_manager.active_tool_id)
 
-    def _on_tool_changed(self, tool_id: str) -> None:
-        # Remove all existing widgets
-        self.clear()
+    # ---- wiring from the window ----
 
+    def set_selection_actions(self, actions: Sequence[QAction]) -> None:
+        """The Arrange actions the Select tool's bar shows for two or more items (PRD 5.3)."""
+        self._selection_actions = list(actions)
+        if self._tool is not None and self._tool.tool_id == "select":
+            self._on_tool_changed("select")
+
+    def set_selection_manager(self, selection: SelectionManager) -> None:
+        """Follow another document's selection (tab switch)."""
+        if self._selection is selection:
+            return
+        if self._selection is not None:
+            try:
+                self._selection.selection_changed.disconnect(self._on_selection_changed)
+            except (TypeError, RuntimeError):
+                pass
+        self._selection = selection
+        selection.selection_changed.connect(self._on_selection_changed)
+        self._update_selection_widgets()
+
+    def refresh(self) -> None:
+        """Re-read the active tool's creation defaults into the shared controls."""
+        if self._tool is not None:
+            self._read_defaults(self._tool)
+
+    @property
+    def shared_widgets(self) -> dict[str, QWidget]:
+        """The shared controls currently shown, keyed by creation-defaults key."""
+        return dict(self._shared)
+
+    @property
+    def selection_action_copies(self) -> list[QAction]:
+        return list(self._selection_copies)
+
+    # ---- composition ----
+
+    def _on_tool_changed(self, tool_id: str) -> None:
+        self.clear()
+        self._shared.clear()
+        self._style_buttons.clear()
+        self._selection_copies.clear()
+        self._selection_label = None
+        self._eyedropper_swatch = self._eyedropper_hex = self._eyedropper_rgb = None
         tool = self._tool_manager.tool(tool_id)
-        if tool is not None:
-            self._label = QLabel(f"{tool.display_name} options")
-            self.addWidget(self._label)
-            tool.build_options_widgets(self)
-        else:
+        self._tool = tool
+        if tool is None:
             self._label = QLabel("No tool selected")
             self.addWidget(self._label)
+            return
+        self._label = QLabel(f"{tool.display_name} ")
+        self.addWidget(self._label)
+
+        keys = list(tool.options_controls)
+        if "tool" not in keys:
+            keys.append("tool")
+        for key in keys:
+            if key == "tool":
+                if tool.tool_id == "select":
+                    self._build_selection_controls()
+                elif isinstance(tool, EyedropperTool):
+                    self._build_eyedropper_controls(tool)
+                tool.build_options_widgets(self)
+                continue
+            spec = SHARED_CONTROLS[key]
+            if spec.key != "text_style" and spec.key not in tool.creation_defaults:
+                continue
+            self._build_control(spec)
+        self._read_defaults(tool)
+        self._update_selection_widgets()
+
+    def _add_labelled(self, label: str, widget: QWidget) -> None:
+        if label:
+            text = QLabel(f" {label}:")
+            self.addWidget(text)
+        widget.setMaximumHeight(_CONTROL_HEIGHT)
+        self.addWidget(widget)
+
+    def _build_control(self, spec: ControlSpec) -> None:
+        if spec.kind == "color":
+            picker = ColorPicker(swatch_size=SWATCH_SIZE)
+            picker.setToolTip(f"{spec.label} colour")
+            picker.color_changed.connect(lambda c, k=spec.key: self._write(k, QColor(c)))
+            self._add_labelled(spec.label, picker)
+            self._shared[spec.key] = picker
+        elif spec.kind == "double":
+            dspin = QDoubleSpinBox()
+            dspin.setRange(spec.minimum, spec.maximum)
+            dspin.setSingleStep(spec.step)
+            dspin.setDecimals(spec.decimals)
+            dspin.setSuffix(spec.suffix)
+            dspin.setMaximumWidth(80)
+            dspin.valueChanged.connect(lambda v, k=spec.key: self._write(k, float(v)))
+            self._add_labelled(spec.label, dspin)
+            self._shared[spec.key] = dspin
+        elif spec.kind == "int":
+            spin = QSpinBox()
+            spin.setRange(int(spec.minimum), int(spec.maximum))
+            spin.setSingleStep(int(spec.step))
+            spin.setSuffix(spec.suffix)
+            spin.setMaximumWidth(80)
+            spin.valueChanged.connect(lambda v, k=spec.key: self._write(k, int(v)))
+            self._add_labelled(spec.label, spin)
+            self._shared[spec.key] = spin
+        elif spec.kind == "slider":
+            slider = QSlider(Qt.Orientation.Horizontal)
+            slider.setRange(int(spec.minimum), int(spec.maximum))
+            slider.setFixedWidth(80)
+            spin = QSpinBox()
+            spin.setRange(int(spec.minimum), int(spec.maximum))
+            spin.setSuffix(spec.suffix)
+            spin.setMaximumWidth(64)
+            slider.valueChanged.connect(spin.setValue)
+            spin.valueChanged.connect(slider.setValue)
+            spin.valueChanged.connect(lambda v, k=spec.key: self._write(k, v))
+            self._add_labelled(spec.label, slider)
+            spin.setMaximumHeight(_CONTROL_HEIGHT)
+            self.addWidget(spin)
+            self._shared[spec.key] = spin
+        elif spec.kind == "font":
+            font_combo = QFontComboBox()
+            font_combo.setMaximumWidth(160)
+            font_combo.currentFontChanged.connect(
+                lambda f, k=spec.key: self._write(k, str(f.family()))
+            )
+            self._add_labelled(spec.label, font_combo)
+            self._shared[spec.key] = font_combo
+        elif spec.kind == "text_style":
+            for key, text, tip in _TEXT_STYLE_KEYS:
+                button = QToolButton()
+                button.setText(text)
+                button.setToolTip(tip)
+                button.setCheckable(True)
+                button.setFixedSize(_CONTROL_HEIGHT, _CONTROL_HEIGHT)
+                font = button.font()
+                if key == "bold":
+                    font.setBold(True)
+                elif key == "italic":
+                    font.setItalic(True)
+                else:
+                    font.setUnderline(True)
+                button.setFont(font)
+                button.toggled.connect(lambda checked, k=key: self._write(k, bool(checked)))
+                self.addWidget(button)
+                self._style_buttons[key] = button
+                self._shared[key] = button
+
+    # ---- the two-way binding ----
+
+    def _write(self, key: str, value: Any) -> None:
+        """A control changed: store the default and tell the other surfaces."""
+        if self._updating or self._tool is None:
+            return
+        self._tool.creation_defaults[key] = value
+        self._tool.on_option_changed(key, value)
+        self._tool_manager.tool_defaults_changed.emit(self._tool.tool_id)
+
+    def _on_tool_defaults_changed(self, tool_id: str) -> None:
+        if self._tool is not None and self._tool.tool_id == tool_id:
+            self._read_defaults(self._tool)
+
+    def _read_defaults(self, tool: BaseTool) -> None:
+        """Show the tool's creation defaults in the shared controls without writing back."""
+        d = tool.creation_defaults
+        self._updating = True
+        try:
+            for key, widget in self._shared.items():
+                if key not in d:
+                    continue
+                value = d[key]
+                if isinstance(widget, ColorPicker):
+                    widget.color = QColor(value) if isinstance(value, QColor) else QColor("black")
+                elif isinstance(widget, QDoubleSpinBox):
+                    widget.setValue(float(value))
+                elif isinstance(widget, QSpinBox):
+                    widget.setValue(int(value))
+                elif isinstance(widget, QFontComboBox):
+                    widget.setCurrentFont(QFont(str(value)))
+                elif isinstance(widget, QToolButton):
+                    widget.setChecked(bool(value))
+        finally:
+            self._updating = False
+
+    # ---- the Select tool's bar (PRD 5.3; Navigation PRD 2.5) ----
+
+    def _build_selection_controls(self) -> None:
+        self._selection_label = QLabel("No selection")
+        self.addWidget(self._selection_label)
+        if not self._selection_actions:
+            return
+        self.addSeparator()
+        for action in self._selection_actions:
+            copy = QAction(action.text(), self)
+            copy.setIcon(action.icon())
+            copy.setToolTip(action.toolTip() or action.text().replace("&", ""))
+            copy.triggered.connect(action.trigger)
+            self.addAction(copy)
+            button = self.widgetForAction(copy)
+            if isinstance(button, QToolButton):
+                button.setFixedSize(_CONTROL_HEIGHT, _CONTROL_HEIGHT)
+            self._selection_copies.append(copy)
+
+    def _on_selection_changed(self, _items: list[object]) -> None:
+        self._update_selection_widgets()
+
+    def _update_selection_widgets(self) -> None:
+        count = self._selection.count if self._selection is not None else 0
+        if self._selection_label is not None:
+            if count == 0 or self._selection is None:
+                self._selection_label.setText("No selection")
+            else:
+                items = [i for i in self._selection.items if isinstance(i, SnapGraphicsItem)]
+                noun = "item" if count == 1 else "items"
+                text = f"Selection: {count} {noun}"
+                if items:
+                    rect = items[0].sceneBoundingRect()
+                    for item in items[1:]:
+                        rect = rect.united(item.sceneBoundingRect())
+                    text += f"   W: {rect.width():.0f} H: {rect.height():.0f}"
+                self._selection_label.setText(text)
+        for copy in self._selection_copies:
+            copy.setVisible(count >= 2)
+
+    # ---- the Eyedropper's bar (PRD 5.3) ----
+
+    def _build_eyedropper_controls(self, tool: EyedropperTool) -> None:
+        self._eyedropper_swatch = QLabel()
+        self._eyedropper_swatch.setFixedSize(SWATCH_SIZE, SWATCH_SIZE)
+        self._eyedropper_swatch.setToolTip("Picked colour")
+        self.addWidget(self._eyedropper_swatch)
+        self._eyedropper_hex = QLabel()
+        self._eyedropper_hex.setMinimumWidth(64)
+        self.addWidget(self._eyedropper_hex)
+        self._eyedropper_rgb = QLabel()
+        self._eyedropper_rgb.setMinimumWidth(110)
+        self.addWidget(self._eyedropper_rgb)
+        stroke = QPushButton("Apply to Stroke")
+        stroke.setMaximumHeight(_CONTROL_HEIGHT)
+        stroke.clicked.connect(lambda: self._apply_picked("stroke_color"))
+        self.addWidget(stroke)
+        fill = QPushButton("Apply to Fill")
+        fill.setMaximumHeight(_CONTROL_HEIGHT)
+        fill.clicked.connect(lambda: self._apply_picked("fill_color"))
+        self.addWidget(fill)
+        tool.set_pick_callback(self._on_color_picked)
+        self._on_color_picked(tool.picked_color)
+
+    def _on_color_picked(self, color: QColor) -> None:
+        if self._eyedropper_swatch is None or self._eyedropper_hex is None:
+            return
+        pixmap = QPixmap(SWATCH_SIZE, SWATCH_SIZE)
+        if color.isValid():
+            pixmap.fill(color)
+            self._eyedropper_hex.setText(color.name().upper())
+            if self._eyedropper_rgb is not None:
+                self._eyedropper_rgb.setText(f"RGB {color.red()}, {color.green()}, {color.blue()}")
+        else:
+            pixmap.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(pixmap)
+            painter.setPen(Qt.GlobalColor.gray)
+            painter.drawRect(0, 0, SWATCH_SIZE - 1, SWATCH_SIZE - 1)
+            painter.end()
+            self._eyedropper_hex.setText("—")
+            if self._eyedropper_rgb is not None:
+                self._eyedropper_rgb.setText("Click the canvas to pick")
+        self._eyedropper_swatch.setPixmap(pixmap)
+
+    def _apply_picked(self, key: str) -> None:
+        """Apply the picked colour to the selected items, else to every tool's default."""
+        tool = self._tool
+        if not isinstance(tool, EyedropperTool):
+            return
+        color = tool.picked_color
+        if not color.isValid():
+            return
+        if self._selection is not None and self._selection.count:
+            scene = None
+            commands: list[BaseCommand] = []
+            for item in self._selection.items:
+                if isinstance(item, SnapGraphicsItem) and hasattr(item, key):
+                    commands.append(ModifyPropertyCommand(item, key, getattr(item, key), color))
+                    scene = item.scene()
+            if commands and scene is not None and hasattr(scene, "command_stack"):
+                label = "Apply to Stroke" if key == "stroke_color" else "Apply to Fill"
+                scene.command_stack.push(MacroCommand(commands, label))
+                return
+        for tool_id in self._tool_manager.tool_ids:
+            other = self._tool_manager.tool(tool_id)
+            if other is not None and key in other.creation_defaults:
+                other.creation_defaults[key] = QColor(color)
+                self._tool_manager.tool_defaults_changed.emit(tool_id)

@@ -23,6 +23,14 @@ class BaseTool(ABC):
     event was consumed.
     """
 
+    options_controls: tuple[str, ...] = ()
+    """Shared Tool Options Bar controls, in order (General UI PRD 5.2, 5.3).
+
+    Each entry names a control the bar builds once and binds to the key of the
+    same name in :attr:`creation_defaults`; ``"tool"`` marks where the tool's
+    own :meth:`build_options_widgets` widgets go (default: after the shared set).
+    """
+
     def __init__(self) -> None:
         self._scene: SnapScene | None = None
         self._selection_manager: SelectionManager | None = None
@@ -140,4 +148,11 @@ class BaseTool(ABC):
         """Populate *toolbar* with per-tool option widgets.
 
         Called each time this tool is activated.  Default does nothing.
+        """
+
+    def on_option_changed(self, key: str, value: Any) -> None:
+        """A shared control wrote *value* to ``creation_defaults[key]``.
+
+        Tools that also apply the value somewhere live (the text tool's editor,
+        the numbered step counter) override this. Default does nothing.
         """

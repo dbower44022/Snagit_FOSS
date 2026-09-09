@@ -21,9 +21,14 @@ class ToolManager(QObject):
     -------
     tool_changed(str)
         Emitted with the tool_id of the newly activated tool.
+    tool_defaults_changed(str)
+        Emitted with a tool_id after one of its ``creation_defaults`` was edited
+        by a UI surface (Tool Options Bar, Property Panel, Preferences), so the
+        other surfaces re-read it (General UI PRD 5.1, 8.5).
     """
 
     tool_changed = pyqtSignal(str)
+    tool_defaults_changed = pyqtSignal(str)
 
     def __init__(
         self,

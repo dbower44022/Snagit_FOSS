@@ -13,6 +13,9 @@ from snapmock.tools.base_tool import BaseTool
 class NumberedStepTool(BaseTool):
     """Click to place incrementing numbered step markers."""
 
+    # Tool Options Bar shared controls (General UI PRD 5.3): Starting Number
+    options_controls = ("start_number",)
+
     def __init__(self) -> None:
         super().__init__()
         self._creation_defaults = {"start_number": 1}
@@ -37,6 +40,15 @@ class NumberedStepTool(BaseTool):
     def activate(self, scene: object, selection_manager: object) -> None:
         super().activate(scene, selection_manager)  # type: ignore[arg-type]
         self._next_number = int(self._creation_defaults.get("start_number", 1))
+
+    def on_option_changed(self, key: str, value: object) -> None:
+        """Starting Number sets the next number to be placed (Numbered Steps PRD 2.7)."""
+        if key == "start_number":
+            self._next_number = int(value)  # type: ignore[call-overload]
+
+    @property
+    def next_number(self) -> int:
+        return self._next_number
 
     def mouse_press(self, event: QMouseEvent) -> bool:
         if self._scene is None or event.button() != Qt.MouseButton.LeftButton:

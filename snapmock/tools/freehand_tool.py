@@ -11,12 +11,19 @@ from snapmock.config.constants import (
     DEFAULT_STROKE_COLOR,
     DEFAULT_STROKE_WIDTH,
 )
+from snapmock.core.path_utils import simplify_rdp
 from snapmock.items.freehand_item import FreehandItem
 from snapmock.tools.base_tool import BaseTool
+
+# The Smoothing slider (0 to 100 percent) maps to this many pixels of tolerance at 100.
+MAX_SMOOTHING_EPSILON = 6.0
 
 
 class FreehandTool(BaseTool):
     """Interactive tool for freehand drawing."""
+
+    # Tool Options Bar shared controls (General UI PRD 5.3)
+    options_controls = ("stroke_color", "stroke_width", "opacity_pct", "smoothing")
 
     def __init__(self) -> None:
         super().__init__()
@@ -73,11 +80,31 @@ class FreehandTool(BaseTool):
         self._item.add_point(local)
         return True
 
+    def _smoothed(self, item: FreehandItem) -> FreehandItem:
+        """Apply the Smoothing default (PRD 5.3): simplify the raw path on release."""
+        smoothing = int(self._creation_defaults.get("smoothing", 0))
+        if smoothing <= 0 or len(item.points) <= 2:
+            return item
+        epsilon = MAX_SMOOTHING_EPSILON * smoothing / 100.0
+        raw = [QPointF(x, y) for x, y in item.points]
+        simplified = simplify_rdp(raw, epsilon)
+        if len(simplified) == len(raw):
+            return item
+        result = FreehandItem()
+        result.stroke_color = item.stroke_color
+        result.fill_color = item.fill_color
+        result.stroke_width = item.stroke_width
+        result.setOpacity(item.opacity())
+        result.setPos(item.pos())
+        for point in simplified:
+            result.add_point(point)
+        return result
+
     def mouse_release(self, event: QMouseEvent) -> bool:
         if self._item is None or self._scene is None:
             return False
         self._scene.removeItem(self._item)
-        created_item = self._item
+        created_item = self._smoothed(self._item)
         self._item = None
         if len(created_item.points) > 2:
             layer = self._scene.layer_manager.active_layer

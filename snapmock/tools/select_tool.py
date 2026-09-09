@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import QBrush, QColor, QKeyEvent, QMouseEvent, QPen, QTransform
-from PyQt6.QtWidgets import QGraphicsRectItem, QLabel, QToolBar, QToolTip
+from PyQt6.QtWidgets import QGraphicsRectItem, QToolTip
 
 from snapmock.commands.move_items import MoveItemsCommand
 from snapmock.config.constants import DRAG_THRESHOLD, MIN_TEXT_BOX_HEIGHT
@@ -60,9 +60,6 @@ class SelectTool(BaseTool):
         self._handle_item_originals: list[tuple[SnapGraphicsItem, QPointF, QTransform]] = []
         # Original geometry for text items (keyed by id(item))
         self._text_originals: dict[int, dict[str, Any]] = {}
-
-        # Selection info label
-        self._info_label: QLabel | None = None
 
     @property
     def tool_id(self) -> str:
@@ -1004,26 +1001,3 @@ class SelectTool(BaseTool):
 
         menu.exec(event.globalPos())
         return True
-
-    # --- tool options ---
-
-    def build_options_widgets(self, toolbar: QToolBar) -> None:
-        self._info_label = QLabel("No selection")
-        toolbar.addWidget(self._info_label)
-        self._update_info_label()
-
-    def _update_info_label(self) -> None:
-        if self._info_label is None or self._selection_manager is None:
-            return
-        count = self._selection_manager.count
-        if count == 0:
-            self._info_label.setText("No selection")
-        elif count == 1:
-            items = [i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)]
-            if items:
-                r = items[0].sceneBoundingRect()
-                self._info_label.setText(f"1 item — {r.width():.0f} × {r.height():.0f}")
-            else:
-                self._info_label.setText("1 item")
-        else:
-            self._info_label.setText(f"{count} items selected")

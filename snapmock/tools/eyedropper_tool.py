@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import QColor, QMouseEvent
 
@@ -18,6 +20,8 @@ class EyedropperTool(BaseTool):
     def __init__(self) -> None:
         super().__init__()
         self._picked_color: QColor = QColor()
+        self._pick_serial = 0
+        self._pick_callback: Callable[[QColor], None] | None = None
 
     @property
     def tool_id(self) -> str:
@@ -34,6 +38,15 @@ class EyedropperTool(BaseTool):
     @property
     def picked_color(self) -> QColor:
         return QColor(self._picked_color)
+
+    @property
+    def pick_serial(self) -> int:
+        """Counts picks, so a caller can tell whether one happened since it last looked."""
+        return self._pick_serial
+
+    def set_pick_callback(self, callback: Callable[[QColor], None] | None) -> None:
+        """Called with each picked colour; the Tool Options Bar shows it (PRD 5.3)."""
+        self._pick_callback = callback
 
     @property
     def status_hint(self) -> str:
@@ -58,4 +71,7 @@ class EyedropperTool(BaseTool):
         )
         painter.end()
         self._picked_color = QColor(img.pixel(0, 0))
+        self._pick_serial += 1
+        if self._pick_callback is not None:
+            self._pick_callback(self.picked_color)
         return True

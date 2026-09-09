@@ -70,6 +70,7 @@ class ColorPicker(QWidget):
         parent: QWidget | None = None,
         *,
         allow_transparent: bool = True,
+        swatch_size: int = 32,
     ) -> None:
         super().__init__(parent)
         self._color = color if color is not None else QColor("red")
@@ -81,7 +82,7 @@ class ColorPicker(QWidget):
         layout.setSpacing(2)
 
         self._swatch = _SwatchButton()
-        self._swatch.setFixedSize(32, 32)
+        self._swatch.setFixedSize(swatch_size, swatch_size)
         self._swatch.color = self._color
         self._swatch.clicked.connect(self._open_dialog)
         layout.addWidget(self._swatch)
@@ -89,7 +90,7 @@ class ColorPicker(QWidget):
         self._transparent_btn: QPushButton | None = None
         if allow_transparent:
             btn = QPushButton("\u2205")  # ∅ empty-set symbol
-            btn.setFixedSize(24, 32)
+            btn.setFixedSize(min(24, swatch_size), swatch_size)
             btn.setCheckable(True)
             btn.setChecked(self._color.alpha() == 0)
             btn.setToolTip("Transparent (no color)")

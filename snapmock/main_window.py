@@ -203,6 +203,7 @@ class MainWindow(QMainWindow):
         self._capture_toggle_actions: list[tuple[str, QAction]] = []
         self._capture_button: QToolButton | None = None
         self._momentary_tool: str | None = None
+        self._momentary_pick_serial = 0
 
         # Library: auto-saved capture workspace (Library PRD)
         self._library = LibraryManager(self._settings.library_directory(), parent=self)
@@ -237,6 +238,7 @@ class MainWindow(QMainWindow):
         self._tool_options = ToolOptionsBar(self._tool_manager, self)
         self._tool_options.setObjectName("ToolOptionsBar")
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self._tool_options)
+        self._tool_options.set_selection_manager(self._selection_manager)
 
         self._layer_panel = LayerPanel(self._scene.layer_manager, self)
         self._layer_panel.setObjectName("LayerPanel")
@@ -473,6 +475,19 @@ class MainWindow(QMainWindow):
         )
         bar.add_zoom_group(a["view.zoom_out"], a["view.zoom_in"], a["view.fit_window"], self._view)
         bar.set_selection_manager(self._selection_manager)
+        # The Select tool's options bar shows the same alignment rows plus Distribute (PRD 5.3).
+        self._tool_options.set_selection_actions(
+            [
+                a["arrange.align_left"],
+                a["arrange.align_center"],
+                a["arrange.align_right"],
+                a["arrange.align_top"],
+                a["arrange.align_middle"],
+                a["arrange.align_bottom"],
+                a["arrange.distribute_horizontal"],
+                a["arrange.distribute_vertical"],
+            ]
+        )
 
     def _enforce_toolbar_layout(self) -> None:
         """The PRD 2.1 toolbar areas, whatever a saved state says (toolbars are not movable)."""
@@ -964,11 +979,13 @@ class MainWindow(QMainWindow):
                 dist_h.triggered.connect(
                     lambda _checked=False: self._arrange_distribute("horizontal")
                 )
+            self._register("arrange.distribute_horizontal", dist_h)
             dist_v = self._distribute_menu.addAction("Distribute &Vertically")
             if dist_v is not None:
                 dist_v.triggered.connect(
                     lambda _checked=False: self._arrange_distribute("vertical")
                 )
+            self._register("arrange.distribute_vertical", dist_v)
 
         arrange_menu.addSeparator()
 
@@ -1505,6 +1522,24 @@ class MainWindow(QMainWindow):
     def _toggle_status_bar(self, checked: bool) -> None:
         self._status_bar.setVisible(checked)
         self._settings.set_status_bar_visible(checked)
+
+    def _apply_momentary_pick(self) -> None:
+        """A colour picked while Alt was held becomes the returned-to tool's stroke colour.
+
+        The Eyedropper PRD's apply target defaults to the stroke colour of the
+        previously active tool (Section 4.5); the General UI PRD's Apply buttons
+        cover the explicit Eyedropper tool.
+        """
+        eyedropper = self._tool_manager.tool("eyedropper")
+        if not isinstance(eyedropper, EyedropperTool):
+            return
+        if eyedropper.pick_serial == self._momentary_pick_serial:
+            return
+        tool = self._tool_manager.active_tool
+        if tool is None or "stroke_color" not in tool.creation_defaults:
+            return
+        tool.creation_defaults["stroke_color"] = eyedropper.picked_color
+        self._tool_manager.tool_defaults_changed.emit(tool.tool_id)
 
     def _on_tool_changed_for_hint(self, _tool_id: str) -> None:
         tool = self._tool_manager.active_tool
@@ -3174,6 +3209,7 @@ class MainWindow(QMainWindow):
             if "start_number" in defaults:
                 defaults["start_number"] = s.numbered_step_start()
         self._property_panel.refresh_tool_defaults()
+        self._tool_options.refresh()
 
     def _wire_document(self, doc: Document) -> None:
         """Connect a document's signals to the window (once per document)."""
@@ -3232,6 +3268,8 @@ class MainWindow(QMainWindow):
         if hasattr(self, "_main_toolbar"):
             self._main_toolbar.set_view(doc.view)
             self._main_toolbar.set_selection_manager(doc.selection_manager)
+        if hasattr(self, "_tool_options"):
+            self._tool_options.set_selection_manager(doc.selection_manager)
         self._update_title()
         if hasattr(self, "_undo_action"):
             self._update_undo_redo_text()
@@ -3377,6 +3415,9 @@ class MainWindow(QMainWindow):
             active = self._tool_manager.active_tool
             if active is None or not active.is_active_operation:
                 self._momentary_tool = "eyedropper"
+                eyedropper = self._tool_manager.tool("eyedropper")
+                if isinstance(eyedropper, EyedropperTool):
+                    self._momentary_pick_serial = eyedropper.pick_serial
                 self._tool_manager.activate_temporary("eyedropper")
                 event.accept()
                 return
@@ -3435,6 +3476,7 @@ class MainWindow(QMainWindow):
         if event.key() == Qt.Key.Key_Alt and not event.isAutoRepeat() and self._momentary_tool:
             self._momentary_tool = None
             self._tool_manager.restore_previous()
+            self._apply_momentary_pick()
             event.accept()
             return
 

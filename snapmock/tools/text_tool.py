@@ -17,11 +17,7 @@ from PyQt6.QtGui import (
     QTextDocument,
 )
 from PyQt6.QtWidgets import (
-    QComboBox,
-    QDoubleSpinBox,
-    QFontComboBox,
     QGraphicsRectItem,
-    QLabel,
     QTextEdit,
     QToolBar,
     QToolButton,
@@ -228,6 +224,19 @@ class _RichTextEditor(QTextEdit):
 class TextTool(BaseTool):
     """Click to place text, drag to define a text box, or click existing text to edit."""
 
+    # Tool Options Bar (General UI PRD 5.3, Text PRD 3.5): shared controls, with the
+    # tool's own alignment buttons ("tool") between the text colour and the box controls.
+    options_controls = (
+        "font_family",
+        "font_size",
+        "text_style",
+        "text_color",
+        "tool",
+        "bg_color",
+        "border_color",
+        "border_width",
+    )
+
     def __init__(self) -> None:
         super().__init__()
         self._editing_item: _TextLike | None = None
@@ -292,114 +301,53 @@ class TextTool(BaseTool):
         return self._is_dragging or self._editing_item is not None
 
     def build_options_widgets(self, toolbar: QToolBar) -> None:
-        # Font family
-        self._opt_font = QFontComboBox()
-        self._opt_font.setMaximumWidth(160)
-        self._opt_font.currentFontChanged.connect(self._on_opt_font_changed)
-        toolbar.addWidget(self._opt_font)
-
-        toolbar.addSeparator()
-
-        # Font size
-        self._opt_size = QComboBox()
-        self._opt_size.setEditable(True)
-        self._opt_size.setMaximumWidth(70)
-        for s in ("8", "9", "10", "11", "12", "14", "18", "24", "30", "36", "48", "60", "72"):
-            self._opt_size.addItem(s)
-        self._opt_size.setCurrentText("14")
-        self._opt_size.currentTextChanged.connect(self._on_opt_size_changed)
-        toolbar.addWidget(self._opt_size)
-
-        toolbar.addSeparator()
-
-        # Bold / Italic / Underline
-        self._opt_bold = QToolButton()
-        self._opt_bold.setText("B")
-        self._opt_bold.setCheckable(True)
-        self._opt_bold.setToolTip("Bold (Ctrl+B)")
-        self._opt_bold.toggled.connect(self._on_opt_bold)
-        toolbar.addWidget(self._opt_bold)
-
-        self._opt_italic = QToolButton()
-        self._opt_italic.setText("I")
-        self._opt_italic.setCheckable(True)
-        self._opt_italic.setToolTip("Italic (Ctrl+I)")
-        self._opt_italic.toggled.connect(self._on_opt_italic)
-        toolbar.addWidget(self._opt_italic)
-
-        self._opt_underline = QToolButton()
-        self._opt_underline.setText("U")
-        self._opt_underline.setCheckable(True)
-        self._opt_underline.setToolTip("Underline (Ctrl+U)")
-        self._opt_underline.toggled.connect(self._on_opt_underline)
-        toolbar.addWidget(self._opt_underline)
-
-        toolbar.addSeparator()
-
-        # Alignment
+        """Text Alignment (Text PRD 3.5); the font, style, colour and box controls are shared."""
+        self._opt_align_buttons: dict[Qt.AlignmentFlag, QToolButton] = {}
         for align, label, tip in (
-            (Qt.AlignmentFlag.AlignLeft, "L", "Left (Ctrl+L)"),
-            (Qt.AlignmentFlag.AlignCenter, "C", "Center (Ctrl+E)"),
-            (Qt.AlignmentFlag.AlignRight, "R", "Right (Ctrl+R)"),
+            (Qt.AlignmentFlag.AlignLeft, "L", "Align Left (Ctrl+L)"),
+            (Qt.AlignmentFlag.AlignCenter, "C", "Align Center (Ctrl+E)"),
+            (Qt.AlignmentFlag.AlignRight, "R", "Align Right (Ctrl+R)"),
             (Qt.AlignmentFlag.AlignJustify, "J", "Justify (Ctrl+J)"),
         ):
             btn = QToolButton()
             btn.setText(label)
             btn.setCheckable(True)
+            btn.setAutoExclusive(True)
             btn.setToolTip(tip)
+            btn.setFixedSize(26, 26)
             btn.clicked.connect(lambda checked, a=align: self._on_opt_align(a))
             toolbar.addWidget(btn)
+            self._opt_align_buttons[align] = btn
+        current = self._creation_defaults.get("horizontal_align", Qt.AlignmentFlag.AlignLeft)
+        if isinstance(current, Qt.AlignmentFlag) and current in self._opt_align_buttons:
+            self._opt_align_buttons[current].setChecked(True)
 
-        toolbar.addSeparator()
-
-        # Border width
-        toolbar.addWidget(QLabel(" Border:"))
-        self._opt_border_w = QDoubleSpinBox()
-        self._opt_border_w.setRange(0.0, 20.0)
-        self._opt_border_w.setDecimals(1)
-        self._opt_border_w.setSuffix(" px")
-        self._opt_border_w.setMaximumWidth(80)
-        toolbar.addWidget(self._opt_border_w)
-
-    def _on_opt_font_changed(self, font: QFont) -> None:
-        if self._editor is not None:
-            fmt = QTextCharFormat()
-            fmt.setFontFamilies([font.family()])
-            self._editor.textCursor().mergeCharFormat(fmt)
-
-    def _on_opt_size_changed(self, text: str) -> None:
-        try:
-            size = float(text)
-        except ValueError:
+    def on_option_changed(self, key: str, value: object) -> None:
+        """A shared control changed: while editing, apply it to the selection too (PRD 3.5)."""
+        if self._editor is None:
             return
-        if size < 1:
+        fmt = QTextCharFormat()
+        if key == "font_family":
+            fmt.setFontFamilies([str(value)])
+        elif key == "font_size":
+            fmt.setFontPointSize(float(value))  # type: ignore[arg-type]
+        elif key == "bold":
+            fmt.setFontWeight(QFont.Weight.Bold if value else QFont.Weight.Normal)
+        elif key == "italic":
+            fmt.setFontItalic(bool(value))
+        elif key == "underline":
+            fmt.setFontUnderline(bool(value))
+        elif key == "text_color" and isinstance(value, QColor):
+            fmt.setForeground(value)
+        else:
             return
-        if self._editor is not None:
-            fmt = QTextCharFormat()
-            fmt.setFontPointSize(size)
-            self._editor.textCursor().mergeCharFormat(fmt)
-
-    def _on_opt_bold(self, checked: bool) -> None:
-        if self._editor is not None:
-            fmt = QTextCharFormat()
-            fmt.setFontWeight(QFont.Weight.Bold if checked else QFont.Weight.Normal)
-            self._editor.textCursor().mergeCharFormat(fmt)
-
-    def _on_opt_italic(self, checked: bool) -> None:
-        if self._editor is not None:
-            fmt = QTextCharFormat()
-            fmt.setFontItalic(checked)
-            self._editor.textCursor().mergeCharFormat(fmt)
-
-    def _on_opt_underline(self, checked: bool) -> None:
-        if self._editor is not None:
-            fmt = QTextCharFormat()
-            fmt.setFontUnderline(checked)
-            self._editor.textCursor().mergeCharFormat(fmt)
+        self._editor.textCursor().mergeCharFormat(fmt)
 
     def _on_opt_align(self, alignment: Qt.AlignmentFlag) -> None:
         if self._editor is not None:
             self._editor.setAlignment(alignment)
+        else:
+            self._creation_defaults["horizontal_align"] = alignment
 
     def activate(self, scene: SnapScene, selection_manager: SelectionManager) -> None:
         super().activate(scene, selection_manager)

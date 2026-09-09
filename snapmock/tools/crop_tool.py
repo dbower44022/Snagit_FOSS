@@ -281,7 +281,7 @@ class CropTool(BaseTool):
         combo.currentTextChanged.connect(self._on_aspect_changed)
         toolbar.addWidget(combo)
 
-        grid_cb = QCheckBox("Grid")
+        grid_cb = QCheckBox("Rule of Thirds")
         grid_cb.setChecked(self._show_grid)
         grid_cb.toggled.connect(self._on_grid_toggled)
         toolbar.addWidget(grid_cb)

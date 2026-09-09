@@ -18,6 +18,9 @@ from snapmock.tools.base_tool import BaseTool
 class RectangleTool(BaseTool):
     """Interactive tool for creating rectangles by click-and-drag."""
 
+    # Tool Options Bar shared controls (General UI PRD 5.3)
+    options_controls = ("stroke_color", "fill_color", "stroke_width", "opacity_pct")
+
     def __init__(self) -> None:
         super().__init__()
         self._start: QPointF = QPointF()

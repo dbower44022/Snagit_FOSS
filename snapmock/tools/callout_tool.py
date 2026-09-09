@@ -36,6 +36,17 @@ _DEFAULT_OFFSET = 80.0
 class CalloutTool(BaseTool):
     """Drag to place tail tip then position bubble, or click for quick creation."""
 
+    # Tool Options Bar shared controls (General UI PRD 5.3, Callout PRD 4.6)
+    options_controls = (
+        "font_family",
+        "font_size",
+        "text_style",
+        "text_color",
+        "bg_color",
+        "border_color",
+        "border_width",
+    )
+
     def __init__(self) -> None:
         super().__init__()
         self._drag_start: QPointF | None = None
@@ -57,6 +68,9 @@ class CalloutTool(BaseTool):
             "padding": 10.0,
             "vertical_align": VerticalAlign.TOP,
             "horizontal_align": Qt.AlignmentFlag.AlignLeft,
+            "bubble_shape": BubbleShape.ROUNDED_RECT,
+            "tail_style": TailStyle.STRAIGHT,
+            "tail_width": 20.0,
         }
 
     @property
@@ -82,50 +96,52 @@ class CalloutTool(BaseTool):
         return self._drag_start is not None
 
     def build_options_widgets(self, toolbar: QToolBar) -> None:
-        # Bubble shape
+        """Bubble Shape, Tail Style, Tail Width (Callout PRD 4.6); the rest is shared."""
         toolbar.addWidget(QLabel(" Shape:"))
         self._opt_shape = QComboBox()
         self._opt_shape.setMaximumWidth(120)
+        self._opt_shape.setMaximumHeight(26)
         for shape in BubbleShape:
             self._opt_shape.addItem(shape.value.replace("_", " ").title(), shape)
+        current_shape = self._creation_defaults.get("bubble_shape", BubbleShape.ROUNDED_RECT)
+        self._opt_shape.setCurrentIndex(max(0, self._opt_shape.findData(current_shape)))
+        self._opt_shape.currentIndexChanged.connect(self._on_opt_shape)
         toolbar.addWidget(self._opt_shape)
 
-        toolbar.addSeparator()
-
-        # Tail style
         toolbar.addWidget(QLabel(" Tail:"))
+        current_tail = self._creation_defaults.get("tail_style", TailStyle.STRAIGHT)
         for style in TailStyle:
             btn = QToolButton()
             btn.setText(style.value.title())
             btn.setCheckable(True)
-            if style == TailStyle.STRAIGHT:
-                btn.setChecked(True)
+            btn.setAutoExclusive(True)
+            btn.setChecked(style == current_tail)
             btn.setToolTip(f"{style.value.title()} tail")
+            btn.setMaximumHeight(26)
+            btn.clicked.connect(lambda _checked=False, s=style: self._on_opt_tail_style(s))
             toolbar.addWidget(btn)
 
-        toolbar.addSeparator()
-
-        # Tail width
         toolbar.addWidget(QLabel(" Tail W:"))
         self._opt_tail_w = QDoubleSpinBox()
         self._opt_tail_w.setRange(4.0, 100.0)
         self._opt_tail_w.setDecimals(0)
         self._opt_tail_w.setSuffix(" px")
-        self._opt_tail_w.setValue(20.0)
+        self._opt_tail_w.setValue(float(self._creation_defaults.get("tail_width", 20.0)))
         self._opt_tail_w.setMaximumWidth(80)
+        self._opt_tail_w.setMaximumHeight(26)
+        self._opt_tail_w.valueChanged.connect(self._on_opt_tail_width)
         toolbar.addWidget(self._opt_tail_w)
 
-        toolbar.addSeparator()
+    def _on_opt_shape(self, index: int) -> None:
+        shape = self._opt_shape.itemData(index)
+        if isinstance(shape, BubbleShape):
+            self._creation_defaults["bubble_shape"] = shape
 
-        # Border width
-        toolbar.addWidget(QLabel(" Border:"))
-        self._opt_border_w = QDoubleSpinBox()
-        self._opt_border_w.setRange(0.0, 20.0)
-        self._opt_border_w.setDecimals(1)
-        self._opt_border_w.setSuffix(" px")
-        self._opt_border_w.setValue(2.0)
-        self._opt_border_w.setMaximumWidth(80)
-        toolbar.addWidget(self._opt_border_w)
+    def _on_opt_tail_style(self, style: TailStyle) -> None:
+        self._creation_defaults["tail_style"] = style
+
+    def _on_opt_tail_width(self, value: float) -> None:
+        self._creation_defaults["tail_width"] = float(value)
 
     def mouse_press(self, event: QMouseEvent) -> bool:
         if self._scene is None or event.button() != Qt.MouseButton.LeftButton:
@@ -278,6 +294,9 @@ class CalloutTool(BaseTool):
         ha = d.get("horizontal_align", Qt.AlignmentFlag.AlignLeft)
         if isinstance(ha, Qt.AlignmentFlag):
             item.set_alignment(ha)
+        item.bubble_shape = d.get("bubble_shape", BubbleShape.ROUNDED_RECT)
+        item.tail_style = d.get("tail_style", TailStyle.STRAIGHT)
+        item.tail_width = float(d.get("tail_width", 20.0))
 
     def _enter_text_editing(self, item: CalloutItem) -> None:
         """Switch to text tool and start editing the newly created callout."""
