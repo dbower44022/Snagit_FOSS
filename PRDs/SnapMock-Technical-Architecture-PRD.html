@@ -38,7 +38,7 @@
         <td>Section 4.4 added: the tool preset and tool theme models, their JSON files under the
         application data directory, and the <code>.smktheme</code> schema (General UI implementation,
         Phase 7, decisions 7.1 and 7.2); Section 10: modules added by Phase 7
-        (<code>core/tool_themes.py</code>, <code>ui/manage_presets_dialog.py</code>). Section 6.1 is unchanged: projects do not carry tool settings.</td>
+        (<code>core/tool_themes.py</code>, <code>ui/manage_presets_dialog.py</code>, <code>ui/tool_themes_dialog.py</code>). Section 6.1 is unchanged: projects do not carry tool settings.</td>
         <td><span class="status open">Pending</span></td>
       </tr>
       <tr>
@@ -189,6 +189,12 @@
         <td>10</td>
         <td>Added</td>
         <td>General UI implementation, Phase 7: <code>ui/manage_presets_dialog.py</code>, the Manage Presets dialog of General UI PRD Section 11.9 and the compact value summary its rows and the theme preview share. Preset renames and deletions apply to the files at once and are not undoable: presets are not document state and have no command stack.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 20:10</td>
+        <td>10</td>
+        <td>Added</td>
+        <td>General UI implementation, Phase 7: <code>ui/tool_themes_dialog.py</code>, the Tool Themes dialog of General UI PRD Section 11.8: the theme list with the active theme marked, the per-tool preview, New, Duplicate, Rename, Delete, Import, Export, and Apply. The Tools menu's Tool Themes... row and its Active Theme label live in <code>main_window.py</code>.</td>
       </tr>
       <tr>
         <td class="nowrap">09-09-26 14:10</td>
@@ -1615,6 +1621,7 @@ docstring.</p>
         toast.py                  # transient notification shown at the bottom of the main…
         tool_options_bar.py       # the shared control set and per-tool options (General UI PRD 5)
         toolbar.py                # the Main Toolbar, the Left Tool Palette, and the zoom dropdown
+        tool_themes_dialog.py     # Tool Themes dialog: list, preview, new, duplicate, rename, delete, import, export, apply (General UI PRD 11.8)
         transform_handles.py      # resize/rotate handles displayed around selected items
         unmet_requirements.py     # the shared unmet-requirement message for never-disabled controls
 tests/

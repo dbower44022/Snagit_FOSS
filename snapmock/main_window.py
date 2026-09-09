@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
     QFileDialog,
+    QLabel,
     QMainWindow,
     QMenu,
     QMenuBar,
@@ -29,6 +30,7 @@ from PyQt6.QtWidgets import (
     QProgressDialog,
     QSystemTrayIcon,
     QToolButton,
+    QWidgetAction,
 )
 
 if TYPE_CHECKING:
@@ -1125,6 +1127,45 @@ class MainWindow(QMainWindow):
         self._tool_manager.tool_changed.connect(self._update_tools_menu_check)
         # Set initial checkmark
         self._update_tools_menu_check(self._tool_manager.active_tool_id)
+
+        # Below the tool list (PRD 3.7): Tool Themes... and the read-only Active Theme label.
+        tools_menu.addSeparator()
+        themes_action = QAction("Tool Themes...", self)
+        themes_action.triggered.connect(self._tools_tool_themes)
+        tools_menu.addAction(themes_action)
+        self._register("tools.themes", themes_action)
+        self._active_theme_label = QLabel()
+        self._active_theme_label.setObjectName("ActiveThemeLabel")
+        self._active_theme_label.setAccessibleName("Active tool theme")
+        self._active_theme_label.setContentsMargins(28, 4, 12, 4)
+        label_action = QWidgetAction(self)
+        label_action.setDefaultWidget(self._active_theme_label)
+        tools_menu.addAction(label_action)
+        self._tool_themes.state_changed.connect(self._update_active_theme_label)
+        self._tool_themes.active_theme_changed.connect(self._on_active_theme_changed)
+        self._update_active_theme_label()
+
+    def _on_active_theme_changed(self, _name: str) -> None:
+        self._update_active_theme_label()
+
+    def _update_active_theme_label(self) -> None:
+        """Active Theme: [name], with "(modified)" once any tool is overridden (PRD 3.7)."""
+        text = f"Active Theme: {self._tool_themes.active_theme_name}"
+        if self._tool_themes.is_modified():
+            text += " (modified)"
+        self._active_theme_label.setText(text)
+
+    @property
+    def active_theme_text(self) -> str:
+        """The Tools menu's Active Theme row as shown."""
+        return self._active_theme_label.text()
+
+    def _tools_tool_themes(self) -> None:
+        """Tools > Tool Themes... (PRD 11.8)."""
+        from snapmock.ui.tool_themes_dialog import ToolThemesDialog
+
+        dialog = ToolThemesDialog(self._tool_themes, self._tool_manager, self)
+        dialog.exec()
 
     def _setup_library_menu(self, menu_bar: QMenuBar) -> None:
         """Library menu (Library PRD Section 5)."""
