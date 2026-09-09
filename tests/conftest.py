@@ -34,6 +34,9 @@ def isolated_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
     monkeypatch.setattr(settings_module.AppSettings, "__init__", _init)
     settings_module.AppSettings().set_library_directory(library_dir)
+    # The first run is over (General UI PRD 16): no Section 16.2 writes and no Welcome
+    # panel in a test's MainWindow unless the test resets the flag itself.
+    settings_module.AppSettings().set_first_run_done(True)
     # Presets, themes, and the tool state (General UI PRD 11.8, 11.9, 15.4) go to a
     # throwaway application data directory, never to ~/.config/snapmock.
     monkeypatch.setattr(

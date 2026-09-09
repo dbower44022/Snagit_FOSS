@@ -192,6 +192,23 @@ class AppSettings:
     def set_status_bar_visible(self, visible: bool) -> None:
         self._qs.setValue("view/statusBarVisible", visible)
 
+    # --- first run and the Welcome panel (General UI PRD 16) ---
+
+    def first_run_done(self) -> bool:
+        """Whether the first launch has applied the Section 16.2 defaults."""
+        return _as_bool(self._qs.value("general/firstRunDone", False))
+
+    def set_first_run_done(self, done: bool) -> None:
+        self._qs.setValue("general/firstRunDone", done)
+
+    def show_welcome_at_startup(self) -> bool:
+        """Whether the Welcome panel opens at launch; the first run turns it on and
+        the panel's "Don't show this again" checkbox turns it off."""
+        return _as_bool(self._qs.value("welcome/showAtStartup", False))
+
+    def set_show_welcome_at_startup(self, show: bool) -> None:
+        self._qs.setValue("welcome/showAtStartup", show)
+
     # --- general (General UI PRD 11.3 General) ---
 
     def language(self) -> str:

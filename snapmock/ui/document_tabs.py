@@ -62,6 +62,7 @@ class DocumentTabs(QWidget):
         super().__init__(parent)
         self._documents = documents
         self._syncing = False
+        self._page: QWidget | None = None
 
         self._tab_bar = _TabBar(self)
         self._tab_bar.setMovable(True)
@@ -105,6 +106,40 @@ class DocumentTabs(QWidget):
     def stack(self) -> QStackedWidget:
         return self._stack
 
+    @property
+    def current_page(self) -> QWidget | None:
+        """The page shown over the document stack, or None while a document shows."""
+        return self._page
+
+    def show_page(self, page: QWidget) -> None:
+        """Show *page* (the Welcome panel) in place of the active document's view.
+
+        The tab bar hides while a page shows. Activating another document, or
+        :meth:`show_documents`, returns to the views.
+        """
+        if self._page is page:
+            self._stack.setCurrentWidget(page)
+            return
+        if self._page is not None:
+            self._stack.removeWidget(self._page)
+        self._page = page
+        self._stack.addWidget(page)
+        self._stack.setCurrentWidget(page)
+        self._update_bar_visibility()
+
+    def show_documents(self) -> None:
+        """Drop the page and show the active document's view again."""
+        if self._page is None:
+            return
+        page = self._page
+        self._page = None
+        self._stack.removeWidget(page)
+        page.hide()
+        doc = self._documents.active
+        if doc is not None:
+            self._stack.setCurrentWidget(doc.view)
+        self._update_bar_visibility()
+
     # --- manager -> widget ---
 
     def _on_document_added(self, doc: Document) -> None:
@@ -133,6 +168,8 @@ class DocumentTabs(QWidget):
         if doc is None:
             return
         idx = self._tab_index_for(doc)
+        if self._page is not None:
+            self.show_documents()
         self._syncing = True
         try:
             if idx >= 0 and self._tab_bar.currentIndex() != idx:
@@ -211,7 +248,7 @@ class DocumentTabs(QWidget):
         return None
 
     def _update_bar_visibility(self) -> None:
-        self._tab_bar.setVisible(self._tab_bar.count() > 1)
+        self._tab_bar.setVisible(self._page is None and self._tab_bar.count() > 1)
 
     def _refresh_tab_fonts(self) -> None:
         current = self._tab_bar.currentIndex()

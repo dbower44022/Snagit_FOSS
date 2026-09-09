@@ -127,6 +127,7 @@ from snapmock.ui.toast import Toast
 from snapmock.ui.tool_options_bar import ToolOptionsBar
 from snapmock.ui.toolbar import MainToolBar, SnapToolBar
 from snapmock.ui.unmet_requirements import check_requirements, show_not_available
+from snapmock.ui.welcome_panel import WelcomePanel
 
 DELAY_CHOICES = (0, 3, 5, 10)
 MODE_LABELS = {
@@ -180,6 +181,7 @@ class MainWindow(QMainWindow):
     ) -> None:
         super().__init__()
         self._settings = AppSettings()
+        self._apply_first_run_defaults()
         # Theme (General UI PRD 13): applied before any widget is built so the
         # first paint is already themed; live switches repaint through the signal.
         self._theme = theme_manager()
@@ -231,6 +233,7 @@ class MainWindow(QMainWindow):
 
         self._tabs = DocumentTabs(self._documents, self)
         self.setCentralWidget(self._tabs)
+        self._welcome: WelcomePanel | None = None
 
         # UI panels
         # Object names let saveState / restoreState persist the layout (PRD 2.3, 15.4).
@@ -374,6 +377,66 @@ class MainWindow(QMainWindow):
 
         if restore_session:
             self._restore_session()
+        if self._settings.show_welcome_at_startup():
+            self.show_welcome()
+
+    def _apply_first_run_defaults(self) -> None:
+        """The first launch (PRD 16.2): snap on, the System theme, the Welcome panel on.
+
+        Every other Section 16.2 line is already the settings default. Written once,
+        so a later launch keeps whatever the user changed.
+        """
+        if self._settings.first_run_done():
+            return
+        self._settings.set_snap_to_grid(True)
+        self._settings.set_theme_mode(ThemeMode.SYSTEM.value)
+        self._settings.set_show_welcome_at_startup(True)
+        self._settings.set_first_run_done(True)
+
+    # ---- Welcome panel (PRD 16) ----
+
+    def show_welcome(self) -> None:
+        """Show the Welcome panel in place of the canvas (first launch, Help menu)."""
+        if self._welcome is None:
+            self._welcome = WelcomePanel(self._settings)
+            self._welcome.open_image_requested.connect(self._welcome_open_image)
+            self._welcome.paste_requested.connect(self._welcome_paste)
+            self._welcome.new_canvas_requested.connect(self._welcome_new_canvas)
+            self._welcome.closed.connect(self.hide_welcome)
+        self._tabs.show_page(self._welcome)
+        self._welcome.setFocus()
+
+    def hide_welcome(self) -> None:
+        """Return to the active document's canvas."""
+        self._tabs.show_documents()
+        self._view.setFocus()
+
+    @property
+    def welcome_panel(self) -> WelcomePanel | None:
+        return self._welcome
+
+    def welcome_is_showing(self) -> bool:
+        return self._welcome is not None and self._tabs.current_page is self._welcome
+
+    def _welcome_open_image(self) -> None:
+        if self._file_import_image():
+            self.hide_welcome()
+
+    def _welcome_paste(self) -> None:
+        if not check_requirements(
+            self,
+            "Paste from Clipboard",
+            [(self._clipboard_has_content(), "content on the clipboard")],
+        ):
+            return
+        self._edit_paste()
+        self.hide_welcome()
+
+    def _welcome_new_canvas(self, width: int, height: int) -> None:
+        scene = SnapScene(width, height)
+        scene.set_background_color(self._settings.default_canvas_color())
+        self._add_document(Document(scene, parent=self))
+        self.hide_welcome()
 
     @staticmethod
     def _default_window_size() -> QSize:
@@ -1905,14 +1968,14 @@ class MainWindow(QMainWindow):
         self._add_recent_file(path)
         self._update_title()
 
-    def _file_import_image(self) -> None:
-        """Import an image file into the scene."""
+    def _file_import_image(self) -> bool:
+        """Import an image file into the scene; True when one was imported."""
         path_str, _ = QFileDialog.getOpenFileName(
             self, "Import Image", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif);;All Files (*)"
         )
         if not path_str:
-            return
-        import_image(self._scene, Path(path_str))
+            return False
+        return import_image(self._scene, Path(path_str)) is not None
 
     def _visible_scene_rect(self) -> QRectF:
         view = self._view
@@ -3259,9 +3322,8 @@ class MainWindow(QMainWindow):
     # ---- help operations ----
 
     def _help_welcome(self) -> None:
-        show_not_available(
-            self, "Welcome / Getting Started", "The welcome panel arrives with the first-run work."
-        )
+        """Help > Welcome / Getting Started (PRD 3.8, 16.1)."""
+        self.show_welcome()
 
     def _help_docs(self) -> None:
         QDesktopServices.openUrl(QUrl(DOCUMENTATION_URL))
