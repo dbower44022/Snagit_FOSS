@@ -5,6 +5,9 @@ from PyQt6.QtCore import QRectF, Qt
 from snapmock.config.constants import (
     DEFAULT_CANVAS_HEIGHT,
     DEFAULT_CANVAS_WIDTH,
+    EMPTY_CANVAS_TEXT,
+    GRID_MAJOR_MULTIPLE,
+    GRID_MINOR_MIN_ZOOM,
     PASTEBOARD_MARGIN,
 )
 from snapmock.core.scene import SnapScene
@@ -82,3 +85,35 @@ def test_empty_canvas_prompt(view: SnapView) -> None:
     snap = view._snap_scene  # noqa: SLF001
     assert snap is not None
     assert view._scene_has_no_user_items(snap) is True  # noqa: SLF001
+
+
+def test_empty_canvas_prompt_wording_follows_prd_6_2() -> None:
+    assert EMPTY_CANVAS_TEXT == (
+        "Drag an image here, paste from clipboard (Ctrl+V), or go to File > Import Image"
+    )
+
+
+def test_grid_major_lines_every_five_units() -> None:
+    """PRD 6.4: major grid lines every 5 grid units."""
+    assert GRID_MAJOR_MULTIPLE == 5
+
+
+def test_minor_grid_lines_hide_below_200_percent(view: SnapView) -> None:
+    """PRD 6.4: below 200 percent zoom only the major lines are drawn."""
+    assert GRID_MINOR_MIN_ZOOM == 200
+    view.set_grid_visible(True)
+    view.set_zoom(100)
+    assert not view.shows_minor_grid_lines
+    view.set_zoom(200)
+    assert view.shows_minor_grid_lines
+    view.set_zoom(150)
+    assert not view.shows_minor_grid_lines
+    # Drawing at either zoom must still run cleanly.
+    from PyQt6.QtGui import QImage, QPainter
+
+    for zoom in (100, 400):
+        view.set_zoom(zoom)
+        image = QImage(200, 200, QImage.Format.Format_ARGB32)
+        painter = QPainter(image)
+        view.drawForeground(painter, QRectF(0, 0, 200, 200))
+        painter.end()

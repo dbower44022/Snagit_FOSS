@@ -166,10 +166,14 @@ CHECKERBOARD_CELL_SIZE = 8
 # Rulers
 RULER_SIZE = 20
 
-# Grid overlay
-GRID_MAJOR_MULTIPLE = 10
+# Grid overlay (General UI PRD 6.4): a major line every 5 grid units; minor lines
+# hide below 200 percent zoom; nothing draws once lines would be closer than 4 px.
+GRID_MAJOR_MULTIPLE = 5
+GRID_MINOR_MIN_ZOOM = 200
 GRID_MIN_PIXEL_SPACING = 4
 
-# Empty canvas prompt
-EMPTY_CANVAS_TEXT = "Drag an image here, paste from clipboard, or use File > Import Image"
+# Empty canvas prompt (General UI PRD 6.2)
+EMPTY_CANVAS_TEXT = (
+    "Drag an image here, paste from clipboard (Ctrl+V), or go to File > Import Image"
+)
 EMPTY_CANVAS_FONT_SIZE = 18

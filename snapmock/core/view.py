@@ -29,6 +29,7 @@ from snapmock.config.constants import (
     EMPTY_CANVAS_TEXT,
     GRID_MAJOR_MULTIPLE,
     GRID_MIN_PIXEL_SPACING,
+    GRID_MINOR_MIN_ZOOM,
     GRID_SIZE_DEFAULT,
     LIBRARY_PATHS_MIME,
     RULER_SIZE,
@@ -213,6 +214,11 @@ class SnapView(QGraphicsView):
         major = QColor(base)
         major.setAlpha(max(0, min(255, round(alpha * 5 / 3))))
         return QPen(minor, 0), QPen(major, 0)
+
+    @property
+    def shows_minor_grid_lines(self) -> bool:
+        """Minor grid lines draw at and above GRID_MINOR_MIN_ZOOM percent (PRD 6.4)."""
+        return self._zoom_pct >= GRID_MINOR_MIN_ZOOM
 
     def _repaint(self) -> None:
         vp = self.viewport()
@@ -532,8 +538,11 @@ class SnapView(QGraphicsView):
                     painter.drawLine(QPointF(clip.left(), py), QPointF(clip.right(), py))
                 return
 
-        # Normal grid
+        # Normal grid: below GRID_MINOR_MIN_ZOOM only the major lines show (PRD 6.4)
+        show_minor = self.shows_minor_grid_lines
         pixel_spacing = grid_size * zoom_factor
+        if not show_minor:
+            pixel_spacing *= GRID_MAJOR_MULTIPLE
         if pixel_spacing < GRID_MIN_PIXEL_SPACING:
             return
 
@@ -548,8 +557,11 @@ class SnapView(QGraphicsView):
                 grid_idx = round(x / grid_size)
                 if grid_idx % GRID_MAJOR_MULTIPLE == 0:
                     painter.setPen(major_pen)
-                else:
+                elif show_minor:
                     painter.setPen(minor_pen)
+                else:
+                    x += grid_size
+                    continue
                 painter.drawLine(
                     QPointF(x, max(clip.top(), canvas.top())),
                     QPointF(x, min(clip.bottom(), canvas.bottom())),
@@ -562,8 +574,11 @@ class SnapView(QGraphicsView):
                 grid_idx = round(y / grid_size)
                 if grid_idx % GRID_MAJOR_MULTIPLE == 0:
                     painter.setPen(major_pen)
-                else:
+                elif show_minor:
                     painter.setPen(minor_pen)
+                else:
+                    y += grid_size
+                    continue
                 painter.drawLine(
                     QPointF(max(clip.left(), canvas.left()), y),
                     QPointF(min(clip.right(), canvas.right()), y),

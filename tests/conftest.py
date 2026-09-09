@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from PyQt6.QtCore import QSettings
+from PyQt6.QtWidgets import QApplication
 from pytestqt.qtbot import QtBot
 
 from snapmock import main_window as main_window_module
@@ -83,8 +84,8 @@ def unmet_messages(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
 
 
 @pytest.fixture()
-def scene() -> SnapScene:
-    """Create a bare SnapScene (no view needed)."""
+def scene(qapp: QApplication) -> SnapScene:
+    """Create a bare SnapScene (no view needed); a QGraphicsScene needs the application first."""
     return SnapScene()
 
 
