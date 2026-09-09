@@ -1,6 +1,6 @@
 # General UI Implementation Notes
 
-Last Updated: 09-09-26 20:45 · Revision 1.10
+Last Updated: 09-09-26 21:25 · Revision 1.11
 
 Implements the SnapMock General User Interface PRD (version 2.3, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
@@ -303,12 +303,13 @@ In commit order: decisions 6.1 and 6.2 with the prompt corrections (Section 3.1)
 
 In commit order: decisions 7.1 and 7.2 (Section 5.1); the model and storage (`snapmock/core/tool_themes.py`: `ToolPreset`, `ToolTheme`, the value codec `encode_value`, `decode_value`, `encode_values`, `decode_values`, `values_equal`, `unique_name`, `PresetStore` under `presets/<tool_id>/`, `ThemeStore` under `themes/`, `read_theme_file` and `write_theme_file` for the `.smktheme` schema with `format_version` 1, `application_data_directory`, and `ToolThemeManager` with `default_theme`, `preferences_changed`, `apply_theme`, `capture_theme`, `duplicate_theme`, `rename_theme`, `delete_theme`, `import_theme`, `export_theme`, `apply_preset`, `save_preset`, `update_preset`, `rename_preset`, `duplicate_preset`, `delete_preset`, `reset_to_theme`, `is_overridden`, `is_modified`, `preset_is_modified`, `current_label`, `save_session`, and `load_session`, and the `active_theme_changed`, `presets_changed`, `themes_changed`, and `state_changed` signals; `AppSettings.active_tool_theme`; Technical Architecture PRD 1.12 with Section 4.4); the preset dropdown (`ToolOptionsBar.set_theme_manager`, `preset_button`, `_build_preset_dropdown`, `_populate_preset_menu`, the Save as Preset, Update Preset, Manage Presets, and Reset to Theme rows; `MainWindow._tool_themes`, `_load_tool_session` at startup in place of the Preferences push, `_apply_tool_defaults` now the Default theme's edit, `_save_window_state` writing the session; the Preferences > Tools note naming the active theme); the Manage Presets dialog (`snapmock/ui/manage_presets_dialog.py`: `ManagePresetsDialog` and `summarise_values`); and the Tool Themes dialog with the Tools menu rows (`snapmock/ui/tool_themes_dialog.py`: `ToolThemesDialog`; `MainWindow._tools_tool_themes`, `_update_active_theme_label`, `active_theme_text`, the `QWidgetAction` label row). General UI PRD 2.3 carries the phase's rows.
 
-**Next required step:** Phase 8, First run, accessibility, and responsive behaviour, in a new session pasting `docs/General-UI-Implementation-Kickoff-Prompt.md` (a Phase 8 instance of the prompt, written as the Phase 6 and Phase 7 prompts were, would give the session the starting state). Phase 8 opens with kickoff decision 5, the welcome panel's New Blank Canvas card; the acceptance pass against PRD Section 17 follows Phase 8.
+**Next required step:** Phase 8, First run, accessibility, and responsive behaviour, in a new session pasting `docs/General-UI-Phase-8-Kickoff-Prompt.md` (revision 1.0, starting state at commit 36de493). Phase 8 opens with kickoff decision 5, the welcome panel's New Blank Canvas card; the acceptance pass against PRD Section 17 follows Phase 8.
 
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.11 | 09-09-26 21:25 | Claude (Claude Code) | Next step points at `docs/General-UI-Phase-8-Kickoff-Prompt.md`. |
 | 1.10 | 09-09-26 20:45 | Claude (Claude Code) | Phase 7 done: phase table, decisions 7.1 and 7.2 (Section 5.1), seven deviations added and one closed (Section 6), tests (Section 7), build summary and next step (Section 14). General UI PRD 2.3, Technical Architecture PRD 1.12. |
 | 1.9 | 09-09-26 16:30 | Claude (Claude Code) | Phase 6 done: phase table, nine deviations added and two closed (Section 6), tests (Section 7), build summary and next step (Section 13). General UI PRD 2.2, Technical Architecture PRD 1.11. |
 | 1.8 | 09-09-26 09:40 | Claude (Claude Code) | Phase 6 in progress: decisions 6.1 and 6.2 (Section 5.1), the corrections found at the phase's start (Section 3.1). |
