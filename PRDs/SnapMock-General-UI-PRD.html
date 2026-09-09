@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.2</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.3</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.2</dd>
-    <dt>Last Updated</dt>    <dd>09-09-26 16:30</dd>
+    <dt>Document version</dt><dd>2.3</dd>
+    <dt>Last Updated</dt>    <dd>09-09-26 20:30</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.3</td>
+        <td class="nowrap">09-09-26 20:30</td>
+        <td>Doug Bower</td>
+        <td>Phase 7 of the implementation (Tool themes and presets): the preset dropdown of Section 5.2, the Tool Themes dialog of Section 11.8, the Manage Presets dialog of Section 11.9, the Tools menu rows of Section 3.7, JSON storage in the application data directory with <code>.smktheme</code> import and export, and the last-used tool option values of Section 15.4 are built. Rows record the two decisions (overrides stay out of the project file; Preferences &gt; Tools edits the Default theme), the six silences the phase decided, and where the build departs from the wording. No requirement changed except where a row says so.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>2.2</td>
         <td class="nowrap">09-09-26 16:30</td>
@@ -140,6 +147,54 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-09-26 20:30</td>
+        <td>5.2</td>
+        <td>Decision</td>
+        <td>Decision 09-09-26 (Phase 7 decision 7.1, option B): per-tool preset overrides persist across sessions in the user's application data directory and are not saved with the project. One tool set is shared by every open tab, so a per-project snapshot would have no owner and would overwrite the user's own setup on every open; sharing a setup goes through a <code>.smktheme</code> export. The sentence "and are saved with the project" no longer applies; <code>manifest.json</code> and Technical Architecture PRD Section 6.1 are unchanged.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 20:30</td>
+        <td>11.3, 11.8</td>
+        <td>Decision</td>
+        <td>Decision 09-09-26 (Phase 7 decision 7.2, option A): the Preferences &gt; Tools values are the built-in Default theme's values for the keys they cover; the rest of Default comes from each tool's built-in constants. Startup loads the active theme rather than pushing Preferences into every tool. A Preferences change rewrites Default and reaches the tools only while Default is the active theme, and then only the tools that are not overridden (a preset applied or a Custom edit is left alone). The page says so and names the active theme.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 20:30</td>
+        <td>5.2</td>
+        <td>Added</td>
+        <td>The preset dropdown is built as the leftmost control of every tool that has creation defaults (Rectangle, Ellipse, Line, Arrow, Freehand, Highlighter, Text, Callout, Numbered Step), before the tool's name. It reads the applied preset's name, the active theme's name when the tool's values still equal the theme's, or "Custom" when they equal neither; "Custom" is a comparison of the tool's current values with the applied preset or, failing one, with the active theme. Update Preset appears only while a preset is applied and the values have moved off it. Save as Preset prompts for a name and asks before replacing an existing one; Reset to Theme and Manage Presets say what they need when there is nothing to reset or no preset to manage (Section 1.3).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 20:30</td>
+        <td>5.3</td>
+        <td>Deviation</td>
+        <td>The Crop tool's aspect ratio and Rule of Thirds and the Raster Selection and Lasso tools' feather and anti-alias live in the widgets those tools build, not in their creation defaults, so those tools have no preset dropdown and a theme does not capture them. Select, Stamp, Blur, Eyedropper, Pan, and Zoom have no options to capture. They join the preset model when their tool PRDs' option work moves those values into creation defaults.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 20:30</td>
+        <td>11.9</td>
+        <td>Deviation</td>
+        <td>Renames and deletions in Manage Presets apply to the preset files at once and are not undoable: presets are not document state, and the command stack belongs to a document. Delete confirms first. Each row's summary lists the tool's values in its options bar order: colour swatches with hex (or "transparent"), widths and sizes with units, the font family, and the callout's bubble and tail. Manage Presets... needs at least one saved preset for the tool.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 20:30</td>
+        <td>11.8</td>
+        <td>Decided</td>
+        <td>The application data directory is the platform's generic configuration location under <code>snapmock</code> (<code>~/.config/snapmock</code> on Linux), with <code>presets/&lt;tool_id&gt;/</code>, <code>themes/</code>, and <code>tool_state.json</code> under it. The Default theme is not a file and cannot be renamed or deleted; the active theme cannot be deleted either, since deleting it would leave every tool's values without a theme to belong to. The preview lists every tool that has presets, in palette order, with the same value summary as Manage Presets. An imported theme whose name is taken is numbered ("Blue 2"); Export suggests <code>&lt;name&gt;.smktheme</code>; a theme file from a newer format version is refused with a message; a theme that lacks a tool or a key takes the Default theme's value there. The <code>.smktheme</code> schema is Technical Architecture PRD Section 4.4.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 20:30</td>
+        <td>3.7</td>
+        <td>Added</td>
+        <td>Tools &gt; Tool Themes... and the read-only Active Theme row are built below the tool list. "(modified)" appears once any tool differs from the active theme, whether through an applied preset or a Custom edit in the bar or the Property Panel, and clears on Reset to Theme or Apply.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 20:30</td>
+        <td>15.4</td>
+        <td>Resolved</td>
+        <td>The last-used tool option values are persisted: every tool's creation defaults and its applied preset are written to <code>tool_state.json</code> after each change and restored at startup over the active theme. The Phase 1 deviation on this line is closed. The values live in a JSON file rather than QSettings because they carry colours and enumerations the theme codec already encodes.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-09-26 16:30</td>
         <td>7.4, 7.5</td>
