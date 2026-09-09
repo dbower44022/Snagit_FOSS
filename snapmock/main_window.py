@@ -72,6 +72,7 @@ from snapmock.core.layer import Layer
 from snapmock.core.scene import SnapScene
 from snapmock.core.selection_manager import SelectionManager
 from snapmock.core.theme_manager import ThemeMode, theme_manager
+from snapmock.core.tool_themes import ToolThemeManager
 from snapmock.core.view import SnapView
 from snapmock.io.exporter import (
     ExportFormat,
@@ -221,6 +222,9 @@ class MainWindow(QMainWindow):
         # The tool manager is shared and rebound to the active document.
         self._tool_manager = ToolManager(first.scene, first.selection_manager, parent=self)
         self._register_tools()
+        # Presets and themes (PRD 5.2, 11.8, 11.9): built right after registration so the
+        # factory defaults it captures are untouched.
+        self._tool_themes = ToolThemeManager(self._tool_manager, self._settings, parent=self)
         self._tool_manager.activate("select")
 
         self._tabs = DocumentTabs(self._documents, self)
@@ -240,6 +244,7 @@ class MainWindow(QMainWindow):
 
         self._tool_options = ToolOptionsBar(self._tool_manager, self)
         self._tool_options.setObjectName("ToolOptionsBar")
+        self._tool_options.set_theme_manager(self._tool_themes)
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self._tool_options)
         self._tool_options.set_selection_manager(self._selection_manager)
 
@@ -250,7 +255,7 @@ class MainWindow(QMainWindow):
         self._property_panel = PropertyPanel(self._selection_manager, self._scene, self)
         self._property_panel.setObjectName("PropertyPanel")
         self._property_panel.set_tool_manager(self._tool_manager)
-        self._apply_tool_defaults()
+        self._load_tool_session()
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._property_panel)
 
         self._library_panel = LibraryPanel(self._library, self._settings, self)
@@ -1952,7 +1957,12 @@ class MainWindow(QMainWindow):
     ) -> None:
         from snapmock.ui.preferences_dialog import PreferencesDialog
 
-        dlg = PreferencesDialog(self._settings, self, capture=self._capture)
+        dlg = PreferencesDialog(
+            self._settings,
+            self,
+            capture=self._capture,
+            active_theme=self._tool_themes.active_theme_name,
+        )
         if focus_library:
             dlg.focus_library_section()
         if focus_capture:
@@ -2435,6 +2445,7 @@ class MainWindow(QMainWindow):
         tool_id = self._tool_manager.active_tool_id
         if tool_id and tool_id not in TRANSIENT_TOOLS:
             self._settings.set_last_tool(tool_id)
+        self._tool_themes.save_session()
 
     def _save_session(self) -> None:
         open_files = [str(d.file_path) for d in self._documents.documents if d.file_path]
@@ -3345,28 +3356,19 @@ class MainWindow(QMainWindow):
         view.set_snap_tolerance(s.snap_tolerance())
         view.set_guide_style(s.guide_color(), s.guide_opacity())
 
+    def _load_tool_session(self) -> None:
+        """Startup: the active theme into every tool, then the last-used values (PRD 15.4)."""
+        self._tool_themes.load_session()
+        self._property_panel.refresh_tool_defaults()
+        self._tool_options.refresh()
+
     def _apply_tool_defaults(self) -> None:
-        """Push Preferences > Tools into every tool's creation defaults (PRD 11.3)."""
-        s = self._settings
-        for tool_id in self._tool_manager.tool_ids:
-            tool = self._tool_manager.tool(tool_id)
-            if tool is None:
-                continue
-            defaults = tool.creation_defaults
-            if "stroke_color" in defaults:
-                defaults["stroke_color"] = QColor(s.default_stroke_color())
-            if "stroke_width" in defaults:
-                defaults["stroke_width"] = s.default_stroke_width()
-            if "fill_color" in defaults:
-                defaults["fill_color"] = QColor(s.default_fill_color())
-            if "font_family" in defaults:
-                defaults["font_family"] = s.default_font_family()
-            if "font_size" in defaults:
-                defaults["font_size"] = s.default_font_size()
-            if "smoothing" in defaults:
-                defaults["smoothing"] = s.freehand_smoothing()
-            if "start_number" in defaults:
-                defaults["start_number"] = s.numbered_step_start()
+        """Preferences > Tools changed: the Default theme's values (PRD 11.3, decision 7.2).
+
+        The theme manager reaches the tools that are not overridden while Default is the
+        active theme; a preset or a Custom edit is left alone.
+        """
+        self._tool_themes.preferences_changed()
         self._property_panel.refresh_tool_defaults()
         self._tool_options.refresh()
 

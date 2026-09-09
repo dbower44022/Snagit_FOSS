@@ -8,6 +8,11 @@ The tool's own :meth:`BaseTool.build_options_widgets` adds what only it has.
 
 The Select tool's bar and the Eyedropper's bar are composed here too, because both
 act on things a tool cannot reach: the Arrange actions and the other tools' defaults.
+
+The leftmost control of every tool that has creation defaults is the preset dropdown of
+PRD 5.2: a button naming the applied preset, the active theme, or "Custom", whose menu
+lists the tool's presets and the Save as Preset, Update Preset, Manage Presets, and Reset
+to Theme rows. It reads and writes through the :class:`ToolThemeManager`.
 """
 
 from __future__ import annotations
@@ -21,7 +26,10 @@ from PyQt6.QtGui import QAction, QColor, QFont, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QDoubleSpinBox,
     QFontComboBox,
+    QInputDialog,
     QLabel,
+    QMenu,
+    QMessageBox,
     QPushButton,
     QSlider,
     QSpinBox,
@@ -35,10 +43,12 @@ from snapmock.commands.modify_property import ModifyPropertyCommand
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.tools.eyedropper_tool import EyedropperTool
 from snapmock.ui.color_picker import ColorPicker
+from snapmock.ui.unmet_requirements import check_requirements
 
 if TYPE_CHECKING:
     from snapmock.core.command_stack import BaseCommand
     from snapmock.core.selection_manager import SelectionManager
+    from snapmock.core.tool_themes import ToolThemeManager
     from snapmock.tools.base_tool import BaseTool
     from snapmock.tools.tool_manager import ToolManager
 
@@ -103,6 +113,9 @@ class ToolOptionsBar(QToolBar):
         self._eyedropper_swatch: QLabel | None = None
         self._eyedropper_hex: QLabel | None = None
         self._eyedropper_rgb: QLabel | None = None
+        self._themes: ToolThemeManager | None = None
+        self._preset_button: QToolButton | None = None
+        self._preset_menu: QMenu | None = None
         self._label = QLabel("No tool selected")
         self.addWidget(self._label)
         self.setMovable(False)
@@ -133,10 +146,24 @@ class ToolOptionsBar(QToolBar):
         selection.selection_changed.connect(self._on_selection_changed)
         self._update_selection_widgets()
 
+    def set_theme_manager(self, themes: ToolThemeManager) -> None:
+        """The presets and themes the dropdown reads and writes (PRD 5.2)."""
+        self._themes = themes
+        themes.state_changed.connect(self._refresh_preset_label)
+        themes.presets_changed.connect(self._on_presets_changed)
+        if self._tool is not None:
+            self._on_tool_changed(self._tool.tool_id)
+
     def refresh(self) -> None:
         """Re-read the active tool's creation defaults into the shared controls."""
         if self._tool is not None:
             self._read_defaults(self._tool)
+        self._refresh_preset_label()
+
+    @property
+    def preset_button(self) -> QToolButton | None:
+        """The preset dropdown, when the active tool has creation defaults."""
+        return self._preset_button
 
     @property
     def shared_widgets(self) -> dict[str, QWidget]:
@@ -156,12 +183,15 @@ class ToolOptionsBar(QToolBar):
         self._selection_copies.clear()
         self._selection_label = None
         self._eyedropper_swatch = self._eyedropper_hex = self._eyedropper_rgb = None
+        self._preset_button = self._preset_menu = None
         tool = self._tool_manager.tool(tool_id)
         self._tool = tool
         if tool is None:
             self._label = QLabel("No tool selected")
             self.addWidget(self._label)
             return
+        if self._themes is not None and tool_id in self._themes.tool_ids:
+            self._build_preset_dropdown(tool)
         self._label = QLabel(f"{tool.display_name} ")
         self.addWidget(self._label)
 
@@ -258,6 +288,121 @@ class ToolOptionsBar(QToolBar):
                 self.addWidget(button)
                 self._style_buttons[key] = button
                 self._shared[key] = button
+
+    # ---- the preset dropdown (PRD 5.2) ----
+
+    def _build_preset_dropdown(self, tool: BaseTool) -> None:
+        button = QToolButton()
+        button.setObjectName("PresetDropdown")
+        button.setAccessibleName(f"{tool.display_name} preset")
+        button.setToolTip("Preset: the applied preset, the active theme, or Custom")
+        button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        button.setMaximumHeight(_CONTROL_HEIGHT)
+        menu = QMenu(button)
+        menu.setObjectName("PresetMenu")
+        menu.aboutToShow.connect(self._populate_preset_menu)
+        button.setMenu(menu)
+        self.addWidget(button)
+        self._preset_button = button
+        self._preset_menu = menu
+        self._refresh_preset_label()
+
+    def _refresh_preset_label(self) -> None:
+        if self._preset_button is None or self._themes is None or self._tool is None:
+            return
+        self._preset_button.setText(f"{self._themes.current_label(self._tool.tool_id)} ▾")
+
+    def _on_presets_changed(self, tool_id: str) -> None:
+        if self._tool is not None and self._tool.tool_id == tool_id:
+            self._refresh_preset_label()
+
+    def _populate_preset_menu(self) -> None:
+        """Rebuild the dropdown's rows from the tool's presets and state."""
+        menu, themes, tool = self._preset_menu, self._themes, self._tool
+        if menu is None or themes is None or tool is None:
+            return
+        menu.clear()
+        tool_id = tool.tool_id
+        label = themes.current_label(tool_id)
+        for preset in themes.presets(tool_id):
+            action = menu.addAction(preset.name)
+            if action is None:
+                continue
+            action.setCheckable(True)
+            action.setChecked(preset.name == label)
+            action.triggered.connect(
+                lambda _checked=False, name=preset.name: self._apply_preset(name)
+            )
+        if themes.presets(tool_id):
+            menu.addSeparator()
+        save = menu.addAction("Save as Preset...")
+        if save is not None:
+            save.triggered.connect(self._save_as_preset)
+        if themes.preset_is_modified(tool_id):
+            update = menu.addAction("Update Preset")
+            if update is not None:
+                update.triggered.connect(self._update_preset)
+        reset = menu.addAction("Reset to Theme")
+        if reset is not None:
+            reset.triggered.connect(self._reset_to_theme)
+
+    def _ask_preset_name(self, initial: str = "") -> str | None:
+        """Prompt for a preset name; None when cancelled."""
+        text, ok = QInputDialog.getText(self, "Save as Preset", "Preset name:", text=initial)
+        return text.strip() if ok else None
+
+    def _confirm_replace(self, name: str) -> bool:
+        answer = QMessageBox.question(
+            self,
+            "Save as Preset",
+            f'A preset named "{name}" exists. Replace it with the current settings?',
+        )
+        return answer == QMessageBox.StandardButton.Yes
+
+    def _apply_preset(self, name: str) -> None:
+        if self._themes is not None and self._tool is not None:
+            self._themes.apply_preset(self._tool.tool_id, name)
+
+    def _save_as_preset(self) -> None:
+        if self._themes is None or self._tool is None:
+            return
+        tool_id = self._tool.tool_id
+        name = self._ask_preset_name()
+        if name is None:
+            return
+        if not check_requirements(self, "Save as Preset", [(bool(name), "a preset name")]):
+            return
+        if name in self._themes.preset_names(tool_id) and not self._confirm_replace(name):
+            return
+        self._themes.save_preset(tool_id, name)
+
+    def _update_preset(self) -> None:
+        if self._themes is None or self._tool is None:
+            return
+        tool_id = self._tool.tool_id
+        if check_requirements(
+            self,
+            "Update Preset",
+            [(self._themes.applied_preset(tool_id) is not None, "an applied preset")],
+        ):
+            self._themes.update_preset(tool_id)
+
+    def _reset_to_theme(self) -> None:
+        if self._themes is None or self._tool is None:
+            return
+        tool_id = self._tool.tool_id
+        if check_requirements(
+            self,
+            "Reset to Theme",
+            [
+                (
+                    self._themes.is_overridden(tool_id),
+                    "a setting that differs from the active theme",
+                )
+            ],
+        ):
+            self._themes.reset_to_theme(tool_id)
 
     # ---- the two-way binding ----
 

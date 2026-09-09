@@ -143,11 +143,13 @@ class PreferencesDialog(QDialog):
         parent: QWidget | None = None,
         *,
         capture: CaptureManager | None = None,
+        active_theme: str = "Default",
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Preferences")
         self.setMinimumSize(720, 480)
         self._settings = settings
+        self._active_theme = active_theme
         self._capture = capture
         self._hotkey_edits: dict[str, QKeySequenceEdit] = {}
         self._hotkey_status: dict[str, QLabel] = {}
@@ -391,6 +393,15 @@ class PreferencesDialog(QDialog):
     def _build_tools_page(self) -> QWidget:
         s = self._settings
         page, form = self._page()
+
+        # Decision 7.2 (Phase 7): these values are the built-in Default tool theme's.
+        note = QLabel(
+            "These values define the built-in Default tool theme. "
+            f"Active theme: {self._active_theme}."
+        )
+        note.setWordWrap(True)
+        note.setObjectName("ToolsThemeNote")
+        form.addRow(note)
 
         self._stroke_color = ColorPicker(s.default_stroke_color(), allow_transparent=False)
         form.addRow("Default stroke color:", self._stroke_color)
