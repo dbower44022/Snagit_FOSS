@@ -1,8 +1,8 @@
 # General UI Implementation Notes
 
-Last Updated: 09-08-26 16:30 · Revision 1.4
+Last Updated: 09-08-26 19:40 · Revision 1.5
 
-Implements the SnapMock General User Interface PRD (version 1.9, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
+Implements the SnapMock General User Interface PRD (version 2.0, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
 ## 1. Phase status
 
@@ -12,7 +12,7 @@ Implements the SnapMock General User Interface PRD (version 1.9, `PRDs/SnapMock-
 | 1 | Menus, shortcuts, help, and window | Done | 9073edc to c7b88ba |
 | 2 | Export | Done | 8a34cad to c5ddfe5 |
 | 3 | Theme and Preferences | Done | a3d19a2 to 4e15e66 |
-| 4 | Toolbars and status bar | Not started | |
+| 4 | Toolbars and status bar | Done | 4ddcf86 to a9ca773, then this close-out commit |
 | 5 | Canvas | Not started | |
 | 6 | Panels and colour picker | Not started | |
 | 7 | Tool themes and presets | Not started | |
@@ -144,6 +144,7 @@ Recorded here so Phase 1 can propose change-log rows for the General UI PRD; non
 - Tool count: Section 3.7 lists 20 tools including Arc and Polygon; Section 17.3 says the palette shows "all 18 tools".
 - Section 17.4 cites "Section 6.5" for the cursor table; the table is Section 6.6 after the Guides insertion.
 - Section 2.1 says the status bar is toggleable and Section 3.3 lists Show Status Bar; both are consistent, but Section 15.4 does not list status bar visibility among persisted toggles. Treated as covered by "toolbar and panel visibility toggles".
+- Section 4.3 describes a pressed state for grid and snap toggle buttons; no group in Section 4.2 contains one. Recorded in the PRD 2.0 change log; none built.
 
 ## 5. Decisions
 
@@ -163,7 +164,13 @@ Taken at the start of Phase 3 (09-08-26):
 |---|---|---|
 | Icon set | A, Tabler Icons | The glyphs SnapMock uses are vendored from Tabler Icons v3.46.0 under `snapmock/resources/icons/tabler/` with the MIT licence file and a README; `snapmock/ui/icons.py` maps every tool, menu row, and panel button to a glyph; the About dialog credits the set. |
 
-The kickoff's remaining decisions (memory zone, guide persistence, welcome-panel card) are presented at the start of the phase that needs them.
+Taken at the start of Phase 4 (09-08-26):
+
+| Decision | Choice | Effect |
+|---|---|---|
+| Memory usage zone | A, runtime dependency | `psutil` reads the process resident set size behind one guarded import in `snapmock/core/process_memory.py`; Technical Architecture PRD 1.8 lists the module and the dependency under its Section 9.1 policy (the readout is blank without the package). Screen Capture PRD Section 14.5 is unchanged. |
+
+The kickoff's remaining decisions (guide persistence, welcome-panel card) are presented at the start of the phase that needs them.
 
 ### 5.2 As raised by Phase 0
 
@@ -175,14 +182,14 @@ The kickoff prompt's six decisions stand. The inventory adds three that pass the
 
 ## 6. Deviations from the PRD
 
-Each has its change-log row in `PRDs/SnapMock-General-UI-PRD.html` version 1.7 (Phase 1), 1.8 (Phase 2), or 1.9 (Phase 3) unless the entry says otherwise.
+Each has its change-log row in `PRDs/SnapMock-General-UI-PRD.html` version 1.7 (Phase 1), 1.8 (Phase 2), 1.9 (Phase 3), or 2.0 (Phase 4) unless the entry says otherwise.
 
 - **Tool shortcut letters** (Section 3.7). Six letters differ from the PRD tables by decision; rows in all five PRDs (the Basic Shape PRD's row for Line, PRD U and shipped L, followed once that file's other edits were committed).
 - **Merge Down, Merge Visible, Flatten All** (Section 3.4). Deferred; the rows check their requirement, then say the feature is not available yet.
 - **Group and Ungroup** (Section 3.6). Deferred to their own kickoff; rows present with shortcuts.
 - **Align and Distribute as submenus** (Section 3.6). The PRD lists eight flat rows; the menu keeps two submenus in the PRD's position and order.
 - **Check for Updates** (Section 3.8). Present; says it is scheduled for a later phase. No phase owns it yet.
-- **Show Tool Palette** (Section 3.3). Toggles the existing top toolbar, which is the tool palette until Phase 4 builds the Main Toolbar and moves the palette to the left edge. Show Main Toolbar arrives with Phase 4. Not recorded in the PRD: it is an interim state, not a departure.
+- **Show Tool Palette** (Section 3.3). Closed in Phase 4: the palette is the vertical Left Tool Palette and Show Main Toolbar toggles the new Main Toolbar.
 - **Last-used tool option values** (Section 15.4). Phase 1 persists the tool id only; option values persist with the preset work of Phase 7.
 - **Select All Text batch changes** (Section 3.2). Phase 1 selects the text-containing items; applying a font, size, or colour to the whole selection at once arrives with the Property Panel's multi-selection behaviour in Phase 6 (Section 8.6).
 - **Preferences dependent controls** (Section 1.3). Resolved in Phase 3: Auto-save is one spinbox where 0 means disabled, and Keep running in tray stays editable while the tray is off.
@@ -196,9 +203,17 @@ Each has its change-log row in `PRDs/SnapMock-General-UI-PRD.html` version 1.7 (
 - **SVG Embed raster images unchecked** (Section 11.2). Raster regions and stamps are omitted so the file is vector-only; the PRD does not define the unchecked output and the SVG generator cannot link external files.
 - **SVG and PDF preview** (Section 11.2). The preview is the flattened raster of the region; the size estimate encodes the real export in memory (PDF through a temporary file).
 - **Export Quick destination** (Section 3.1). Beside a saved non-Library document as `.png`, otherwise the last-used PNG directory under the display name; overwrites; the path is shown in the status bar. The PRD names the settings but not the destination.
-- **Momentary eyedropper** (Section 12.2). Alt switches to the eyedropper and back, but the eyedropper's picked colour has no consumer until Phase 4 builds its options bar (Apply to Stroke / Apply to Fill).
+- **Momentary eyedropper** (Section 12.2). Closed in Phase 4: the Eyedropper's options bar has Apply to Stroke and Apply to Fill, and a colour picked while Alt is held becomes the stroke colour default of the tool returned to (the Eyedropper PRD's default apply target).
+- **Shared controls without an item property** (Section 5.2). Stroke Style, Fill Opacity, Stroke Opacity, and the Shadow toggle are not built: no item exposes them, and a control with nothing behind it cannot be greyed out under Section 1.3. Vector tools show one Opacity control. They arrive with the item properties the Basic Shape Annotation Tools PRD defines.
+- **Per-tool options bar contents** (Section 5.3). Recorded per tool in the PRD 2.0 row. Tool-specific controls whose item property does not exist yet (arrow head styles, corner radius, blend mode, blur mode and intensity, badge colour and size, stamp library) are omitted until their tool PRDs' item work lands. The bar edits creation defaults only; changes to selected items go through the Property Panel. Font Size is a spinbox (General UI PRD), not the Text PRD's editable combo box.
+- **Zoom preset list** (Section 4.3). The dropdown and the status bar zoom menu use the PRD's eleven presets; Zoom In and Zoom Out step through the finer `ZOOM_STEPS` ladder of the Navigation PRD.
+- **Grid and snap toolbar toggles** (Section 4.3). Mentioned by the PRD, listed in no group; none built. Added to Section 4 of these notes.
+- **Memory zone units** (Section 9). A megabyte is 1,048,576 bytes; the zone stays in megabytes above 1 GB; a dash when the value cannot be read.
+- **Selection size** (Section 9). The bounding box of the whole selection, stroke included, as the transform handles draw it.
 
 ## 7. Tests
+
+Phase 4 adds `tests/test_process_memory.py` (4 tests: a positive reading, the guarded import, the megabyte format, the thresholds), `tests/test_main_toolbar.py` (13 tests: the groups and dividers in PRD order, placement and object name, icon-only 32 px buttons with shortcut tooltips, the tooltip helper, an unmet requirement through a toolbar button, the Align group shown for two or more items and following the active tab, the zoom dropdown's presets, sync, custom entry and range message, and tab following, View > Show Main Toolbar and Reset Layout, the palette as a 48 px vertical left column, and its toggle), `tests/test_tool_options_bar.py` (15 tests: height and name, the shared set per shape tool, bar edits writing defaults, bar and Property Panel in step both ways, Preferences pushes, the Text tool's controls and alignment slot, the Callout's own controls applied to new items, the Select tool's label and alignment copies and their tab following, the Eyedropper's display and Apply buttons, the momentary pick, the numbered step Starting Number, freehand smoothing, the Rule of Thirds label, and the tools with a name only), and `tests/test_status_bar.py` (7 tests: zone widths and height, cursor and canvas formats, selection size, the clickable zoom menu, memory text and colour roles, the memory refresh, and tab following). `tests/test_capture/test_main_window.py` reads the Capture button from the Main Toolbar. At the close of Phase 4 the suite passed 725 tests with 13 skipped and one environmental deselection (`test_font_combo_reflects_text_item_font`).
 
 Phase 3 adds `tests/test_theme.py` (26 tests: the two theme files define every constant and the Section 13 table values, constant substitution and the two parse errors, the manager's default, live dark switch with palette and sheet, no re-apply on the same mode, System following the style hint, UI font size, icon size, View > Dark Mode reflecting and persisting the mode, the view's pasteboard and grid pens and checkerboard tile reading the theme and its overrides, handle recolouring, the capture accent, every named icon file existing beside the licence, icon rendering and recolouring, the palette's icon-only buttons and tooltips, icon size, and menu icons) and rewrites `tests/test_preferences_dialog.py` (17 tests: category order and page switching, no disabled control, the defaults of every page, stored values shown, changed keys only, and the application of General, Performance, Appearance, Canvas & Grid, and Tools changes including tool defaults at startup and the Delete Layer confirmation preference). `tests/test_capture/test_preferences.py` now expects Keep running in tray to stay enabled. At the close of Phase 3 the suite passed 686 tests with 13 skipped and one environmental deselection (`test_font_combo_reflects_text_item_font`).
 
@@ -220,12 +235,17 @@ In commit order: the export engine (`ExportSettings`, `ExportFormat`, `ExportReg
 
 In commit order: the theme manager (`snapmock/core/theme_manager.py`: `ThemeMode`, `ThemeColors`, `parse_theme_file`, `ThemeManager` with `set_mode`, `apply`, `icon`, `set_icon_size`, `set_ui_font_size`, the `theme_changed` and `icon_size_changed` signals, and the process-wide `theme_manager()` and `current_theme()`), the two style sheets under `snapmock/resources/themes/`, the theme, icon-size, and UI-font-size settings, and View > Dark Mode; canvas rendering from the theme (the view's pasteboard, shadow, border, empty-canvas text, checkerboard, and grid pens with their Preferences overrides; rulers; transform handles with `apply_theme`; the crop overlay and capture overlay accents; hard-coded style sheets replaced by theme roles; the superseded colour constants removed from `config/constants.py`); the icon set (`snapmock/resources/icons/tabler/` with LICENSE and README, `snapmock/ui/icons.py`, icon-only palette buttons with tooltips, menu and tray icons, Layer Panel buttons, the About credit); and the Preferences dialog rebuilt as sidebar categories with every Section 11.3 setting in `AppSettings` and wired (view preferences per document, tool defaults through `_apply_tool_defaults`, `CommandStack.set_limit`, `LibraryManager.create_blank` taking a colour, `PropertyPanel.refresh_tool_defaults`). Technical Architecture PRD 1.7 lists `core/theme_manager.py`, `ui/icons.py`, and the resource files.
 
-**Next required step:** Phase 4, Toolbars and status bar, in a new session pasting `docs/General-UI-Implementation-Kickoff-Prompt.md`. Phase 4 opens by presenting decision 2 (memory usage zone: a runtime dependency or platform calls in one module) with the consequential decision template and waiting.
+## 11. What Phase 4 built
+
+In commit order: decision 2 and `snapmock/core/process_memory.py` (`process_memory_bytes`, `format_memory`, `memory_role`, the 500 MB and 1 GB thresholds) with `psutil` and `types-psutil` in `pyproject.toml` and Technical Architecture PRD 1.8; the Main Toolbar (`MainToolBar`, `ZOOM_PRESETS`, `action_tooltip` in `snapmock/ui/toolbar.py`; `MainWindow._actions`, `_register`, `_populate_main_toolbar`, `_enforce_toolbar_layout`; View > Show Main Toolbar; the Capture button as Group 0; icon-map entries for the two Align labels with axis suffixes); the Left Tool Palette (`SnapToolBar` docked left, 48 px, one column); the Tool Options Bar's shared controls (`BaseTool.options_controls` and `on_option_changed`, `ToolManager.tool_defaults_changed`, `ControlSpec` and `SHARED_CONTROLS` in `snapmock/ui/tool_options_bar.py`, `ColorPicker(swatch_size=)`, the Property Panel's `_notify_defaults_changed`, the tools' declarations, freehand smoothing through `simplify_rdp`, the numbered step `next_number`, the callout's shape, tail style and tail width defaults, the eyedropper's `set_pick_callback` and `pick_serial`, `MainWindow._apply_momentary_pick`); and the status bar (`SnapStatusBar(document)` with `set_document`, the six zones, `zoom_menu`, `set_memory_bytes`, the 5-second timer).
+
+**Next required step:** Phase 5, Canvas, in a new session pasting `docs/General-UI-Implementation-Kickoff-Prompt.md`. Phase 5 opens by presenting decision 3 (guide persistence in the project file, which changes the `.smk` format and the Technical Architecture PRD's file-format section) with the consequential decision template and waiting.
 
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 09-08-26 19:40 | Claude (Claude Code) | Phase 4 done: phase table, the memory-zone decision (Section 5.1), seven deviations added and two closed (Section 6), a Section 4 inconsistency, tests (Section 7), build summary and next step (Section 11). |
 | 1.4 | 09-08-26 16:30 | Claude (Claude Code) | Phase 3 done: phase table, the icon-set decision (Section 5.1), seven deviations (Section 6), tests (Section 7), build summary and next step (Section 10). |
 | 1.3 | 09-08-26 13:45 | Claude (Claude Code) | Phase 2 done: phase table, four deviations (Section 6), tests (Section 7), build summary and next step (Section 9). |
 | 1.2 | 09-08-26 13:21 | Claude (Claude Code) | Basic Shape PRD shortcut row delivered; the owed item is closed. |

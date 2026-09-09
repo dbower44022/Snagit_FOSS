@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.9</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.0</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>1.9</dd>
-    <dt>Last Updated</dt>    <dd>09-08-26 16:30</dd>
+    <dt>Document version</dt><dd>2.0</dd>
+    <dt>Last Updated</dt>    <dd>09-08-26 19:40</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.0</td>
+        <td class="nowrap">09-08-26 19:40</td>
+        <td>Doug Bower</td>
+        <td>Phase 4 of the implementation (Toolbars and status bar): the Main Toolbar of Section 4, the Left Tool Palette of Section 2, the Tool Options Bar's shared controls of Section 5, and the six status bar zones of Section 9 are built. Rows record the memory-readout decision (kickoff decision 2), the zoom preset list, the shared controls left out because no item carries the property, the per-tool options bar contents, the eyedropper's consumers, and where the PRD was silent. No requirement changed except where a row says so.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.9</td>
         <td class="nowrap">09-08-26 16:30</td>
@@ -119,6 +126,54 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-08-26 19:40</td>
+        <td>9</td>
+        <td>Decision</td>
+        <td>Decision 09-08-26 (kickoff decision 2): the memory usage zone reads the process resident set size through the <code>psutil</code> package (<code>core/process_memory.py</code>), the runtime-dependency option, rather than platform calls in a module outside <code>snapmock/capture/</code>. Where this section is silent: a megabyte is 1,048,576 bytes, the zone stays in megabytes above 1 GB ("1,124 MB") so both thresholds read on one scale, and the zone shows a dash when the value cannot be read. The colours are the theme's warning and error colours (Section 13).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 19:40</td>
+        <td>9</td>
+        <td>Decided</td>
+        <td>The selection size zone shows the bounding box of the whole selection, stroke included, as the transform handles draw it. The zoom zone is a flat button that opens a menu of the Section 4.3 presets with the current one checked. The canvas size zone follows the scene's canvas-size signal, so Resize Canvas and Crop update it.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 19:40</td>
+        <td>4.2, 4.3</td>
+        <td>Decided</td>
+        <td>The Main Toolbar's buttons are the menu actions themselves, so each carries the menu's icon, "Name (Shortcut)" tooltip, and never-disabled requirement check. Group 5's Align buttons are toolbar copies that trigger the Arrange rows: hiding a shared action would also hide its menu row. The zoom dropdown's presets are this section's list; Zoom In and Zoom Out keep stepping through the finer ladder the Navigation and Raster Operations PRD defines, since the two gestures serve different purposes. Typing a value outside 10 to 3200 percent shows the Section 1.3 message.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 19:40</td>
+        <td>4.3</td>
+        <td>Noted</td>
+        <td>This section describes a pressed state for grid and snap toggle buttons, but no group in Section 4.2 contains a grid or snap button; none is built. Group 0 (Capture) comes from the Screen Capture PRD Section 3.3 and sits before Group 1.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 19:40</td>
+        <td>2.1, 2.2, 3.3</td>
+        <td>Added</td>
+        <td>The tool palette is the Left Tool Palette: a vertical toolbar on the left edge, 48 px wide at the default icon size (32 px buttons with 8 px padding), resized live by the icon-size preference. View gains Show Main Toolbar before Show Tool Palette. The Main Toolbar is 40 px tall, the Tool Options Bar 36 px, the status bar 24 px. Saved layouts from earlier versions are corrected to these toolbar areas at startup, since the toolbars are not movable.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 19:40</td>
+        <td>5.2</td>
+        <td>Deviation</td>
+        <td>Four shared controls are not built: Stroke Style, Fill Opacity, Stroke Opacity, and the Shadow toggle. No item exposes those properties yet (VectorItem carries stroke colour, stroke width, fill colour, and one opacity), and a control with nothing behind it cannot be greyed out under Section 1.3. They arrive with the item properties the Basic Shape Annotation Tools PRD defines; until then the vector tools show one Opacity control. Font Size is a QSpinBox from 6 to 200 as this section says; the Text and Callout PRD's editable size combo box is not used.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 19:40</td>
+        <td>5.1, 5.3</td>
+        <td>Decided</td>
+        <td>Each tool declares its shared controls in order and the bar builds them once, bound to the tool's creation defaults; the Tool Options Bar, the Property Panel's tool-defaults mode, and Preferences &gt; Tools stay in step through one signal. The bar edits creation defaults only; a change to selected items goes through the Property Panel. Per tool: Rectangle and Ellipse show stroke, fill, width, opacity; Line, Arrow, and Highlighter show stroke, width, opacity; Freehand adds Smoothing, which now simplifies the path on release (up to 6 px of tolerance at 100 percent); Text shows font, size, bold/italic/underline, text colour, alignment, background, border colour and width; Callout shows the same text controls plus bubble shape, tail style, and tail width, which new callouts now take; Numbered Step shows Starting Number, which sets the next number placed; Crop keeps its aspect presets and a Rule of Thirds checkbox; Raster Selection and Lasso keep feather and anti-alias; Pan, Zoom, Blur, and Stamp show their name only. Tool-specific controls whose item property does not exist yet (arrow head styles, corner radius, blend mode, blur mode and intensity, badge colour and size, stamp library) are omitted until their tool PRDs' item work lands.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 19:40</td>
+        <td>5.3, 12.2</td>
+        <td>Added</td>
+        <td>The Select tool's bar reads "Selection: N items" with "W: H:" of the bounding box and, for two or more items, the six Align and two Distribute rows. The Eyedropper's bar shows the picked swatch, hex, and RGB values with Apply to Stroke and Apply to Fill: with items selected the colour is applied to them as one undoable command; otherwise every tool's matching creation default takes it. A colour picked while Alt is held (the momentary eyedropper of Section 12.2) becomes the stroke colour default of the tool returned to, the Blur, Highlighter, and Eyedropper PRD's default apply target. The Phase 1 deviation on the momentary eyedropper is closed.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-08-26 16:30</td>
         <td>13.4</td>
