@@ -204,3 +204,28 @@ def test_view_menu_toggle_and_reset_layout(qtbot: QtBot, main_window: MainWindow
     main_window._view_reset_layout()  # noqa: SLF001
     assert bar.isVisibleTo(main_window)
     assert main_window.toolBarArea(bar) == Qt.ToolBarArea.TopToolBarArea
+
+
+def test_tool_palette_is_a_vertical_left_column(main_window: MainWindow) -> None:
+    palette = main_window._toolbar  # noqa: SLF001
+    assert main_window.toolBarArea(palette) == Qt.ToolBarArea.LeftToolBarArea
+    assert palette.orientation() == Qt.Orientation.Vertical
+    assert palette.width() == 48
+    assert not palette.isMovable()
+    for tool_id, button in palette._buttons.items():  # noqa: SLF001
+        assert button.size().width() == 32 and button.size().height() == 32, tool_id
+    assert len(palette._buttons) == 18  # noqa: SLF001
+
+
+def test_tool_palette_toggle_keeps_working(main_window: MainWindow) -> None:
+    palette = main_window._toolbar  # noqa: SLF001
+    menu_bar = main_window.menuBar()
+    assert menu_bar is not None
+    view_menu = next(a.menu() for a in menu_bar.actions() if a.text() == "&View")
+    assert view_menu is not None
+    toggle = next(a for a in view_menu.actions() if plain_label(a.text()) == "Show Tool Palette")
+    assert toggle is palette.toggleViewAction()
+    palette.hide()
+    main_window._view_reset_layout()  # noqa: SLF001
+    assert palette.isVisibleTo(main_window)
+    assert main_window.toolBarArea(palette) == Qt.ToolBarArea.LeftToolBarArea

@@ -229,9 +229,10 @@ class MainWindow(QMainWindow):
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self._main_toolbar)
         self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
 
+        # The Left Tool Palette (PRD 2.1): a vertical toolbar on the left edge.
         self._toolbar = SnapToolBar(self._tool_manager, self)
         self._toolbar.setObjectName("ToolPalette")
-        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self._toolbar)
+        self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self._toolbar)
 
         self._tool_options = ToolOptionsBar(self._tool_manager, self)
         self._tool_options.setObjectName("ToolOptionsBar")
@@ -477,6 +478,8 @@ class MainWindow(QMainWindow):
         """The PRD 2.1 toolbar areas, whatever a saved state says (toolbars are not movable)."""
         if self.toolBarArea(self._main_toolbar) != Qt.ToolBarArea.TopToolBarArea:
             self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self._main_toolbar)
+        if self.toolBarArea(self._toolbar) != Qt.ToolBarArea.LeftToolBarArea:
+            self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self._toolbar)
         if self.toolBarArea(self._tool_options) != Qt.ToolBarArea.TopToolBarArea:
             self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self._tool_options)
         if not self.toolBarBreak(self._tool_options):

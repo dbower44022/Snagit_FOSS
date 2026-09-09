@@ -180,13 +180,19 @@ class MainToolBar(QToolBar):
 
 
 class SnapToolBar(QToolBar):
-    """The Left Tool Palette (PRD 2.1): one button per tool, synced with the ToolManager."""
+    """The Left Tool Palette (PRD 2.1, 2.2): one column of tool buttons, synced with the tools.
+
+    The window docks it in the left toolbar area, which makes it vertical. It is 48 px
+    wide at the default icon size: 32 px buttons with 8 px of padding around them.
+    """
 
     def __init__(self, tool_manager: ToolManager, parent: QWidget | None = None) -> None:
         super().__init__("Tool Palette", parent)
         self._tool_manager = tool_manager
         self._buttons: dict[str, QToolButton] = {}
         self.setMovable(False)
+        self.setFloatable(False)
+        self.setAllowedAreas(Qt.ToolBarArea.LeftToolBarArea | Qt.ToolBarArea.RightToolBarArea)
         self.setIconSize(theme_manager().icon_qsize())
 
         for tid in tool_manager.tool_ids:
@@ -218,7 +224,10 @@ class SnapToolBar(QToolBar):
         """Themed icons at the preferred size on every button (General UI PRD 13.4)."""
         manager = theme_manager()
         self.setIconSize(manager.icon_qsize())
+        button_size = manager.icon_size + PALETTE_BUTTON_PADDING
+        self.setFixedWidth(max(PALETTE_WIDTH, button_size + 2 * PALETTE_BUTTON_PADDING))
         for tid, btn in self._buttons.items():
+            btn.setFixedSize(button_size, button_size)
             name = TOOL_ICONS.get(tid)
             icon = manager.icon(name) if name is not None else None
             if icon is not None and not icon.isNull():
