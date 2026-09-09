@@ -29,6 +29,7 @@ from snapmock.config.constants import (
     PANEL_THRESHOLD_MIN,
     RECENT_COLORS_MAX,
     RECENT_FILES_DEFAULT,
+    RECENT_ZOOM_MAX,
     SNAP_TOLERANCE_DEFAULT,
     THUMBNAIL_DELAY_DEFAULT_MS,
     UNDO_LIMIT,
@@ -80,6 +81,31 @@ class AppSettings:
 
     def set_recent_files(self, paths: list[str]) -> None:
         self._qs.setValue("files/recent", paths)
+
+    # Zoom per recently opened project (General UI PRD 15.4): the metadata beside
+    # each recent path, newest first, capped so the map cannot grow without bound.
+
+    def _recent_zoom_map(self) -> dict[str, int]:
+        raw = self._qs.value("files/recentZoom", "")
+        if not isinstance(raw, str) or not raw:
+            return {}
+        try:
+            data = json.loads(raw)
+        except ValueError:
+            return {}
+        if not isinstance(data, dict):
+            return {}
+        return {str(k): int(v) for k, v in data.items() if isinstance(v, int | float)}
+
+    def recent_file_zoom(self, path: Path) -> int | None:
+        """The zoom percentage the project at *path* was last viewed at, if recorded."""
+        return self._recent_zoom_map().get(str(path.resolve()))
+
+    def set_recent_file_zoom(self, path: Path, zoom: int) -> None:
+        key = str(path.resolve())
+        rest = {k: v for k, v in self._recent_zoom_map().items() if k != key}
+        entries = [(key, int(zoom)), *rest.items()][:RECENT_ZOOM_MAX]
+        self._qs.setValue("files/recentZoom", json.dumps(dict(entries)))
 
     # --- view preferences ---
 

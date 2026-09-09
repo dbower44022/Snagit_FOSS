@@ -11,6 +11,7 @@ from snapmock.commands.add_item import AddItemCommand
 from snapmock.config.settings import AppSettings
 from snapmock.items.rectangle_item import RectangleItem
 from snapmock.main_window import MainWindow
+from snapmock.ui.unsaved_changes_dialog import UnsavedChangesDialog
 
 
 def test_docks_and_toolbars_have_object_names_for_state_persistence(qtbot: QtBot) -> None:
@@ -73,7 +74,7 @@ def test_unsaved_changes_dialog_wording_and_dont_save(
     assert doc.is_dirty
     seen: dict[str, str] = {}
 
-    def _exec(box: QMessageBox) -> int:
+    def _exec(box: UnsavedChangesDialog) -> int:
         seen["text"] = box.text()
         discard = box.button(QMessageBox.StandardButton.Discard)
         assert discard is not None
@@ -81,7 +82,7 @@ def test_unsaved_changes_dialog_wording_and_dont_save(
         discard.click()
         return 0
 
-    monkeypatch.setattr(QMessageBox, "exec", _exec)
+    monkeypatch.setattr(UnsavedChangesDialog, "exec", _exec)
     assert window._maybe_save_before_close(doc) is True  # noqa: SLF001
     assert seen["text"] == (
         "You have unsaved changes to Untitled. Do you want to save before closing?"

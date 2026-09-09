@@ -50,6 +50,7 @@ GUIDE_OPACITY_DEFAULT = 70
 
 # Recent files (General UI PRD 11.3 General)
 RECENT_FILES_DEFAULT = 10
+RECENT_ZOOM_MAX = 50  # zoom levels kept per recently opened project (PRD 15.4)
 
 # Layer thumbnail refresh delay (General UI PRD 11.3 Performance)
 THUMBNAIL_DELAY_DEFAULT_MS = 500

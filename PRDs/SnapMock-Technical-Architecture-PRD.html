@@ -161,6 +161,12 @@
     </thead>
     <tbody>
       <tr>
+        <td class="nowrap">09-10-26 00:50</td>
+        <td>10</td>
+        <td>Added</td>
+        <td>General UI implementation, Phase 8: <code>ui/unsaved_changes_dialog.py</code>, the Unsaved Changes dialog of General UI PRD Section 11.7 as a <code>QDialog</code> with the canvas preview, the same wording, and Save, Don't Save, Cancel reported as the <code>QMessageBox</code> buttons the close path already handles.</td>
+      </tr>
+      <tr>
         <td class="nowrap">09-10-26 00:20</td>
         <td>10</td>
         <td>Added</td>
@@ -1644,6 +1650,7 @@ docstring.</p>
         tool_themes_dialog.py     # Tool Themes dialog: list, preview, new, duplicate, rename, delete, import, export, apply (General UI PRD 11.8)
         transform_handles.py      # resize/rotate handles displayed around selected items
         unmet_requirements.py     # the shared unmet-requirement message for never-disabled controls
+        unsaved_changes_dialog.py # Unsaved Changes dialog with the canvas preview (General UI PRD 11.7)
         welcome_panel.py          # the Welcome panel of General UI PRD 16 and its canvas size dialog
 tests/
     __init__.py

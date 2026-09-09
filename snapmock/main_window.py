@@ -7,7 +7,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QRectF, QSize, Qt, QTimer, QUrl
+from PyQt6.QtCore import QPoint, QRectF, QSize, Qt, QTimer, QUrl
 from PyQt6.QtGui import (
     QAction,
     QActionGroup,
@@ -130,6 +130,7 @@ from snapmock.ui.toast import Toast
 from snapmock.ui.tool_options_bar import ToolOptionsBar
 from snapmock.ui.toolbar import MainToolBar, SnapToolBar
 from snapmock.ui.unmet_requirements import check_requirements, show_not_available
+from snapmock.ui.unsaved_changes_dialog import UnsavedChangesDialog
 from snapmock.ui.welcome_panel import WelcomePanel
 
 DELAY_CHOICES = (0, 3, 5, 10)
@@ -368,6 +369,7 @@ class MainWindow(QMainWindow):
         if state is not None:
             self.restoreState(state)
             self._enforce_toolbar_layout()
+            self._recover_floating_panels()
         else:
             self._apply_default_dock_sizes()
 
@@ -514,6 +516,24 @@ class MainWindow(QMainWindow):
             self._status_bar_action.setChecked(True)
         self._apply_default_dock_sizes()
         self._update_panel_modes(force=True)
+
+    # ---- multi-monitor (PRD 15.3) ----
+
+    def _recover_floating_panels(self) -> None:
+        """Move a floating panel onto the primary screen when its saved position is on
+        no connected screen (PRD 15.3). Docked panels and on-screen panels are untouched."""
+        screens = QApplication.screens()
+        primary = QApplication.primaryScreen()
+        if primary is None:
+            return
+        for panel in (self._layer_panel, self._property_panel, self._library_panel):
+            if not panel.isFloating():
+                continue
+            frame = panel.frameGeometry()
+            if any(screen.geometry().intersects(frame) for screen in screens):
+                continue
+            available = primary.availableGeometry()
+            panel.move(available.topLeft() + QPoint(40, 40))
 
     # ---- panel collapse modes (PRD 15.1, 15.2) ----
 
@@ -1971,6 +1991,9 @@ class MainWindow(QMainWindow):
             self._library.attach_document(doc)
         else:
             self._add_recent_file(path)
+        zoom = self._settings.recent_file_zoom(path)
+        if zoom is not None:
+            doc.view.set_zoom(zoom)
         return doc
 
     def _file_save(self) -> None:
@@ -2633,7 +2656,14 @@ class MainWindow(QMainWindow):
             self._settings.set_last_tool(tool_id)
         self._tool_themes.save_session()
 
+    def _remember_zoom(self, doc: Document) -> None:
+        """Record the zoom a file-backed document is viewed at (PRD 15.4)."""
+        if doc.file_path is not None:
+            self._settings.set_recent_file_zoom(doc.file_path, doc.view.zoom_percent)
+
     def _save_session(self) -> None:
+        for doc in self._documents.documents:
+            self._remember_zoom(doc)
         open_files = [str(d.file_path) for d in self._documents.documents if d.file_path]
         self._settings.set_session_open_files(open_files)
         self._settings.set_session_active_index(max(0, self._documents.active_index))
@@ -3632,6 +3662,7 @@ class MainWindow(QMainWindow):
         """
         if not self._maybe_save_before_close(doc):
             return False
+        self._remember_zoom(doc)
         self._library.detach_document(doc)
         if self._documents.count == 1:
             # Keep one document open at all times
@@ -3664,7 +3695,7 @@ class MainWindow(QMainWindow):
         """The Unsaved Changes dialog (PRD 11.7): Save, Don't Save, Cancel."""
         if not doc.is_dirty:
             return True
-        result = self._ask_unsaved_changes(doc.display_name)
+        result = self._ask_unsaved_changes(doc.display_name, doc.scene)
         if result == QMessageBox.StandardButton.Cancel:
             return False
         if result == QMessageBox.StandardButton.Save:
@@ -3673,27 +3704,16 @@ class MainWindow(QMainWindow):
             return not doc.is_dirty
         return True
 
-    def _ask_unsaved_changes(self, name: str) -> QMessageBox.StandardButton:
-        box = QMessageBox(self)
-        box.setIcon(QMessageBox.Icon.Warning)
-        box.setWindowTitle("Unsaved Changes")
-        box.setText(f"You have unsaved changes to {name}. Do you want to save before closing?")
-        box.setStandardButtons(
-            QMessageBox.StandardButton.Save
-            | QMessageBox.StandardButton.Discard
-            | QMessageBox.StandardButton.Cancel
-        )
-        discard = box.button(QMessageBox.StandardButton.Discard)
-        if discard is not None:
-            discard.setText("Don't Save")
-        box.setDefaultButton(QMessageBox.StandardButton.Save)
-        box.exec()
-        clicked = box.clickedButton()
-        result = box.standardButton(clicked) if clicked is not None else None
-        box.deleteLater()
-        if result in (QMessageBox.StandardButton.Save, QMessageBox.StandardButton.Discard):
-            return result
-        return QMessageBox.StandardButton.Cancel
+    def _ask_unsaved_changes(
+        self, name: str, scene: SnapScene | None = None
+    ) -> QMessageBox.StandardButton:
+        """The Section 11.7 dialog with the canvas preview; Cancel unless Save or Don't
+        Save was clicked."""
+        dialog = UnsavedChangesDialog(name, scene, self)
+        dialog.exec()
+        result = dialog.result_button()
+        dialog.deleteLater()
+        return result
 
     def _reveal_document_in_file_manager(self, doc: Document) -> None:
         if doc.file_path is None:
