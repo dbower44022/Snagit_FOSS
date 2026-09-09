@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import QSizeF, Qt, pyqtSignal
+from PyQt6.QtCore import QPoint, QSizeF, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QTextCharFormat, QTextCursor
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -46,6 +46,7 @@ from snapmock.items.text_item import TextItem
 from snapmock.items.vector_item import VectorItem
 from snapmock.ui.collapsible_section import CollapsibleSection
 from snapmock.ui.color_picker import ColorPicker
+from snapmock.ui.panel_modes import STRIP_PANEL_WIDTH, PanelMode
 
 if TYPE_CHECKING:
     from snapmock.core.scene import SnapScene
@@ -90,8 +91,46 @@ def _hex_text(color: QColor) -> str:
     return color.name(fmt).upper()
 
 
+# Section title -> Tabler glyph for the icon-strip buttons (PRD 15.2).
+SECTION_ICONS: dict[str, str] = {
+    "Transform": "resize",
+    "Appearance": "palette",
+    "Text": "typography",
+    "Text Box": "app-window",
+    "Item Info": "info-circle",
+    "Canvas": "aspect-ratio",
+}
+POPOVER_SIZE = (340, 480)
+
+
+class _PropertyPopover(QWidget):
+    """The popover an icon-strip button opens; it holds the panel's own scroll area."""
+
+    closed = pyqtSignal()
+
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__(parent, Qt.WindowType.Popup)
+        self.setAccessibleName("Properties")
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(4, 4, 4, 4)
+        self._layout = layout
+
+    def adopt(self, widget: QWidget) -> None:
+        widget.setParent(self)
+        self._layout.addWidget(widget)
+        widget.show()
+
+    def hideEvent(self, event: object) -> None:  # noqa: N802
+        super().hideEvent(event)  # type: ignore[arg-type]
+        self.closed.emit()
+
+
 class PropertyPanel(QDockWidget):
     """Dockable panel showing properties of the selected item(s).
+
+    :meth:`set_mode` gives the narrow mode of PRD 15.2 (sliders and hex inputs
+    hidden, the spinboxes and swatches stay) and the icon strip (one button per
+    section, each opening the panel in a popover).
 
     Signals
     -------
@@ -154,6 +193,16 @@ class PropertyPanel(QDockWidget):
         self._main_layout.addStretch()
         self._scroll.setWidget(container)
         self.setWidget(self._scroll)
+        self._mode = PanelMode.FULL
+        self._abbreviated: list[QWidget] = [
+            self._stroke_w_slider,
+            self._opacity_slider,
+            self._stroke_hex,
+            self._fill_hex,
+        ]
+        self._popover: _PropertyPopover | None = None
+        self._strip_buttons: dict[str, QToolButton] = {}
+        self._strip = self._build_strip()
 
         self._connect_edit_handlers()
         self._connect_selection_signals()
@@ -162,6 +211,100 @@ class PropertyPanel(QDockWidget):
 
         # Initial state
         self._refresh_from_selection()
+
+    # ---------------------------------------------------- collapse modes (PRD 15)
+
+    def _build_strip(self) -> QWidget:
+        strip = QWidget()
+        strip.setAccessibleName("Property Panel sections")
+        layout = QVBoxLayout(strip)
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(2)
+        for section in self._sections:
+            button = QToolButton()
+            button.setAutoRaise(True)
+            button.setToolTip(section.title)
+            button.setAccessibleName(f"{section.title} section")
+            button.setAccessibleDescription(f"Opens the {section.title} properties.")
+            button.setFixedSize(STRIP_PANEL_WIDTH - 8, STRIP_PANEL_WIDTH - 8)
+            button.clicked.connect(lambda _c=False, s=section: self._open_section_popover(s))
+            layout.addWidget(button)
+            self._strip_buttons[section.title] = button
+        layout.addStretch()
+        self._apply_strip_icons()
+        return strip
+
+    def _apply_strip_icons(self) -> None:
+        manager = theme_manager()
+        for title, button in self._strip_buttons.items():
+            button.setIcon(manager.icon(SECTION_ICONS.get(title, "settings")))
+            button.setIconSize(manager.icon_qsize())
+
+    @property
+    def mode(self) -> PanelMode:
+        return self._mode
+
+    @property
+    def strip(self) -> QWidget:
+        return self._strip
+
+    @property
+    def popover(self) -> _PropertyPopover | None:
+        return self._popover
+
+    def set_mode(self, mode: PanelMode) -> None:
+        """Full, narrow (abbreviated controls), or the icon strip with popovers."""
+        if mode is self._mode:
+            return
+        self._mode = mode
+        self._close_popover()
+        for widget in self._abbreviated:
+            widget.setVisible(mode is PanelMode.FULL)
+        if mode is PanelMode.ICON_STRIP:
+            self._scroll.setParent(self)
+            self._scroll.hide()
+            self.setWidget(self._strip)
+            self._strip.show()
+            self.setMinimumWidth(STRIP_PANEL_WIDTH)
+            self.setMaximumWidth(STRIP_PANEL_WIDTH)
+        else:
+            if self.widget() is not self._scroll:
+                self._strip.setParent(self)
+                self._strip.hide()
+                self.setWidget(self._scroll)
+                self._scroll.show()
+            self.setMinimumWidth(0)
+            self.setMaximumWidth(16777215)
+
+    def _open_section_popover(self, section: CollapsibleSection) -> None:
+        self._close_popover()
+        popover = _PropertyPopover(self)
+        popover.adopt(self._scroll)
+        popover.resize(*POPOVER_SIZE)
+        popover.closed.connect(self._on_popover_closed)
+        section.set_expanded(True)
+        self._refresh_from_selection()
+        anchor = self.mapToGlobal(QPoint(0, 0))
+        popover.move(anchor.x() - popover.width(), anchor.y())
+        popover.show()
+        self._scroll.ensureWidgetVisible(section)
+        self._popover = popover
+
+    def _close_popover(self) -> None:
+        if self._popover is not None:
+            popover = self._popover
+            self._popover = None
+            popover.hide()
+            popover.deleteLater()
+
+    def _on_popover_closed(self) -> None:
+        if self._popover is None:
+            return
+        popover = self._popover
+        self._popover = None
+        self._scroll.setParent(self)
+        self._scroll.hide()
+        popover.deleteLater()
 
     # ------------------------------------------------------------------ build
 
@@ -502,6 +645,7 @@ class PropertyPanel(QDockWidget):
 
     def _on_theme_changed(self, _name: str) -> None:
         self._apply_icons()
+        self._apply_strip_icons()
         self._refresh_from_selection()
 
     def _apply_icons(self) -> None:

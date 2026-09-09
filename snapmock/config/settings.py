@@ -23,6 +23,10 @@ from snapmock.config.constants import (
     LIBRARY_PREVIEW_DEFAULT,
     LIBRARY_THUMBNAIL_DEFAULT,
     ORG_NAME,
+    PANEL_NARROW_THRESHOLD_DEFAULT,
+    PANEL_STRIP_THRESHOLD_DEFAULT,
+    PANEL_THRESHOLD_MAX,
+    PANEL_THRESHOLD_MIN,
     RECENT_COLORS_MAX,
     RECENT_FILES_DEFAULT,
     SNAP_TOLERANCE_DEFAULT,
@@ -208,6 +212,28 @@ class AppSettings:
 
     def set_show_welcome_at_startup(self, show: bool) -> None:
         self._qs.setValue("welcome/showAtStartup", show)
+
+    # --- panel collapse thresholds (General UI PRD 15.2) ---
+
+    def panel_narrow_threshold(self) -> int:
+        """Window width below which the right panels go narrow."""
+        val = int(self._qs.value("panels/narrowThreshold", PANEL_NARROW_THRESHOLD_DEFAULT))
+        return _clamp(val, PANEL_THRESHOLD_MIN, PANEL_THRESHOLD_MAX)
+
+    def set_panel_narrow_threshold(self, width: int) -> None:
+        self._qs.setValue(
+            "panels/narrowThreshold", _clamp(width, PANEL_THRESHOLD_MIN, PANEL_THRESHOLD_MAX)
+        )
+
+    def panel_strip_threshold(self) -> int:
+        """Window width at or below which the right panels become icon strips."""
+        val = int(self._qs.value("panels/stripThreshold", PANEL_STRIP_THRESHOLD_DEFAULT))
+        return _clamp(val, PANEL_THRESHOLD_MIN, PANEL_THRESHOLD_MAX)
+
+    def set_panel_strip_threshold(self, width: int) -> None:
+        self._qs.setValue(
+            "panels/stripThreshold", _clamp(width, PANEL_THRESHOLD_MIN, PANEL_THRESHOLD_MAX)
+        )
 
     # --- general (General UI PRD 11.3 General) ---
 

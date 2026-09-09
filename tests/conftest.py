@@ -11,6 +11,7 @@ from snapmock import main_window as main_window_module
 from snapmock.capture.backend import FakeCaptureBackend, FakeHotkeyBackend
 from snapmock.capture.manager import CaptureManager
 from snapmock.config import settings as settings_module
+from snapmock.config.constants import PANEL_THRESHOLD_MIN
 from snapmock.config.settings import AppSettings
 from snapmock.core import tool_themes as tool_themes_module
 from snapmock.core.scene import SnapScene
@@ -37,6 +38,11 @@ def isolated_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     # The first run is over (General UI PRD 16): no Section 16.2 writes and no Welcome
     # panel in a test's MainWindow unless the test resets the flag itself.
     settings_module.AppSettings().set_first_run_done(True)
+    # The offscreen screen is small, so a test window opens at the 1024 by 600 minimum.
+    # Thresholds at their floor keep the right panels in full mode (General UI PRD 15.2);
+    # the responsive tests set the real defaults back.
+    settings_module.AppSettings().set_panel_narrow_threshold(PANEL_THRESHOLD_MIN)
+    settings_module.AppSettings().set_panel_strip_threshold(PANEL_THRESHOLD_MIN)
     # Presets, themes, and the tool state (General UI PRD 11.8, 11.9, 15.4) go to a
     # throwaway application data directory, never to ~/.config/snapmock.
     monkeypatch.setattr(

@@ -46,7 +46,12 @@ from snapmock.capture.models import (
     CaptureMode,
     FullScreenScope,
 )
-from snapmock.config.constants import LIBRARY_THUMBNAIL_MAX, LIBRARY_THUMBNAIL_MIN
+from snapmock.config.constants import (
+    LIBRARY_THUMBNAIL_MAX,
+    LIBRARY_THUMBNAIL_MIN,
+    PANEL_THRESHOLD_MAX,
+    PANEL_THRESHOLD_MIN,
+)
 from snapmock.config.settings import AppSettings
 from snapmock.core.theme_manager import current_theme
 from snapmock.library.model import SORT_OPTIONS
@@ -191,9 +196,9 @@ class PreferencesDialog(QDialog):
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         outer.addWidget(buttons)
-        apply_default_names(self)
 
-    # --- pages ---
+        # --- pages ---
+        apply_default_names(self)
 
     def _add_page(self, title: str, page: QWidget) -> None:
         self._pages[title] = page
@@ -319,6 +324,21 @@ class PreferencesDialog(QDialog):
         self._ui_font_combo = _combo(UI_FONT_CHOICES, s.ui_font_size())
         form.addRow("UI font size:", self._ui_font_combo)
         self._readers["ui_font_size"] = self._ui_font_combo.currentData
+
+        # Panel collapse thresholds (PRD 15.2): the window widths that narrow the
+        # right panels and turn them into icon strips.
+        self._narrow_threshold_spin = QSpinBox()
+        self._narrow_threshold_spin.setRange(PANEL_THRESHOLD_MIN, PANEL_THRESHOLD_MAX)
+        self._narrow_threshold_spin.setSuffix(" px")
+        self._narrow_threshold_spin.setValue(s.panel_narrow_threshold())
+        form.addRow("Narrow panels below:", self._narrow_threshold_spin)
+        self._readers["panel_narrow_threshold"] = self._narrow_threshold_spin.value
+        self._strip_threshold_spin = QSpinBox()
+        self._strip_threshold_spin.setRange(PANEL_THRESHOLD_MIN, PANEL_THRESHOLD_MAX)
+        self._strip_threshold_spin.setSuffix(" px")
+        self._strip_threshold_spin.setValue(s.panel_strip_threshold())
+        form.addRow("Icon-strip panels at or below:", self._strip_threshold_spin)
+        self._readers["panel_strip_threshold"] = self._strip_threshold_spin.value
         return page
 
     def _checkerboard_colors(self) -> tuple[QColor, QColor] | None:

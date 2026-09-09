@@ -17,6 +17,7 @@ from PyQt6.QtGui import (
     QKeyEvent,
     QKeySequence,
     QPageLayout,
+    QResizeEvent,
 )
 from PyQt6.QtWidgets import (
     QApplication,
@@ -122,6 +123,7 @@ from snapmock.ui.export_dialog import ExportDialog
 from snapmock.ui.icons import apply_action_icons, apply_menu_bar_icons, apply_tool_action_icons
 from snapmock.ui.layer_panel import LayerPanel
 from snapmock.ui.library_panel import LibraryPanel
+from snapmock.ui.panel_modes import PanelMode, mode_for_width, panel_width_for
 from snapmock.ui.property_panel import PropertyPanel
 from snapmock.ui.status_bar import SnapStatusBar
 from snapmock.ui.toast import Toast
@@ -183,6 +185,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._settings = AppSettings()
         self._apply_first_run_defaults()
+        self._panel_mode = PanelMode.FULL
         # Theme (General UI PRD 13): applied before any widget is built so the
         # first paint is already themed; live switches repaint through the signal.
         self._theme = theme_manager()
@@ -340,6 +343,7 @@ class MainWindow(QMainWindow):
         ColorPicker.set_eyedropper_handler(self._pick_color_for_picker)
         self._tool_manager.tool_changed.connect(self._on_tool_changed_for_picker)
         self._setup_capture_toolbar()
+        self._name_extension_buttons()
         self._status_bar_action.setChecked(self._settings.status_bar_visible())
         self._update_undo_redo_text()
 
@@ -367,6 +371,7 @@ class MainWindow(QMainWindow):
         else:
             self._apply_default_dock_sizes()
 
+        self._update_panel_modes(force=True)
         self._restore_last_tool()
         self._update_title()
         self._apply_tab_order()
@@ -508,6 +513,47 @@ class MainWindow(QMainWindow):
         if self._status_bar_action is not None:
             self._status_bar_action.setChecked(True)
         self._apply_default_dock_sizes()
+        self._update_panel_modes(force=True)
+
+    # ---- panel collapse modes (PRD 15.1, 15.2) ----
+
+    @property
+    def panel_mode(self) -> PanelMode:
+        return self._panel_mode
+
+    def _update_panel_modes(self, *, force: bool = False) -> None:
+        """Pick the right panels' mode from the window width and the two thresholds."""
+        mode = mode_for_width(
+            self.width(),
+            self._settings.panel_narrow_threshold(),
+            self._settings.panel_strip_threshold(),
+        )
+        if mode is self._panel_mode and not force:
+            return
+        self._panel_mode = mode
+        self._layer_panel.set_mode(mode)
+        self._property_panel.set_mode(mode)
+        width = panel_width_for(mode)
+        self.resizeDocks(
+            [self._layer_panel, self._property_panel], [width, width], Qt.Orientation.Horizontal
+        )
+
+    def resizeEvent(self, event: QResizeEvent | None) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        if hasattr(self, "_property_panel"):
+            self._update_panel_modes()
+
+    def _name_extension_buttons(self) -> None:
+        """The overflow button each toolbar opens when its widgets do not fit (PRD 15.1)."""
+        for bar, name in (
+            (self._tool_options, "More tool options"),
+            (self._main_toolbar, "More toolbar buttons"),
+            (self._toolbar, "More tools"),
+        ):
+            ext = bar.findChild(QToolButton, "qt_toolbar_ext_button")
+            if ext is not None:
+                ext.setAccessibleName(name)
+                ext.setToolTip(name)
 
     def _restore_last_tool(self) -> None:
         """Reactivate the tool that was active when the last session ended (PRD 15.4)."""
@@ -2251,6 +2297,12 @@ class MainWindow(QMainWindow):
             s.set_guide_opacity(int(str(changes["guide_opacity"][1])))
         if "layer_hover_highlight" in changes:
             s.set_layer_hover_highlight(bool(changes["layer_hover_highlight"][1]))
+        if "panel_narrow_threshold" in changes:
+            s.set_panel_narrow_threshold(int(str(changes["panel_narrow_threshold"][1])))
+        if "panel_strip_threshold" in changes:
+            s.set_panel_strip_threshold(int(str(changes["panel_strip_threshold"][1])))
+        if "panel_narrow_threshold" in changes or "panel_strip_threshold" in changes:
+            self._update_panel_modes(force=True)
         view_keys = (
             "checkerboard_size",
             "checkerboard_colors",

@@ -40,6 +40,7 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import (
     QAbstractItemView,
+    QCheckBox,
     QDockWidget,
     QHBoxLayout,
     QLabel,
@@ -67,6 +68,7 @@ from snapmock.core.command_stack import BaseCommand
 from snapmock.core.render_engine import RenderEngine
 from snapmock.core.theme_manager import current_theme, theme_manager
 from snapmock.ui.icons import ACTION_ICONS
+from snapmock.ui.panel_modes import STRIP_PANEL_WIDTH, PanelMode
 
 if TYPE_CHECKING:
     from snapmock.core.layer import Layer
@@ -116,10 +118,22 @@ def _checkerboard(size: int) -> QPixmap:
 
 
 class _RowRects:
-    """The hit and paint rectangles of one row, left to right (PRD 7.2)."""
+    """The hit and paint rectangles of one row, left to right (PRD 7.2).
 
-    def __init__(self, rect: QRect) -> None:
+    Narrow mode (PRD 15.2) drops the opacity column; icon-strip mode keeps only
+    the thumbnail, centred.
+    """
+
+    def __init__(self, rect: QRect, mode: PanelMode = PanelMode.FULL) -> None:
         cy = rect.center().y()
+        if mode is PanelMode.ICON_STRIP:
+            self.eye = QRect()
+            self.lock = QRect()
+            self.opacity = QRect()
+            self.name = QRect()
+            self.thumbnail = QRect(0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE)
+            self.thumbnail.moveCenter(rect.center())
+            return
         x = rect.left() + _MARGIN
         self.eye = QRect(x, cy - TOGGLE_SIZE // 2, TOGGLE_SIZE, TOGGLE_SIZE)
         x += TOGGLE_SIZE + _GAP
@@ -128,6 +142,10 @@ class _RowRects:
         self.thumbnail = QRect(x, cy - THUMBNAIL_SIZE // 2, THUMBNAIL_SIZE, THUMBNAIL_SIZE)
         x += THUMBNAIL_SIZE + _GAP + 2
         right = rect.right() - _MARGIN
+        if mode is PanelMode.NARROW:
+            self.opacity = QRect(right, rect.top(), 0, rect.height())
+            self.name = QRect(x, rect.top(), max(10, right - x), rect.height())
+            return
         self.opacity = QRect(
             right - _OPACITY_TEXT_WIDTH, rect.top(), _OPACITY_TEXT_WIDTH, rect.height()
         )
@@ -252,6 +270,9 @@ class _LayerRowDelegate(QStyledItemDelegate):
         return self._panel_ref()
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:  # noqa: N802
+        panel = self._panel()
+        if panel is not None and panel.mode is PanelMode.ICON_STRIP:
+            return QSize(STRIP_PANEL_WIDTH, ROW_HEIGHT)
         return QSize(MIN_PANEL_WIDTH, ROW_HEIGHT)
 
     def paint(  # noqa: C901
@@ -265,7 +286,7 @@ class _LayerRowDelegate(QStyledItemDelegate):
             return
         theme = current_theme()
         rect = option.rect
-        rects = _RowRects(rect)
+        rects = _RowRects(rect, panel.mode)
         painter.save()
 
         # Background: accent for the active layer, hover otherwise (PRD 7.3, 13)
@@ -287,16 +308,21 @@ class _LayerRowDelegate(QStyledItemDelegate):
             painter.setOpacity(LOCKED_ROW_OPACITY)
 
         manager = theme_manager()
-        # Visibility toggle
-        eye = manager.icon("eye" if layer.visible else "eye-off")
-        if not layer.visible:
-            painter.save()
-            painter.setOpacity(painter.opacity() * HIDDEN_TOGGLE_OPACITY)
-        eye.paint(painter, rects.eye)
-        if not layer.visible:
-            painter.restore()
-        # Lock toggle
-        manager.icon("lock" if layer.locked else "lock-open").paint(painter, rects.lock)
+        if rects.eye.isEmpty():
+            # Icon strip (PRD 15.2): the thumbnail alone, dimmed while hidden.
+            if not layer.visible:
+                painter.setOpacity(painter.opacity() * HIDDEN_TOGGLE_OPACITY)
+        else:
+            # Visibility toggle
+            eye = manager.icon("eye" if layer.visible else "eye-off")
+            if not layer.visible:
+                painter.save()
+                painter.setOpacity(painter.opacity() * HIDDEN_TOGGLE_OPACITY)
+            eye.paint(painter, rects.eye)
+            if not layer.visible:
+                painter.restore()
+            # Lock toggle
+            manager.icon("lock" if layer.locked else "lock-open").paint(painter, rects.lock)
 
         # Thumbnail on a checkerboard
         painter.drawPixmap(rects.thumbnail, panel.checkerboard())
@@ -314,20 +340,22 @@ class _LayerRowDelegate(QStyledItemDelegate):
             manager.icon("lock").paint(painter, overlay)
 
         # Name, elided (PRD 7.2)
-        painter.setPen(theme.text_primary)
-        metrics = QFontMetrics(option.font)
-        text = metrics.elidedText(layer.name, Qt.TextElideMode.ElideRight, rects.name.width())
-        painter.drawText(
-            rects.name, int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft), text
-        )
+        if not rects.name.isEmpty():
+            painter.setPen(theme.text_primary)
+            metrics = QFontMetrics(option.font)
+            text = metrics.elidedText(layer.name, Qt.TextElideMode.ElideRight, rects.name.width())
+            painter.drawText(
+                rects.name, int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft), text
+            )
 
-        # Opacity text
-        painter.setPen(theme.text_secondary)
-        painter.drawText(
-            rects.opacity,
-            int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight),
-            f"{round(layer.opacity * 100)}%",
-        )
+        # Opacity text (dropped in narrow mode)
+        if rects.opacity.width() > 0:
+            painter.setPen(theme.text_secondary)
+            painter.drawText(
+                rects.opacity,
+                int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight),
+                f"{round(layer.opacity * 100)}%",
+            )
         painter.restore()
 
     def editorEvent(  # noqa: N802
@@ -345,8 +373,17 @@ class _LayerRowDelegate(QStyledItemDelegate):
         layer_id = index.data(LAYER_ID_ROLE)
         if not isinstance(layer_id, str):
             return False
-        rects = _RowRects(option.rect)
+        rects = _RowRects(option.rect, panel.mode)
         pos = event.pos()
+        if panel.mode is PanelMode.ICON_STRIP:
+            if rects.thumbnail.contains(pos) and event.type() in (
+                QEvent.Type.MouseButtonPress,
+                QEvent.Type.MouseButtonDblClick,
+            ):
+                if event.type() == QEvent.Type.MouseButtonPress:
+                    panel.open_layer_popover(layer_id, rects.thumbnail)
+                return True
+            return False
         if event.type() == QEvent.Type.MouseButtonPress:
             if rects.eye.contains(pos):
                 panel.toggle_visibility(layer_id)
@@ -428,8 +465,96 @@ class _OpacityPopover(QWidget):
             panel.set_opacity(self._layer_id, value / 100.0, live=True)
 
 
+class _LayerPopover(QWidget):
+    """The full-controls popover an icon-strip thumbnail opens (PRD 15.2)."""
+
+    def __init__(self, panel: LayerPanel, layer: Layer) -> None:
+        super().__init__(panel, Qt.WindowType.Popup)
+        self._panel_ref = weakref.ref(panel)
+        self._layer_id = layer.layer_id
+        self.setAccessibleName(f"Layer {layer.name}")
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(8, 6, 8, 6)
+        self._name = QLineEdit(layer.name)
+        self._name.setAccessibleName("Layer name")
+        self._name.editingFinished.connect(self._on_name_edited)
+        layout.addWidget(self._name)
+        toggles = QHBoxLayout()
+        self._visible = QCheckBox("Visible")
+        self._visible.setAccessibleName("Layer visible")
+        self._visible.setChecked(layer.visible)
+        self._visible.toggled.connect(self._on_visible_toggled)
+        self._locked = QCheckBox("Locked")
+        self._locked.setAccessibleName("Layer locked")
+        self._locked.setChecked(layer.locked)
+        self._locked.toggled.connect(self._on_locked_toggled)
+        toggles.addWidget(self._visible)
+        toggles.addWidget(self._locked)
+        layout.addLayout(toggles)
+        row = QHBoxLayout()
+        self._slider = QSlider(Qt.Orientation.Horizontal)
+        self._slider.setRange(0, 100)
+        self._slider.setValue(round(layer.opacity * 100))
+        self._slider.setFixedWidth(140)
+        self._slider.setAccessibleName("Layer opacity")
+        self._label = QLabel(f"{self._slider.value()}%")
+        self._label.setFixedWidth(36)
+        self._slider.valueChanged.connect(self._on_opacity_changed)
+        row.addWidget(QLabel("Opacity:"))
+        row.addWidget(self._slider)
+        row.addWidget(self._label)
+        layout.addLayout(row)
+
+    @property
+    def name_edit(self) -> QLineEdit:
+        return self._name
+
+    @property
+    def visible_check(self) -> QCheckBox:
+        return self._visible
+
+    @property
+    def lock_check(self) -> QCheckBox:
+        return self._locked
+
+    @property
+    def opacity_slider(self) -> QSlider:
+        return self._slider
+
+    def _layer(self) -> tuple[LayerPanel, Layer] | None:
+        panel = self._panel_ref()
+        if panel is None:
+            return None
+        layer = panel.layer_manager.layer_by_id(self._layer_id)
+        return (panel, layer) if layer is not None else None
+
+    def _on_name_edited(self) -> None:
+        found = self._layer()
+        if found is not None and self._name.text().strip():
+            found[0].rename_layer(self._layer_id, self._name.text().strip())
+
+    def _on_visible_toggled(self, checked: bool) -> None:
+        found = self._layer()
+        if found is not None and found[1].visible != checked:
+            found[0].toggle_visibility(self._layer_id)
+
+    def _on_locked_toggled(self, checked: bool) -> None:
+        found = self._layer()
+        if found is not None and found[1].locked != checked:
+            found[0].toggle_lock(self._layer_id)
+
+    def _on_opacity_changed(self, value: int) -> None:
+        self._label.setText(f"{value}%")
+        found = self._layer()
+        if found is not None:
+            found[0].set_opacity(self._layer_id, value / 100.0, live=True)
+
+
 class LayerPanel(QDockWidget):
     """Dockable layer panel: the rows of Section 7.2 over the action bar of 7.4.
+
+    :meth:`set_mode` switches between the full rows, the narrow rows without the
+    opacity column, and the icon strip of thumbnails (PRD 15.1, 15.2).
 
     Signals
     -------
@@ -448,6 +573,8 @@ class LayerPanel(QDockWidget):
         self._thumbnails: dict[str, QPixmap] = {}
         self._checkerboard: QPixmap | None = None
         self._popover: _OpacityPopover | None = None
+        self._layer_popover: _LayerPopover | None = None
+        self._mode = PanelMode.FULL
         self.setAllowedAreas(
             Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea
         )
@@ -502,6 +629,52 @@ class LayerPanel(QDockWidget):
         self._connect_scene()
         self._refresh_void()
         self._refresh_thumbnails()
+
+    # --- collapse modes (PRD 15.1, 15.2) ---
+
+    @property
+    def mode(self) -> PanelMode:
+        return self._mode
+
+    def set_mode(self, mode: PanelMode) -> None:
+        """Full rows, narrow rows (no opacity column), or the 48 px icon strip."""
+        if mode is self._mode:
+            return
+        self._mode = mode
+        strip = mode is PanelMode.ICON_STRIP
+        if strip:
+            self.setMinimumWidth(STRIP_PANEL_WIDTH)
+            self.setMaximumWidth(STRIP_PANEL_WIDTH)
+            self._list.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+            self._list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        else:
+            self.setMinimumWidth(MIN_PANEL_WIDTH)
+            self.setMaximumWidth(16777215)
+            self._list.setEditTriggers(
+                QAbstractItemView.EditTrigger.DoubleClicked
+                | QAbstractItemView.EditTrigger.EditKeyPressed
+            )
+            self._list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        for button in self._buttons.values():
+            button.setVisible(not strip)
+        self._refresh_void()
+        self._viewport().update()
+
+    def open_layer_popover(self, layer_id: str, anchor: QRect) -> None:
+        """The full-controls popover of icon-strip mode, beside *anchor* (PRD 15.2)."""
+        layer = self._layer_manager.layer_by_id(layer_id)
+        if layer is None:
+            return
+        popover = _LayerPopover(self, layer)
+        popover.adjustSize()
+        global_pos = self._viewport().mapToGlobal(anchor.topLeft())
+        popover.move(global_pos.x() - popover.width(), global_pos.y())
+        popover.show()
+        self._layer_popover = popover
+
+    @property
+    def layer_popover(self) -> _LayerPopover | None:
+        return self._layer_popover
 
     # --- binding ---
 

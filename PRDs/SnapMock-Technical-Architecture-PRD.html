@@ -161,6 +161,12 @@
     </thead>
     <tbody>
       <tr>
+        <td class="nowrap">09-10-26 00:20</td>
+        <td>10</td>
+        <td>Added</td>
+        <td>General UI implementation, Phase 8: <code>ui/panel_modes.py</code>, the panel collapse modes of General UI PRD Sections 15.1 and 15.2 (full, narrow at 200 px, icon strip at 48 px), the threshold defaults, and the mode a window width selects. The Layer Panel and Property Panel switch modes through <code>set_mode</code>; the main window picks the mode on every resize.</td>
+      </tr>
+      <tr>
         <td class="nowrap">09-09-26 23:30</td>
         <td>10</td>
         <td>Added</td>
@@ -1623,6 +1629,7 @@ docstring.</p>
         layer_properties_dialog.py # inspect and edit properties of a Layer
         library_panel.py          # dockable file browser for the active library
         manage_presets_dialog.py  # Manage Presets dialog: rename, duplicate, delete one tool's presets (General UI PRD 11.9)
+        panel_modes.py            # panel collapse modes and thresholds (General UI PRD 15.1, 15.2)
         preferences_dialog.py     # view and edit persistent application settings
         property_panel.py         # dock widget showing selected item properties
         resize_canvas_dialog.py   # Resize Canvas dialog — change canvas dimensions with…
