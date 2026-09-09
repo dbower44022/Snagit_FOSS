@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.1</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.2</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.1</dd>
-    <dt>Last Updated</dt>    <dd>09-08-26 23:45</dd>
+    <dt>Document version</dt><dd>2.2</dd>
+    <dt>Last Updated</dt>    <dd>09-09-26 16:30</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.2</td>
+        <td class="nowrap">09-09-26 16:30</td>
+        <td>Doug Bower</td>
+        <td>Phase 6 of the implementation (Panels and colour picker): the Layer Panel rows, interactions, and action bar of Section 7, the Property Panel items of Section 8, Canvas Properties of Section 10.1, and the colour picker popover of Section 11.1 are built. Rows record the two kickoff decisions (the layer blend mode and badges deferred to the raster follow-up; the six item properties without a home left to their tool PRDs), the four silences the phase decided, and where the build departs from the wording. No requirement changed except where a row says so.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>2.1</td>
         <td class="nowrap">09-08-26 23:45</td>
@@ -133,6 +140,90 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-09-26 16:30</td>
+        <td>7.4, 7.5</td>
+        <td>Decision</td>
+        <td>Decision 09-09-26 (Phase 6 decision 6.1, option B): the Layer Blend Mode dropdown of the action bar and the BG and raster badges of Section 7.5 are deferred to the Navigation and Raster Operations follow-up that owns Merge Down, Merge Visible, and Flatten All. Both need a blend mode and a layer type on the Layer and the per-layer compositing pass of Technical Architecture PRD 3.9.1, which the display path does not have; the follow-up builds that pass for merging. The action bar ships with New, Delete, Duplicate, and Merge Down.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 16:30</td>
+        <td>8.3, 8.4</td>
+        <td>Decision</td>
+        <td>Decision 09-09-26 (Phase 6 decision 6.2, option B): Stroke Style, Fill Opacity and Stroke Opacity as two sliders, the Shadow section, Blend Mode, and Line Spacing are not built here; no item carries the property, and a control with nothing behind it cannot be greyed out under Section 1.3. They arrive with the item work of the Basic Shape Annotation Tools PRD and the Text and Callout PRD, whose tables define them. Vector items keep one Opacity control.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 16:30</td>
+        <td>7.2</td>
+        <td>Changed</td>
+        <td>Layer visibility and layer opacity now reach the canvas: a hidden layer's items are hidden and a layer's opacity multiplies its items' own (Technical Architecture PRD 3.9.1). Before Phase 6 both were stored and honoured only by the Select tool's hit testing, so the eye toggle would have had no visible effect. The thumbnail of a hidden layer still shows the layer's items.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 16:30</td>
+        <td>7.2</td>
+        <td>Changed</td>
+        <td>Rename Layer (F2) and the Layer menu row open the row's inline editor instead of an input dialog; the panel is shown first if it was closed. A blank or unchanged name is ignored. The opacity popover's slider steps merge into one undo entry.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 16:30</td>
+        <td>7.3</td>
+        <td>Decision</td>
+        <td>Ctrl+click multi-selection: delete, lock, and hide act on every selected layer as one undoable command when the clicked row is part of the selection (the row toggles, the context menu rows, the action bar, and the Layer menu); merge joins them when merging exists. Duplicate, rename, and reorder stay single-layer. Delete refuses to remove every layer and says it needs at least one layer left. The active layer stays the current row, and a selection of one row follows it.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 16:30</td>
+        <td>7.3</td>
+        <td>Decision</td>
+        <td>The hover highlight ships: hovering a row draws a dashed accent outline around the layer's visible items on the canvas, and Preferences > Canvas & Grid gains "Highlight layer items on hover", on by default. The insertion line for drag reorder is the theme accent, drawn by the panel rather than the platform style.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 16:30</td>
+        <td>7.2</td>
+        <td>Changed</td>
+        <td>Layer thumbnails render each layer's items at thumbnail scale after Preferences > Performance "Thumbnail update delay" (Phase 3 stored it with no consumer), on every command; the checkerboard uses the theme's checkerboard colours.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 16:30</td>
+        <td>8.2</td>
+        <td>Changed</td>
+        <td>Section collapse states are now persisted per section (settings keys under panels/propertySection); the Phase 0 inventory had recorded them as persisted when the code kept them in memory only.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 16:30</td>
+        <td>8.4</td>
+        <td>Decision</td>
+        <td>Text Alignment stays a dropdown (Left, Center, Right, Justify) rather than the toggle group named here: the rich text engine supports Justify and the Text and Callout PRD lists it. Font Weight offers Regular and Bold, the Text and Callout PRD's weight table; Font Style offers Normal and Italic; Underline stays a checkbox since Section 8.4 gives it no other home. Background Fill moved from the Text Box section to the Text section as this section places it. Text alignment outside edit mode and the canvas colour now change through undoable commands; both wrote directly before Phase 6.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 16:30</td>
+        <td>8.5</td>
+        <td>Decision</td>
+        <td>Canvas DPI is stored on the scene and saved in <code>manifest.json</code> as <code>canvas.dpi</code> (default 72; Technical Architecture PRD 1.11, Section 6.1); the Export dialog keeps its own DPI setting and does not read it yet. Editing Canvas Width or Height in the panel resizes through the Resize Canvas command anchored top-left, so content keeps its position; the Image menu dialog still offers the nine anchors. Pasteboard Color, Grid Size, and Snap to Grid edit the preference or View toggle they mirror and stay in step with Preferences and the View menu.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 16:30</td>
+        <td>8.6</td>
+        <td>Changed</td>
+        <td>Multi-selection: every shared control shows the selection's value or a mixed indicator (a dash in a spinbox, a half-filled swatch, an empty dropdown, a part-checked box; Flip buttons show unchecked with a "Mixed" tooltip), and one change applies to every selected item as a single undoable command, with slider steps merging. Item Type reads the shared type, or "N items". This closes the Select All Text row of Section 3.2: a font, size, or colour applied while several text items are selected reaches all of them.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 16:30</td>
+        <td>10.1</td>
+        <td>Changed</td>
+        <td>Canvas Properties... now deselects, shows the Property Panel, expands the Canvas section, and scrolls to it; it was a placeholder message.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 16:30</td>
+        <td>11.1</td>
+        <td>Decision</td>
+        <td>The popover's square is saturation across and value down at the hue the hue bar selects, the usual picker geometry, rather than hue across as the text reads; the hue bar is the independent hue control the section also asks for. Recent colours are ordered newest first, de-duplicated by their ARGB value, and capped at twelve; a colour joins the list when the popover closes with a colour different from the one it opened with, and when an eyedropper pick lands. Saved slots are twelve, filled by right-click, persisted in settings. Live preview goes through the same <code>color_changed</code> signal as before, so the six existing consumers are unchanged; a drag on the square merges into one undo entry where the consumer's command merges. The "∅" toggle beside the swatch is gone.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 16:30</td>
+        <td>11.1</td>
+        <td>Changed</td>
+        <td>The eyedropper button hides the popover, activates the eyedropper as a temporary tool, delivers the first pick to the picker (and to the Tool Options Bar as before), returns to the previous tool, and reopens the popover with the pick, as the Blur, Highlighter, and Eyedropper PRD's picker integration describes. Without an open canvas the button shows the Section 1.3 message.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-08-26 23:45</td>
         <td>6.5</td>
