@@ -23,6 +23,7 @@ from snapmock.config.constants import (
     LIBRARY_PREVIEW_DEFAULT,
     LIBRARY_THUMBNAIL_DEFAULT,
     ORG_NAME,
+    RECENT_COLORS_MAX,
     RECENT_FILES_DEFAULT,
     SNAP_TOLERANCE_DEFAULT,
     THUMBNAIL_DELAY_DEFAULT_MS,
@@ -135,6 +136,39 @@ class AppSettings:
 
     def set_snap_to_grid(self, enabled: bool) -> None:
         self._qs.setValue("view/snapToGrid", enabled)
+
+    # --- colour picker swatches (General UI PRD 11.1) ---
+
+    def recent_colors(self) -> list[QColor]:
+        """The last twelve colours committed in a picker, newest first."""
+        val = self._qs.value("colors/recent", [])
+        if not isinstance(val, list):
+            return []
+        colors = [_optional_color(v) for v in val]
+        return [c for c in colors if c is not None][:RECENT_COLORS_MAX]
+
+    def push_recent_color(self, color: QColor) -> None:
+        """Put *color* first, dropping an earlier copy of the same colour and the excess."""
+        key = _color_text(color)
+        rest = [c for c in self.recent_colors() if _color_text(c) != key]
+        self._qs.setValue(
+            "colors/recent", [key] + [_color_text(c) for c in rest][: RECENT_COLORS_MAX - 1]
+        )
+
+    def saved_colors(self) -> list[QColor | None]:
+        """The twelve saved slots; None for an empty slot."""
+        val = self._qs.value("colors/saved", [])
+        slots: list[QColor | None] = [None] * RECENT_COLORS_MAX
+        if isinstance(val, list):
+            for i, v in enumerate(val[:RECENT_COLORS_MAX]):
+                slots[i] = _optional_color(v)
+        return slots
+
+    def set_saved_color(self, index: int, color: QColor | None) -> None:
+        slots = self.saved_colors()
+        if 0 <= index < RECENT_COLORS_MAX:
+            slots[index] = QColor(color) if color is not None else None
+        self._qs.setValue("colors/saved", [_color_text(c) for c in slots])
 
     def property_section_expanded(self, title: str) -> bool:
         """Whether a Property Panel section is expanded (PRD 8.2); expanded by default."""

@@ -46,6 +46,10 @@ class EyedropperTool(BaseTool):
         """Counts picks, so a caller can tell whether one happened since it last looked."""
         return self._pick_serial
 
+    @property
+    def pick_callback(self) -> Callable[[QColor], None] | None:
+        return self._pick_callback
+
     def set_pick_callback(self, callback: Callable[[QColor], None] | None) -> None:
         """Called with each picked colour; the Tool Options Bar shows it (PRD 5.3)."""
         self._pick_callback = callback

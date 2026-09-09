@@ -112,6 +112,7 @@ from snapmock.tools.stamp_tool import StampTool
 from snapmock.tools.text_tool import TextTool
 from snapmock.tools.tool_manager import ToolManager
 from snapmock.tools.zoom_tool import ZoomTool
+from snapmock.ui.color_picker import ColorPicker
 from snapmock.ui.document_tabs import DocumentTabs
 from snapmock.ui.export_dialog import ExportDialog
 from snapmock.ui.icons import apply_action_icons, apply_menu_bar_icons, apply_tool_action_icons
@@ -204,6 +205,8 @@ class MainWindow(QMainWindow):
         self._capture_button: QToolButton | None = None
         self._momentary_tool: str | None = None
         self._momentary_pick_serial = 0
+        self._picker_pick_active = False
+        self._picker_bar_callback: Callable[[QColor], None] | None = None
 
         # Library: auto-saved capture workspace (Library PRD)
         self._library = LibraryManager(self._settings.library_directory(), parent=self)
@@ -320,6 +323,8 @@ class MainWindow(QMainWindow):
         self._layer_panel.set_actions({k: a for k, a in bar_actions.items() if a is not None})
         self._layer_panel.layer_hovered.connect(self._on_layer_hovered)
         self._property_panel.canvas_setting_changed.connect(self._on_canvas_setting_changed)
+        ColorPicker.set_eyedropper_handler(self._pick_color_for_picker)
+        self._tool_manager.tool_changed.connect(self._on_tool_changed_for_picker)
         self._setup_capture_toolbar()
         self._status_bar_action.setChecked(self._settings.status_bar_visible())
         self._update_undo_redo_text()
@@ -3033,6 +3038,39 @@ class MainWindow(QMainWindow):
     def _toggle_layer_visibility(self, layer_id: str) -> None:
         """Toggle visibility on a layer, and on its Ctrl+click selection, as one command."""
         self._layer_panel.toggle_visibility(layer_id)
+
+    def _pick_color_for_picker(self, deliver: Callable[[QColor], None]) -> bool:
+        """A colour picker's eyedropper button (General UI PRD 11.1, Blur PRD 4.6).
+
+        Activates the eyedropper as a temporary tool; the first pick goes to the
+        picker as well as to the Tool Options Bar, and the previous tool returns.
+        """
+        eyedropper = self._tool_manager.tool("eyedropper")
+        if not isinstance(eyedropper, EyedropperTool) or self._active_document is None:
+            return False
+        self._tool_manager.activate_temporary("eyedropper")
+        bar_callback = eyedropper.pick_callback
+
+        def _picked(color: QColor) -> None:
+            eyedropper.set_pick_callback(bar_callback)
+            self._picker_pick_active = False
+            if bar_callback is not None:
+                bar_callback(color)
+            self._tool_manager.restore_previous()
+            deliver(color)
+
+        self._picker_pick_active = True
+        self._picker_bar_callback = bar_callback
+        eyedropper.set_pick_callback(_picked)
+        return True
+
+    def _on_tool_changed_for_picker(self, tool_id: str) -> None:
+        """Leaving the eyedropper before a pick drops the picker's claim on it."""
+        if tool_id != "eyedropper" and self._picker_pick_active:
+            self._picker_pick_active = False
+            eyedropper = self._tool_manager.tool("eyedropper")
+            if isinstance(eyedropper, EyedropperTool):
+                eyedropper.set_pick_callback(self._picker_bar_callback)
 
     def _on_canvas_setting_changed(self, key: str, value: object) -> None:
         """A Property Panel Canvas section control that edits a preference (PRD 8.5)."""
