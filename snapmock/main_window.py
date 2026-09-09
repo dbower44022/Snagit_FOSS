@@ -311,6 +311,14 @@ class MainWindow(QMainWindow):
         self._actions: dict[str, QAction] = {}
         self._setup_menus()
         self._populate_main_toolbar()
+        bar_actions = {
+            "New Layer": self._layer_new_action,
+            "Delete Layer": self._layer_delete_action,
+            "Duplicate Layer": self._layer_duplicate_action,
+            "Merge Down": self._layer_merge_down_action,
+        }
+        self._layer_panel.set_actions({k: a for k, a in bar_actions.items() if a is not None})
+        self._layer_panel.layer_hovered.connect(self._on_layer_hovered)
         self._setup_capture_toolbar()
         self._status_bar_action.setChecked(self._settings.status_bar_visible())
         self._update_undo_redo_text()
@@ -890,14 +898,14 @@ class MainWindow(QMainWindow):
         if layer_menu is None:
             return
 
-        new_layer_action = layer_menu.addAction("&New Layer")
-        if new_layer_action is not None:
-            new_layer_action.setShortcut(QKeySequence(SHORTCUTS["layer.new"]))
-            new_layer_action.triggered.connect(self._layer_new)
+        self._layer_new_action = QAction("&New Layer", self)
+        self._layer_new_action.setShortcut(QKeySequence(SHORTCUTS["layer.new"]))
+        self._layer_new_action.triggered.connect(self._layer_new)
+        layer_menu.addAction(self._layer_new_action)
 
-        dup_layer_action = layer_menu.addAction("&Duplicate Layer")
-        if dup_layer_action is not None:
-            dup_layer_action.triggered.connect(self._layer_duplicate)
+        self._layer_duplicate_action = QAction("&Duplicate Layer", self)
+        self._layer_duplicate_action.triggered.connect(self._layer_duplicate)
+        layer_menu.addAction(self._layer_duplicate_action)
 
         self._layer_delete_action = QAction("De&lete Layer", self)
         self._layer_delete_action.setShortcut(QKeySequence(SHORTCUTS["layer.delete"]))
@@ -2089,6 +2097,8 @@ class MainWindow(QMainWindow):
             s.set_guide_color(_as_color(changes["guide_color"][1]))
         if "guide_opacity" in changes:
             s.set_guide_opacity(int(str(changes["guide_opacity"][1])))
+        if "layer_hover_highlight" in changes:
+            s.set_layer_hover_highlight(bool(changes["layer_hover_highlight"][1]))
         view_keys = (
             "checkerboard_size",
             "checkerboard_colors",
@@ -2808,40 +2818,56 @@ class MainWindow(QMainWindow):
         self._scene.command_stack.push(DuplicateLayerCommand(self._scene, active.layer_id))
 
     def _layer_delete(self) -> None:
+        """Delete the active layer, or every Ctrl+click-selected layer, as one command."""
         lm = self._scene.layer_manager
         active = lm.active_layer
+        targets = [
+            layer
+            for layer in (lm.layer_by_id(lid) for lid in self._layer_panel.selected_layer_ids())
+            if layer is not None
+        ]
+        if active is not None and not targets:
+            targets = [active]
         if not self._require(
             "Delete Layer",
             (active is not None, "an active layer"),
-            (lm.count > 1, "more than one layer"),
+            (
+                lm.count > len(targets),
+                "more than one layer" if len(targets) == 1 else "at least one layer left",
+            ),
         ):
             return
-        assert active is not None
         from snapmock.commands.layer_commands import RemoveLayerCommand
         from snapmock.commands.macro_command import MacroCommand
         from snapmock.commands.remove_item import RemoveItemCommand
         from snapmock.core.command_stack import BaseCommand
 
+        ids = {layer.layer_id for layer in targets}
         items = [
-            i
-            for i in self._scene.items()
-            if isinstance(i, SnapGraphicsItem) and i.layer_id == active.layer_id
+            i for i in self._scene.items() if isinstance(i, SnapGraphicsItem) and i.layer_id in ids
         ]
         if items and self._settings.confirm_delete_layers():
             count = len(items)
             noun = "item" if count == 1 else "items"
+            what = f'layer "{targets[0].name}"' if len(targets) == 1 else f"{len(targets)} layers"
+            pronoun = "it" if len(targets) == 1 else "them"
             answer = QMessageBox.question(
                 self,
                 "Delete Layer",
-                f'Delete layer "{active.name}" and the {count} {noun} on it?',
+                f"Delete {what} and the {count} {noun} on {pronoun}?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
             )
             if answer != QMessageBox.StandardButton.Yes:
                 return
         cmds: list[BaseCommand] = [RemoveItemCommand(self._scene, i) for i in items]
-        cmds.append(RemoveLayerCommand(lm, active.layer_id))
-        self._scene.command_stack.push(MacroCommand(cmds, f'Delete layer "{active.name}"'))
+        cmds.extend(RemoveLayerCommand(lm, layer.layer_id) for layer in targets)
+        description = (
+            f'Delete layer "{targets[0].name}"'
+            if len(targets) == 1
+            else f"Delete {len(targets)} layers"
+        )
+        self._scene.command_stack.push(MacroCommand(cmds, description))
 
     _MERGE_DEFERRAL = "Layer merging is scheduled for the raster operations follow-up."
 
@@ -2996,26 +3022,19 @@ class MainWindow(QMainWindow):
         self._scene.command_stack.push(cmd)
 
     def _toggle_layer_lock(self, layer_id: str) -> None:
-        """Toggle lock on a layer via undoable command."""
-        from snapmock.commands.layer_commands import ChangeLayerPropertyCommand
-
-        lm = self._scene.layer_manager
-        layer = lm.layer_by_id(layer_id)
-        if layer is None:
-            return
-        cmd = ChangeLayerPropertyCommand(lm, layer_id, "locked", layer.locked, not layer.locked)
-        self._scene.command_stack.push(cmd)
+        """Toggle lock on a layer, and on its Ctrl+click selection, as one command."""
+        self._layer_panel.toggle_lock(layer_id)
 
     def _toggle_layer_visibility(self, layer_id: str) -> None:
-        """Toggle visibility on a layer via undoable command."""
-        from snapmock.commands.layer_commands import ChangeLayerPropertyCommand
+        """Toggle visibility on a layer, and on its Ctrl+click selection, as one command."""
+        self._layer_panel.toggle_visibility(layer_id)
 
-        lm = self._scene.layer_manager
-        layer = lm.layer_by_id(layer_id)
-        if layer is None:
-            return
-        cmd = ChangeLayerPropertyCommand(lm, layer_id, "visible", layer.visible, not layer.visible)
-        self._scene.command_stack.push(cmd)
+    def _on_layer_hovered(self, layer_id: str) -> None:
+        """Outline the hovered layer's items on the canvas (General UI PRD 7.3, Preferences)."""
+        if layer_id and self._settings.layer_hover_highlight():
+            self._view.set_highlighted_layer(layer_id)
+        else:
+            self._view.set_highlighted_layer(None)
 
     # ---- arrange operations ----
 

@@ -136,6 +136,13 @@ class AppSettings:
     def set_snap_to_grid(self, enabled: bool) -> None:
         self._qs.setValue("view/snapToGrid", enabled)
 
+    def layer_hover_highlight(self) -> bool:
+        """Hovering a Layer Panel row outlines that layer's items (General UI PRD 7.3)."""
+        return _as_bool(self._qs.value("view/layerHoverHighlight", True))
+
+    def set_layer_hover_highlight(self, enabled: bool) -> None:
+        self._qs.setValue("view/layerHoverHighlight", enabled)
+
     def status_bar_visible(self) -> bool:
         return _as_bool(self._qs.value("view/statusBarVisible", True))
 

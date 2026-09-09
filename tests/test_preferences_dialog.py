@@ -91,6 +91,7 @@ class TestInitialValues:
         assert dlg._pixel_grid_spin.value() == 800
         assert dlg._guide_color.color.name().upper() == "#00BFFF"
         assert dlg._guide_opacity_slider.value() == 70
+        assert dlg._layer_hover_cb.isChecked() is True
 
     def test_tools_and_performance_defaults(self, qtbot: QtBot) -> None:
         dlg = _dialog(qtbot)

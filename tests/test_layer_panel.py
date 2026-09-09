@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QPoint, QPointF, QRectF, Qt
+from PyQt6.QtCore import QItemSelectionModel, QPoint, QPointF, QRectF, Qt
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QLineEdit
 from pytestqt.qtbot import QtBot
@@ -223,3 +223,150 @@ def test_row_rects_fit_minimum_width() -> None:
     rects = _RowRects(QRect(QPoint(0, 0), QPoint(MIN_PANEL_WIDTH - 1, ROW_HEIGHT - 1)))
     assert rects.name.width() >= 10
     assert rects.opacity.right() < MIN_PANEL_WIDTH
+
+
+# ---- interactions and action bar (PRD 7.3, 7.4) ----
+
+
+def test_drop_target_index_mapping() -> None:
+    from snapmock.ui.layer_panel import drop_target_index
+
+    # Three rows top-to-bottom: rows 0,1,2 are manager indices 2,1,0.
+    assert drop_target_index(drag_row=0, drop_row=2, above=False, count=3) == 0  # to bottom
+    assert drop_target_index(drag_row=2, drop_row=0, above=True, count=3) == 2  # to top
+    assert drop_target_index(drag_row=0, drop_row=1, above=True, count=3) == 2  # no move
+    assert drop_target_index(drag_row=0, drop_row=3, above=True, count=3) == 0  # below all
+    assert drop_target_index(drag_row=2, drop_row=1, above=False, count=3) == 0  # no move
+    assert drop_target_index(drag_row=2, drop_row=1, above=True, count=3) == 1  # up one
+
+
+def test_reorder_pushes_command(qtbot: QtBot, scene: SnapScene) -> None:
+    panel = _panel(qtbot, scene)
+    lm = scene.layer_manager
+    top = lm.add_layer("Top")
+    bottom = lm.layers[0]
+    panel.reorder(top.layer_id, 0)
+    assert lm.layers[0] is top and lm.layers[1] is bottom
+    assert scene.command_stack.undo_text == "Reorder layers"
+    scene.command_stack.undo()
+    assert lm.layers[0] is bottom
+    first = panel.list_widget.item(0)
+    assert first is not None and first.text() == "Top"
+
+
+def test_ctrl_click_batch_lock_and_hide_are_one_command(qtbot: QtBot, scene: SnapScene) -> None:
+    panel = _panel(qtbot, scene)
+    lm = scene.layer_manager
+    a = lm.layers[0]
+    b = lm.add_layer("B")
+    c = lm.add_layer("C")
+    lst = panel.list_widget
+    lst.setCurrentRow(0)  # C
+    item_a = lst.item(panel.row_for_layer(a.layer_id))
+    assert item_a is not None
+    item_a.setSelected(True)  # the Ctrl+click selection: C and A
+    assert panel.selected_layer_ids() == [c.layer_id, a.layer_id]
+    assert panel.batch_ids(b.layer_id) == [b.layer_id]
+    panel.toggle_lock(c.layer_id)
+    assert a.locked and c.locked and not b.locked
+    assert scene.command_stack.count == 1
+    assert scene.command_stack.undo_text == "Lock 2 layers"
+    panel.toggle_visibility(a.layer_id)
+    assert not a.visible and not c.visible and b.visible
+    assert scene.command_stack.undo_text == "Hide 2 layers"
+    scene.command_stack.undo()
+    scene.command_stack.undo()
+    assert a.visible and c.visible and not a.locked and not c.locked
+
+
+def test_batch_delete_through_the_window(main_window: MainWindow, unmet_messages: list) -> None:
+    lm = main_window.scene.layer_manager
+    a = lm.layers[0]
+    b = lm.add_layer("B")
+    panel = main_window._layer_panel  # noqa: SLF001
+    lst = panel.list_widget
+    for row in range(lst.count()):
+        item = lst.item(row)
+        assert item is not None
+        item.setSelected(True)
+    main_window._layer_delete()  # noqa: SLF001
+    assert unmet_messages == [("Delete Layer", "Delete Layer needs at least one layer left.")]
+    assert lm.count == 2
+    c = lm.add_layer("C")
+    item_b = lst.item(panel.row_for_layer(b.layer_id))
+    assert item_b is not None
+    lst.setCurrentItem(item_b, QItemSelectionModel.SelectionFlag.ClearAndSelect)  # click B
+    item_c = lst.item(panel.row_for_layer(c.layer_id))  # then Ctrl+click C
+    assert item_c is not None
+    item_c.setSelected(True)
+    assert panel.selected_layer_ids() == [c.layer_id, b.layer_id]
+    main_window._layer_delete()  # noqa: SLF001
+    assert [layer.layer_id for layer in lm.layers] == [a.layer_id]
+    assert main_window.scene.command_stack.undo_text == "Delete 2 layers"
+    main_window.scene.command_stack.undo()
+    assert lm.count == 3
+
+
+def test_action_bar_reuses_menu_actions(main_window: MainWindow, unmet_messages: list) -> None:
+    from snapmock.ui.layer_panel import ACTION_BAR_LABELS
+
+    panel = main_window._layer_panel  # noqa: SLF001
+    for label in ACTION_BAR_LABELS:
+        button = panel.button(label)
+        action = button.defaultAction()
+        assert action is not None and action.text().replace("&", "") == label
+        assert button.accessibleName() == label
+        assert not button.icon().isNull()
+        assert button.isEnabled()
+    lm = main_window.scene.layer_manager
+    panel.button("New Layer").click()
+    assert lm.count == 2
+    panel.button("Merge Down").click()  # the deferred feature explains itself
+    assert unmet_messages and unmet_messages[-1][0] == "Merge Down"
+    panel.button("Delete Layer").click()
+    assert lm.count == 1
+
+
+def test_standalone_panel_buttons_use_commands(qtbot: QtBot, scene: SnapScene) -> None:
+    panel = _panel(qtbot, scene)
+    panel.button("New Layer").click()
+    assert scene.layer_manager.count == 2
+    assert scene.command_stack.undo_text == 'Add layer "Layer 2"'
+    panel.button("Delete Layer").click()
+    assert scene.layer_manager.count == 1
+    assert scene.command_stack.undo_text == "Remove layer"
+
+
+def test_hover_highlights_layer_items_unless_preference_off(
+    main_window: MainWindow, qtbot: QtBot
+) -> None:
+    from snapmock.config.settings import AppSettings
+
+    main_window.show()
+    lm = main_window.scene.layer_manager
+    layer = lm.active_layer
+    assert layer is not None
+    panel = main_window._layer_panel  # noqa: SLF001
+    panel.layer_hovered.emit(layer.layer_id)
+    assert main_window.view.highlighted_layer == layer.layer_id
+    panel.layer_hovered.emit("")
+    assert main_window.view.highlighted_layer is None
+    AppSettings().set_layer_hover_highlight(False)
+    panel.layer_hovered.emit(layer.layer_id)
+    assert main_window.view.highlighted_layer is None
+    main_window._apply_preference_changes({"layer_hover_highlight": (False, True)})  # noqa: SLF001
+    assert AppSettings().layer_hover_highlight() is True
+
+
+def test_list_reports_hovered_row(qtbot: QtBot, scene: SnapScene) -> None:
+    panel = _panel(qtbot, scene)
+    layer = scene.layer_manager.active_layer
+    assert layer is not None
+    seen: list[str] = []
+    panel.layer_hovered.connect(seen.append)
+    rects = _row_rect(panel, layer.layer_id)
+    viewport = panel.list_widget.viewport()
+    assert viewport is not None
+    qtbot.mouseMove(viewport, pos=rects.name.center())
+    qtbot.mouseMove(viewport, pos=QPoint(rects.name.center().x(), ROW_HEIGHT * 3))
+    assert seen == [layer.layer_id, ""]

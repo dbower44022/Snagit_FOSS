@@ -99,6 +99,7 @@ class SnapView(QGraphicsView):
         self._guide_drag: Guide | None = None  # being moved with the mouse
         self._guide_drag_pos: float = 0.0
         self._guide_hover: bool = False
+        self._highlighted_layer: str | None = None
         self._guide_preview_inside: bool = False
 
         # Cached checkerboard tile, rebuilt when the theme or its preferences change
@@ -805,6 +806,33 @@ class SnapView(QGraphicsView):
             self._draw_guides(painter, rect)
         if self._crosshairs_visible:
             self._draw_crosshairs(painter, rect)
+        if self._highlighted_layer is not None:
+            self._draw_layer_highlight(painter, snap)
+
+    # --- layer hover highlight (General UI PRD 7.3) ---
+
+    @property
+    def highlighted_layer(self) -> str | None:
+        return self._highlighted_layer
+
+    def set_highlighted_layer(self, layer_id: str | None) -> None:
+        """Outline the items of *layer_id* while its Layer Panel row is hovered."""
+        if layer_id == self._highlighted_layer:
+            return
+        self._highlighted_layer = layer_id
+        self._repaint()
+
+    def _draw_layer_highlight(self, painter: QPainter, snap: SnapScene) -> None:
+        layer_id = self._highlighted_layer
+        if layer_id is None:
+            return
+        color = QColor(current_theme().accent)
+        color.setAlpha(160)
+        painter.setPen(QPen(color, 0, Qt.PenStyle.DashLine))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        for item in snap.items_on_layer(layer_id):
+            if item.isVisible():
+                painter.drawRect(item.sceneBoundingRect().adjusted(-2, -2, 2, 2))
 
     def _draw_grid(self, painter: QPainter, rect: QRectF, snap: SnapScene) -> None:
         canvas = snap.canvas_rect

@@ -380,6 +380,12 @@ class PreferencesDialog(QDialog):
         row, self._guide_opacity_slider = _slider_with_value(1, 100, s.guide_opacity(), "%")
         form.addRow("Guide opacity:", row)
         self._readers["guide_opacity"] = self._guide_opacity_slider.value
+
+        self._layer_hover_cb = QCheckBox()
+        self._layer_hover_cb.setChecked(s.layer_hover_highlight())
+        self._layer_hover_cb.setAccessibleName("Highlight layer items on hover")
+        form.addRow("Highlight layer items on hover:", self._layer_hover_cb)
+        self._readers["layer_hover_highlight"] = self._layer_hover_cb.isChecked
         return page
 
     def _build_tools_page(self) -> QWidget:

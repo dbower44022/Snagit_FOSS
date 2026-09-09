@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 from PyQt6.QtCore import (
     QAbstractItemModel,
     QEvent,
+    QItemSelectionModel,
     QModelIndex,
     QObject,
     QPoint,
@@ -22,12 +23,19 @@ from PyQt6.QtCore import (
     QSize,
     Qt,
     QTimer,
+    pyqtSignal,
 )
 from PyQt6.QtGui import (
+    QAction,
     QColor,
+    QDragLeaveEvent,
+    QDragMoveEvent,
+    QDropEvent,
     QFontMetrics,
     QMouseEvent,
     QPainter,
+    QPaintEvent,
+    QPen,
     QPixmap,
 )
 from PyQt6.QtWidgets import (
@@ -38,20 +46,27 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QPushButton,
     QSlider,
     QStyle,
     QStyledItemDelegate,
     QStyleOptionViewItem,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
-from snapmock.commands.layer_commands import ChangeLayerPropertyCommand
+from snapmock.commands.layer_commands import (
+    AddLayerCommand,
+    ChangeLayerPropertyCommand,
+    RemoveLayerCommand,
+    ReorderLayerCommand,
+)
+from snapmock.commands.macro_command import MacroCommand
 from snapmock.config.settings import AppSettings
+from snapmock.core.command_stack import BaseCommand
 from snapmock.core.render_engine import RenderEngine
 from snapmock.core.theme_manager import current_theme, theme_manager
-from snapmock.ui.icons import ADD_ICON, REMOVE_ICON
+from snapmock.ui.icons import ACTION_ICONS
 
 if TYPE_CHECKING:
     from snapmock.core.layer import Layer
@@ -77,6 +92,9 @@ _OPACITY_TEXT_WIDTH = 44
 _CHECKER_CELL = 5
 
 LAYER_ID_ROLE = Qt.ItemDataRole.UserRole
+
+ACTION_BAR_LABELS = ("New Layer", "Delete Layer", "Duplicate Layer", "Merge Down")
+"""The bottom action bar's buttons in order (PRD 7.4); the blend-mode dropdown is deferred."""
 
 
 def _checkerboard(size: int) -> QPixmap:
@@ -114,6 +132,113 @@ class _RowRects:
             right - _OPACITY_TEXT_WIDTH, rect.top(), _OPACITY_TEXT_WIDTH, rect.height()
         )
         self.name = QRect(x, rect.top(), max(10, self.opacity.left() - _GAP - x), rect.height())
+
+
+def drop_target_index(drag_row: int, drop_row: int, above: bool, count: int) -> int:
+    """The layer-manager index a dragged row lands on (rows are top-to-bottom).
+
+    *drop_row* is the row under the cursor, or ``count`` for the space below the
+    last row; *above* says whether the insertion line is above it.
+    """
+    visual = drop_row if above else drop_row + 1
+    if drag_row < visual:
+        visual -= 1  # the dragged row leaves the list before the insert
+    visual = max(0, min(visual, count - 1))
+    return (count - 1) - visual
+
+
+class _LayerList(QListWidget):
+    """The row list: drag reorder with the accent insertion line, hover reporting."""
+
+    reorder_requested = pyqtSignal(str, int)
+    """(layer_id, new manager index) after a row is dropped."""
+    hovered_layer_changed = pyqtSignal(str)
+    """The layer id under the cursor, or an empty string."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._drop_line_y: int | None = None
+        self._hovered_id = ""
+        self.setDragEnabled(True)
+        self.setAcceptDrops(True)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
+        self.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.setDropIndicatorShown(False)
+
+    def _drop_target(self, pos: QPoint) -> tuple[int, bool]:
+        index = self.indexAt(pos)
+        if not index.isValid():
+            return self.count(), True
+        rect = self.visualRect(index)
+        return index.row(), pos.y() < rect.center().y()
+
+    def dragMoveEvent(self, event: QDragMoveEvent | None) -> None:  # noqa: N802
+        if event is None:
+            return
+        super().dragMoveEvent(event)
+        row, above = self._drop_target(event.position().toPoint())
+        if row >= self.count():
+            last = self.item(self.count() - 1)
+            self._drop_line_y = self.visualItemRect(last).bottom() if last is not None else 0
+        else:
+            item = self.item(row)
+            rect = self.visualItemRect(item) if item is not None else QRect()
+            self._drop_line_y = rect.top() if above else rect.bottom()
+        event.acceptProposedAction()
+        viewport = self.viewport()
+        if viewport is not None:
+            viewport.update()
+
+    def dragLeaveEvent(self, event: QDragLeaveEvent | None) -> None:  # noqa: N802
+        self._drop_line_y = None
+        super().dragLeaveEvent(event)
+
+    def dropEvent(self, event: QDropEvent | None) -> None:  # noqa: N802
+        """Route the drop to a command instead of letting the model move the row."""
+        self._drop_line_y = None
+        if event is None:
+            return
+        current = self.currentItem()
+        if current is None:
+            event.ignore()
+            return
+        layer_id = current.data(LAYER_ID_ROLE)
+        drop_row, above = self._drop_target(event.position().toPoint())
+        event.setDropAction(Qt.DropAction.IgnoreAction)
+        event.accept()
+        if isinstance(layer_id, str):
+            target = drop_target_index(self.row(current), drop_row, above, self.count())
+            self.reorder_requested.emit(layer_id, target)
+
+    def paintEvent(self, event: QPaintEvent | None) -> None:  # noqa: N802
+        super().paintEvent(event)
+        if self._drop_line_y is None:
+            return
+        viewport = self.viewport()
+        if viewport is None:
+            return
+        painter = QPainter(viewport)
+        painter.setPen(QPen(current_theme().accent, 2))
+        y = self._drop_line_y
+        painter.drawLine(0, y, viewport.width(), y)
+        painter.end()
+
+    def mouseMoveEvent(self, event: QMouseEvent | None) -> None:  # noqa: N802
+        super().mouseMoveEvent(event)
+        if event is None:
+            return
+        index = self.indexAt(event.pos())
+        layer_id = index.data(LAYER_ID_ROLE) if index.isValid() else ""
+        self._set_hovered(layer_id if isinstance(layer_id, str) else "")
+
+    def leaveEvent(self, event: QEvent | None) -> None:  # noqa: N802
+        super().leaveEvent(event)
+        self._set_hovered("")
+
+    def _set_hovered(self, layer_id: str) -> None:
+        if layer_id != self._hovered_id:
+            self._hovered_id = layer_id
+            self.hovered_layer_changed.emit(layer_id)
 
 
 class _LayerRowDelegate(QStyledItemDelegate):
@@ -304,7 +429,15 @@ class _OpacityPopover(QWidget):
 
 
 class LayerPanel(QDockWidget):
-    """Dockable layer panel: the rows of Section 7.2 over the action bar of 7.4."""
+    """Dockable layer panel: the rows of Section 7.2 over the action bar of 7.4.
+
+    Signals
+    -------
+    layer_hovered(str)
+        The id of the layer row under the cursor, or an empty string (PRD 7.3).
+    """
+
+    layer_hovered = pyqtSignal(str)
 
     def __init__(self, scene: SnapScene, parent: QWidget | None = None) -> None:
         super().__init__("Layers", parent)
@@ -322,11 +455,13 @@ class LayerPanel(QDockWidget):
         container = QWidget()
         layout = QVBoxLayout(container)
 
-        self._list = QListWidget()
+        self._list = _LayerList()
         self._list.setAccessibleName("Layers")
         self._list.setMouseTracking(True)
         self._list.setUniformItemSizes(True)
-        self._list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self._list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self._list.reorder_requested.connect(self.reorder)
+        self._list.hovered_layer_changed.connect(self.layer_hovered)
         self._list.setEditTriggers(
             QAbstractItemView.EditTrigger.DoubleClicked
             | QAbstractItemView.EditTrigger.EditKeyPressed
@@ -338,21 +473,24 @@ class LayerPanel(QDockWidget):
         self._list.customContextMenuRequested.connect(self._on_context_menu)
         layout.addWidget(self._list)
 
+        # Bottom action bar (PRD 7.4): the Layer menu's actions, never disabled
         btn_layout = QHBoxLayout()
-        self._add_btn = QPushButton("+")
-        self._add_btn.setToolTip("Add layer")
-        self._add_btn.setAccessibleName("Add layer")
-        self._add_btn.clicked.connect(self._on_add_layer)
-        btn_layout.addWidget(self._add_btn)
-
-        self._remove_btn = QPushButton("-")
-        self._remove_btn.setToolTip("Remove layer")
-        self._remove_btn.setAccessibleName("Remove layer")
-        self._remove_btn.clicked.connect(self._on_remove_layer)
-        btn_layout.addWidget(self._remove_btn)
+        btn_layout.setSpacing(2)
+        self._buttons: dict[str, QToolButton] = {}
+        for label in ACTION_BAR_LABELS:
+            button = QToolButton()
+            button.setAutoRaise(True)
+            button.setToolTip(label)
+            button.setAccessibleName(label)
+            button.setIconSize(theme_manager().icon_qsize())
+            btn_layout.addWidget(button)
+            self._buttons[label] = button
+        btn_layout.addStretch()
         layout.addLayout(btn_layout)
-        self._apply_icons()
+        self._fallback_actions: dict[str, QAction] = {}
+        self._install_fallback_actions()
         theme_manager().theme_changed.connect(self._on_theme_changed)
+        theme_manager().icon_size_changed.connect(self._on_icon_size_changed)
 
         self.setWidget(container)
 
@@ -369,6 +507,27 @@ class LayerPanel(QDockWidget):
     @property
     def layer_manager(self) -> LayerManager:
         return self._layer_manager
+
+    def button(self, label: str) -> QToolButton:
+        """An action bar button by its Section 7.4 label."""
+        return self._buttons[label]
+
+    def set_actions(self, actions: dict[str, QAction]) -> None:
+        """Give the action bar the Layer menu's actions, keyed by :data:`ACTION_BAR_LABELS`."""
+        for label, action in actions.items():
+            button = self._buttons.get(label)
+            if button is not None:
+                button.setDefaultAction(action)
+        self._apply_icons()
+
+    def _install_fallback_actions(self) -> None:
+        """Commands for a panel used without a main window (tests, previews)."""
+        new = QAction("New Layer", self)
+        new.triggered.connect(self._on_add_layer)
+        delete = QAction("Delete Layer", self)
+        delete.triggered.connect(self._on_remove_layer)
+        self._fallback_actions = {"New Layer": new, "Delete Layer": delete}
+        self.set_actions(self._fallback_actions)
 
     @property
     def list_widget(self) -> QListWidget:
@@ -434,6 +593,13 @@ class LayerPanel(QDockWidget):
         self._viewport().update()
 
     def _refresh_void(self) -> None:
+        """Rebuild the rows from the manager, keeping a Ctrl+click multi-selection.
+
+        With one row selected the selection follows the active layer; only a
+        selection of two or more rows survives the rebuild.
+        """
+        multi = set(self.selected_layer_ids()) if len(self._list.selectedItems()) > 1 else set()
+        current: QListWidgetItem | None = None
         self._list.blockSignals(True)
         self._list.clear()
         # Display top-to-bottom (reverse of internal bottom-to-top)
@@ -453,7 +619,18 @@ class LayerPanel(QDockWidget):
             )
             self._list.addItem(item)
             if layer.layer_id == self._layer_manager.active_layer_id:
-                self._list.setCurrentItem(item)
+                current = item
+        if current is not None:
+            flag = (
+                QItemSelectionModel.SelectionFlag.NoUpdate
+                if multi
+                else QItemSelectionModel.SelectionFlag.ClearAndSelect
+            )
+            self._list.setCurrentItem(current, flag)
+        for row in range(self._list.count()):
+            row_item = self._list.item(row)
+            if row_item is not None and row_item.data(LAYER_ID_ROLE) in multi:
+                row_item.setSelected(True)
         self._list.blockSignals(False)
         self._viewport().update()
 
@@ -506,24 +683,37 @@ class LayerPanel(QDockWidget):
     # --- row interactions, every one a command (PRD 7.3) ---
 
     def toggle_visibility(self, layer_id: str) -> None:
-        layer = self._layer_manager.layer_by_id(layer_id)
-        if layer is None:
-            return
-        self._push(
-            ChangeLayerPropertyCommand(
-                self._layer_manager, layer_id, "visible", layer.visible, not layer.visible
-            )
-        )
+        """Hide or show *layer_id*, and every selected layer with it, as one command."""
+        self._toggle_flag(layer_id, "visible")
 
     def toggle_lock(self, layer_id: str) -> None:
+        """Lock or unlock *layer_id*, and every selected layer with it, as one command."""
+        self._toggle_flag(layer_id, "locked")
+
+    def _toggle_flag(self, layer_id: str, prop: str) -> None:
         layer = self._layer_manager.layer_by_id(layer_id)
         if layer is None:
             return
-        self._push(
-            ChangeLayerPropertyCommand(
-                self._layer_manager, layer_id, "locked", layer.locked, not layer.locked
-            )
-        )
+        new_value = not getattr(layer, prop)
+        commands: list[BaseCommand] = []
+        for lid in self.batch_ids(layer_id):
+            target = self._layer_manager.layer_by_id(lid)
+            if target is not None and getattr(target, prop) != new_value:
+                commands.append(
+                    ChangeLayerPropertyCommand(
+                        self._layer_manager, lid, prop, getattr(target, prop), new_value
+                    )
+                )
+        if not commands:
+            return
+        if len(commands) == 1:
+            self._push(commands[0])
+        else:
+            verb = {
+                "visible": "Hide" if not new_value else "Show",
+                "locked": "Lock" if new_value else "Unlock",
+            }[prop]
+            self._push(MacroCommand(commands, f"{verb} {len(commands)} layers"))
 
     def set_opacity(self, layer_id: str, opacity: float, *, live: bool = False) -> None:
         """Set a layer's opacity; *live* merges slider steps into one undo entry."""
@@ -571,7 +761,7 @@ class LayerPanel(QDockWidget):
     def opacity_popover(self) -> _OpacityPopover | None:
         return self._popover
 
-    def _push(self, command: ChangeLayerPropertyCommand) -> None:
+    def _push(self, command: BaseCommand) -> None:
         self._scene.command_stack.push(command)
 
     # --- list slots ---
@@ -588,21 +778,63 @@ class LayerPanel(QDockWidget):
         self._apply_icons()
         self._viewport().update()
 
+    def _on_icon_size_changed(self, _size: int) -> None:
+        size = theme_manager().icon_qsize()
+        for button in self._buttons.values():
+            button.setIconSize(size)
+
     def _apply_icons(self) -> None:
         manager = theme_manager()
-        for btn, name in ((self._add_btn, ADD_ICON), (self._remove_btn, REMOVE_ICON)):
+        for label, button in self._buttons.items():
+            name = ACTION_ICONS.get(label)
+            action = button.defaultAction()
+            if name is None:
+                continue
             icon = manager.icon(name)
-            if not icon.isNull():
-                btn.setIcon(icon)
-                btn.setText("")
+            if action is not None:
+                action.setIcon(icon)
+            button.setIcon(icon)
 
     def _on_add_layer(self) -> None:
-        self._layer_manager.add_layer()
+        self._push(AddLayerCommand(self._layer_manager, f"Layer {self._layer_manager.count + 1}"))
 
     def _on_remove_layer(self) -> None:
         active = self._layer_manager.active_layer
-        if active is not None:
-            self._layer_manager.remove_layer(active.layer_id)
+        if active is not None and self._layer_manager.count > 1:
+            self._push(RemoveLayerCommand(self._layer_manager, active.layer_id))
+
+    # --- selection and batches (PRD 7.3, Ctrl+click) ---
+
+    def selected_layer_ids(self) -> list[str]:
+        """The Ctrl+click selection, top row first; the active layer alone otherwise."""
+        ids = [
+            item.data(LAYER_ID_ROLE)
+            for item in self._list.selectedItems()
+            if isinstance(item.data(LAYER_ID_ROLE), str)
+        ]
+        ordered = [
+            lid
+            for lid in (
+                self._list.item(r).data(LAYER_ID_ROLE)  # type: ignore[union-attr]
+                for r in range(self._list.count())
+            )
+            if lid in ids
+        ]
+        if ordered:
+            return ordered
+        return [self._layer_manager.active_layer_id] if self._layer_manager.active_layer_id else []
+
+    def batch_ids(self, layer_id: str) -> list[str]:
+        """*layer_id* alone, or every selected layer when it is part of a multi-selection."""
+        selected = self.selected_layer_ids()
+        if layer_id in selected and len(selected) > 1:
+            return selected
+        return [layer_id]
+
+    def reorder(self, layer_id: str, new_index: int) -> None:
+        if self._layer_manager.index_of(layer_id) in (-1, new_index):
+            return
+        self._push(ReorderLayerCommand(self._layer_manager, layer_id, new_index))
 
     def _on_context_menu(self, pos: object) -> None:
         if not isinstance(pos, QPoint):
@@ -633,5 +865,5 @@ class LayerPanel(QDockWidget):
         """Return the ideal panel height to fit the current layers (capped at *max_rows*)."""
         row_count = max(1, min(self._list.count(), max_rows))
         list_h = row_count * ROW_HEIGHT + 2 * self._list.frameWidth()
-        # Account for the button bar (~35px) and layout margins/spacing (~20px)
+        # Account for the action bar (~35px) and layout margins/spacing (~20px)
         return list_h + 55
