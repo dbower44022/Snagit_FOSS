@@ -117,3 +117,59 @@ def test_minor_grid_lines_hide_below_200_percent(view: SnapView) -> None:
         painter = QPainter(image)
         view.drawForeground(painter, QRectF(0, 0, 200, 200))
         painter.end()
+
+
+# --- crosshairs (General UI PRD 3.3) ---
+
+
+def test_crosshairs_follow_the_cursor_and_leave_with_it(view: SnapView) -> None:
+    from PyQt6.QtCore import QPointF
+    from PyQt6.QtTest import QTest
+
+    view.resize(400, 300)
+    view.show()
+    assert not view.crosshairs_visible
+    assert view.crosshair_pos is None
+    view.set_crosshairs_visible(True)
+    vp = view.viewport()
+    assert vp is not None
+    QTest.mouseMove(vp, vp.rect().center())
+    pos = view.crosshair_pos
+    assert pos is not None
+    expected = view.mapToScene(vp.rect().center())
+    assert abs(pos.x() - expected.x()) < 1 and abs(pos.y() - expected.y()) < 1
+    # Painting with crosshairs on runs through the foreground path.
+    from PyQt6.QtGui import QImage, QPainter
+
+    image = QImage(200, 200, QImage.Format.Format_ARGB32)
+    painter = QPainter(image)
+    view.drawForeground(painter, QRectF(0, 0, 200, 200))
+    painter.end()
+    view.leaveEvent(None)
+    assert view.crosshair_pos is None
+    view._move_crosshairs(QPointF(10, 10))  # noqa: SLF001
+    view.set_crosshairs_visible(False)
+    assert view.crosshair_pos is None
+
+
+def test_show_crosshairs_menu_toggle_applies_to_every_document_and_persists(
+    main_window: "MainWindow",  # type: ignore[name-defined] # noqa: F821
+) -> None:
+    from snapmock.config.settings import AppSettings
+    from snapmock.core.document import Document
+    from snapmock.main_window import MainWindow
+
+    assert isinstance(main_window, MainWindow)
+    action = main_window._crosshairs_action  # noqa: SLF001
+    assert action.isCheckable() and not action.isChecked()
+    second = Document(SnapScene())
+    main_window._add_document(second, activate=False)  # noqa: SLF001
+    action.setChecked(True)
+    assert all(d.view.crosshairs_visible for d in main_window.documents.documents)
+    assert AppSettings().crosshairs_visible()
+    third = Document(SnapScene())
+    main_window._add_document(third, activate=False)  # noqa: SLF001
+    assert third.view.crosshairs_visible
+    action.setChecked(False)
+    assert not any(d.view.crosshairs_visible for d in main_window.documents.documents)
+    assert not AppSettings().crosshairs_visible()

@@ -104,6 +104,13 @@ class AppSettings:
     def set_rulers_visible(self, visible: bool) -> None:
         self._qs.setValue("view/rulersVisible", visible)
 
+    def crosshairs_visible(self) -> bool:
+        """View > Show Crosshairs (General UI PRD 3.3, 15.4)."""
+        return _as_bool(self._qs.value("view/crosshairsVisible", False))
+
+    def set_crosshairs_visible(self, visible: bool) -> None:
+        self._qs.setValue("view/crosshairsVisible", visible)
+
     def snap_to_grid(self) -> bool:
         return bool(self._qs.value("view/snapToGrid", False))
 

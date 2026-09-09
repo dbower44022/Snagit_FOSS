@@ -79,6 +79,7 @@ ACTION_ICONS: dict[str, str] = {
     "Show Grid": "grid-dots",
     "Snap to Grid": "magnet",
     "Show Rulers": "ruler",
+    "Show Crosshairs": "crosshair",
     "Show Status Bar": "layout-bottombar",
     "Reset Layout": "layout-dashboard",
     "Dark Mode": "moon",

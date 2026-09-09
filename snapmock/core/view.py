@@ -75,6 +75,10 @@ class SnapView(QGraphicsView):
         self._grid_size: int = GRID_SIZE_DEFAULT
         self._rulers_visible: bool = False
 
+        # Crosshairs (General UI PRD 3.3): full-width lines through the cursor position
+        self._crosshairs_visible: bool = False
+        self._crosshair_pos: QPointF | None = None
+
         # Cached checkerboard tile, rebuilt when the theme or its preferences change
         self._checkerboard_tile: QPixmap | None = None
 
@@ -155,6 +159,47 @@ class SnapView(QGraphicsView):
             vp = self.viewport()
             if vp is not None:
                 vp.update()
+
+    # --- crosshairs (General UI PRD 3.3) ---
+
+    @property
+    def crosshairs_visible(self) -> bool:
+        return self._crosshairs_visible
+
+    def set_crosshairs_visible(self, visible: bool) -> None:
+        """Show or hide the crosshair lines that follow the cursor."""
+        self._crosshairs_visible = visible
+        if not visible:
+            self._crosshair_pos = None
+        self._repaint()
+
+    @property
+    def crosshair_pos(self) -> QPointF | None:
+        """Scene position of the crosshairs, or None while the cursor is off the viewport."""
+        return QPointF(self._crosshair_pos) if self._crosshair_pos is not None else None
+
+    def _move_crosshairs(self, scene_pos: QPointF | None) -> None:
+        """Repaint the strips of the old and new crosshair lines only."""
+        vp = self.viewport()
+        if vp is None:
+            self._crosshair_pos = scene_pos
+            return
+        for pos in (self._crosshair_pos, scene_pos):
+            if pos is None:
+                continue
+            vp_pos = self.mapFromScene(pos)
+            vp.update(vp_pos.x() - 1, 0, 3, vp.height())
+            vp.update(0, vp_pos.y() - 1, vp.width(), 3)
+        self._crosshair_pos = scene_pos
+
+    def _draw_crosshairs(self, painter: QPainter, rect: QRectF) -> None:
+        pos = self._crosshair_pos
+        if pos is None:
+            return
+        pen = QPen(current_theme().crosshair, 0)
+        painter.setPen(pen)
+        painter.drawLine(QPointF(rect.left(), pos.y()), QPointF(rect.right(), pos.y()))
+        painter.drawLine(QPointF(pos.x(), rect.top()), QPointF(pos.x(), rect.bottom()))
 
     # --- theme and appearance preferences (General UI PRD 11.3, 13.4) ---
 
@@ -503,17 +548,20 @@ class SnapView(QGraphicsView):
             self._checkerboard_tile = tile
         return self._checkerboard_tile
 
-    # --- drawForeground (grid) ---
+    # --- drawForeground (grid, crosshairs) ---
 
     def drawForeground(self, painter: QPainter | None, rect: QRectF) -> None:  # noqa: N802
         if painter is None:
             return
-        if not self._grid_visible:
-            return
         snap = self._snap_scene
         if snap is None:
             return
+        if self._grid_visible:
+            self._draw_grid(painter, rect, snap)
+        if self._crosshairs_visible:
+            self._draw_crosshairs(painter, rect)
 
+    def _draw_grid(self, painter: QPainter, rect: QRectF, snap: SnapScene) -> None:
         canvas = snap.canvas_rect
         clip = canvas.intersected(rect)
         if clip.isEmpty():
@@ -615,8 +663,10 @@ class SnapView(QGraphicsView):
             self._v_ruler.update()
 
     def leaveEvent(self, event: object) -> None:  # noqa: N802
-        """Stop auto-scroll when the mouse leaves the viewport."""
+        """Stop auto-scroll and hide the crosshairs when the mouse leaves the viewport."""
         self._stop_auto_scroll()
+        if self._crosshair_pos is not None:
+            self._move_crosshairs(None)
         super().leaveEvent(event)  # type: ignore[arg-type]
 
     # --- wheel event (Ctrl+scroll for zoom) ---
@@ -660,6 +710,8 @@ class SnapView(QGraphicsView):
         # Emit cursor position for status bar
         scene_pos = self.mapToScene(event.position().toPoint())
         self.cursor_moved.emit(scene_pos.x(), scene_pos.y())
+        if self._crosshairs_visible:
+            self._move_crosshairs(scene_pos)
 
         # Auto edge scroll during active drag operations (mouse button held)
         if (

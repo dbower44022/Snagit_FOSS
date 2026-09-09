@@ -187,6 +187,7 @@ def test_view_menu_labels_and_status_bar_toggle(window: MainWindow) -> None:
         "Show Grid",
         "Snap to Grid",
         "Show Rulers",
+        "Show Crosshairs",
         "Show Tool Palette",
         "Show Tool Options",
         "Show Layer Panel",
@@ -195,6 +196,7 @@ def test_view_menu_labels_and_status_bar_toggle(window: MainWindow) -> None:
     ):
         assert label in texts, label
     assert texts.index("Snap to Grid") < texts.index("Show Rulers")
+    assert texts.index("Show Rulers") < texts.index("Show Crosshairs")
     window._status_bar_action.setChecked(False)  # noqa: SLF001
     assert not window.statusBar().isVisibleTo(window)  # type: ignore[union-attr]
     window._status_bar_action.setChecked(True)  # noqa: SLF001

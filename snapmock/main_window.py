@@ -746,6 +746,12 @@ class MainWindow(QMainWindow):
         self._rulers_action.toggled.connect(self._toggle_rulers)
         view_menu.addAction(self._rulers_action)
 
+        self._crosshairs_action = QAction("Show &Crosshairs", self)
+        self._crosshairs_action.setCheckable(True)
+        self._crosshairs_action.setChecked(self._settings.crosshairs_visible())
+        self._crosshairs_action.toggled.connect(self._toggle_crosshairs)
+        view_menu.addAction(self._crosshairs_action)
+
         view_menu.addSeparator()
 
         # Panel visibility toggles
@@ -1515,6 +1521,12 @@ class MainWindow(QMainWindow):
     def _toggle_rulers(self, checked: bool) -> None:
         self._view.set_rulers_visible(checked)
         self._settings.set_rulers_visible(checked)
+
+    def _toggle_crosshairs(self, checked: bool) -> None:
+        """View > Show Crosshairs applies to every open document (PRD 3.3)."""
+        for doc in self._documents.documents:
+            doc.view.set_crosshairs_visible(checked)
+        self._settings.set_crosshairs_visible(checked)
 
     def _toggle_snap_to_grid(self, checked: bool) -> None:
         self._settings.set_snap_to_grid(checked)
@@ -3176,6 +3188,7 @@ class MainWindow(QMainWindow):
         view.set_grid_visible(self._settings.grid_visible())
         view.set_grid_size(self._settings.grid_size())
         view.set_rulers_visible(self._settings.rulers_visible())
+        view.set_crosshairs_visible(self._settings.crosshairs_visible())
         self._apply_view_preferences(view)
 
     def _apply_view_preferences(self, view: SnapView) -> None:
