@@ -347,6 +347,14 @@ class AppSettings:
     def set_numbered_step_start(self, number: int) -> None:
         self._qs.setValue("tools/numberedStepStart", max(0, number))
 
+    # --- tool themes (General UI PRD 11.8): the active theme's name ---
+
+    def active_tool_theme(self) -> str:
+        return str(self._qs.value("tools/activeTheme", "Default")) or "Default"
+
+    def set_active_tool_theme(self, name: str) -> None:
+        self._qs.setValue("tools/activeTheme", name)
+
     # --- performance (General UI PRD 11.3 Performance) ---
 
     def undo_limit(self) -> int:
