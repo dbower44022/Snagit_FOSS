@@ -44,7 +44,7 @@ class PanTool(BaseTool):
             return False
         self._panning = True
         self._pan_start = event.pos()
-        view.setCursor(Qt.CursorShape.ClosedHandCursor)
+        view.set_hover_cursor(Qt.CursorShape.ClosedHandCursor)
         return True
 
     def mouse_move(self, event: QMouseEvent) -> bool:
@@ -69,14 +69,14 @@ class PanTool(BaseTool):
         self._panning = False
         view = self._view
         if view is not None:
-            view.setCursor(Qt.CursorShape.OpenHandCursor)
+            view.set_hover_cursor(None)
         return True
 
     def cancel(self) -> None:
         self._panning = False
         view = self._view
         if view is not None:
-            view.unsetCursor()
+            view.set_hover_cursor(None)
 
     def deactivate(self) -> None:
         self.cancel()

@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
-from PyQt6.QtGui import QColor, QMouseEvent, QPen
+from PyQt6.QtGui import QColor, QCursor, QKeyEvent, QMouseEvent, QPen
 from PyQt6.QtWidgets import QGraphicsRectItem
 
 from snapmock.config.constants import DRAG_THRESHOLD
 from snapmock.tools.base_tool import BaseTool
+from snapmock.ui.cursors import zoom_in_cursor, zoom_out_cursor
 
 
 class ZoomTool(BaseTool):
@@ -28,12 +29,28 @@ class ZoomTool(BaseTool):
         return "Zoom"
 
     @property
-    def cursor(self) -> Qt.CursorShape:
-        return Qt.CursorShape.CrossCursor
+    def cursor(self) -> QCursor:
+        """Magnifier with a plus; Alt swaps in the minus (General UI PRD 6.6)."""
+        return zoom_in_cursor()
 
     @property
     def is_active_operation(self) -> bool:
         return self._dragging
+
+    def _show_alt_cursor(self, alt: bool) -> None:
+        view = self._view
+        if view is not None:
+            view.set_hover_cursor(zoom_out_cursor() if alt else None)
+
+    def key_press(self, event: QKeyEvent) -> bool:
+        if event.key() == Qt.Key.Key_Alt:
+            self._show_alt_cursor(True)
+        return False
+
+    def key_release(self, event: QKeyEvent) -> bool:
+        if event.key() == Qt.Key.Key_Alt:
+            self._show_alt_cursor(False)
+        return False
 
     @property
     def status_hint(self) -> str:
@@ -57,6 +74,7 @@ class ZoomTool(BaseTool):
 
     def mouse_move(self, event: QMouseEvent) -> bool:
         if not self._dragging or self._scene is None:
+            self._show_alt_cursor(bool(event.modifiers() & Qt.KeyboardModifier.AltModifier))
             return False
         pos = self._scene_pos(event)
         if pos is None:

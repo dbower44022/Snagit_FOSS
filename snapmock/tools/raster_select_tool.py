@@ -6,11 +6,12 @@ from enum import Enum, auto
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
-from PyQt6.QtGui import QKeyEvent, QMouseEvent
+from PyQt6.QtGui import QCursor, QKeyEvent, QMouseEvent
 from PyQt6.QtWidgets import QCheckBox, QLabel, QSpinBox, QToolBar
 
 from snapmock.config.constants import DRAG_THRESHOLD
 from snapmock.tools.base_tool import BaseTool
+from snapmock.ui.cursors import raster_select_cursor
 from snapmock.ui.selection_overlay import SelectionOverlay
 
 if TYPE_CHECKING:
@@ -46,8 +47,9 @@ class RasterSelectTool(BaseTool):
         return "Raster Select"
 
     @property
-    def cursor(self) -> Qt.CursorShape:
-        return Qt.CursorShape.CrossCursor
+    def cursor(self) -> QCursor:
+        """Crosshair with a dotted square (General UI PRD 6.6)."""
+        return raster_select_cursor()
 
     @property
     def is_active_operation(self) -> bool:

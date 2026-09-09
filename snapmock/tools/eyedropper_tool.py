@@ -5,9 +5,10 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
-from PyQt6.QtGui import QColor, QMouseEvent
+from PyQt6.QtGui import QColor, QCursor, QMouseEvent
 
 from snapmock.tools.base_tool import BaseTool
+from snapmock.ui.cursors import eyedropper_cursor
 
 
 class EyedropperTool(BaseTool):
@@ -32,8 +33,9 @@ class EyedropperTool(BaseTool):
         return "Eyedropper"
 
     @property
-    def cursor(self) -> Qt.CursorShape:
-        return Qt.CursorShape.CrossCursor
+    def cursor(self) -> QCursor:
+        """The dropper glyph with its tip as the hotspot (General UI PRD 6.6)."""
+        return eyedropper_cursor()
 
     @property
     def picked_color(self) -> QColor:

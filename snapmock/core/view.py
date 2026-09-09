@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from PyQt6.QtCore import QEvent, QMimeData, QPoint, QPointF, QRectF, Qt, QTimeLine, pyqtSignal
 from PyQt6.QtGui import (
     QColor,
+    QCursor,
     QDragEnterEvent,
     QDragMoveEvent,
     QDropEvent,
@@ -144,6 +145,15 @@ class SnapView(QGraphicsView):
             vp.setCursor(tool.cursor)
         else:
             vp.unsetCursor()
+
+    def set_hover_cursor(self, cursor: QCursor | Qt.CursorShape | None) -> None:
+        """A cursor for what is under the pointer (PRD 6.6); None returns to the tool's own."""
+        if cursor is None:
+            self._apply_tool_cursor()
+            return
+        vp = self.viewport()
+        if vp is not None:
+            vp.setCursor(cursor)
 
     # --- grid & ruler visibility ---
 
@@ -817,16 +827,20 @@ class SnapView(QGraphicsView):
         if mime is not None and mime.hasFormat(LIBRARY_PATHS_MIME):
             event.acceptProposedAction()
             return
-        if mime is not None and self._has_image_urls(mime):
-            event.acceptProposedAction()
-            return
-        if mime is not None and mime.hasImage():
-            event.acceptProposedAction()
+        if mime is not None and (self._has_image_urls(mime) or mime.hasImage()):
+            # An external image is copied in, so the copy cursor shows (PRD 6.6)
+            event.setDropAction(Qt.DropAction.CopyAction)
+            event.accept()
             return
         event.ignore()
 
     def dragMoveEvent(self, event: QDragMoveEvent | None) -> None:  # noqa: N802
         if event is None:
+            return
+        mime: QMimeData | None = event.mimeData()
+        if mime is not None and not mime.hasFormat(LIBRARY_PATHS_MIME):
+            event.setDropAction(Qt.DropAction.CopyAction)
+            event.accept()
             return
         event.acceptProposedAction()
 

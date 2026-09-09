@@ -91,6 +91,9 @@ class SelectTool(BaseTool):
 
     def deactivate(self) -> None:
         self.cancel()
+        view = self._view
+        if view is not None:
+            view.set_hover_cursor(None)
         if self._selection_manager is not None:
             try:
                 self._selection_manager.selection_changed.disconnect(self._on_selection_changed)
@@ -152,6 +155,44 @@ class SelectTool(BaseTool):
                 return gitem
         return None
 
+    def _locked_item_at(self, scene_pos: QPointF) -> bool:
+        """Whether a visible item on a locked layer is under *scene_pos*."""
+        if self._scene is None:
+            return False
+        for gitem in self._scene.items(scene_pos):
+            if isinstance(gitem, SnapGraphicsItem):
+                layer = self._scene.layer_manager.layer_by_id(gitem.layer_id)
+                if layer is not None and layer.locked and layer.visible:
+                    return True
+        return False
+
+    def _update_hover_cursor(self, scene_pos: QPointF) -> None:
+        """The idle cursor of PRD 6.6.
+
+        Open hand over what can be dragged, forbidden over a locked layer's item,
+        the handle's own cursor over a handle, the arrow elsewhere.
+        """
+        view = self._view
+        if view is None:
+            return
+        if self._handles is not None and self._handles.scene() is not None:
+            handle = self._handles.handle_at(scene_pos)
+            if handle is not None:
+                view.set_hover_cursor(self._handles.cursor_for(handle))
+                return
+        if self._item_at(scene_pos) is not None:
+            view.set_hover_cursor(Qt.CursorShape.OpenHandCursor)
+        elif (
+            self._handles is not None
+            and self._handles.scene() is not None
+            and self._handles.current_rect.contains(scene_pos)
+        ):
+            view.set_hover_cursor(Qt.CursorShape.OpenHandCursor)
+        elif self._locked_item_at(scene_pos):
+            view.set_hover_cursor(Qt.CursorShape.ForbiddenCursor)
+        else:
+            view.set_hover_cursor(None)
+
     # --- mouse events ---
 
     def mouse_press(self, event: QMouseEvent) -> bool:
@@ -168,8 +209,8 @@ class SelectTool(BaseTool):
         self._drag_total = QPointF(0, 0)
         self._constrain_axis = None
 
-        # Check if clicking on a transform handle
-        if self._handles is not None:
+        # Check if clicking on a transform handle (only while the handles are shown)
+        if self._handles is not None and self._handles.scene() is not None:
             handle = self._handles.handle_at(scene_pos)
             if handle is not None:
                 self._state = _State.HANDLE_DRAG
@@ -219,6 +260,7 @@ class SelectTool(BaseTool):
                 ]
                 if self._drag_items:
                     self._state = _State.DRAGGING
+                    self._set_cursor(Qt.CursorShape.ClosedHandCursor)
                     return True
 
         if item is not None:
@@ -236,6 +278,7 @@ class SelectTool(BaseTool):
                 i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)
             ]
             self._state = _State.DRAGGING
+            self._set_cursor(Qt.CursorShape.ClosedHandCursor)
         else:
             # No item — start rubber-band or deselect
             if not (
@@ -260,6 +303,7 @@ class SelectTool(BaseTool):
             return self._handle_rubber_band_move(scene_pos)
         elif self._state == _State.HANDLE_DRAG:
             return self._handle_transform_move(scene_pos, event)
+        self._update_hover_cursor(scene_pos)
         return False
 
     def mouse_release(self, event: QMouseEvent) -> bool:
@@ -271,7 +315,9 @@ class SelectTool(BaseTool):
             return False
 
         if self._state == _State.DRAGGING:
-            return self._handle_drag_release()
+            handled = self._handle_drag_release()
+            self._update_hover_cursor(scene_pos)
+            return handled
         elif self._state == _State.RUBBER_BAND:
             return self._handle_rubber_band_release(scene_pos, event)
         elif self._state == _State.HANDLE_DRAG:
@@ -365,6 +411,11 @@ class SelectTool(BaseTool):
                 dy = self._drag_total.y()
                 QToolTip.showText(global_pos, f"\u0394X: {dx:+.0f}  \u0394Y: {dy:+.0f}")
         return True
+
+    def _set_cursor(self, cursor: Qt.CursorShape) -> None:
+        view = self._view
+        if view is not None:
+            view.set_hover_cursor(cursor)
 
     def _handle_drag_release(self) -> bool:
         total = self._drag_total

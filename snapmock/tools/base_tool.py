@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QContextMenuEvent, QKeyEvent, QMouseEvent
+from PyQt6.QtGui import QContextMenuEvent, QCursor, QKeyEvent, QMouseEvent
 
 if TYPE_CHECKING:
     from PyQt6.QtWidgets import QToolBar
@@ -58,8 +58,8 @@ class BaseTool(ABC):
         """Human-readable name for toolbar/tooltip."""
 
     @property
-    def cursor(self) -> Qt.CursorShape:
-        """Cursor to display when this tool is active."""
+    def cursor(self) -> Qt.CursorShape | QCursor:
+        """Cursor to display when this tool is active (General UI PRD 6.6)."""
         return Qt.CursorShape.ArrowCursor
 
     # --- lifecycle ---

@@ -6,7 +6,7 @@ from enum import Enum, auto
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
-from PyQt6.QtGui import QBrush, QColor, QPen
+from PyQt6.QtGui import QBrush, QColor, QCursor, QPen
 from PyQt6.QtWidgets import (
     QGraphicsEllipseItem,
     QGraphicsItem,
@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
 )
 
 from snapmock.core.theme_manager import current_theme
+from snapmock.ui.cursors import rotate_cursor
 
 if TYPE_CHECKING:
     from snapmock.core.scene import SnapScene
@@ -47,7 +48,6 @@ _CURSOR_MAP: dict[HandlePosition, Qt.CursorShape] = {
     HandlePosition.BOTTOM_LEFT: Qt.CursorShape.SizeBDiagCursor,
     HandlePosition.BOTTOM_CENTER: Qt.CursorShape.SizeVerCursor,
     HandlePosition.BOTTOM_RIGHT: Qt.CursorShape.SizeFDiagCursor,
-    HandlePosition.ROTATE: Qt.CursorShape.CrossCursor,
 }
 
 # Corner handles used for proportional resize
@@ -95,7 +95,7 @@ class RotateHandleItem(QGraphicsEllipseItem):
         self.position = HandlePosition.ROTATE
         self.apply_theme()
         self.setZValue(999998)
-        self.setCursor(Qt.CursorShape.CrossCursor)
+        self.setCursor(rotate_cursor())
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, False)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
 
@@ -200,6 +200,10 @@ class TransformHandles(QGraphicsItemGroup):
             if hr.contains(scene_pos):
                 return pos
         return None
+
+    def cursor_for(self, handle_pos: HandlePosition) -> QCursor:
+        """The cursor the handle at *handle_pos* shows (General UI PRD 6.6)."""
+        return self._handles[handle_pos].cursor()
 
     def anchor_for_handle(self, handle_pos: HandlePosition) -> QPointF:
         """Return the anchor point (opposite corner/edge) for a resize handle."""

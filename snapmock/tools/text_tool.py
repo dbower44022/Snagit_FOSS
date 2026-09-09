@@ -42,6 +42,7 @@ from snapmock.core.theme_manager import current_theme
 from snapmock.items.callout_item import CalloutItem
 from snapmock.items.text_item import TextItem
 from snapmock.tools.base_tool import BaseTool
+from snapmock.ui.cursors import text_hover_cursor
 from snapmock.ui.find_replace_bar import FindReplaceBar
 
 if TYPE_CHECKING:
@@ -362,6 +363,9 @@ class TextTool(BaseTool):
     def deactivate(self) -> None:
         self._cleanup_drag()
         self._finish_editing()
+        view = self._view
+        if view is not None:
+            view.set_hover_cursor(None)
         super().deactivate()
 
     def cancel(self) -> None:
@@ -407,11 +411,12 @@ class TextTool(BaseTool):
         return True
 
     def mouse_move(self, event: QMouseEvent) -> bool:
-        if self._drag_start is None or self._drag_preview is None or self._scene is None:
-            return False
-
         view = self._view
-        if view is None:
+        if view is None or self._scene is None:
+            return False
+        if self._drag_start is None or self._drag_preview is None:
+            if self._editing_item is None:
+                self._update_hover_cursor(view.mapToScene(event.pos()))
             return False
 
         current = view.mapToScene(event.pos())
@@ -506,6 +511,23 @@ class TextTool(BaseTool):
             # Let the editor widget handle all other keys
             return False
         return False
+
+    def _update_hover_cursor(self, scene_pos: QPointF) -> None:
+        """PRD 6.6: the highlighted I-beam over an existing text item, forbidden over one
+        on a locked layer, the plain I-beam elsewhere."""
+        view = self._view
+        if view is None or self._scene is None:
+            return
+        if self._text_item_at(scene_pos) is not None:
+            view.set_hover_cursor(text_hover_cursor())
+            return
+        for gitem in self._scene.items(scene_pos):
+            if isinstance(gitem, (TextItem, CalloutItem)):
+                layer = self._scene.layer_manager.layer_by_id(gitem.layer_id)
+                if layer is not None and layer.locked and layer.visible:
+                    view.set_hover_cursor(Qt.CursorShape.ForbiddenCursor)
+                    return
+        view.set_hover_cursor(None)
 
     def _text_item_at(self, scene_pos: QPointF) -> _TextLike | None:
         """Find a TextItem or CalloutItem under the given scene position."""

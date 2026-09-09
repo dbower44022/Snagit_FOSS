@@ -3423,7 +3423,7 @@ class MainWindow(QMainWindow):
             event.key() == Qt.Key.Key_Alt
             and not event.isAutoRepeat()
             and self._momentary_tool is None
-            and self._tool_manager.active_tool_id not in ("eyedropper", "pan")
+            and self._tool_manager.active_tool_id not in ("eyedropper", "pan", "zoom")
         ):
             active = self._tool_manager.active_tool
             if active is None or not active.is_active_operation:

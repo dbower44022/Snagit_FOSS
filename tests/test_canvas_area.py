@@ -60,8 +60,10 @@ def test_cursor_applied_on_tool_change(main_window: "MainWindow") -> None:  # ty
     # Select tool default is ArrowCursor
     main_window.tool_manager.activate("select")
     assert vp.cursor().shape() == Qt.CursorShape.ArrowCursor
-    # Raster select tool uses CrossCursor
+    # Raster select tool uses the crosshair-with-square pixmap cursor (PRD 6.6)
     main_window.tool_manager.activate("raster_select")
+    assert vp.cursor().shape() == Qt.CursorShape.BitmapCursor
+    main_window.tool_manager.activate("rectangle")
     assert vp.cursor().shape() == Qt.CursorShape.CrossCursor
 
 
