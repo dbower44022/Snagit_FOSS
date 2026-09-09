@@ -126,7 +126,11 @@ class ReorderLayerCommand(BaseCommand):
 
 
 class ChangeLayerPropertyCommand(BaseCommand):
-    """Change a layer property (visibility, lock, opacity, name)."""
+    """Change a layer property (visibility, lock, opacity, name).
+
+    With *mergeable* set, consecutive changes to the same property of the
+    same layer collapse into one undo entry (the Layer Panel's opacity slider).
+    """
 
     def __init__(
         self,
@@ -135,12 +139,29 @@ class ChangeLayerPropertyCommand(BaseCommand):
         prop_name: str,
         old_value: object,
         new_value: object,
+        *,
+        mergeable: bool = False,
     ) -> None:
         self._mgr = manager
         self._layer_id = layer_id
         self._prop_name = prop_name
         self._old_value = old_value
         self._new_value = new_value
+        self._mergeable = mergeable
+
+    @property
+    def merge_id(self) -> int:
+        if not self._mergeable:
+            return 0
+        return hash((self._layer_id, self._prop_name)) & 0x7FFFFFFF or 1
+
+    def merge_with(self, other: BaseCommand) -> bool:
+        if not isinstance(other, ChangeLayerPropertyCommand) or not other._mergeable:
+            return False
+        if other._layer_id != self._layer_id or other._prop_name != self._prop_name:
+            return False
+        self._new_value = other._new_value
+        return True
 
     def _apply(self, value: object) -> None:
         if self._prop_name == "visible":

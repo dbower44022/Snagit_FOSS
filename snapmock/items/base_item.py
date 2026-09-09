@@ -25,6 +25,8 @@ class SnapGraphicsItem(QGraphicsObject):
         self._locked: bool = False
         self._flip_horizontal: bool = False
         self._flip_vertical: bool = False
+        self._layer_opacity: float = 1.0
+        self._paint_saved: bool = False
         self.setFlag(QGraphicsObject.GraphicsItemFlag.ItemIsSelectable, True)
         self.setFlag(QGraphicsObject.GraphicsItemFlag.ItemIsMovable, False)
         self.setFlag(QGraphicsObject.GraphicsItemFlag.ItemSendsGeometryChanges, True)
@@ -46,6 +48,23 @@ class SnapGraphicsItem(QGraphicsObject):
     @layer_id.setter
     def layer_id(self, value: str) -> None:
         self._layer_id = value
+        scene = self.scene()
+        apply_state = getattr(scene, "apply_layer_state", None)
+        if callable(apply_state):
+            apply_state(self)
+
+    @property
+    def layer_opacity(self) -> float:
+        """The owning layer's opacity, applied on top of the item's own (Tech Arch 3.9.1).
+
+        Runtime state set by the scene; never serialized.
+        """
+        return self._layer_opacity
+
+    @layer_opacity.setter
+    def layer_opacity(self, value: float) -> None:
+        self._layer_opacity = max(0.0, min(1.0, value))
+        self.update()
 
     @property
     def locked(self) -> bool:
@@ -76,9 +95,16 @@ class SnapGraphicsItem(QGraphicsObject):
         self.update()
 
     def _apply_flip(self, painter: QPainter) -> None:
-        """Apply flip transform if either flip flag is set. Call at start of paint()."""
+        """Apply the layer opacity and any flip transform. Call at start of paint()."""
+        self._paint_saved = (
+            self._flip_horizontal or self._flip_vertical or self._layer_opacity < 1.0
+        )
+        if not self._paint_saved:
+            return
+        painter.save()
+        if self._layer_opacity < 1.0:
+            painter.setOpacity(painter.opacity() * self._layer_opacity)
         if self._flip_horizontal or self._flip_vertical:
-            painter.save()
             br = self.boundingRect()
             cx = br.center().x()
             cy = br.center().y()
@@ -90,9 +116,10 @@ class SnapGraphicsItem(QGraphicsObject):
             painter.translate(-cx, -cy)
 
     def _end_flip(self, painter: QPainter) -> None:
-        """Restore painter state after flip. Call at end of paint()."""
-        if self._flip_horizontal or self._flip_vertical:
+        """Restore painter state after :meth:`_apply_flip`. Call at end of paint()."""
+        if self._paint_saved:
             painter.restore()
+            self._paint_saved = False
 
     # --- position / transform property shims ---
 

@@ -240,7 +240,7 @@ class MainWindow(QMainWindow):
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self._tool_options)
         self._tool_options.set_selection_manager(self._selection_manager)
 
-        self._layer_panel = LayerPanel(self._scene.layer_manager, self)
+        self._layer_panel = LayerPanel(self._scene, self)
         self._layer_panel.setObjectName("LayerPanel")
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._layer_panel)
 
@@ -2863,18 +2863,13 @@ class MainWindow(QMainWindow):
             show_not_available(self, "Flatten All", self._MERGE_DEFERRAL)
 
     def _layer_rename(self) -> None:
-        from PyQt6.QtWidgets import QInputDialog
-
-        lm = self._scene.layer_manager
+        """Rename Layer (F2) opens the Layer Panel's inline editor (General UI PRD 7.2)."""
         active = self._require_active_layer("Rename Layer")
         if active is None:
             return
-        new_name, ok = QInputDialog.getText(self, "Rename Layer", "New name:", text=active.name)
-        if ok and new_name:
-            from snapmock.commands.layer_commands import ChangeLayerPropertyCommand
-
-            cmd = ChangeLayerPropertyCommand(lm, active.layer_id, "name", active.name, new_name)
-            self._scene.command_stack.push(cmd)
+        if not self._layer_panel.isVisible():
+            self._layer_panel.show()
+        self._layer_panel.begin_rename(active.layer_id)
 
     def _layer_properties(self) -> None:
         active = self._require_active_layer("Layer Properties")
@@ -3346,7 +3341,7 @@ class MainWindow(QMainWindow):
         self._tool_manager.activate(prev_tool_id)
         # Panels are created after the first document; guard for construction order.
         if hasattr(self, "_layer_panel"):
-            self._layer_panel.set_manager(doc.scene.layer_manager)
+            self._layer_panel.set_scene(doc.scene)
         if hasattr(self, "_property_panel"):
             self._property_panel.set_scene(doc.scene)
             self._property_panel.set_selection(doc.selection_manager)

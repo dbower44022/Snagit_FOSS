@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from PyQt6.QtCore import QRectF, QSizeF, pyqtSignal
 from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import QGraphicsScene
+from PyQt6.QtWidgets import QGraphicsItem, QGraphicsScene
 
 from snapmock.config.constants import (
     DEFAULT_CANVAS_HEIGHT,
@@ -45,6 +45,8 @@ class SnapScene(QGraphicsScene):
 
         self._layer_manager = LayerManager(self)
         self._command_stack = CommandStack(self)
+        self._layer_manager.layer_visibility_changed.connect(self._on_layer_visibility_changed)
+        self._layer_manager.layer_opacity_changed.connect(self._on_layer_opacity_changed)
 
         # Create default layer
         self._layer_manager.add_layer("Layer 1")
@@ -83,6 +85,42 @@ class SnapScene(QGraphicsScene):
         self._canvas_size = QSizeF(size)
         self._update_scene_rect()
         self.canvas_size_changed.emit(self._canvas_size)
+
+    # --- layer state on items (Technical Architecture PRD 3.9.1) ---
+
+    def addItem(self, item: QGraphicsItem | None) -> None:  # noqa: N802
+        super().addItem(item)
+        self.apply_layer_state(item)
+
+    def apply_layer_state(self, item: QGraphicsItem | None) -> None:
+        """Give *item* its layer's visibility and opacity; a no-op for non-annotation items."""
+        from snapmock.items.base_item import SnapGraphicsItem
+
+        if not isinstance(item, SnapGraphicsItem):
+            return
+        layer = self._layer_manager.layer_by_id(item.layer_id)
+        if layer is None:
+            return
+        item.setVisible(layer.visible)
+        item.layer_opacity = layer.opacity
+
+    def items_on_layer(self, layer_id: str) -> list[QGraphicsItem]:
+        from snapmock.items.base_item import SnapGraphicsItem
+
+        return [
+            i for i in self.items() if isinstance(i, SnapGraphicsItem) and i.layer_id == layer_id
+        ]
+
+    def _on_layer_visibility_changed(self, layer_id: str, visible: bool) -> None:
+        for item in self.items_on_layer(layer_id):
+            item.setVisible(visible)
+
+    def _on_layer_opacity_changed(self, layer_id: str, opacity: float) -> None:
+        from snapmock.items.base_item import SnapGraphicsItem
+
+        for item in self.items_on_layer(layer_id):
+            if isinstance(item, SnapGraphicsItem):
+                item.layer_opacity = opacity
 
     # --- guides (General UI PRD 6.5); mutate through commands/guide_commands.py ---
 

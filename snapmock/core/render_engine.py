@@ -85,23 +85,35 @@ class RenderEngine:
         self,
         layer_id: str,
         rect: QRectF,
+        scale: float = 1.0,
     ) -> QImage:
-        """Render only items on *layer_id* within *rect* to a QImage."""
+        """Render only items on *layer_id* within *rect* to a QImage.
+
+        *scale* multiplies the output size, as in :meth:`render_region`. Items
+        on the layer are drawn even when the layer is hidden, so a Layer Panel
+        thumbnail shows what the layer holds.
+        """
         from snapmock.items.base_item import SnapGraphicsItem
 
-        w = max(1, int(rect.width()))
-        h = max(1, int(rect.height()))
+        w = max(1, round(rect.width() * scale))
+        h = max(1, round(rect.height() * scale))
 
         image = QImage(w, h, QImage.Format.Format_ARGB32_Premultiplied)
         image.fill(Qt.GlobalColor.transparent)
 
-        # Temporarily hide items not on the target layer
+        # Temporarily hide items not on the target layer, and show the target's
         hidden_items: list[SnapGraphicsItem] = []
+        shown_items: list[SnapGraphicsItem] = []
         for gitem in self._scene.items():
-            if isinstance(gitem, SnapGraphicsItem) and gitem.layer_id != layer_id:
+            if not isinstance(gitem, SnapGraphicsItem):
+                continue
+            if gitem.layer_id != layer_id:
                 if gitem.isVisible():
                     gitem.setVisible(False)
                     hidden_items.append(gitem)
+            elif not gitem.isVisible():
+                gitem.setVisible(True)
+                shown_items.append(gitem)
 
         painter = QPainter(image)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -115,5 +127,7 @@ class RenderEngine:
         # Restore visibility
         for gitem in hidden_items:
             gitem.setVisible(True)
+        for gitem in shown_items:
+            gitem.setVisible(False)
 
         return image
