@@ -12,6 +12,7 @@ from snapmock.config.constants import (
     PASTEBOARD_MARGIN,
 )
 from snapmock.core.command_stack import CommandStack
+from snapmock.core.guides import Guide
 from snapmock.core.layer_manager import LayerManager
 
 
@@ -22,10 +23,13 @@ class SnapScene(QGraphicsScene):
     -------
     canvas_size_changed(QSizeF)
         Emitted when the logical canvas size changes.
+    guides_changed()
+        Emitted after the guide list changes (General UI PRD 6.5).
     """
 
     canvas_size_changed = pyqtSignal(QSizeF)
     background_changed = pyqtSignal()
+    guides_changed = pyqtSignal()
 
     def __init__(
         self,
@@ -36,6 +40,7 @@ class SnapScene(QGraphicsScene):
         super().__init__(parent)  # type: ignore[arg-type]
         self._canvas_size = QSizeF(width, height)
         self._background_color: QColor = QColor("white")
+        self._guides: list[Guide] = []
         self._update_scene_rect()
 
         self._layer_manager = LayerManager(self)
@@ -78,6 +83,36 @@ class SnapScene(QGraphicsScene):
         self._canvas_size = QSizeF(size)
         self._update_scene_rect()
         self.canvas_size_changed.emit(self._canvas_size)
+
+    # --- guides (General UI PRD 6.5); mutate through commands/guide_commands.py ---
+
+    @property
+    def guides(self) -> list[Guide]:
+        return list(self._guides)
+
+    def add_guide(self, guide: Guide) -> None:
+        if guide not in self._guides:
+            self._guides.append(guide)
+            self._guides_did_change()
+
+    def remove_guide(self, guide: Guide) -> None:
+        if guide in self._guides:
+            self._guides.remove(guide)
+            self._guides_did_change()
+
+    def replace_guide(self, old: Guide, new: Guide) -> None:
+        if old in self._guides:
+            self._guides[self._guides.index(old)] = new
+            self._guides_did_change()
+
+    def set_guides(self, guides: list[Guide]) -> None:
+        self._guides = list(guides)
+        self._guides_did_change()
+
+    def _guides_did_change(self) -> None:
+        self.guides_changed.emit()
+        # Every view repaints its foreground through Qt's own scene-update path.
+        self.update()
 
     def _update_scene_rect(self) -> None:
         """Expand sceneRect beyond the canvas to provide a pasteboard margin."""

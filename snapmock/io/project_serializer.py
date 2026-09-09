@@ -11,6 +11,7 @@ from PyQt6.QtCore import QBuffer, QIODevice, Qt
 from PyQt6.QtGui import QImage, QPixmap
 
 from snapmock.config.constants import APP_VERSION, PROJECT_FORMAT_VERSION, THUMBNAIL_MAX_SIZE
+from snapmock.core.guides import Guide
 from snapmock.core.layer import Layer
 from snapmock.core.scene import SnapScene
 from snapmock.items.arrow_item import ArrowItem
@@ -89,6 +90,8 @@ def save_project(
             "height": scene.canvas_size.height(),
         },
     }
+    if scene.guides:
+        manifest["guides"] = [g.to_dict() for g in scene.guides]
     if library_metadata:
         manifest["library_metadata"] = dict(library_metadata)
     if capture_metadata:
@@ -262,6 +265,12 @@ def load_project(path: Path) -> SnapScene:
         if cls is not None:
             item = cls.deserialize(item_data)
             scene.addItem(item)
+
+    raw_guides = manifest.get("guides", [])
+    if isinstance(raw_guides, list):
+        guides = [g for g in (Guide.from_dict(entry) for entry in raw_guides) if g is not None]
+        if guides:
+            scene.set_guides(guides)
 
     scene.command_stack.clear()
     scene.command_stack.mark_clean()

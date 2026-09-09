@@ -752,6 +752,31 @@ class MainWindow(QMainWindow):
         self._crosshairs_action.toggled.connect(self._toggle_crosshairs)
         view_menu.addAction(self._crosshairs_action)
 
+        # Guides (PRD 3.3, 6.5)
+        self._guides_action = QAction("Show G&uides", self)
+        self._guides_action.setCheckable(True)
+        self._guides_action.setShortcut(QKeySequence(SHORTCUTS["view.toggle_guides"]))
+        self._guides_action.setChecked(self._settings.guides_visible())
+        self._guides_action.toggled.connect(self._toggle_guides)
+        view_menu.addAction(self._guides_action)
+        self._register("view.toggle_guides", self._guides_action)
+
+        self._snap_guides_action = QAction("Snap to Gu&ides", self)
+        self._snap_guides_action.setCheckable(True)
+        self._snap_guides_action.setChecked(self._settings.snap_to_guides())
+        self._snap_guides_action.toggled.connect(self._toggle_snap_to_guides)
+        view_menu.addAction(self._snap_guides_action)
+
+        self._lock_guides_action = QAction("Loc&k Guides", self)
+        self._lock_guides_action.setCheckable(True)
+        self._lock_guides_action.setChecked(self._settings.guides_locked())
+        self._lock_guides_action.toggled.connect(self._toggle_lock_guides)
+        view_menu.addAction(self._lock_guides_action)
+
+        clear_guides = view_menu.addAction("Clear &All Guides")
+        if clear_guides is not None:
+            clear_guides.triggered.connect(self._view_clear_guides)
+
         view_menu.addSeparator()
 
         # Panel visibility toggles
@@ -1530,6 +1555,44 @@ class MainWindow(QMainWindow):
 
     def _toggle_snap_to_grid(self, checked: bool) -> None:
         self._settings.set_snap_to_grid(checked)
+        for doc in self._documents.documents:
+            doc.view.set_snap_to_grid(checked)
+
+    def _toggle_guides(self, checked: bool) -> None:
+        """View > Show Guides (PRD 3.3): guides stay in place when hidden."""
+        self._settings.set_guides_visible(checked)
+        for doc in self._documents.documents:
+            doc.view.set_guides_visible(checked)
+
+    def _toggle_snap_to_guides(self, checked: bool) -> None:
+        self._settings.set_snap_to_guides(checked)
+        for doc in self._documents.documents:
+            doc.view.set_snap_to_guides(checked)
+
+    def _toggle_lock_guides(self, checked: bool) -> None:
+        self._settings.set_guides_locked(checked)
+        for doc in self._documents.documents:
+            doc.view.set_guides_locked(checked)
+
+    def _view_clear_guides(self) -> None:
+        """View > Clear All Guides (PRD 3.3): confirms, then one undoable command."""
+        from snapmock.commands.guide_commands import ClearGuidesCommand
+
+        guides = self._scene.guides
+        if not self._require("Clear All Guides", (bool(guides), "at least one guide")):
+            return
+        count = len(guides)
+        noun = "guide" if count == 1 else "guides"
+        answer = QMessageBox.question(
+            self,
+            "Clear All Guides",
+            f"Remove all {count} {noun} from the canvas?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        self._scene.command_stack.push(ClearGuidesCommand(self._scene))
 
     def _toggle_status_bar(self, checked: bool) -> None:
         self._status_bar.setVisible(checked)
@@ -1916,6 +1979,8 @@ class MainWindow(QMainWindow):
             self._snap_grid_action.blockSignals(True)
             self._snap_grid_action.setChecked(enabled)
             self._snap_grid_action.blockSignals(False)
+            for doc in self._documents.documents:
+                doc.view.set_snap_to_grid(enabled)
 
         if "autosave_interval" in changes:
             # 0 means disabled (PRD 11.3); the timer keeps its last positive interval.
@@ -2031,6 +2096,9 @@ class MainWindow(QMainWindow):
             "grid_color",
             "grid_opacity",
             "pixel_grid_zoom",
+            "snap_tolerance",
+            "guide_color",
+            "guide_opacity",
         )
         if any(key in changes for key in view_keys):
             for doc in self._documents.documents:
@@ -3189,6 +3257,10 @@ class MainWindow(QMainWindow):
         view.set_grid_size(self._settings.grid_size())
         view.set_rulers_visible(self._settings.rulers_visible())
         view.set_crosshairs_visible(self._settings.crosshairs_visible())
+        view.set_guides_visible(self._settings.guides_visible())
+        view.set_snap_to_guides(self._settings.snap_to_guides())
+        view.set_guides_locked(self._settings.guides_locked())
+        view.set_snap_to_grid(self._settings.snap_to_grid())
         self._apply_view_preferences(view)
 
     def _apply_view_preferences(self, view: SnapView) -> None:
@@ -3198,6 +3270,8 @@ class MainWindow(QMainWindow):
         view.set_checkerboard(s.checkerboard_size(), s.checkerboard_colors())
         view.set_grid_style(s.grid_color(), s.grid_opacity())
         view.set_pixel_grid_threshold(s.pixel_grid_zoom())
+        view.set_snap_tolerance(s.snap_tolerance())
+        view.set_guide_style(s.guide_color(), s.guide_opacity())
 
     def _apply_tool_defaults(self) -> None:
         """Push Preferences > Tools into every tool's creation defaults (PRD 11.3)."""

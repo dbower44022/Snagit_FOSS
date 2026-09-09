@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import weakref
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QPointF, Qt
-from PyQt6.QtGui import QFont, QPainter, QPaintEvent, QPen, QPolygonF
+from PyQt6.QtGui import QFont, QMouseEvent, QPainter, QPaintEvent, QPen, QPolygonF
 from PyQt6.QtWidgets import QWidget
 
 from snapmock.config.constants import RULER_SIZE
+from snapmock.core.guides import GuideOrientation
 from snapmock.core.theme_manager import current_theme
 
 if TYPE_CHECKING:
@@ -42,13 +44,56 @@ class RulerWidget(QWidget):
     ) -> None:
         super().__init__(parent)
         self._orientation = orientation
-        self._view = view
+        # A weak reference: the view owns its rulers, and a strong reference back would
+        # make a cycle the garbage collector tears down while Qt is still destroying it.
+        self._view_ref: weakref.ref[SnapView] = weakref.ref(view)
         self._cursor_scene_pos: QPointF = QPointF()
         self._font = QFont("Sans Serif", 7)
+        self._dragging_guide: bool = False
+
+    @property
+    def _view(self) -> SnapView:
+        view = self._view_ref()
+        if view is None:
+            raise RuntimeError("RulerWidget outlived its SnapView")
+        return view
 
     def set_cursor_pos(self, x: float, y: float) -> None:
         self._cursor_scene_pos = QPointF(x, y)
         self.update()
+
+    # --- guide creation (General UI PRD 6.5): drag from the ruler onto the canvas ---
+
+    @property
+    def guide_orientation(self) -> GuideOrientation:
+        """A horizontal ruler makes horizontal guides, a vertical ruler vertical ones."""
+        if self._orientation == Qt.Orientation.Horizontal:
+            return GuideOrientation.HORIZONTAL
+        return GuideOrientation.VERTICAL
+
+    def mousePressEvent(self, event: QMouseEvent | None) -> None:  # noqa: N802
+        if event is None or event.button() != Qt.MouseButton.LeftButton:
+            return
+        if self._view.guides_locked:
+            return
+        self._dragging_guide = True
+        self._view.begin_guide_preview(self.guide_orientation)
+        self._view.update_guide_preview(event.globalPosition().toPoint())
+        event.accept()
+
+    def mouseMoveEvent(self, event: QMouseEvent | None) -> None:  # noqa: N802
+        if event is None or not self._dragging_guide:
+            return
+        whole = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+        self._view.update_guide_preview(event.globalPosition().toPoint(), whole)
+        event.accept()
+
+    def mouseReleaseEvent(self, event: QMouseEvent | None) -> None:  # noqa: N802
+        if event is None or not self._dragging_guide:
+            return
+        self._dragging_guide = False
+        self._view.finish_guide_preview()
+        event.accept()
 
     def paintEvent(self, event: QPaintEvent | None) -> None:  # noqa: N802
         if event is None:

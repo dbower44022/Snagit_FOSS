@@ -32,14 +32,18 @@ from snapmock.config.constants import (
     GRID_MIN_PIXEL_SPACING,
     GRID_MINOR_MIN_ZOOM,
     GRID_SIZE_DEFAULT,
+    GUIDE_COLOR_DEFAULT,
+    GUIDE_OPACITY_DEFAULT,
     LIBRARY_PATHS_MIME,
     RULER_SIZE,
+    SNAP_TOLERANCE_DEFAULT,
     ZOOM_DEFAULT,
     ZOOM_MAX,
     ZOOM_MIN,
     ZOOM_PIXEL_GRID_THRESHOLD,
     ZOOM_STEPS,
 )
+from snapmock.core.guides import Guide, GuideOrientation, snap_rect_delta, snap_value
 from snapmock.core.scene import SnapScene
 from snapmock.core.theme_manager import current_theme
 
@@ -47,6 +51,9 @@ if TYPE_CHECKING:
     from snapmock.tools.tool_manager import ToolManager
 
 _IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"}
+
+# Screen pixels within which the pointer is "over" a guide line (General UI PRD 6.5)
+GUIDE_HIT_TOLERANCE = 4
 
 
 class SnapView(QGraphicsView):
@@ -79,6 +86,20 @@ class SnapView(QGraphicsView):
         # Crosshairs (General UI PRD 3.3): full-width lines through the cursor position
         self._crosshairs_visible: bool = False
         self._crosshair_pos: QPointF | None = None
+
+        # Guides and snapping (General UI PRD 6.5). The guides themselves live on the scene.
+        self._guides_visible: bool = True
+        self._guides_locked: bool = False
+        self._snap_to_guides: bool = False
+        self._snap_to_grid: bool = False
+        self._snap_tolerance: int = SNAP_TOLERANCE_DEFAULT
+        self._guide_color: QColor = QColor(GUIDE_COLOR_DEFAULT)
+        self._guide_opacity: int = GUIDE_OPACITY_DEFAULT
+        self._guide_preview: Guide | None = None  # being dragged out of a ruler
+        self._guide_drag: Guide | None = None  # being moved with the mouse
+        self._guide_drag_pos: float = 0.0
+        self._guide_hover: bool = False
+        self._guide_preview_inside: bool = False
 
         # Cached checkerboard tile, rebuilt when the theme or its preferences change
         self._checkerboard_tile: QPixmap | None = None
@@ -210,6 +231,218 @@ class SnapView(QGraphicsView):
         painter.setPen(pen)
         painter.drawLine(QPointF(rect.left(), pos.y()), QPointF(rect.right(), pos.y()))
         painter.drawLine(QPointF(pos.x(), rect.top()), QPointF(pos.x(), rect.bottom()))
+
+    # --- guides (General UI PRD 6.5) ---
+
+    @property
+    def guides_visible(self) -> bool:
+        return self._guides_visible
+
+    def set_guides_visible(self, visible: bool) -> None:
+        """View > Show Guides; hidden guides stay in place and cannot be dragged."""
+        self._guides_visible = visible
+        self._repaint()
+
+    @property
+    def guides_locked(self) -> bool:
+        return self._guides_locked
+
+    def set_guides_locked(self, locked: bool) -> None:
+        """View > Lock Guides: no mouse move or delete; Clear All Guides still works."""
+        self._guides_locked = locked
+
+    @property
+    def snap_to_guides(self) -> bool:
+        return self._snap_to_guides
+
+    def set_snap_to_guides(self, enabled: bool) -> None:
+        self._snap_to_guides = enabled
+
+    @property
+    def snap_to_grid(self) -> bool:
+        return self._snap_to_grid
+
+    def set_snap_to_grid(self, enabled: bool) -> None:
+        """View > Snap to Grid, independent of whether the grid is shown."""
+        self._snap_to_grid = enabled
+
+    def set_snap_tolerance(self, pixels: int) -> None:
+        """Preferences > Canvas & Grid snap tolerance, in screen pixels."""
+        self._snap_tolerance = max(1, pixels)
+
+    def set_guide_style(self, color: QColor, opacity_pct: int) -> None:
+        """Preferences > Canvas & Grid guide colour and opacity."""
+        self._guide_color = QColor(color)
+        self._guide_opacity = max(1, min(100, opacity_pct))
+        self._repaint()
+
+    @property
+    def guide_pen(self) -> QPen:
+        color = QColor(self._guide_color)
+        color.setAlpha(round(self._guide_opacity * 2.55))
+        return QPen(color, 0)
+
+    def _scene_tolerance(self) -> float:
+        """The snap tolerance converted from screen pixels to scene units."""
+        return self._snap_tolerance / max(0.01, self._zoom_pct / 100.0)
+
+    def snap_point(self, pos: QPointF) -> QPointF:
+        """*pos* snapped to the grid and then to the guides, as the View toggles say."""
+        snap = self._snap_scene
+        x, y = pos.x(), pos.y()
+        if self._snap_to_grid:
+            grid = self._grid_size
+            x = round(x / grid) * grid
+            y = round(y / grid) * grid
+        if self._snap_to_guides and snap is not None and snap.guides:
+            tolerance = self._scene_tolerance()
+            vertical = [
+                g.position for g in snap.guides if g.orientation is GuideOrientation.VERTICAL
+            ]
+            horizontal = [
+                g.position for g in snap.guides if g.orientation is GuideOrientation.HORIZONTAL
+            ]
+            gx = snap_value(x, vertical, tolerance)
+            gy = snap_value(y, horizontal, tolerance)
+            x = gx if gx is not None else x
+            y = gy if gy is not None else y
+        return QPointF(x, y)
+
+    def snap_rect_offset(self, rect: QRectF) -> QPointF:
+        """The offset that puts an edge or the centre of *rect* on a guide, or zero."""
+        snap = self._snap_scene
+        if not self._snap_to_guides or snap is None or not snap.guides:
+            return QPointF()
+        return snap_rect_delta(rect, snap.guides, self._scene_tolerance())
+
+    def _guides_interactive(self) -> bool:
+        """Guides take the mouse only under the Select tool, so drawing near one still draws."""
+        if not self._guides_visible or self._guides_locked:
+            return False
+        tool = self._tool_manager.active_tool if self._tool_manager is not None else None
+        if tool is None:
+            return True
+        return tool.tool_id == "select" and not tool.is_active_operation
+
+    def guide_at(self, viewport_pos: QPoint) -> Guide | None:
+        """The guide within GUIDE_HIT_TOLERANCE screen pixels of *viewport_pos*, if any."""
+        snap = self._snap_scene
+        if snap is None:
+            return None
+        best: Guide | None = None
+        best_distance = float(GUIDE_HIT_TOLERANCE)
+        for guide in snap.guides:
+            if guide.orientation is GuideOrientation.VERTICAL:
+                screen = self.mapFromScene(QPointF(guide.position, 0)).x()
+                distance = abs(screen - viewport_pos.x())
+            else:
+                screen = self.mapFromScene(QPointF(0, guide.position)).y()
+                distance = abs(screen - viewport_pos.y())
+            if distance <= best_distance:
+                best, best_distance = guide, distance
+        return best
+
+    def _guide_value(
+        self, orientation: GuideOrientation, viewport_pos: QPoint, whole: bool
+    ) -> float:
+        scene_pos = self.mapToScene(viewport_pos)
+        value = scene_pos.x() if orientation is GuideOrientation.VERTICAL else scene_pos.y()
+        return float(round(value)) if whole else value
+
+    @staticmethod
+    def _shift_held(event: QMouseEvent) -> bool:
+        return bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+
+    # Creation from a ruler: the ruler owns the mouse and reports global positions.
+
+    def begin_guide_preview(self, orientation: GuideOrientation) -> None:
+        self._guide_preview = Guide(orientation, 0.0)
+        self._guide_preview_inside = False
+
+    def update_guide_preview(self, global_pos: QPoint, whole: bool = False) -> None:
+        """Move the preview line to the pointer; off the viewport there is no preview."""
+        if self._guide_preview is None:
+            return
+        vp = self.viewport()
+        if vp is None:
+            return
+        local = vp.mapFromGlobal(global_pos)
+        self._guide_preview_inside = vp.rect().contains(local)
+        if self._guide_preview_inside:
+            value = self._guide_value(self._guide_preview.orientation, local, whole)
+            self._guide_preview = self._guide_preview.moved_to(value)
+        self._repaint()
+
+    def finish_guide_preview(self) -> None:
+        """Place the guide where the preview is, if the pointer is over the viewport."""
+        preview = self._guide_preview
+        self._guide_preview = None
+        self._repaint()
+        snap = self._snap_scene
+        if preview is None or snap is None or not self._guide_preview_inside:
+            return
+        from snapmock.commands.guide_commands import AddGuideCommand
+
+        snap.command_stack.push(AddGuideCommand(snap, preview))
+
+    @property
+    def guide_preview(self) -> Guide | None:
+        return self._guide_preview if self._guide_preview_inside else None
+
+    # Moving and deleting with the mouse
+
+    def _start_guide_drag(self, guide: Guide) -> None:
+        self._guide_drag = guide
+        self._guide_drag_pos = guide.position
+
+    def _move_guide_drag(self, event: QMouseEvent) -> None:
+        if self._guide_drag is None:
+            return
+        pos = event.position().toPoint()
+        self._guide_drag_pos = self._guide_value(
+            self._guide_drag.orientation, pos, self._shift_held(event)
+        )
+        self._repaint()
+
+    def _finish_guide_drag(self, event: QMouseEvent) -> None:
+        guide = self._guide_drag
+        self._guide_drag = None
+        snap = self._snap_scene
+        if guide is None or snap is None:
+            return
+        from snapmock.commands.guide_commands import MoveGuideCommand, RemoveGuideCommand
+
+        pos = event.position().toPoint()
+        onto_ruler = self._rulers_visible and (
+            pos.y() < 0 if guide.orientation is GuideOrientation.HORIZONTAL else pos.x() < 0
+        )
+        if onto_ruler:
+            snap.command_stack.push(RemoveGuideCommand(snap, guide))
+        elif self._guide_drag_pos != guide.position:
+            snap.command_stack.push(MoveGuideCommand(snap, guide, self._guide_drag_pos))
+        self._repaint()
+
+    @property
+    def dragging_guide(self) -> Guide | None:
+        return self._guide_drag
+
+    def _draw_guides(self, painter: QPainter, rect: QRectF) -> None:
+        snap = self._snap_scene
+        if snap is None:
+            return
+        painter.setPen(self.guide_pen)
+        lines = [
+            g.moved_to(self._guide_drag_pos) if g == self._guide_drag else g for g in snap.guides
+        ]
+        if self._guide_preview is not None and self._guide_preview_inside:
+            lines.append(self._guide_preview)
+        for guide in lines:
+            if guide.orientation is GuideOrientation.HORIZONTAL:
+                y = guide.position
+                painter.drawLine(QPointF(rect.left(), y), QPointF(rect.right(), y))
+            else:
+                x = guide.position
+                painter.drawLine(QPointF(x, rect.top()), QPointF(x, rect.bottom()))
 
     # --- theme and appearance preferences (General UI PRD 11.3, 13.4) ---
 
@@ -568,6 +801,8 @@ class SnapView(QGraphicsView):
             return
         if self._grid_visible:
             self._draw_grid(painter, rect, snap)
+        if self._guides_visible:
+            self._draw_guides(painter, rect)
         if self._crosshairs_visible:
             self._draw_crosshairs(painter, rect)
 
@@ -667,10 +902,10 @@ class SnapView(QGraphicsView):
 
     def scrollContentsBy(self, dx: int, dy: int) -> None:  # noqa: N802
         super().scrollContentsBy(dx, dy)
-        if self._h_ruler is not None:
-            self._h_ruler.update()
-        if self._v_ruler is not None:
-            self._v_ruler.update()
+        # Qt can call this while the view is being torn down, after Python cleared its dict
+        for ruler in (getattr(self, "_h_ruler", None), getattr(self, "_v_ruler", None)):
+            if ruler is not None:
+                ruler.update()
 
     def leaveEvent(self, event: object) -> None:  # noqa: N802
         """Stop auto-scroll and hide the crosshairs when the mouse leaves the viewport."""
@@ -708,6 +943,13 @@ class SnapView(QGraphicsView):
             self._pan_start = event.position().toPoint()
             event.accept()
             return
+        # A guide under the pointer is moved rather than handed to the tool (PRD 6.5)
+        if event.button() == Qt.MouseButton.LeftButton and self._guides_interactive():
+            guide = self.guide_at(event.position().toPoint())
+            if guide is not None:
+                self._start_guide_drag(guide)
+                event.accept()
+                return
         # Delegate to tool manager
         if self._tool_manager is not None and self._tool_manager.handle_mouse_press(event):
             event.accept()
@@ -732,6 +974,27 @@ class SnapView(QGraphicsView):
         ):
             self._check_auto_scroll(event.position().toPoint())
 
+        # Guide drag, or the resize cursor while hovering a guide
+        if self._guide_drag is not None:
+            self._move_guide_drag(event)
+            event.accept()
+            return
+        if event.buttons() == Qt.MouseButton.NoButton and self._guides_interactive():
+            guide = self.guide_at(event.position().toPoint())
+            if guide is not None:
+                vp = self.viewport()
+                if vp is not None:
+                    vertical = guide.orientation is GuideOrientation.VERTICAL
+                    vp.setCursor(
+                        Qt.CursorShape.SizeHorCursor if vertical else Qt.CursorShape.SizeVerCursor
+                    )
+                self._guide_hover = True
+                event.accept()
+                return
+            if self._guide_hover:
+                self._guide_hover = False
+                self._apply_tool_cursor()
+
         # Middle-mouse pan
         if self._panning:
             delta = event.position().toPoint() - self._pan_start
@@ -754,6 +1017,10 @@ class SnapView(QGraphicsView):
         if event is None:
             return
         self._stop_auto_scroll()
+        if self._guide_drag is not None and event.button() == Qt.MouseButton.LeftButton:
+            self._finish_guide_drag(event)
+            event.accept()
+            return
         # Middle-mouse pan
         if event.button() == Qt.MouseButton.MiddleButton and self._panning:
             self._panning = False

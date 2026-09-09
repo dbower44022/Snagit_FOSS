@@ -51,7 +51,7 @@ class EllipseTool(BaseTool):
     def mouse_press(self, event: QMouseEvent) -> bool:
         if self._scene is None or event.button() != Qt.MouseButton.LeftButton:
             return False
-        self._start = (
+        self._start = self._snap_pos(
             self._scene.views()[0].mapToScene(event.pos()) if self._scene.views() else QPointF()
         )
         self._item = EllipseItem(rect=QRectF(0, 0, 0, 0))
@@ -66,7 +66,7 @@ class EllipseTool(BaseTool):
     def mouse_move(self, event: QMouseEvent) -> bool:
         if self._item is None or self._scene is None:
             return False
-        current = (
+        current = self._snap_pos(
             self._scene.views()[0].mapToScene(event.pos()) if self._scene.views() else QPointF()
         )
         rect = QRectF(self._start, current).normalized()

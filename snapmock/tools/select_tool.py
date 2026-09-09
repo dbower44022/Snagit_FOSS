@@ -379,11 +379,10 @@ class SelectTool(BaseTool):
         else:
             self._constrain_axis = None
 
-        # Snap to grid if visible
+        # View > Snap to Grid: the total movement lands on grid multiples
         view = self._view
-        if view is not None and view._grid_visible:  # noqa: SLF001
+        if view is not None and view.snap_to_grid:
             grid = view._grid_size  # noqa: SLF001
-            # Snap the new total movement to grid
             new_total_x = self._drag_total.x() + raw_delta.x()
             new_total_y = self._drag_total.y() + raw_delta.y()
             snapped_x = round(new_total_x / grid) * grid
@@ -392,6 +391,10 @@ class SelectTool(BaseTool):
                 snapped_x - self._drag_total.x(),
                 snapped_y - self._drag_total.y(),
             )
+        # View > Snap to Guides: an edge or the centre of the selection lands on a guide
+        if view is not None and view.snap_to_guides:
+            moved = self._selection_bounding_rect(self._drag_items).translated(raw_delta)
+            raw_delta += view.snap_rect_offset(moved)
 
         for item in self._drag_items:
             item.moveBy(raw_delta.x(), raw_delta.y())
@@ -514,7 +517,10 @@ class SelectTool(BaseTool):
 
         if self._handle_pos == HandlePosition.ROTATE:
             self._apply_rotation(scene_pos, shift)
-        elif self._handle_pos in CORNER_HANDLES:
+            self._update_handles()
+            return True
+        scene_pos = self._snap_pos(scene_pos)
+        if self._handle_pos in CORNER_HANDLES:
             self._apply_corner_resize(scene_pos, shift, alt)
         elif self._handle_pos in EDGE_HANDLES:
             self._apply_edge_resize(scene_pos, ctrl, shift)

@@ -111,6 +111,25 @@ class AppSettings:
     def set_crosshairs_visible(self, visible: bool) -> None:
         self._qs.setValue("view/crosshairsVisible", visible)
 
+    def guides_visible(self) -> bool:
+        """View > Show Guides (General UI PRD 3.3); guides stay in place when hidden."""
+        return _as_bool(self._qs.value("view/guidesVisible", True))
+
+    def set_guides_visible(self, visible: bool) -> None:
+        self._qs.setValue("view/guidesVisible", visible)
+
+    def snap_to_guides(self) -> bool:
+        return _as_bool(self._qs.value("view/snapToGuides", False))
+
+    def set_snap_to_guides(self, enabled: bool) -> None:
+        self._qs.setValue("view/snapToGuides", enabled)
+
+    def guides_locked(self) -> bool:
+        return _as_bool(self._qs.value("view/guidesLocked", False))
+
+    def set_guides_locked(self, locked: bool) -> None:
+        self._qs.setValue("view/guidesLocked", locked)
+
     def snap_to_grid(self) -> bool:
         return bool(self._qs.value("view/snapToGrid", False))
 

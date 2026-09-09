@@ -188,6 +188,10 @@ def test_view_menu_labels_and_status_bar_toggle(window: MainWindow) -> None:
         "Snap to Grid",
         "Show Rulers",
         "Show Crosshairs",
+        "Show Guides",
+        "Snap to Guides",
+        "Lock Guides",
+        "Clear All Guides",
         "Show Tool Palette",
         "Show Tool Options",
         "Show Layer Panel",
@@ -197,6 +201,11 @@ def test_view_menu_labels_and_status_bar_toggle(window: MainWindow) -> None:
         assert label in texts, label
     assert texts.index("Snap to Grid") < texts.index("Show Rulers")
     assert texts.index("Show Rulers") < texts.index("Show Crosshairs")
+    assert texts.index("Show Crosshairs") < texts.index("Show Guides")
+    assert texts.index("Show Guides") < texts.index("Snap to Guides")
+    assert texts.index("Snap to Guides") < texts.index("Lock Guides")
+    assert texts.index("Lock Guides") < texts.index("Clear All Guides")
+    assert texts.index("Clear All Guides") < texts.index("Show Main Toolbar")
     window._status_bar_action.setChecked(False)  # noqa: SLF001
     assert not window.statusBar().isVisibleTo(window)  # type: ignore[union-attr]
     window._status_bar_action.setChecked(True)  # noqa: SLF001

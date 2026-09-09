@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Technical Architecture</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.9</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.10</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
-    <dt>Document version</dt><dd>1.9</dd>
-    <dt>Last Updated</dt>    <dd>09-08-26 22:11</dd>
+    <dt>Document version</dt><dd>1.10</dd>
+    <dt>Last Updated</dt>    <dd>09-08-26 23:30</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,15 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.10</td>
+        <td class="nowrap">09-08-26 23:30</td>
+        <td>Doug Bower</td>
+        <td>Section 6.1: <code>manifest.json</code> carries an optional <code>guides</code> list
+        (General UI kickoff decision 3, 09-08-26); Section 10: modules added by the General UI
+        implementation, Phase 5 (<code>core/guides.py</code>, <code>commands/guide_commands.py</code>).</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.9</td>
         <td class="nowrap">09-08-26 22:11</td>
@@ -132,6 +141,18 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-08-26 23:30</td>
+        <td>6.1</td>
+        <td>Decision</td>
+        <td>Decision 09-08-26 (General UI kickoff decision 3, option A): guide positions are saved in the project file. <code>manifest.json</code> gains an optional <code>guides</code> key, a list of <code>{"orientation": "horizontal" | "vertical", "position": number}</code> entries in scene coordinates, written only when the scene has guides. <code>format_version</code> stays 1: a loader that does not know the key ignores it, as the file-versioning requirement already asks, and the loader here skips malformed entries. Guide add, move, remove, and clear are undoable commands that dirty the document and reach Library files through the ordinary write-back.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-08-26 23:30</td>
+        <td>10</td>
+        <td>Added</td>
+        <td>General UI implementation, Phase 5: <code>core/guides.py</code>, the guide model (orientation and position), its manifest form, and the snapping arithmetic; <code>commands/guide_commands.py</code>, the four guide commands. Guides are drawn by <code>SnapView</code> in its foreground pass, on the overlay layer Section 7.1 already names, so exports never include them.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-08-26 22:11</td>
         <td>10</td>
@@ -990,7 +1011,7 @@ enabling unlimited undo/redo.</p>
     <tr><th>Path</th><th>Format</th><th>Contents</th></tr>
   </thead>
   <tbody>
-    <tr><th>manifest.json</th><td>JSON</td><td>Project metadata: version, canvas size, creation date, last modified, application version.</td></tr>
+    <tr><th>manifest.json</th><td>JSON</td><td>Project metadata: version, canvas size, creation date, last modified, application version; an optional <code>guides</code> list of horizontal and vertical guide positions (General UI PRD 6.5), present only when the project has guides.</td></tr>
     <tr><th>layers.json</th><td>JSON</td><td>Ordered array of Layer objects with all properties.</td></tr>
     <tr><th>items.json</th><td>JSON</td><td>Array of all SnapGraphicsItem objects, serialized with their full property sets, keyed by <code>item_id</code>.</td></tr>
     <tr><th>raster/</th><td>Directory</td><td>Contains raster data files (PNG) for RasterRegionItems and background layers, named by <code>item_id</code>.</td></tr>
@@ -1370,6 +1391,7 @@ docstring.</p>
         add_item.py               # adds a SnapGraphicsItem to the scene
         arrange_commands.py       # Arrange commands — z-order, alignment, and distribution
         canvas_transform_commands.py # Canvas transform commands — rotate and flip the entire…
+        guide_commands.py         # Guide commands — undoable add, move, remove, and clear of guides
         layer_commands.py         # Layer commands — undoable layer add, remove, reorder,…
         macro_command.py          # MacroCommand groups multiple sub-commands into a single…
         modify_property.py        # change a single property on an item (with merge support)
@@ -1391,6 +1413,7 @@ docstring.</p>
         command_stack.py          # Undo/redo command infrastructure
         document.py               # one open file: its scene, view, selection, and clipboard
         document_manager.py       # ordered set of open documents and the active one
+        guides.py                 # user-placed horizontal and vertical reference lines
         layer.py                  # Layer data model
         layer_manager.py          # owns the ordered layer stack and emits change signals
         path_utils.py             # Path utilities — point simplification and smoothing…

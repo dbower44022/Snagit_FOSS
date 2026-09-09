@@ -53,6 +53,7 @@ ACTION_LABELS: dict[str, str] = {
     "view.actual_size": "Zoom to 100%",
     "view.toggle_grid": "Show Grid",
     "view.toggle_rulers": "Show Rulers",
+    "view.toggle_guides": "Show Guides",
     "view.zoom_to_selection": "Zoom to Selection",
     "view.snap_to_grid": "Snap to Grid",
     "image.crop_to_canvas": "Crop to Canvas",

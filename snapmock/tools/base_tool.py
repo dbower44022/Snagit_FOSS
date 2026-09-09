@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QPointF, Qt
 from PyQt6.QtGui import QContextMenuEvent, QCursor, QKeyEvent, QMouseEvent
 
 if TYPE_CHECKING:
@@ -98,6 +98,11 @@ class BaseTool(ABC):
         if self._scene is not None and self._scene.views():
             return self._scene.views()[0]  # type: ignore[return-value]
         return None
+
+    def _snap_pos(self, pos: QPointF) -> QPointF:
+        """*pos* snapped to the grid and guides as the View toggles say (PRD 6.5)."""
+        view = self._view
+        return view.snap_point(pos) if view is not None else pos
 
     def _switch_to_select(self) -> None:
         """Switch to the select tool via the view's tool manager."""
