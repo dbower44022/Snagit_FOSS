@@ -343,6 +343,9 @@ class ToolOptionsBar(QToolBar):
             update = menu.addAction("Update Preset")
             if update is not None:
                 update.triggered.connect(self._update_preset)
+        manage = menu.addAction("Manage Presets...")
+        if manage is not None:
+            manage.triggered.connect(self._manage_presets)
         reset = menu.addAction("Reset to Theme")
         if reset is not None:
             reset.triggered.connect(self._reset_to_theme)
@@ -387,6 +390,29 @@ class ToolOptionsBar(QToolBar):
             [(self._themes.applied_preset(tool_id) is not None, "an applied preset")],
         ):
             self._themes.update_preset(tool_id)
+
+    def _manage_presets(self) -> None:
+        """Manage Presets... (PRD 11.9): the dialog for the active tool's presets."""
+        if self._themes is None or self._tool is None:
+            return
+        from snapmock.ui.manage_presets_dialog import ManagePresetsDialog
+
+        tool = self._tool
+        if not check_requirements(
+            self,
+            "Manage Presets",
+            [
+                (
+                    bool(self._themes.preset_names(tool.tool_id)),
+                    f"at least one saved preset for the {tool.display_name} tool",
+                )
+            ],
+        ):
+            return
+        dialog = ManagePresetsDialog(
+            self._themes, tool.tool_id, tool.display_name, tool.options_controls, self.window()
+        )
+        dialog.exec()
 
     def _reset_to_theme(self) -> None:
         if self._themes is None or self._tool is None:

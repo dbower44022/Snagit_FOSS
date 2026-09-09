@@ -85,13 +85,18 @@ def test_save_as_preset_and_the_menu_rows(
     main_window: MainWindow, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     main_window.tool_manager.activate("arrow")
-    assert _menu_texts(main_window) == ["Save as Preset...", "Reset to Theme"]
+    assert _menu_texts(main_window) == ["Save as Preset...", "Manage Presets...", "Reset to Theme"]
     _width_spin(main_window).setValue(5.0)
     monkeypatch.setattr(ToolOptionsBar, "_ask_preset_name", lambda self, initial="": "Thick")
     _trigger(main_window, "Save as Preset...")
     assert _button(main_window).text() == "Thick ▾"
     assert (tmp_path / "snapmock-data" / "presets" / "arrow" / "thick.json").is_file()
-    assert _menu_texts(main_window) == ["Thick", "Save as Preset...", "Reset to Theme"]
+    assert _menu_texts(main_window) == [
+        "Thick",
+        "Save as Preset...",
+        "Manage Presets...",
+        "Reset to Theme",
+    ]
     bar = _bar(main_window)
     menu = bar._preset_menu  # noqa: SLF001
     assert menu is not None
@@ -103,6 +108,7 @@ def test_save_as_preset_and_the_menu_rows(
         "Thick",
         "Save as Preset...",
         "Update Preset",
+        "Manage Presets...",
         "Reset to Theme",
     ]
     assert not menu.actions()[0].isChecked()

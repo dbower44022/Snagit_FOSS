@@ -38,7 +38,7 @@
         <td>Section 4.4 added: the tool preset and tool theme models, their JSON files under the
         application data directory, and the <code>.smktheme</code> schema (General UI implementation,
         Phase 7, decisions 7.1 and 7.2); Section 10: modules added by Phase 7
-        (<code>core/tool_themes.py</code>). Section 6.1 is unchanged: projects do not carry tool settings.</td>
+        (<code>core/tool_themes.py</code>, <code>ui/manage_presets_dialog.py</code>). Section 6.1 is unchanged: projects do not carry tool settings.</td>
         <td><span class="status open">Pending</span></td>
       </tr>
       <tr>
@@ -183,6 +183,12 @@
         <td>10</td>
         <td>Added</td>
         <td>General UI implementation, Phase 7: <code>core/tool_themes.py</code>, the preset and theme models, the value codec, the preset and theme stores, the session state, the <code>.smktheme</code> reader and writer, and the <code>ToolThemeManager</code> that owns the active theme and each tool's applied preset.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-09-26 19:30</td>
+        <td>10</td>
+        <td>Added</td>
+        <td>General UI implementation, Phase 7: <code>ui/manage_presets_dialog.py</code>, the Manage Presets dialog of General UI PRD Section 11.9 and the compact value summary its rows and the theme preview share. Preset renames and deletions apply to the files at once and are not undoable: presets are not document state and have no command stack.</td>
       </tr>
       <tr>
         <td class="nowrap">09-09-26 14:10</td>
@@ -1597,6 +1603,7 @@ docstring.</p>
         layer_panel.py            # dock widget showing the layer stack
         layer_properties_dialog.py # inspect and edit properties of a Layer
         library_panel.py          # dockable file browser for the active library
+        manage_presets_dialog.py  # Manage Presets dialog: rename, duplicate, delete one tool's presets (General UI PRD 11.9)
         preferences_dialog.py     # view and edit persistent application settings
         property_panel.py         # dock widget showing selected item properties
         resize_canvas_dialog.py   # Resize Canvas dialog — change canvas dimensions with…
