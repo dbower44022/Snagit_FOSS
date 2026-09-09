@@ -268,7 +268,7 @@ class MainWindow(QMainWindow):
         )
         self._toast = Toast(self)
 
-        self._status_bar = SnapStatusBar(self._view)
+        self._status_bar = SnapStatusBar(first)
         self.setStatusBar(self._status_bar)
         self._status_bar.setVisible(self._settings.status_bar_visible())
         self._configure_view(first.view)
@@ -3264,7 +3264,7 @@ class MainWindow(QMainWindow):
             self._property_panel.set_scene(doc.scene)
             self._property_panel.set_selection(doc.selection_manager)
         if hasattr(self, "_status_bar"):
-            self._status_bar.set_view(doc.view)
+            self._status_bar.set_document(doc)
         if hasattr(self, "_main_toolbar"):
             self._main_toolbar.set_view(doc.view)
             self._main_toolbar.set_selection_manager(doc.selection_manager)
