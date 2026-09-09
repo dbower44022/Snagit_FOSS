@@ -280,8 +280,8 @@ def test_bold_italic_underline_reflect_font_state(qtbot: QtBot) -> None:
     f.setUnderline(True)
     item.font = f
     sm.select(item)
-    assert panel._bold_check.isChecked()
-    assert panel._italic_check.isChecked()
+    assert panel._weight_combo.currentData() == QFont.Weight.Bold
+    assert panel._style_combo.currentData() is True
     assert panel._underline_check.isChecked()
 
 

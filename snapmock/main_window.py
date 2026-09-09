@@ -319,6 +319,7 @@ class MainWindow(QMainWindow):
         }
         self._layer_panel.set_actions({k: a for k, a in bar_actions.items() if a is not None})
         self._layer_panel.layer_hovered.connect(self._on_layer_hovered)
+        self._property_panel.canvas_setting_changed.connect(self._on_canvas_setting_changed)
         self._setup_capture_toolbar()
         self._status_bar_action.setChecked(self._settings.status_bar_visible())
         self._update_undo_redo_text()
@@ -1565,6 +1566,8 @@ class MainWindow(QMainWindow):
         self._settings.set_snap_to_grid(checked)
         for doc in self._documents.documents:
             doc.view.set_snap_to_grid(checked)
+        if hasattr(self, "_property_panel"):
+            self._property_panel.refresh_canvas_settings()
 
     def _toggle_guides(self, checked: bool) -> None:
         """View > Show Guides (PRD 3.3): guides stay in place when hidden."""
@@ -2113,6 +2116,8 @@ class MainWindow(QMainWindow):
         if any(key in changes for key in view_keys):
             for doc in self._documents.documents:
                 self._apply_view_preferences(doc.view)
+        if hasattr(self, "_property_panel"):
+            self._property_panel.refresh_canvas_settings()
 
     def _apply_tool_preference_changes(self, changes: dict[str, tuple[object, object]]) -> None:
         """Preferences > Tools: the defaults every tool starts a new item with."""
@@ -3028,6 +3033,21 @@ class MainWindow(QMainWindow):
     def _toggle_layer_visibility(self, layer_id: str) -> None:
         """Toggle visibility on a layer, and on its Ctrl+click selection, as one command."""
         self._layer_panel.toggle_visibility(layer_id)
+
+    def _on_canvas_setting_changed(self, key: str, value: object) -> None:
+        """A Property Panel Canvas section control that edits a preference (PRD 8.5)."""
+        if key == "snap_to_grid":
+            self._snap_grid_action.setChecked(bool(value))
+            return
+        if key in ("pasteboard_color", "grid_size"):
+            self._apply_preference_changes({key: (None, value)})
+
+    def _show_canvas_properties(self) -> None:
+        """Canvas context menu > Canvas Properties opens the Canvas section (PRD 10.1)."""
+        self._selection_manager.deselect_all()
+        self._property_panel.show()
+        self._property_panel.raise_()
+        self._property_panel.show_canvas_section()
 
     def _on_layer_hovered(self, layer_id: str) -> None:
         """Outline the hovered layer's items on the canvas (General UI PRD 7.3, Preferences)."""

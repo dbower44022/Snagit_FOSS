@@ -67,6 +67,7 @@ LIBRARY_WRITE_BACK_DELAY_MS = 300
 LIBRARY_PATHS_MIME = "application/x-snapmock-library-paths"
 LIBRARY_IMPORT_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".gif", ".webp")
 PROJECT_FORMAT_VERSION = 1
+DEFAULT_CANVAS_DPI = 72
 SNAGIT_EXTENSION = ".snagx"
 SNAGIT_FORMAT_VERSION = "1.0"
 

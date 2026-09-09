@@ -136,6 +136,15 @@ class AppSettings:
     def set_snap_to_grid(self, enabled: bool) -> None:
         self._qs.setValue("view/snapToGrid", enabled)
 
+    def property_section_expanded(self, title: str) -> bool:
+        """Whether a Property Panel section is expanded (PRD 8.2); expanded by default."""
+        key = "panels/propertySection/" + "".join(c for c in title if c.isalnum())
+        return _as_bool(self._qs.value(key, True))
+
+    def set_property_section_expanded(self, title: str, expanded: bool) -> None:
+        key = "panels/propertySection/" + "".join(c for c in title if c.isalnum())
+        self._qs.setValue(key, expanded)
+
     def layer_hover_highlight(self) -> bool:
         """Hovering a Layer Panel row outlines that layer's items (General UI PRD 7.3)."""
         return _as_bool(self._qs.value("view/layerHoverHighlight", True))

@@ -7,6 +7,7 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QGraphicsItem, QGraphicsScene
 
 from snapmock.config.constants import (
+    DEFAULT_CANVAS_DPI,
     DEFAULT_CANVAS_HEIGHT,
     DEFAULT_CANVAS_WIDTH,
     PASTEBOARD_MARGIN,
@@ -29,6 +30,7 @@ class SnapScene(QGraphicsScene):
 
     canvas_size_changed = pyqtSignal(QSizeF)
     background_changed = pyqtSignal()
+    canvas_dpi_changed = pyqtSignal(int)
     guides_changed = pyqtSignal()
 
     def __init__(
@@ -40,6 +42,7 @@ class SnapScene(QGraphicsScene):
         super().__init__(parent)  # type: ignore[arg-type]
         self._canvas_size = QSizeF(width, height)
         self._background_color: QColor = QColor("white")
+        self._canvas_dpi: int = DEFAULT_CANVAS_DPI
         self._guides: list[Guide] = []
         self._update_scene_rect()
 
@@ -85,6 +88,21 @@ class SnapScene(QGraphicsScene):
         self._canvas_size = QSizeF(size)
         self._update_scene_rect()
         self.canvas_size_changed.emit(self._canvas_size)
+
+    @property
+    def canvas_dpi(self) -> int:
+        """The project's nominal resolution (Technical Architecture PRD 4.1); 72 by default.
+
+        Stored in the manifest; export keeps its own DPI setting.
+        """
+        return self._canvas_dpi
+
+    def set_canvas_dpi(self, dpi: int) -> None:
+        """Set the canvas DPI; change it through ``commands/canvas_property_commands.py``."""
+        dpi = max(1, int(dpi))
+        if dpi != self._canvas_dpi:
+            self._canvas_dpi = dpi
+            self.canvas_dpi_changed.emit(dpi)
 
     # --- layer state on items (Technical Architecture PRD 3.9.1) ---
 

@@ -10,7 +10,12 @@ from typing import Any
 from PyQt6.QtCore import QBuffer, QIODevice, Qt
 from PyQt6.QtGui import QImage, QPixmap
 
-from snapmock.config.constants import APP_VERSION, PROJECT_FORMAT_VERSION, THUMBNAIL_MAX_SIZE
+from snapmock.config.constants import (
+    APP_VERSION,
+    DEFAULT_CANVAS_DPI,
+    PROJECT_FORMAT_VERSION,
+    THUMBNAIL_MAX_SIZE,
+)
 from snapmock.core.guides import Guide
 from snapmock.core.layer import Layer
 from snapmock.core.scene import SnapScene
@@ -88,6 +93,7 @@ def save_project(
         "canvas": {
             "width": scene.canvas_size.width(),
             "height": scene.canvas_size.height(),
+            "dpi": scene.canvas_dpi,
         },
     }
     if scene.guides:
@@ -235,6 +241,7 @@ def load_project(path: Path) -> SnapScene:
         width=int(canvas.get("width", 1920)),
         height=int(canvas.get("height", 1080)),
     )
+    scene.set_canvas_dpi(int(canvas.get("dpi", DEFAULT_CANVAS_DPI)))
     # Remove the default layer
     default_layer = scene.layer_manager.active_layer
     if default_layer is not None:

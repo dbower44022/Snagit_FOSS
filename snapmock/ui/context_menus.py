@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PyQt6.QtWidgets import QMenu, QMessageBox
+from PyQt6.QtWidgets import QMenu
 
 if TYPE_CHECKING:
     from snapmock.core.layer_manager import LayerManager
@@ -37,9 +37,7 @@ def build_canvas_context_menu(parent: MainWindow) -> QMenu:
 
     canvas_props_action = menu.addAction("Canvas Properties...")
     if canvas_props_action is not None:
-        canvas_props_action.triggered.connect(
-            lambda: QMessageBox.information(parent, "Canvas Properties", "Coming soon.")
-        )
+        canvas_props_action.triggered.connect(parent._show_canvas_properties)  # noqa: SLF001
 
     menu.addSeparator()
 

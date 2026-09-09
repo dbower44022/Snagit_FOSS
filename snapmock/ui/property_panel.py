@@ -1,10 +1,16 @@
-"""PropertyPanel — dock widget showing selected item properties."""
+"""PropertyPanel — dock widget showing selected item properties (General UI PRD Section 8).
+
+Every control edits the whole selection: one item gets a ``ModifyPropertyCommand``,
+several get one ``ModifyPropertiesCommand`` (PRD 8.6), and a control whose values
+differ across the selection shows a mixed indicator until it is changed.
+"""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QSizeF, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QTextCharFormat, QTextCursor
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -14,18 +20,26 @@ from PyQt6.QtWidgets import (
     QFontComboBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
     QScrollArea,
     QSlider,
     QSpinBox,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
-from snapmock.commands.modify_property import ModifyPropertyCommand
+from snapmock.commands.canvas_property_commands import SetCanvasPropertyCommand
+from snapmock.commands.macro_command import MacroCommand
+from snapmock.commands.modify_property import ModifyPropertiesCommand, ModifyPropertyCommand
 from snapmock.commands.move_item_layer import MoveItemToLayerCommand
+from snapmock.commands.raster_commands import ResizeCanvasCommand
 from snapmock.commands.scale_geometry_command import ScaleGeometryCommand
 from snapmock.config.constants import VerticalAlign
+from snapmock.config.settings import AppSettings
+from snapmock.core.command_stack import BaseCommand
+from snapmock.core.theme_manager import current_theme, theme_manager
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.callout_item import CalloutItem
 from snapmock.items.text_item import TextItem
@@ -34,8 +48,6 @@ from snapmock.ui.collapsible_section import CollapsibleSection
 from snapmock.ui.color_picker import ColorPicker
 
 if TYPE_CHECKING:
-    from PyQt6.QtWidgets import QGraphicsItem
-
     from snapmock.core.scene import SnapScene
     from snapmock.core.selection_manager import SelectionManager
     from snapmock.tools.tool_manager import ToolManager
@@ -43,9 +55,53 @@ if TYPE_CHECKING:
 
 _VECTOR_TOOL_IDS = {"rectangle", "ellipse", "line", "arrow", "freehand", "highlight"}
 
+MIXED_TEXT = "—"
+"""The dash a spinbox shows when the selection's values differ (PRD 8.6)."""
+
+FONT_WEIGHTS: tuple[tuple[str, QFont.Weight], ...] = (
+    ("Regular", QFont.Weight.Normal),
+    ("Bold", QFont.Weight.Bold),
+)
+"""Font Weight dropdown entries (PRD 8.4; the Text PRD's weight table)."""
+
+FONT_STYLES: tuple[tuple[str, bool], ...] = (("Normal", False), ("Italic", True))
+"""Font Style dropdown entries (PRD 8.4)."""
+
+CANVAS_DPI_RANGE = (1, 2400)
+
+_TextLike = TextItem | CalloutItem
+
+
+def _color_key(color: QColor) -> str:
+    return color.name(QColor.NameFormat.HexArgb)
+
+
+def _uniform(values: list[Any], key: Callable[[Any], Any] = lambda v: v) -> tuple[Any, bool]:
+    """The first value and whether every value matches it; ``(None, False)`` when empty."""
+    if not values:
+        return None, False
+    first = values[0]
+    first_key = key(first)
+    return first, all(key(v) == first_key for v in values[1:])
+
+
+def _hex_text(color: QColor) -> str:
+    fmt = QColor.NameFormat.HexArgb if color.alpha() < 255 else QColor.NameFormat.HexRgb
+    return color.name(fmt).upper()
+
 
 class PropertyPanel(QDockWidget):
-    """Dockable panel showing properties of the selected item(s)."""
+    """Dockable panel showing properties of the selected item(s).
+
+    Signals
+    -------
+    canvas_setting_changed(str, object)
+        A Canvas section control that edits a preference rather than the
+        scene: ``pasteboard_color`` (QColor or None), ``grid_size`` (int),
+        ``snap_to_grid`` (bool). The main window applies and persists it.
+    """
+
+    canvas_setting_changed = pyqtSignal(str, object)
 
     def __init__(
         self,
@@ -56,6 +112,7 @@ class PropertyPanel(QDockWidget):
         super().__init__("Properties", parent)
         self._selection_manager = selection_manager
         self._scene = scene
+        self._settings = AppSettings()
         self._updating = False
         self._tool_manager: ToolManager | None = None
         self._active_tool_id: str = ""
@@ -67,24 +124,113 @@ class PropertyPanel(QDockWidget):
         )
 
         # Scroll area wrapper
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        self._scroll = QScrollArea()
+        self._scroll.setWidgetResizable(True)
+        self._scroll.setFrameShape(QScrollArea.Shape.NoFrame)
         container = QWidget()
         self._main_layout = QVBoxLayout(container)
         self._main_layout.setContentsMargins(0, 0, 0, 0)
         self._main_layout.setSpacing(2)
 
-        # --- Transform section ---
+        self._build_transform_section()
+        self._build_appearance_section()
+        self._build_text_section()
+        self._build_text_box_section()
+        self._build_info_section()
+        self._build_canvas_section()
+        self._sections = (
+            self._transform_section,
+            self._appearance_section,
+            self._text_section,
+            self._text_box_section,
+            self._info_section,
+            self._canvas_section,
+        )
+        for section in self._sections:
+            section.set_expanded(self._settings.property_section_expanded(section.title))
+            section.toggled.connect(self._on_section_toggled)
+
+        self._main_layout.addStretch()
+        self._scroll.setWidget(container)
+        self.setWidget(self._scroll)
+
+        self._connect_edit_handlers()
+        self._connect_selection_signals()
+        self._connect_scene_signals()
+        theme_manager().theme_changed.connect(self._on_theme_changed)
+
+        # Initial state
+        self._refresh_from_selection()
+
+    # ------------------------------------------------------------------ build
+
+    @staticmethod
+    def _make_double_spin(
+        minimum: float, maximum: float, decimals: int, suffix: str, name: str
+    ) -> QDoubleSpinBox:
+        spin = QDoubleSpinBox()
+        spin.setRange(minimum, maximum)
+        spin.setDecimals(decimals)
+        spin.setSuffix(suffix)
+        spin.setKeyboardTracking(False)
+        spin.setSpecialValueText(MIXED_TEXT)
+        spin.setAccessibleName(name)
+        return spin
+
+    @staticmethod
+    def _slider_spin_row(spin: QSpinBox | QDoubleSpinBox, slider: QSlider, name: str) -> QWidget:
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        slider.setAccessibleName(f"{name} slider")
+        spin.setAccessibleName(name)
+        layout.addWidget(slider)
+        layout.addWidget(spin)
+        return row
+
+    @staticmethod
+    def _hex_edit(name: str) -> QLineEdit:
+        edit = QLineEdit()
+        edit.setMaxLength(9)
+        edit.setPlaceholderText("#RRGGBB")
+        edit.setFixedWidth(84)
+        edit.setAccessibleName(f"{name} hex")
+        return edit
+
+    @staticmethod
+    def _color_row(picker: ColorPicker, edit: QLineEdit, name: str) -> QWidget:
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        picker.setAccessibleName(name)
+        layout.addWidget(picker)
+        layout.addWidget(edit)
+        layout.addStretch()
+        return row
+
+    def _build_transform_section(self) -> None:
         self._transform_section = CollapsibleSection("Transform")
-        self._x_spin = self._make_double_spin(-99999.0, 99999.0, 1, " px")
-        self._y_spin = self._make_double_spin(-99999.0, 99999.0, 1, " px")
-        self._w_spin = self._make_double_spin(1.0, 99999.0, 1, " px")
-        self._h_spin = self._make_double_spin(1.0, 99999.0, 1, " px")
-        self._rot_spin = self._make_double_spin(-360.0, 360.0, 1, "\u00b0")
+        # Spinbox minimums are one step below the real range: the minimum
+        # shows the mixed dash (PRD 8.6) and is never a value the panel writes.
+        self._x_spin = self._make_double_spin(-99999.0, 99999.0, 1, " px", "X position")
+        self._y_spin = self._make_double_spin(-99999.0, 99999.0, 1, " px", "Y position")
+        self._w_spin = self._make_double_spin(0.0, 99999.0, 1, " px", "Width")
+        self._h_spin = self._make_double_spin(0.0, 99999.0, 1, " px", "Height")
+        self._rot_spin = self._make_double_spin(-361.0, 360.0, 1, "°", "Rotation")
         self._transform_section.add_row("X:", self._x_spin)
         self._transform_section.add_row("Y:", self._y_spin)
-        self._transform_section.add_row("W:", self._w_spin)
+
+        w_row = QWidget()
+        w_layout = QHBoxLayout(w_row)
+        w_layout.setContentsMargins(0, 0, 0, 0)
+        w_layout.addWidget(self._w_spin)
+        self._aspect_lock = QToolButton()
+        self._aspect_lock.setCheckable(True)
+        self._aspect_lock.setAutoRaise(True)
+        self._aspect_lock.setToolTip("Lock aspect ratio")
+        self._aspect_lock.setAccessibleName("Lock aspect ratio")
+        w_layout.addWidget(self._aspect_lock)
+        self._transform_section.add_row("W:", w_row)
         self._transform_section.add_row("H:", self._h_spin)
         self._transform_section.add_row("Rotation:", self._rot_spin)
 
@@ -93,74 +239,87 @@ class PropertyPanel(QDockWidget):
         flip_layout.setContentsMargins(0, 0, 0, 0)
         self._flip_h_btn = QPushButton("Flip H")
         self._flip_h_btn.setCheckable(True)
+        self._flip_h_btn.setAccessibleName("Flip horizontal")
         self._flip_v_btn = QPushButton("Flip V")
         self._flip_v_btn.setCheckable(True)
+        self._flip_v_btn.setAccessibleName("Flip vertical")
         flip_layout.addWidget(self._flip_h_btn)
         flip_layout.addWidget(self._flip_v_btn)
         self._transform_section.add_row("Flip:", flip_container)
-
         self._main_layout.addWidget(self._transform_section)
 
-        # --- Appearance section ---
+    def _build_appearance_section(self) -> None:
         self._appearance_section = CollapsibleSection("Appearance")
 
         self._stroke_color_picker = ColorPicker(QColor("black"))
-        self._appearance_section.add_row("Stroke:", self._stroke_color_picker)
+        self._stroke_hex = self._hex_edit("Stroke color")
+        self._appearance_section.add_row(
+            "Stroke:", self._color_row(self._stroke_color_picker, self._stroke_hex, "Stroke color")
+        )
 
-        stroke_w_container = QWidget()
-        stroke_w_layout = QHBoxLayout(stroke_w_container)
-        stroke_w_layout.setContentsMargins(0, 0, 0, 0)
         self._stroke_w_slider = QSlider(Qt.Orientation.Horizontal)
         self._stroke_w_slider.setRange(0, 100)
         self._stroke_w_spin = QDoubleSpinBox()
-        self._stroke_w_spin.setRange(0.0, 100.0)
+        self._stroke_w_spin.setRange(-1.0, 100.0)
         self._stroke_w_spin.setDecimals(1)
-        stroke_w_layout.addWidget(self._stroke_w_slider)
-        stroke_w_layout.addWidget(self._stroke_w_spin)
-        self._appearance_section.add_row("Width:", stroke_w_container)
+        self._stroke_w_spin.setSpecialValueText(MIXED_TEXT)
+        self._stroke_w_spin.setKeyboardTracking(False)
+        self._appearance_section.add_row(
+            "Width:",
+            self._slider_spin_row(self._stroke_w_spin, self._stroke_w_slider, "Stroke width"),
+        )
 
         self._fill_color_picker = ColorPicker(QColor("transparent"))
-        self._appearance_section.add_row("Fill:", self._fill_color_picker)
+        self._fill_hex = self._hex_edit("Fill color")
+        self._appearance_section.add_row(
+            "Fill:", self._color_row(self._fill_color_picker, self._fill_hex, "Fill color")
+        )
 
-        opacity_container = QWidget()
-        opacity_layout = QHBoxLayout(opacity_container)
-        opacity_layout.setContentsMargins(0, 0, 0, 0)
         self._opacity_slider = QSlider(Qt.Orientation.Horizontal)
         self._opacity_slider.setRange(0, 100)
         self._opacity_spin = QSpinBox()
-        self._opacity_spin.setRange(0, 100)
+        self._opacity_spin.setRange(-1, 100)
         self._opacity_spin.setSuffix("%")
-        opacity_layout.addWidget(self._opacity_slider)
-        opacity_layout.addWidget(self._opacity_spin)
-        self._appearance_section.add_row("Opacity:", opacity_container)
-
+        self._opacity_spin.setSpecialValueText(MIXED_TEXT)
+        self._opacity_spin.setKeyboardTracking(False)
+        self._appearance_section.add_row(
+            "Opacity:", self._slider_spin_row(self._opacity_spin, self._opacity_slider, "Opacity")
+        )
         self._main_layout.addWidget(self._appearance_section)
 
-        # --- Text section ---
+    def _build_text_section(self) -> None:
         self._text_section = CollapsibleSection("Text")
 
         self._font_combo = QFontComboBox()
+        self._font_combo.setAccessibleName("Font family")
         self._text_section.add_row("Font:", self._font_combo)
 
         self._font_size_spin = QSpinBox()
         self._font_size_spin.setRange(0, 200)
         self._font_size_spin.setSuffix(" pt")
-        self._font_size_spin.setSpecialValueText(" ")
+        self._font_size_spin.setSpecialValueText(MIXED_TEXT)
         self._font_size_spin.setKeyboardTracking(False)
+        self._font_size_spin.setAccessibleName("Font size")
         self._text_section.add_row("Size:", self._font_size_spin)
 
-        style_container = QWidget()
-        style_layout = QHBoxLayout(style_container)
-        style_layout.setContentsMargins(0, 0, 0, 0)
-        self._bold_check = QCheckBox("Bold")
-        self._italic_check = QCheckBox("Italic")
+        self._weight_combo = QComboBox()
+        for label, weight in FONT_WEIGHTS:
+            self._weight_combo.addItem(label, weight)
+        self._weight_combo.setAccessibleName("Font weight")
+        self._text_section.add_row("Weight:", self._weight_combo)
+
+        self._style_combo = QComboBox()
+        for label, italic in FONT_STYLES:
+            self._style_combo.addItem(label, italic)
+        self._style_combo.setAccessibleName("Font style")
+        self._text_section.add_row("Style:", self._style_combo)
+
         self._underline_check = QCheckBox("Underline")
-        style_layout.addWidget(self._bold_check)
-        style_layout.addWidget(self._italic_check)
-        style_layout.addWidget(self._underline_check)
-        self._text_section.add_row("Style:", style_container)
+        self._underline_check.setAccessibleName("Underline")
+        self._text_section.add_row("", self._underline_check)
 
         self._text_color_picker = ColorPicker(QColor("black"))
+        self._text_color_picker.setAccessibleName("Text color")
         self._text_section.add_row("Color:", self._text_color_picker)
 
         self._text_align_combo = QComboBox()
@@ -168,96 +327,123 @@ class PropertyPanel(QDockWidget):
         self._text_align_combo.addItem("Center", Qt.AlignmentFlag.AlignHCenter)
         self._text_align_combo.addItem("Right", Qt.AlignmentFlag.AlignRight)
         self._text_align_combo.addItem("Justify", Qt.AlignmentFlag.AlignJustify)
+        self._text_align_combo.setAccessibleName("Text alignment")
         self._text_section.add_row("Align:", self._text_align_combo)
 
+        # Background Fill belongs to the Text section (PRD 8.4)
+        self._text_bg_color_picker = ColorPicker(QColor("transparent"))
+        self._text_bg_color_picker.setAccessibleName("Background fill")
+        self._text_section.add_row("Background:", self._text_bg_color_picker)
         self._main_layout.addWidget(self._text_section)
 
-        # --- Text Box section (TextItem only) ---
+    def _build_text_box_section(self) -> None:
         self._text_box_section = CollapsibleSection("Text Box")
 
-        self._text_bg_color_picker = ColorPicker(QColor("transparent"))
-        self._text_box_section.add_row("Background:", self._text_bg_color_picker)
-
         self._text_border_color_picker = ColorPicker(QColor("transparent"))
+        self._text_border_color_picker.setAccessibleName("Border color")
         self._text_box_section.add_row("Border:", self._text_border_color_picker)
 
-        self._text_border_w_spin = QDoubleSpinBox()
-        self._text_border_w_spin.setRange(0.0, 20.0)
-        self._text_border_w_spin.setDecimals(1)
-        self._text_border_w_spin.setSuffix(" px")
-        self._text_border_w_spin.setKeyboardTracking(False)
+        self._text_border_w_spin = self._make_double_spin(-0.1, 20.0, 1, " px", "Border width")
         self._text_box_section.add_row("Border width:", self._text_border_w_spin)
 
-        self._text_corner_radius_spin = QDoubleSpinBox()
-        self._text_corner_radius_spin.setRange(0.0, 50.0)
-        self._text_corner_radius_spin.setDecimals(1)
-        self._text_corner_radius_spin.setSuffix(" px")
-        self._text_corner_radius_spin.setKeyboardTracking(False)
+        self._text_corner_radius_spin = self._make_double_spin(
+            -0.1, 50.0, 1, " px", "Corner radius"
+        )
         self._text_box_section.add_row("Corner radius:", self._text_corner_radius_spin)
 
-        self._text_padding_spin = QDoubleSpinBox()
-        self._text_padding_spin.setRange(0.0, 50.0)
-        self._text_padding_spin.setDecimals(1)
-        self._text_padding_spin.setSuffix(" px")
-        self._text_padding_spin.setKeyboardTracking(False)
+        self._text_padding_spin = self._make_double_spin(-0.1, 50.0, 1, " px", "Padding")
         self._text_box_section.add_row("Padding:", self._text_padding_spin)
 
         self._text_valign_combo = QComboBox()
         self._text_valign_combo.addItem("Top", VerticalAlign.TOP)
         self._text_valign_combo.addItem("Center", VerticalAlign.CENTER)
         self._text_valign_combo.addItem("Bottom", VerticalAlign.BOTTOM)
+        self._text_valign_combo.setAccessibleName("Vertical alignment")
         self._text_box_section.add_row("Vertical align:", self._text_valign_combo)
 
         self._text_auto_size_check = QCheckBox("Auto-size height")
+        self._text_auto_size_check.setAccessibleName("Auto-size height")
         self._text_box_section.add_row("", self._text_auto_size_check)
-
         self._main_layout.addWidget(self._text_box_section)
 
-        # --- Item Info section ---
+    def _build_info_section(self) -> None:
         self._info_section = CollapsibleSection("Item Info")
         self._type_label = QLabel("")
         self._layer_combo = QComboBox()
+        self._layer_combo.setAccessibleName("Layer")
         self._locked_check = QCheckBox("Locked")
+        self._locked_check.setAccessibleName("Item lock")
         self._info_section.add_row("Type:", self._type_label)
         self._info_section.add_row("Layer:", self._layer_combo)
         self._info_section.add_row("", self._locked_check)
         self._main_layout.addWidget(self._info_section)
 
-        # --- Canvas section ---
+    def _build_canvas_section(self) -> None:
         self._canvas_section = CollapsibleSection("Canvas")
-        self._canvas_w_label = QLabel("")
-        self._canvas_h_label = QLabel("")
+        self._canvas_w_spin = QSpinBox()
+        self._canvas_w_spin.setRange(1, 99999)
+        self._canvas_w_spin.setSuffix(" px")
+        self._canvas_w_spin.setKeyboardTracking(False)
+        self._canvas_w_spin.setAccessibleName("Canvas width")
+        self._canvas_h_spin = QSpinBox()
+        self._canvas_h_spin.setRange(1, 99999)
+        self._canvas_h_spin.setSuffix(" px")
+        self._canvas_h_spin.setKeyboardTracking(False)
+        self._canvas_h_spin.setAccessibleName("Canvas height")
         self._bg_color_picker = ColorPicker(QColor("white"))
-        self._canvas_section.add_row("Width:", self._canvas_w_label)
-        self._canvas_section.add_row("Height:", self._canvas_h_label)
-        self._canvas_section.add_row("Background:", self._bg_color_picker)
+        self._bg_color_picker.setAccessibleName("Canvas color")
+        self._pasteboard_picker = ColorPicker(QColor("#E0E0E0"), allow_transparent=False)
+        self._pasteboard_picker.setAccessibleName("Pasteboard color")
+        self._grid_size_spin = QSpinBox()
+        self._grid_size_spin.setRange(1, 100)
+        self._grid_size_spin.setSuffix(" px")
+        self._grid_size_spin.setKeyboardTracking(False)
+        self._grid_size_spin.setAccessibleName("Grid size")
+        self._snap_check = QCheckBox("Snap to grid")
+        self._snap_check.setAccessibleName("Snap to grid")
+        self._dpi_spin = QSpinBox()
+        self._dpi_spin.setRange(*CANVAS_DPI_RANGE)
+        self._dpi_spin.setKeyboardTracking(False)
+        self._dpi_spin.setAccessibleName("Canvas DPI")
+        self._canvas_section.add_row("Width:", self._canvas_w_spin)
+        self._canvas_section.add_row("Height:", self._canvas_h_spin)
+        self._canvas_section.add_row("Canvas color:", self._bg_color_picker)
+        self._canvas_section.add_row("Pasteboard:", self._pasteboard_picker)
+        self._canvas_section.add_row("Grid size:", self._grid_size_spin)
+        self._canvas_section.add_row("", self._snap_check)
+        self._canvas_section.add_row("DPI:", self._dpi_spin)
         self._main_layout.addWidget(self._canvas_section)
 
-        self._main_layout.addStretch()
-        scroll.setWidget(container)
-        self.setWidget(scroll)
-
-        # Connect edit handlers
+    def _connect_edit_handlers(self) -> None:
         self._x_spin.valueChanged.connect(self._on_x_changed)
         self._y_spin.valueChanged.connect(self._on_y_changed)
         self._w_spin.valueChanged.connect(self._on_w_changed)
         self._h_spin.valueChanged.connect(self._on_h_changed)
         self._rot_spin.valueChanged.connect(self._on_rotation_changed)
+        self._aspect_lock.toggled.connect(self._on_aspect_lock_toggled)
         self._flip_h_btn.toggled.connect(self._on_flip_h_changed)
         self._flip_v_btn.toggled.connect(self._on_flip_v_changed)
         self._stroke_color_picker.color_changed.connect(self._on_stroke_color_changed)
+        self._stroke_hex.editingFinished.connect(self._on_stroke_hex_edited)
         self._stroke_w_slider.valueChanged.connect(self._on_stroke_w_slider_changed)
         self._stroke_w_spin.valueChanged.connect(self._on_stroke_w_spin_changed)
         self._fill_color_picker.color_changed.connect(self._on_fill_color_changed)
+        self._fill_hex.editingFinished.connect(self._on_fill_hex_edited)
         self._opacity_slider.valueChanged.connect(self._on_opacity_slider_changed)
         self._opacity_spin.valueChanged.connect(self._on_opacity_spin_changed)
         self._layer_combo.currentIndexChanged.connect(self._on_layer_changed)
         self._locked_check.toggled.connect(self._on_locked_changed)
+        self._canvas_w_spin.valueChanged.connect(self._on_canvas_size_changed)
+        self._canvas_h_spin.valueChanged.connect(self._on_canvas_size_changed)
         self._bg_color_picker.color_changed.connect(self._on_bg_color_changed)
+        self._pasteboard_picker.color_changed.connect(self._on_pasteboard_color_changed)
+        self._grid_size_spin.valueChanged.connect(self._on_grid_size_changed)
+        self._snap_check.toggled.connect(self._on_snap_toggled)
+        self._dpi_spin.valueChanged.connect(self._on_dpi_changed)
         self._font_combo.currentFontChanged.connect(self._on_font_family_changed)
         self._font_size_spin.valueChanged.connect(self._on_font_size_changed)
-        self._bold_check.toggled.connect(self._on_bold_changed)
-        self._italic_check.toggled.connect(self._on_italic_changed)
+        self._weight_combo.currentIndexChanged.connect(self._on_weight_changed)
+        self._style_combo.currentIndexChanged.connect(self._on_style_changed)
         self._underline_check.toggled.connect(self._on_underline_changed)
         self._text_color_picker.color_changed.connect(self._on_text_color_changed)
         self._text_align_combo.currentIndexChanged.connect(self._on_text_align_changed)
@@ -269,67 +455,95 @@ class PropertyPanel(QDockWidget):
         self._text_valign_combo.currentIndexChanged.connect(self._on_text_valign_changed)
         self._text_auto_size_check.toggled.connect(self._on_text_auto_size_changed)
 
-        # Connect selection signals
-        self._connect_selection_signals()
-        self._connect_scene_signals()
-
-        # Initial state
-        self._refresh_from_selection()
-
-    # --- helpers ---
-
-    @staticmethod
-    def _make_double_spin(
-        minimum: float, maximum: float, decimals: int, suffix: str
-    ) -> QDoubleSpinBox:
-        spin = QDoubleSpinBox()
-        spin.setRange(minimum, maximum)
-        spin.setDecimals(decimals)
-        spin.setSuffix(suffix)
-        spin.setKeyboardTracking(False)
-        return spin
+    # ------------------------------------------------------------ wiring
 
     def _connect_selection_signals(self) -> None:
         self._selection_manager.selection_changed.connect(self._refresh_from_selection)
         self._selection_manager.selection_cleared.connect(self._refresh_from_selection)
 
-    def _connect_scene_signals(self) -> None:
-        self._scene.command_stack.stack_changed.connect(self._refresh_from_selection)
+    def _disconnect_selection_signals(self) -> None:
+        for signal in (
+            self._selection_manager.selection_changed,
+            self._selection_manager.selection_cleared,
+        ):
+            try:
+                signal.disconnect(self._refresh_from_selection)
+            except (TypeError, RuntimeError):
+                pass
+
+    def _scene_signal_pairs(self) -> list[tuple[Any, Callable[..., None]]]:
         lm = self._scene.layer_manager
-        lm.layer_added.connect(self._rebuild_layer_combo)
-        lm.layer_removed.connect(self._rebuild_layer_combo)
-        lm.layer_renamed.connect(self._rebuild_layer_combo)
+        return [
+            (self._scene.command_stack.stack_changed, self._refresh_from_selection),
+            (self._scene.canvas_size_changed, self._refresh_from_selection),
+            (self._scene.background_changed, self._refresh_from_selection),
+            (self._scene.canvas_dpi_changed, self._refresh_from_selection),
+            (lm.layer_added, self._rebuild_layer_combo),
+            (lm.layer_removed, self._rebuild_layer_combo),
+            (lm.layer_renamed, self._rebuild_layer_combo),
+        ]
+
+    def _connect_scene_signals(self) -> None:
+        for signal, slot in self._scene_signal_pairs():
+            signal.connect(slot)
+
+    def _disconnect_scene_signals(self) -> None:
+        for signal, slot in self._scene_signal_pairs():
+            try:
+                signal.disconnect(slot)
+            except (TypeError, RuntimeError):
+                pass
+
+    def _on_section_toggled(self, expanded: bool) -> None:
+        section = self.sender()
+        if isinstance(section, CollapsibleSection):
+            self._settings.set_property_section_expanded(section.title, expanded)
+
+    def _on_theme_changed(self, _name: str) -> None:
+        self._apply_icons()
+        self._refresh_from_selection()
+
+    def _apply_icons(self) -> None:
+        manager = theme_manager()
+        name = "link" if self._aspect_lock.isChecked() else "link-off"
+        icon = manager.icon(name)
+        if not icon.isNull():
+            self._aspect_lock.setIcon(icon)
+
+    # ---------------------------------------------------------- selection
+
+    def _selected_items(self) -> list[SnapGraphicsItem]:
+        return [i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)]
 
     def _first_selected_item(self) -> SnapGraphicsItem | None:
-        items = self._selection_manager.items
-        if items:
-            item = items[0]
-            if isinstance(item, SnapGraphicsItem):
-                return item
-        return None
+        items = self._selected_items()
+        return items[0] if items else None
 
-    # --- refresh ---
+    def _selected_vectors(self) -> list[VectorItem]:
+        return [i for i in self._selected_items() if isinstance(i, VectorItem)]
 
-    def _refresh_from_selection(self, _items: list[QGraphicsItem] | None = None) -> None:
+    def _selected_text_items(self) -> list[_TextLike]:
+        return [i for i in self._selected_items() if isinstance(i, (TextItem, CalloutItem))]
+
+    # ------------------------------------------------------------ refresh
+
+    def _refresh_from_selection(self, *_args: object) -> None:  # noqa: C901
         self._updating = True
         try:
-            item = self._first_selected_item()
-            has_selection = item is not None
-            is_vector = isinstance(item, VectorItem)
-            has_text = isinstance(item, (TextItem, CalloutItem))
-            is_text_item = isinstance(item, TextItem)
+            items = self._selected_items()
+            has_selection = bool(items)
+            all_vector = has_selection and all(isinstance(i, VectorItem) for i in items)
+            all_text = has_selection and all(isinstance(i, (TextItem, CalloutItem)) for i in items)
+            all_text_items = has_selection and all(isinstance(i, TextItem) for i in items)
 
-            # Check for tool-defaults mode: no selection + text/callout tool active
             in_tool_defaults = not has_selection and self._active_tool_id in ("text", "callout")
             in_vector_defaults = not has_selection and self._active_tool_id in _VECTOR_TOOL_IDS
 
-            # Section visibility
+            # Section visibility (PRD 8.3 to 8.6)
             self._transform_section.setVisible(has_selection)
-            self._appearance_section.setVisible(
-                (has_selection and is_vector) or in_vector_defaults
-            )
-            self._text_section.setVisible((has_selection and has_text) or in_tool_defaults)
-            self._text_box_section.setVisible((has_selection and has_text) or in_tool_defaults)
+            self._appearance_section.setVisible(all_vector or in_vector_defaults)
+            self._text_section.setVisible(all_text or in_tool_defaults)
+            self._text_box_section.setVisible(all_text or in_tool_defaults)
             self._info_section.setVisible(has_selection)
             self._canvas_section.setVisible(
                 not has_selection and not in_tool_defaults and not in_vector_defaults
@@ -339,81 +553,160 @@ class PropertyPanel(QDockWidget):
                 self._populate_appearance_from_tool_defaults()
             elif in_tool_defaults:
                 self._populate_from_tool_defaults()
-            elif item is not None:
-                # Transform
-                self._x_spin.setValue(item.pos_x)
-                self._y_spin.setValue(item.pos_y)
-                br = item.boundingRect()
-                self._w_spin.setValue(br.width())
-                self._h_spin.setValue(br.height())
-                self._rot_spin.setValue(item.rotation_deg)
-                self._flip_h_btn.setChecked(item.flip_horizontal)
-                self._flip_v_btn.setChecked(item.flip_vertical)
-
-                # Appearance (VectorItem only)
-                if is_vector:
-                    assert isinstance(item, VectorItem)
-                    self._stroke_color_picker.color = item.stroke_color
-                    self._stroke_w_slider.setValue(int(item.stroke_width))
-                    self._stroke_w_spin.setValue(item.stroke_width)
-                    self._fill_color_picker.color = item.fill_color
-                    self._opacity_slider.setValue(int(item.opacity_pct))
-                    self._opacity_spin.setValue(int(item.opacity_pct))
-
-                # Text (TextItem / CalloutItem)
-                if has_text:
-                    assert isinstance(item, (TextItem, CalloutItem))
-                    if item.is_editing:
-                        self._ensure_editor_connected()
-                        self._refresh_text_from_cursor()
-                    else:
-                        self._disconnect_editor()
-                        self._bold_check.setTristate(False)
-                        self._italic_check.setTristate(False)
-                        self._underline_check.setTristate(False)
-                        f = item.font
-                        self._font_combo.setCurrentFont(f)
-                        self._font_size_spin.setValue(f.pointSize())
-                        self._bold_check.setChecked(f.bold())
-                        self._italic_check.setChecked(f.italic())
-                        self._underline_check.setChecked(f.underline())
-                        self._text_color_picker.color = item.text_color
-                        # Horizontal alignment from first block
-                        block_fmt = item.get_block_format()
-                        align = block_fmt.alignment()
-                        self._set_align_combo(align)
-
-                # Text Box (TextItem and CalloutItem)
-                if has_text:
-                    assert isinstance(item, (TextItem, CalloutItem))
-                    self._text_bg_color_picker.color = item.bg_color
-                    self._text_border_color_picker.color = item.border_color
-                    self._text_border_w_spin.setValue(item.border_width)
-                    self._text_corner_radius_spin.setValue(item.border_radius)
-                    self._text_padding_spin.setValue(item.padding)
-                    # Set valign combo
-                    for i in range(self._text_valign_combo.count()):
-                        if self._text_valign_combo.itemData(i) == item.vertical_align:
-                            self._text_valign_combo.setCurrentIndex(i)
-                            break
-                    # Auto-size only applies to TextItem
-                    self._text_auto_size_check.setVisible(is_text_item)
-                    if is_text_item:
-                        assert isinstance(item, TextItem)
-                        self._text_auto_size_check.setChecked(item.auto_size)
-
-                # Item Info
-                self._type_label.setText(item.type_name)
-                self._rebuild_layer_combo()
-                self._locked_check.setChecked(item.locked)
+            elif items:
+                self._populate_transform(items)
+                if all_vector:
+                    self._populate_appearance([i for i in items if isinstance(i, VectorItem)])
+                if all_text:
+                    self._populate_text(self._selected_text_items(), all_text_items)
+                self._populate_info(items)
             else:
-                # Canvas mode
-                cs = self._scene.canvas_size
-                self._canvas_w_label.setText(f"{int(cs.width())} px")
-                self._canvas_h_label.setText(f"{int(cs.height())} px")
-                self._bg_color_picker.color = self._scene.background_color
+                self._populate_canvas()
         finally:
             self._updating = False
+
+    def _populate_transform(self, items: list[SnapGraphicsItem]) -> None:
+        self._set_spin(self._x_spin, [i.pos_x for i in items])
+        self._set_spin(self._y_spin, [i.pos_y for i in items])
+        self._set_spin(self._w_spin, [i.boundingRect().width() for i in items])
+        self._set_spin(self._h_spin, [i.boundingRect().height() for i in items])
+        self._set_spin(self._rot_spin, [i.rotation_deg for i in items])
+        self._set_toggle(self._flip_h_btn, [i.flip_horizontal for i in items])
+        self._set_toggle(self._flip_v_btn, [i.flip_vertical for i in items])
+        self._apply_icons()
+
+    def _populate_appearance(self, items: list[VectorItem]) -> None:
+        self._set_color(
+            self._stroke_color_picker, self._stroke_hex, [i.stroke_color for i in items]
+        )
+        widths = [i.stroke_width for i in items]
+        value, uniform = _uniform(widths)
+        self._stroke_w_slider.setValue(int(value) if uniform else 0)
+        self._set_spin(self._stroke_w_spin, widths)
+        self._set_color(self._fill_color_picker, self._fill_hex, [i.fill_color for i in items])
+        opacities = [int(i.opacity_pct) for i in items]
+        value, uniform = _uniform(opacities)
+        self._opacity_slider.setValue(int(value) if uniform else 0)
+        self._set_spin(self._opacity_spin, opacities)
+
+    def _populate_text(self, items: list[_TextLike], all_text_items: bool) -> None:
+        first = items[0]
+        if len(items) == 1 and first.is_editing:
+            self._ensure_editor_connected()
+            self._refresh_text_from_cursor()
+        else:
+            self._disconnect_editor()
+            fonts = [i.font for i in items]
+            family, uniform = _uniform([f.family() for f in fonts])
+            if uniform:
+                self._font_combo.setCurrentFont(QFont(family))
+            else:
+                self._clear_font_combo()
+            self._set_spin(self._font_size_spin, [f.pointSize() for f in fonts])
+            self._set_combo_data(
+                self._weight_combo,
+                [QFont.Weight.Bold if f.bold() else QFont.Weight.Normal for f in fonts],
+            )
+            self._set_combo_data(self._style_combo, [f.italic() for f in fonts])
+            self._set_check(self._underline_check, [f.underline() for f in fonts])
+            self._set_color(self._text_color_picker, None, [i.text_color for i in items])
+            alignments = [
+                int(i.get_block_format().alignment() & Qt.AlignmentFlag.AlignHorizontal_Mask)
+                for i in items
+            ]
+            value, uniform = _uniform(alignments)
+            if uniform:
+                self._set_align_combo(Qt.AlignmentFlag(value))
+            else:
+                self._text_align_combo.setCurrentIndex(-1)
+        self._set_color(self._text_bg_color_picker, None, [i.bg_color for i in items])
+        self._set_color(self._text_border_color_picker, None, [i.border_color for i in items])
+        self._set_spin(self._text_border_w_spin, [i.border_width for i in items])
+        self._set_spin(self._text_corner_radius_spin, [i.border_radius for i in items])
+        self._set_spin(self._text_padding_spin, [i.padding for i in items])
+        self._set_combo_data(self._text_valign_combo, [i.vertical_align for i in items])
+        self._text_auto_size_check.setVisible(all_text_items)
+        if all_text_items:
+            self._set_check(
+                self._text_auto_size_check,
+                [i.auto_size for i in items if isinstance(i, TextItem)],
+            )
+
+    def _populate_info(self, items: list[SnapGraphicsItem]) -> None:
+        value, uniform = _uniform([i.type_name for i in items])
+        self._type_label.setText(str(value) if uniform else f"{len(items)} items")
+        self._rebuild_layer_combo()
+        self._set_check(self._locked_check, [i.locked for i in items])
+
+    def _populate_canvas(self) -> None:
+        cs = self._scene.canvas_size
+        self._canvas_w_spin.setValue(int(cs.width()))
+        self._canvas_h_spin.setValue(int(cs.height()))
+        self._bg_color_picker.color = self._scene.background_color
+        pasteboard = self._settings.pasteboard_color()
+        self._pasteboard_picker.color = (
+            pasteboard if pasteboard is not None else current_theme().pasteboard
+        )
+        self._grid_size_spin.setValue(self._settings.grid_size())
+        self._snap_check.setChecked(self._settings.snap_to_grid())
+        self._dpi_spin.setValue(self._scene.canvas_dpi)
+
+    # mixed-value helpers (PRD 8.6)
+
+    @staticmethod
+    def _set_spin(spin: QSpinBox | QDoubleSpinBox, values: list[Any]) -> None:
+        value, uniform = _uniform([round(float(v), 3) for v in values])
+        if isinstance(spin, QSpinBox):
+            spin.setValue(int(value) if uniform else spin.minimum())
+        else:
+            spin.setValue(float(value) if uniform else spin.minimum())
+
+    @staticmethod
+    def _set_color(picker: ColorPicker, edit: QLineEdit | None, values: list[QColor]) -> None:
+        value, uniform = _uniform(values, _color_key)
+        if uniform:
+            picker.color = QColor(value)
+            if edit is not None:
+                edit.setText(_hex_text(QColor(value)))
+        else:
+            picker.mixed = True
+            if edit is not None:
+                edit.setText("")
+
+    @staticmethod
+    def _set_combo_data(combo: QComboBox, values: list[Any]) -> None:
+        value, uniform = _uniform(values)
+        if not uniform:
+            combo.setCurrentIndex(-1)
+            return
+        for i in range(combo.count()):
+            if combo.itemData(i) == value:
+                combo.setCurrentIndex(i)
+                return
+        combo.setCurrentIndex(-1)
+
+    @staticmethod
+    def _set_check(check: QCheckBox, values: list[bool]) -> None:
+        value, uniform = _uniform(values)
+        if uniform:
+            check.setTristate(False)
+            check.setChecked(bool(value))
+        else:
+            check.setTristate(True)
+            check.setCheckState(Qt.CheckState.PartiallyChecked)
+
+    @staticmethod
+    def _set_toggle(button: QPushButton, values: list[bool]) -> None:
+        value, uniform = _uniform(values)
+        button.setChecked(bool(value) if uniform else False)
+        button.setToolTip("" if uniform else "Mixed")
+
+    def _clear_font_combo(self) -> None:
+        line_edit = self._font_combo.lineEdit()
+        if line_edit is not None:
+            line_edit.setText("")
+
+    # tool defaults (PRD 8.5)
 
     def _in_tool_defaults_mode(self) -> bool:
         """Return True if showing tool defaults (no selection + text/callout tool)."""
@@ -437,27 +730,27 @@ class PropertyPanel(QDockWidget):
         d = self._active_tool_defaults()
         if d is None:
             return
-        # Text section
         font = QFont(str(d.get("font_family", "Sans Serif")))
         font.setPointSize(int(d.get("font_size", 14)))
         self._font_combo.setCurrentFont(font)
         self._font_size_spin.setValue(int(d.get("font_size", 14)))
-        self._bold_check.setChecked(bool(d.get("bold", False)))
-        self._italic_check.setChecked(bool(d.get("italic", False)))
-        self._underline_check.setChecked(bool(d.get("underline", False)))
+        self._set_combo_data(
+            self._weight_combo,
+            [QFont.Weight.Bold if bool(d.get("bold", False)) else QFont.Weight.Normal],
+        )
+        self._set_combo_data(self._style_combo, [bool(d.get("italic", False))])
+        self._set_check(self._underline_check, [bool(d.get("underline", False))])
         tc = d.get("text_color")
         self._text_color_picker.color = QColor(tc) if isinstance(tc, QColor) else QColor("black")
 
-        # Horizontal alignment
         ha = d.get("horizontal_align", Qt.AlignmentFlag.AlignLeft)
         if isinstance(ha, Qt.AlignmentFlag):
             self._set_align_combo(ha)
 
-        # Text Box section
         bg = d.get("bg_color")
-        bg_color = QColor(bg) if isinstance(bg, QColor) else QColor("#00000000")
-        self._text_bg_color_picker.color = bg_color
-
+        self._text_bg_color_picker.color = (
+            QColor(bg) if isinstance(bg, QColor) else QColor("#00000000")
+        )
         bc = d.get("border_color")
         self._text_border_color_picker.color = (
             QColor(bc) if isinstance(bc, QColor) else QColor("#00000000")
@@ -465,19 +758,12 @@ class PropertyPanel(QDockWidget):
         self._text_border_w_spin.setValue(float(d.get("border_width", 0.0)))
         self._text_corner_radius_spin.setValue(float(d.get("border_radius", 0.0)))
         self._text_padding_spin.setValue(float(d.get("padding", 8.0)))
+        self._set_combo_data(self._text_valign_combo, [d.get("vertical_align", VerticalAlign.TOP)])
 
-        # Vertical align
-        va = d.get("vertical_align", VerticalAlign.TOP)
-        for i in range(self._text_valign_combo.count()):
-            if self._text_valign_combo.itemData(i) == va:
-                self._text_valign_combo.setCurrentIndex(i)
-                break
-
-        # Auto-size: only for text tool (not callout)
         is_text_tool = self._active_tool_id == "text"
         self._text_auto_size_check.setVisible(is_text_tool)
         if is_text_tool:
-            self._text_auto_size_check.setChecked(bool(d.get("auto_size", True)))
+            self._set_check(self._text_auto_size_check, [bool(d.get("auto_size", True))])
 
     def _populate_appearance_from_tool_defaults(self) -> None:
         """Fill Appearance widgets from the active vector tool's creation_defaults."""
@@ -485,14 +771,14 @@ class PropertyPanel(QDockWidget):
         if d is None:
             return
         sc = d.get("stroke_color")
-        self._stroke_color_picker.color = QColor(sc) if isinstance(sc, QColor) else QColor("black")
+        stroke = QColor(sc) if isinstance(sc, QColor) else QColor("black")
+        self._set_color(self._stroke_color_picker, self._stroke_hex, [stroke])
         sw = float(d.get("stroke_width", 2.0))
         self._stroke_w_slider.setValue(int(sw))
         self._stroke_w_spin.setValue(sw)
         fc = d.get("fill_color")
-        self._fill_color_picker.color = (
-            QColor(fc) if isinstance(fc, QColor) else QColor("transparent")
-        )
+        fill = QColor(fc) if isinstance(fc, QColor) else QColor("transparent")
+        self._set_color(self._fill_color_picker, self._fill_hex, [fill])
         op = int(d.get("opacity_pct", 100))
         self._opacity_slider.setValue(op)
         self._opacity_spin.setValue(op)
@@ -503,105 +789,150 @@ class PropertyPanel(QDockWidget):
         try:
             self._layer_combo.clear()
             layers = self._scene.layer_manager.layers
-            item = self._first_selected_item()
-            current_idx = 0
-            for i, layer in enumerate(layers):
+            items = self._selected_items()
+            for layer in layers:
                 self._layer_combo.addItem(layer.name, layer.layer_id)
-                if item is not None and layer.layer_id == item.layer_id:
-                    current_idx = i
-            self._layer_combo.setCurrentIndex(current_idx)
+            self._set_combo_data(self._layer_combo, [i.layer_id for i in items])
         finally:
             self._updating = was_updating
 
-    # --- edit handlers ---
+    # ------------------------------------------------------- commands
+
+    def _push(self, command: BaseCommand) -> None:
+        self._scene.command_stack.push(command)
+
+    def _push_property(self, items: list[Any], prop: str, value: Any) -> None:
+        """One undoable command that sets *prop* on every item (PRD 8.6)."""
+        if not items:
+            return
+        if len(items) == 1:
+            item = items[0]
+            self._push(ModifyPropertyCommand(item, prop, getattr(item, prop), value))
+        else:
+            self._push(ModifyPropertiesCommand(items, prop, value))
+
+    def _push_scale(self, items: list[SnapGraphicsItem], sx: float, sy: float) -> None:
+        commands: list[BaseCommand] = [ScaleGeometryCommand(i, sx, sy) for i in items]
+        if len(commands) == 1:
+            self._push(commands[0])
+        elif commands:
+            self._push(MacroCommand(commands, "Resize items"))
+
+    def _push_font(self, items: list[_TextLike], mutate: Callable[[QFont], None]) -> None:
+        commands: list[BaseCommand] = []
+        for item in items:
+            new_font = QFont(item.font)
+            mutate(new_font)
+            commands.append(ModifyPropertyCommand(item, "font", item.font, new_font))
+        if len(commands) == 1:
+            self._push(commands[0])
+        elif commands:
+            self._push(MacroCommand(commands, "Change font"))
+
+    def _set_default(self, key: str, value: object) -> bool:
+        """Write a creation default when the panel shows tool defaults; True if it did."""
+        if not (self._in_tool_defaults_mode() or self._in_vector_defaults_mode()):
+            return False
+        d = self._active_tool_defaults()
+        if d is not None:
+            d[key] = value
+            self._notify_defaults_changed()
+        return True
+
+    # --- transform handlers ---
 
     def _on_x_changed(self, value: float) -> None:
-        if self._updating:
+        if self._updating or value == self._x_spin.minimum():
             return
-        item = self._first_selected_item()
-        if item is None:
-            return
-        cmd = ModifyPropertyCommand(item, "pos_x", item.pos_x, value)
-        self._scene.command_stack.push(cmd)
+        self._push_property(self._selected_items(), "pos_x", value)
 
     def _on_y_changed(self, value: float) -> None:
-        if self._updating:
+        if self._updating or value == self._y_spin.minimum():
             return
-        item = self._first_selected_item()
-        if item is None:
-            return
-        cmd = ModifyPropertyCommand(item, "pos_y", item.pos_y, value)
-        self._scene.command_stack.push(cmd)
+        self._push_property(self._selected_items(), "pos_y", value)
 
     def _on_w_changed(self, value: float) -> None:
-        if self._updating:
+        if self._updating or value <= 0:
             return
-        item = self._first_selected_item()
-        if item is None:
-            return
-        br = item.boundingRect()
-        old_w = br.width()
-        if old_w <= 0:
-            return
-        sx = value / old_w
-        cmd = ScaleGeometryCommand(item, sx, 1.0)
-        self._scene.command_stack.push(cmd)
+        commands: list[BaseCommand] = []
+        for item in self._selected_items():
+            old_w = item.boundingRect().width()
+            if old_w <= 0:
+                continue
+            sx = value / old_w
+            commands.append(ScaleGeometryCommand(item, sx, sx if self.aspect_locked else 1.0))
+        self._push_commands(commands, "Resize items")
 
     def _on_h_changed(self, value: float) -> None:
-        if self._updating:
+        if self._updating or value <= 0:
             return
-        item = self._first_selected_item()
-        if item is None:
-            return
-        br = item.boundingRect()
-        old_h = br.height()
-        if old_h <= 0:
-            return
-        sy = value / old_h
-        cmd = ScaleGeometryCommand(item, 1.0, sy)
-        self._scene.command_stack.push(cmd)
+        commands: list[BaseCommand] = []
+        for item in self._selected_items():
+            old_h = item.boundingRect().height()
+            if old_h <= 0:
+                continue
+            sy = value / old_h
+            commands.append(ScaleGeometryCommand(item, sy if self.aspect_locked else 1.0, sy))
+        self._push_commands(commands, "Resize items")
+
+    def _push_commands(self, commands: list[BaseCommand], description: str) -> None:
+        if len(commands) == 1:
+            self._push(commands[0])
+        elif commands:
+            self._push(MacroCommand(commands, description))
+
+    @property
+    def aspect_locked(self) -> bool:
+        """The chain-link toggle between Width and Height (PRD 8.3)."""
+        return self._aspect_lock.isChecked()
+
+    def _on_aspect_lock_toggled(self, _checked: bool) -> None:
+        self._apply_icons()
 
     def _on_rotation_changed(self, value: float) -> None:
-        if self._updating:
+        if self._updating or value == self._rot_spin.minimum():
             return
-        item = self._first_selected_item()
-        if item is None:
-            return
-        cmd = ModifyPropertyCommand(item, "rotation_deg", item.rotation_deg, value)
-        self._scene.command_stack.push(cmd)
+        self._push_property(self._selected_items(), "rotation_deg", value)
 
     def _on_flip_h_changed(self, checked: bool) -> None:
         if self._updating:
             return
-        item = self._first_selected_item()
-        if item is None:
-            return
-        cmd = ModifyPropertyCommand(item, "flip_horizontal", item.flip_horizontal, checked)
-        self._scene.command_stack.push(cmd)
+        self._push_property(self._selected_items(), "flip_horizontal", checked)
 
     def _on_flip_v_changed(self, checked: bool) -> None:
         if self._updating:
             return
-        item = self._first_selected_item()
-        if item is None:
-            return
-        cmd = ModifyPropertyCommand(item, "flip_vertical", item.flip_vertical, checked)
-        self._scene.command_stack.push(cmd)
+        self._push_property(self._selected_items(), "flip_vertical", checked)
+
+    # --- appearance handlers ---
 
     def _on_stroke_color_changed(self, color: QColor) -> None:
         if self._updating:
             return
-        if self._in_vector_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                d["stroke_color"] = QColor(color)
-                self._notify_defaults_changed()
+        self._stroke_hex.setText(_hex_text(color))
+        if self._set_default("stroke_color", QColor(color)):
             return
-        item = self._first_selected_item()
-        if not isinstance(item, VectorItem):
+        self._push_property(self._selected_vectors(), "stroke_color", QColor(color))
+
+    def _on_stroke_hex_edited(self) -> None:
+        self._apply_hex(self._stroke_hex, self._stroke_color_picker)
+
+    def _on_fill_hex_edited(self) -> None:
+        self._apply_hex(self._fill_hex, self._fill_color_picker)
+
+    def _apply_hex(self, edit: QLineEdit, picker: ColorPicker) -> None:
+        """A valid hex in the input becomes the swatch colour and applies like a pick."""
+        if self._updating:
             return
-        cmd = ModifyPropertyCommand(item, "stroke_color", item.stroke_color, color)
-        self._scene.command_stack.push(cmd)
+        color = QColor(edit.text().strip())
+        if not color.isValid():
+            edit.setText("" if picker.mixed else _hex_text(picker.color))
+            return
+        if not picker.mixed and _color_key(color) == _color_key(picker.color):
+            edit.setText(_hex_text(color))
+            return
+        picker.color = color
+        picker.color_changed.emit(QColor(color))
 
     def _on_stroke_w_slider_changed(self, value: int) -> None:
         if self._updating:
@@ -609,50 +940,28 @@ class PropertyPanel(QDockWidget):
         self._updating = True
         self._stroke_w_spin.setValue(float(value))
         self._updating = False
-        if self._in_vector_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                d["stroke_width"] = float(value)
-                self._notify_defaults_changed()
-            return
-        item = self._first_selected_item()
-        if not isinstance(item, VectorItem):
-            return
-        cmd = ModifyPropertyCommand(item, "stroke_width", item.stroke_width, float(value))
-        self._scene.command_stack.push(cmd)
+        self._apply_stroke_width(float(value))
 
     def _on_stroke_w_spin_changed(self, value: float) -> None:
-        if self._updating:
+        if self._updating or value < 0:
             return
         self._updating = True
         self._stroke_w_slider.setValue(int(value))
         self._updating = False
-        if self._in_vector_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                d["stroke_width"] = value
-                self._notify_defaults_changed()
+        self._apply_stroke_width(value)
+
+    def _apply_stroke_width(self, value: float) -> None:
+        if self._set_default("stroke_width", value):
             return
-        item = self._first_selected_item()
-        if not isinstance(item, VectorItem):
-            return
-        cmd = ModifyPropertyCommand(item, "stroke_width", item.stroke_width, value)
-        self._scene.command_stack.push(cmd)
+        self._push_property(self._selected_vectors(), "stroke_width", value)
 
     def _on_fill_color_changed(self, color: QColor) -> None:
         if self._updating:
             return
-        if self._in_vector_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                d["fill_color"] = QColor(color)
-                self._notify_defaults_changed()
+        self._fill_hex.setText(_hex_text(color))
+        if self._set_default("fill_color", QColor(color)):
             return
-        item = self._first_selected_item()
-        if not isinstance(item, VectorItem):
-            return
-        cmd = ModifyPropertyCommand(item, "fill_color", item.fill_color, color)
-        self._scene.command_stack.push(cmd)
+        self._push_property(self._selected_vectors(), "fill_color", QColor(color))
 
     def _on_opacity_slider_changed(self, value: int) -> None:
         if self._updating:
@@ -660,66 +969,94 @@ class PropertyPanel(QDockWidget):
         self._updating = True
         self._opacity_spin.setValue(value)
         self._updating = False
-        if self._in_vector_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                d["opacity_pct"] = float(value)
-                self._notify_defaults_changed()
-            return
-        item = self._first_selected_item()
-        if item is None:
-            return
-        cmd = ModifyPropertyCommand(item, "opacity_pct", item.opacity_pct, float(value))
-        self._scene.command_stack.push(cmd)
+        self._apply_opacity(value)
 
     def _on_opacity_spin_changed(self, value: int) -> None:
-        if self._updating:
+        if self._updating or value < 0:
             return
         self._updating = True
         self._opacity_slider.setValue(value)
         self._updating = False
-        if self._in_vector_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                d["opacity_pct"] = float(value)
-                self._notify_defaults_changed()
+        self._apply_opacity(value)
+
+    def _apply_opacity(self, value: int) -> None:
+        if self._set_default("opacity_pct", float(value)):
             return
-        item = self._first_selected_item()
-        if item is None:
-            return
-        cmd = ModifyPropertyCommand(item, "opacity_pct", item.opacity_pct, float(value))
-        self._scene.command_stack.push(cmd)
+        self._push_property(self._selected_items(), "opacity_pct", float(value))
+
+    # --- item info handlers ---
 
     def _on_layer_changed(self, index: int) -> None:
         if self._updating or index < 0:
             return
-        item = self._first_selected_item()
-        if item is None:
-            return
+        items = self._selected_items()
         target_layer_id = self._layer_combo.itemData(index)
-        if not isinstance(target_layer_id, str) or target_layer_id == item.layer_id:
+        if not isinstance(target_layer_id, str):
             return
-        cmd = MoveItemToLayerCommand(self._scene, [item], target_layer_id)
-        self._scene.command_stack.push(cmd)
+        moving = [i for i in items if i.layer_id != target_layer_id]
+        if moving:
+            self._push(MoveItemToLayerCommand(self._scene, moving, target_layer_id))
 
     def _on_locked_changed(self, checked: bool) -> None:
         if self._updating:
             return
-        item = self._first_selected_item()
-        if item is None:
+        self._locked_check.setTristate(False)
+        self._push_property(self._selected_items(), "locked", checked)
+
+    # --- canvas handlers (PRD 8.5) ---
+
+    def _on_canvas_size_changed(self, _value: int) -> None:
+        if self._updating:
             return
-        cmd = ModifyPropertyCommand(item, "locked", item.locked, checked)
-        self._scene.command_stack.push(cmd)
+        size = QSizeF(self._canvas_w_spin.value(), self._canvas_h_spin.value())
+        if size == self._scene.canvas_size:
+            return
+        # Anchored top-left so existing content keeps its position.
+        self._push(ResizeCanvasCommand(self._scene, size, 0, self._scene.background_color))
+
+    def _on_bg_color_changed(self, color: QColor) -> None:
+        if self._updating:
+            return
+        self._push(
+            SetCanvasPropertyCommand(
+                self._scene, "background_color", self._scene.background_color, QColor(color)
+            )
+        )
+
+    def _on_pasteboard_color_changed(self, color: QColor) -> None:
+        if not self._updating:
+            self.canvas_setting_changed.emit("pasteboard_color", QColor(color))
+
+    def _on_grid_size_changed(self, value: int) -> None:
+        if not self._updating:
+            self.canvas_setting_changed.emit("grid_size", value)
+
+    def _on_snap_toggled(self, checked: bool) -> None:
+        if not self._updating:
+            self.canvas_setting_changed.emit("snap_to_grid", checked)
+
+    def _on_dpi_changed(self, value: int) -> None:
+        if self._updating or value == self._scene.canvas_dpi:
+            return
+        self._push(
+            SetCanvasPropertyCommand(self._scene, "canvas_dpi", self._scene.canvas_dpi, value)
+        )
+
+    def show_canvas_section(self) -> None:
+        """Expand the Canvas section and scroll to it (canvas context menu, PRD 10.1)."""
+        self._canvas_section.set_expanded(True)
+        self._refresh_from_selection()
+        self._scroll.ensureWidgetVisible(self._canvas_section)
+
+    # --- text handlers ---
 
     def _set_align_combo(self, alignment: Qt.AlignmentFlag) -> None:
         """Set the text align combo to match the given Qt alignment flag."""
-        # Qt may combine alignment flags; mask to horizontal component
         h_align = alignment & Qt.AlignmentFlag.AlignHorizontal_Mask
         for i in range(self._text_align_combo.count()):
             if self._text_align_combo.itemData(i) == h_align:
                 self._text_align_combo.setCurrentIndex(i)
                 return
-        # Default to Left if not found
         self._text_align_combo.setCurrentIndex(0)
 
     def _ensure_editor_connected(self) -> None:
@@ -759,7 +1096,6 @@ class PropertyPanel(QDockWidget):
         self._connected_editor = None
 
     def _on_editor_cursor_changed(self) -> None:
-        """Slot for cursor position / selection changes in the editor."""
         if self._updating:
             return
         self._updating = True
@@ -769,16 +1105,9 @@ class PropertyPanel(QDockWidget):
             self._updating = False
 
     def _on_editor_format_changed(self, _fmt: QTextCharFormat) -> None:
-        """Slot for currentCharFormatChanged (e.g. Ctrl+B in editor)."""
-        if self._updating:
-            return
-        self._updating = True
-        try:
-            self._refresh_text_from_cursor()
-        finally:
-            self._updating = False
+        self._on_editor_cursor_changed()
 
-    def _refresh_text_from_cursor(self) -> None:
+    def _refresh_text_from_cursor(self) -> None:  # noqa: C901
         """Refresh text widgets from the editor's current cursor/selection format."""
         editor = self._get_active_editor()
         if editor is None or not hasattr(editor, "textCursor"):
@@ -786,32 +1115,30 @@ class PropertyPanel(QDockWidget):
         cursor: QTextCursor = editor.textCursor()
 
         if not cursor.hasSelection():
-            # No selection — show definite values from cursor char format
             fmt = cursor.charFormat()
             font = fmt.font()
             self._font_combo.setCurrentFont(font)
-            size = font.pointSize()
-            self._font_size_spin.setValue(max(1, size))
-            self._bold_check.setTristate(False)
-            self._italic_check.setTristate(False)
-            self._underline_check.setTristate(False)
-            self._bold_check.setChecked(font.bold())
-            self._italic_check.setChecked(font.italic())
-            self._underline_check.setChecked(font.underline())
+            self._font_size_spin.setValue(max(1, font.pointSize()))
+            self._set_combo_data(
+                self._weight_combo,
+                [QFont.Weight.Bold if font.bold() else QFont.Weight.Normal],
+            )
+            self._set_combo_data(self._style_combo, [font.italic()])
+            self._set_check(self._underline_check, [font.underline()])
             fg = fmt.foreground()
             if fg.style() != Qt.BrushStyle.NoBrush:
                 self._text_color_picker.color = QColor(fg.color())
             self._set_align_combo(cursor.blockFormat().alignment())
             return
 
-        # Selection — analyze fragments for mixed state
-        families: set[str] = set()
-        sizes: set[int] = set()
-        bolds: set[bool] = set()
-        italics: set[bool] = set()
-        underlines: set[bool] = set()
-        colors: set[str] = set()
-        alignments: set[int] = set()
+        # Selection: analyse fragments for mixed state (Text PRD 3.6)
+        families: list[str] = []
+        sizes: list[int] = []
+        bolds: list[bool] = []
+        italics: list[bool] = []
+        underlines: list[bool] = []
+        colors: list[QColor] = []
+        alignments: list[int] = []
 
         sel_start = cursor.selectionStart()
         sel_end = cursor.selectionEnd()
@@ -823,83 +1150,61 @@ class PropertyPanel(QDockWidget):
         while block.isValid():
             block_start = block.position()
             block_end = block_start + block.length()
-            block_overlaps = block_end > sel_start and block_start < sel_end
-            if block_overlaps:
+            if block_end > sel_start and block_start < sel_end:
                 align = block.blockFormat().alignment()
-                alignments.add(int(align & Qt.AlignmentFlag.AlignHorizontal_Mask))
+                alignments.append(int(align & Qt.AlignmentFlag.AlignHorizontal_Mask))
             it = block.begin()
             while not it.atEnd():
                 fragment = it.fragment()
                 if fragment.isValid():
                     frag_start = fragment.position()
                     frag_end = frag_start + fragment.length()
-                    # Check overlap with selection
                     if frag_end > sel_start and frag_start < sel_end:
                         fmt = fragment.charFormat()
                         font = fmt.font()
-                        families.add(font.family())
-                        sizes.add(font.pointSize())
-                        bolds.add(font.bold())
-                        italics.add(font.italic())
-                        underlines.add(font.underline())
+                        families.append(font.family())
+                        sizes.append(font.pointSize())
+                        bolds.append(font.bold())
+                        italics.append(font.italic())
+                        underlines.append(font.underline())
                         fg = fmt.foreground()
                         if fg.style() != Qt.BrushStyle.NoBrush:
-                            colors.add(fg.color().name(QColor.NameFormat.HexArgb))
+                            colors.append(QColor(fg.color()))
                 it += 1
             block = block.next()
 
-        # Font family
-        if len(families) == 1:
-            self._font_combo.setCurrentFont(QFont(next(iter(families))))
-        elif len(families) > 1:
-            le = self._font_combo.lineEdit()
-            if le is not None:
-                le.setText("")
+        family, uniform = _uniform(families)
+        if uniform and family:
+            self._font_combo.setCurrentFont(QFont(family))
+        elif families:
+            self._clear_font_combo()
+        if sizes:
+            self._set_spin(self._font_size_spin, [max(1, s) for s in sizes])
+        if bolds:
+            self._set_combo_data(
+                self._weight_combo,
+                [QFont.Weight.Bold if b else QFont.Weight.Normal for b in bolds],
+            )
+        if italics:
+            self._set_combo_data(self._style_combo, italics)
+        if underlines:
+            self._set_check(self._underline_check, underlines)
+        if colors:
+            self._set_color(self._text_color_picker, None, colors)
+        if alignments:
+            value, uniform = _uniform(alignments)
+            if uniform:
+                self._set_align_combo(Qt.AlignmentFlag(value))
+            else:
+                self._text_align_combo.setCurrentIndex(-1)
 
-        # Font size
-        if len(sizes) == 1:
-            self._font_size_spin.setValue(max(1, next(iter(sizes))))
-        elif len(sizes) > 1:
-            self._font_size_spin.setValue(0)
-
-        # Bold
-        if len(bolds) == 1:
-            self._bold_check.setTristate(False)
-            self._bold_check.setChecked(next(iter(bolds)))
-        elif len(bolds) > 1:
-            self._bold_check.setTristate(True)
-            self._bold_check.setCheckState(Qt.CheckState.PartiallyChecked)
-
-        # Italic
-        if len(italics) == 1:
-            self._italic_check.setTristate(False)
-            self._italic_check.setChecked(next(iter(italics)))
-        elif len(italics) > 1:
-            self._italic_check.setTristate(True)
-            self._italic_check.setCheckState(Qt.CheckState.PartiallyChecked)
-
-        # Underline
-        if len(underlines) == 1:
-            self._underline_check.setTristate(False)
-            self._underline_check.setChecked(next(iter(underlines)))
-        elif len(underlines) > 1:
-            self._underline_check.setTristate(True)
-            self._underline_check.setCheckState(Qt.CheckState.PartiallyChecked)
-
-        # Text color — show first found, leave unchanged if mixed
-        if len(colors) == 1:
-            self._text_color_picker.color = QColor(next(iter(colors)))
-
-        # Horizontal alignment
-        if len(alignments) == 1:
-            self._set_align_combo(Qt.AlignmentFlag(next(iter(alignments))))
-        elif len(alignments) > 1:
-            self._text_align_combo.setCurrentIndex(-1)
-
-    def _text_item(self) -> TextItem | CalloutItem | None:
-        item = self._first_selected_item()
-        if isinstance(item, (TextItem, CalloutItem)):
-            return item
+    def _editing_editor(self) -> QWidget | None:
+        """The rich text editor when exactly one text item is being edited."""
+        items = self._selected_text_items()
+        if len(items) == 1 and items[0].is_editing:
+            editor = self._get_active_editor()
+            if editor is not None and hasattr(editor, "textCursor"):
+                return editor
         return None
 
     def _get_active_editor(self) -> QWidget | None:
@@ -913,156 +1218,90 @@ class PropertyPanel(QDockWidget):
                     return editor
         return None
 
-    def _push_font_change(self, item: TextItem | CalloutItem, new_font: QFont) -> None:
-        old_font = item.font
-        cmd = ModifyPropertyCommand(item, "font", old_font, new_font)
-        self._scene.command_stack.push(cmd)
+    def _merge_char_format(self, editor: QWidget, fmt: QTextCharFormat) -> None:
+        editor.textCursor().mergeCharFormat(fmt)  # type: ignore[attr-defined]
 
     def _on_font_family_changed(self, font: QFont) -> None:
         if self._updating:
             return
-        if self._in_tool_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                d["font_family"] = font.family()
-                self._notify_defaults_changed()
+        if self._set_default("font_family", font.family()):
             return
-        item = self._text_item()
-        if item is None:
+        editor = self._editing_editor()
+        if editor is not None:
+            fmt = QTextCharFormat()
+            fmt.setFontFamilies([font.family()])
+            self._merge_char_format(editor, fmt)
             return
-        # Edit-mode: apply to cursor selection
-        if item.is_editing:
-            editor = self._get_active_editor()
-            if editor is not None and hasattr(editor, "textCursor"):
-                fmt = QTextCharFormat()
-                fmt.setFontFamilies([font.family()])
-                editor.textCursor().mergeCharFormat(fmt)
-                return
-        new_font = QFont(item.font)
-        new_font.setFamily(font.family())
-        self._push_font_change(item, new_font)
+        self._push_font(self._selected_text_items(), lambda f: f.setFamily(font.family()))
 
     def _on_font_size_changed(self, value: int) -> None:
         if self._updating or value == 0:
             return
-        if self._in_tool_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                d["font_size"] = value
-                self._notify_defaults_changed()
+        if self._set_default("font_size", value):
             return
-        item = self._text_item()
-        if item is None:
+        editor = self._editing_editor()
+        if editor is not None:
+            fmt = QTextCharFormat()
+            fmt.setFontPointSize(float(value))
+            self._merge_char_format(editor, fmt)
             return
-        # Edit-mode: apply to cursor selection
-        if item.is_editing:
-            editor = self._get_active_editor()
-            if editor is not None and hasattr(editor, "textCursor"):
-                fmt = QTextCharFormat()
-                fmt.setFontPointSize(float(value))
-                editor.textCursor().mergeCharFormat(fmt)
-                return
-        new_font = QFont(item.font)
-        new_font.setPointSize(value)
-        self._push_font_change(item, new_font)
+        self._push_font(self._selected_text_items(), lambda f: f.setPointSize(value))
 
-    def _on_bold_changed(self, checked: bool) -> None:
-        if self._updating:
+    def _on_weight_changed(self, index: int) -> None:
+        if self._updating or index < 0:
             return
-        self._bold_check.setTristate(False)
-        if self._in_tool_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                d["bold"] = checked
-                self._notify_defaults_changed()
+        weight = self._weight_combo.itemData(index)
+        bold = weight == QFont.Weight.Bold
+        if self._set_default("bold", bold):
             return
-        item = self._text_item()
-        if item is None:
+        editor = self._editing_editor()
+        if editor is not None:
+            fmt = QTextCharFormat()
+            fmt.setFontWeight(QFont.Weight.Bold if bold else QFont.Weight.Normal)
+            self._merge_char_format(editor, fmt)
             return
-        # Edit-mode: apply to cursor selection
-        if item.is_editing:
-            editor = self._get_active_editor()
-            if editor is not None and hasattr(editor, "textCursor"):
-                fmt = QTextCharFormat()
-                fmt.setFontWeight(QFont.Weight.Bold if checked else QFont.Weight.Normal)
-                editor.textCursor().mergeCharFormat(fmt)
-                return
-        new_font = QFont(item.font)
-        new_font.setBold(checked)
-        self._push_font_change(item, new_font)
+        self._push_font(self._selected_text_items(), lambda f: f.setBold(bold))
 
-    def _on_italic_changed(self, checked: bool) -> None:
-        if self._updating:
+    def _on_style_changed(self, index: int) -> None:
+        if self._updating or index < 0:
             return
-        self._italic_check.setTristate(False)
-        if self._in_tool_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                d["italic"] = checked
-                self._notify_defaults_changed()
+        italic = bool(self._style_combo.itemData(index))
+        if self._set_default("italic", italic):
             return
-        item = self._text_item()
-        if item is None:
+        editor = self._editing_editor()
+        if editor is not None:
+            fmt = QTextCharFormat()
+            fmt.setFontItalic(italic)
+            self._merge_char_format(editor, fmt)
             return
-        # Edit-mode: apply to cursor selection
-        if item.is_editing:
-            editor = self._get_active_editor()
-            if editor is not None and hasattr(editor, "textCursor"):
-                fmt = QTextCharFormat()
-                fmt.setFontItalic(checked)
-                editor.textCursor().mergeCharFormat(fmt)
-                return
-        new_font = QFont(item.font)
-        new_font.setItalic(checked)
-        self._push_font_change(item, new_font)
+        self._push_font(self._selected_text_items(), lambda f: f.setItalic(italic))
 
     def _on_underline_changed(self, checked: bool) -> None:
         if self._updating:
             return
         self._underline_check.setTristate(False)
-        if self._in_tool_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                d["underline"] = checked
-                self._notify_defaults_changed()
+        if self._set_default("underline", checked):
             return
-        item = self._text_item()
-        if item is None:
+        editor = self._editing_editor()
+        if editor is not None:
+            fmt = QTextCharFormat()
+            fmt.setFontUnderline(checked)
+            self._merge_char_format(editor, fmt)
             return
-        # Edit-mode: apply to cursor selection
-        if item.is_editing:
-            editor = self._get_active_editor()
-            if editor is not None and hasattr(editor, "textCursor"):
-                fmt = QTextCharFormat()
-                fmt.setFontUnderline(checked)
-                editor.textCursor().mergeCharFormat(fmt)
-                return
-        new_font = QFont(item.font)
-        new_font.setUnderline(checked)
-        self._push_font_change(item, new_font)
+        self._push_font(self._selected_text_items(), lambda f: f.setUnderline(checked))
 
     def _on_text_color_changed(self, color: QColor) -> None:
         if self._updating:
             return
-        if self._in_tool_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                d["text_color"] = QColor(color)
-                self._notify_defaults_changed()
+        if self._set_default("text_color", QColor(color)):
             return
-        item = self._text_item()
-        if item is None:
+        editor = self._editing_editor()
+        if editor is not None:
+            fmt = QTextCharFormat()
+            fmt.setForeground(color)
+            self._merge_char_format(editor, fmt)
             return
-        # Edit-mode: apply to cursor selection
-        if item.is_editing:
-            editor = self._get_active_editor()
-            if editor is not None and hasattr(editor, "textCursor"):
-                fmt = QTextCharFormat()
-                fmt.setForeground(color)
-                editor.textCursor().mergeCharFormat(fmt)
-                return
-        cmd = ModifyPropertyCommand(item, "text_color", item.text_color, color)
-        self._scene.command_stack.push(cmd)
+        self._push_property(self._selected_text_items(), "text_color", QColor(color))
 
     def _on_text_align_changed(self, index: int) -> None:
         if self._updating or index < 0:
@@ -1070,147 +1309,80 @@ class PropertyPanel(QDockWidget):
         alignment = self._text_align_combo.itemData(index)
         if not isinstance(alignment, Qt.AlignmentFlag):
             return
-        if self._in_tool_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                d["horizontal_align"] = alignment
-                self._notify_defaults_changed()
+        if self._set_default("horizontal_align", alignment):
             return
-        item = self._text_item()
-        if item is None:
+        editor = self._editing_editor()
+        if editor is not None and hasattr(editor, "setAlignment"):
+            editor.setAlignment(alignment)
             return
-        # Edit-mode: apply to cursor's paragraph
-        if item.is_editing:
-            editor = self._get_active_editor()
-            if editor is not None and hasattr(editor, "setAlignment"):
-                editor.setAlignment(alignment)
-                return
-        # Non-editing: apply to entire document
-        item.set_alignment(alignment)
+        self._push_property(self._selected_text_items(), "horizontal_alignment", alignment)
 
     def _on_text_bg_color_changed(self, color: QColor) -> None:
         if self._updating:
             return
-        if self._in_tool_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                d["bg_color"] = QColor(color)
-                self._notify_defaults_changed()
+        if self._set_default("bg_color", QColor(color)):
             return
-        item = self._first_selected_item()
-        if not isinstance(item, (TextItem, CalloutItem)):
-            return
-        cmd = ModifyPropertyCommand(item, "bg_color", item.bg_color, color)
-        self._scene.command_stack.push(cmd)
+        self._push_property(self._selected_text_items(), "bg_color", QColor(color))
 
     def _on_text_border_color_changed(self, color: QColor) -> None:
         if self._updating:
             return
-        if self._in_tool_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                d["border_color"] = QColor(color)
-                self._notify_defaults_changed()
+        if self._set_default("border_color", QColor(color)):
             return
-        item = self._first_selected_item()
-        if not isinstance(item, (TextItem, CalloutItem)):
-            return
-        cmd = ModifyPropertyCommand(item, "border_color", item.border_color, color)
-        self._scene.command_stack.push(cmd)
+        self._push_property(self._selected_text_items(), "border_color", QColor(color))
 
     def _on_text_border_w_changed(self, value: float) -> None:
-        if self._updating:
+        if self._updating or value < 0:
             return
-        if self._in_tool_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                d["border_width"] = value
-                self._notify_defaults_changed()
+        if self._set_default("border_width", value):
             return
-        item = self._first_selected_item()
-        if not isinstance(item, (TextItem, CalloutItem)):
-            return
-        cmd = ModifyPropertyCommand(item, "border_width", item.border_width, value)
-        self._scene.command_stack.push(cmd)
+        self._push_property(self._selected_text_items(), "border_width", value)
 
     def _on_text_corner_radius_changed(self, value: float) -> None:
-        if self._updating:
+        if self._updating or value < 0:
             return
-        if self._in_tool_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                d["border_radius"] = value
-                self._notify_defaults_changed()
+        if self._set_default("border_radius", value):
             return
-        item = self._first_selected_item()
-        if not isinstance(item, (TextItem, CalloutItem)):
-            return
-        cmd = ModifyPropertyCommand(item, "border_radius", item.border_radius, value)
-        self._scene.command_stack.push(cmd)
+        self._push_property(self._selected_text_items(), "border_radius", value)
 
     def _on_text_padding_changed(self, value: float) -> None:
-        if self._updating:
+        if self._updating or value < 0:
             return
-        if self._in_tool_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                d["padding"] = value
-                self._notify_defaults_changed()
+        if self._set_default("padding", value):
             return
-        item = self._first_selected_item()
-        if not isinstance(item, (TextItem, CalloutItem)):
-            return
-        cmd = ModifyPropertyCommand(item, "padding", item.padding, value)
-        self._scene.command_stack.push(cmd)
+        self._push_property(self._selected_text_items(), "padding", value)
 
     def _on_text_valign_changed(self, index: int) -> None:
         if self._updating or index < 0:
             return
-        if self._in_tool_defaults_mode():
-            d = self._active_tool_defaults()
-            new_align = self._text_valign_combo.itemData(index)
-            if d is not None and isinstance(new_align, VerticalAlign):
-                d["vertical_align"] = new_align
-            return
-        item = self._first_selected_item()
-        if not isinstance(item, (TextItem, CalloutItem)):
-            return
         new_align = self._text_valign_combo.itemData(index)
         if not isinstance(new_align, VerticalAlign):
             return
-        cmd = ModifyPropertyCommand(item, "vertical_align", item.vertical_align, new_align)
-        self._scene.command_stack.push(cmd)
+        if self._set_default("vertical_align", new_align):
+            return
+        self._push_property(self._selected_text_items(), "vertical_align", new_align)
 
     def _on_text_auto_size_changed(self, checked: bool) -> None:
         if self._updating:
             return
-        if self._in_tool_defaults_mode():
-            d = self._active_tool_defaults()
-            if d is not None:
-                d["auto_size"] = checked
-                self._notify_defaults_changed()
+        self._text_auto_size_check.setTristate(False)
+        if self._set_default("auto_size", checked):
             return
-        item = self._first_selected_item()
-        if not isinstance(item, TextItem):
-            return
-        cmd = ModifyPropertyCommand(item, "auto_size", item.auto_size, checked)
-        self._scene.command_stack.push(cmd)
-
-    def _on_bg_color_changed(self, color: QColor) -> None:
-        if self._updating:
-            return
-        self._scene.set_background_color(color)
+        items = [i for i in self._selected_items() if isinstance(i, TextItem)]
+        self._push_property(items, "auto_size", checked)
 
     # --- public API for scene/selection replacement ---
 
     def set_scene(self, scene: SnapScene) -> None:
         """Replace the scene reference (e.g. after File > New or Open)."""
+        self._disconnect_scene_signals()
         self._scene = scene
         self._connect_scene_signals()
         self._refresh_from_selection()
 
     def set_selection(self, selection_manager: SelectionManager) -> None:
         """Replace the SelectionManager (e.g. after opening a new project)."""
+        self._disconnect_selection_signals()
         self._selection_manager = selection_manager
         self._connect_selection_signals()
         self._refresh_from_selection()
@@ -1236,6 +1408,11 @@ class PropertyPanel(QDockWidget):
     def refresh_tool_defaults(self) -> None:
         """Re-read the active tool's creation defaults (Preferences > Tools changed)."""
         self._refresh_from_selection()
+
+    def refresh_canvas_settings(self) -> None:
+        """Re-read the pasteboard, grid size, and snap state (View menu, Preferences)."""
+        if not self._selected_items():
+            self._refresh_from_selection()
 
     def _on_tool_changed(self, tool_id: str) -> None:
         """Track the active tool and refresh the panel."""

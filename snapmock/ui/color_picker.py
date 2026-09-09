@@ -13,6 +13,7 @@ class _SwatchButton(QPushButton):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._color = QColor("red")
+        self._mixed = False
 
     @property
     def color(self) -> QColor:
@@ -21,6 +22,15 @@ class _SwatchButton(QPushButton):
     @color.setter
     def color(self, value: QColor) -> None:
         self._color = QColor(value)
+        self.update()
+
+    @property
+    def mixed(self) -> bool:
+        return self._mixed
+
+    @mixed.setter
+    def mixed(self, value: bool) -> None:
+        self._mixed = value
         self.update()
 
     def paintEvent(self, event: QPaintEvent | None) -> None:
@@ -41,8 +51,15 @@ class _SwatchButton(QPushButton):
                     h = min(cell, inner.bottom() + 1 - y)
                     painter.fillRect(QRect(x, y, w, h), c)
 
-        # Draw the actual color on top
-        painter.fillRect(inner, self._color)
+        # Draw the actual color on top; a mixed selection fills the left half only (PRD 8.6)
+        if self._mixed:
+            half = QRect(inner)
+            half.setWidth(inner.width() // 2)
+            painter.fillRect(half, self._color)
+            painter.setPen(QColor("#888888"))
+            painter.drawLine(inner.topRight(), inner.bottomLeft())
+        else:
+            painter.fillRect(inner, self._color)
 
         # Border
         painter.setPen(QColor("#888888"))
@@ -108,9 +125,19 @@ class ColorPicker(QWidget):
         self._color = QColor(value)
         if value.alpha() > 0:
             self._last_opaque = QColor(value)
+        self._swatch.mixed = False
         self._swatch.color = self._color
         if self._transparent_btn is not None:
             self._transparent_btn.setChecked(value.alpha() == 0)
+
+    @property
+    def mixed(self) -> bool:
+        """True while the swatch shows a mixed selection (PRD 8.6); any colour set clears it."""
+        return self._swatch.mixed
+
+    @mixed.setter
+    def mixed(self, value: bool) -> None:
+        self._swatch.mixed = value
 
     def _open_dialog(self) -> None:
         options = QColorDialog.ColorDialogOption.ShowAlphaChannel

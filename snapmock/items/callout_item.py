@@ -88,6 +88,16 @@ class CalloutItem(RichTextMixin, SnapGraphicsItem):
         self.update()
 
     @property
+    def horizontal_alignment(self) -> Qt.AlignmentFlag:
+        """The first paragraph's horizontal alignment (Property Panel Align)."""
+        return self.get_block_format().alignment() & Qt.AlignmentFlag.AlignHorizontal_Mask
+
+    @horizontal_alignment.setter
+    def horizontal_alignment(self, value: Qt.AlignmentFlag) -> None:
+        self.set_alignment(value)
+        self.update()
+
+    @property
     def text_color(self) -> QColor:
         return self._get_text_color()
 
