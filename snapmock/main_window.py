@@ -121,7 +121,7 @@ from snapmock.ui.property_panel import PropertyPanel
 from snapmock.ui.status_bar import SnapStatusBar
 from snapmock.ui.toast import Toast
 from snapmock.ui.tool_options_bar import ToolOptionsBar
-from snapmock.ui.toolbar import SnapToolBar
+from snapmock.ui.toolbar import MainToolBar, SnapToolBar
 from snapmock.ui.unmet_requirements import check_requirements, show_not_available
 
 DELAY_CHOICES = (0, 3, 5, 10)
@@ -224,9 +224,14 @@ class MainWindow(QMainWindow):
 
         # UI panels
         # Object names let saveState / restoreState persist the layout (PRD 2.3, 15.4).
+        self._main_toolbar = MainToolBar(self)
+        self._main_toolbar.setObjectName("MainToolBar")
+        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self._main_toolbar)
+        self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
+
         self._toolbar = SnapToolBar(self._tool_manager, self)
         self._toolbar.setObjectName("ToolPalette")
-        self.addToolBar(self._toolbar)
+        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self._toolbar)
 
         self._tool_options = ToolOptionsBar(self._tool_manager, self)
         self._tool_options.setObjectName("ToolOptionsBar")
@@ -259,7 +264,6 @@ class MainWindow(QMainWindow):
             lambda _d: self._library_panel.refresh_open_state()
         )
         self._toast = Toast(self)
-        self._setup_capture_toolbar()
 
         self._status_bar = SnapStatusBar(self._view)
         self.setStatusBar(self._status_bar)
@@ -300,7 +304,11 @@ class MainWindow(QMainWindow):
         self._layer_merge_down_action: QAction | None = None
         # Tools menu action map
         self._tool_actions: dict[str, QAction] = {}
+        # Menu actions the Main Toolbar reuses, keyed like SHORTCUTS (PRD 4.2)
+        self._actions: dict[str, QAction] = {}
         self._setup_menus()
+        self._populate_main_toolbar()
+        self._setup_capture_toolbar()
         self._status_bar_action.setChecked(self._settings.status_bar_visible())
         self._update_undo_redo_text()
 
@@ -324,6 +332,7 @@ class MainWindow(QMainWindow):
         state = self._settings.window_state()
         if state is not None:
             self.restoreState(state)
+            self._enforce_toolbar_layout()
         else:
             self._apply_default_dock_sizes()
 
@@ -393,7 +402,9 @@ class MainWindow(QMainWindow):
     def _view_reset_layout(self) -> None:
         """Restore every panel and toolbar to its default position, size, and visibility."""
         self.restoreState(self._default_layout_state)
+        self._enforce_toolbar_layout()
         for widget in (
+            self._main_toolbar,
             self._toolbar,
             self._tool_options,
             self._layer_panel,
@@ -434,6 +445,43 @@ class MainWindow(QMainWindow):
 
     # ---- menus ----
 
+    def _register(self, key: str, action: QAction | None) -> None:
+        """Remember a menu action the Main Toolbar reuses."""
+        if action is not None:
+            self._actions[key] = action
+
+    def _populate_main_toolbar(self) -> None:
+        """PRD 4.2's six groups over the menu actions; Group 0 arrives with the capture button."""
+        a = self._actions
+        bar = self._main_toolbar
+        bar.add_group([a["file.new"], a["file.open"], a["file.save"], a["file.export_quick_png"]])
+        bar.add_group(
+            [a["edit.undo"], a["edit.redo"], a["edit.cut"], a["edit.copy"], a["edit.paste"]]
+        )
+        bar.add_group([a["edit.duplicate"], a["edit.delete"]])
+        bar.add_group([a["arrange.bring_to_front"], a["arrange.send_to_back"]])
+        bar.add_alignment_group(
+            [
+                a["arrange.align_left"],
+                a["arrange.align_center"],
+                a["arrange.align_right"],
+                a["arrange.align_top"],
+                a["arrange.align_middle"],
+                a["arrange.align_bottom"],
+            ]
+        )
+        bar.add_zoom_group(a["view.zoom_out"], a["view.zoom_in"], a["view.fit_window"], self._view)
+        bar.set_selection_manager(self._selection_manager)
+
+    def _enforce_toolbar_layout(self) -> None:
+        """The PRD 2.1 toolbar areas, whatever a saved state says (toolbars are not movable)."""
+        if self.toolBarArea(self._main_toolbar) != Qt.ToolBarArea.TopToolBarArea:
+            self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self._main_toolbar)
+        if self.toolBarArea(self._tool_options) != Qt.ToolBarArea.TopToolBarArea:
+            self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self._tool_options)
+        if not self.toolBarBreak(self._tool_options):
+            self.insertToolBarBreak(self._tool_options)
+
     def _setup_menus(self) -> None:
         """Create menu bar actions."""
         menu_bar = self.menuBar()
@@ -468,11 +516,13 @@ class MainWindow(QMainWindow):
         if new_action is not None:
             new_action.setShortcut(QKeySequence(SHORTCUTS["file.new"]))
             new_action.triggered.connect(self._file_new)
+        self._register("file.new", new_action)
 
         open_action = file_menu.addAction("&Open...")
         if open_action is not None:
             open_action.setShortcut(QKeySequence(SHORTCUTS["file.open"]))
             open_action.triggered.connect(self._file_open)
+        self._register("file.open", open_action)
 
         self._recent_menu = file_menu.addMenu("Open &Recent")
         self._update_recent_files_menu()
@@ -488,6 +538,7 @@ class MainWindow(QMainWindow):
         if save_action is not None:
             save_action.setShortcut(QKeySequence(SHORTCUTS["file.save"]))
             save_action.triggered.connect(self._file_save)
+        self._register("file.save", save_action)
 
         save_as_action = file_menu.addAction("Save &As...")
         if save_as_action is not None:
@@ -510,6 +561,7 @@ class MainWindow(QMainWindow):
         if export_png_action is not None:
             export_png_action.setShortcut(QKeySequence(SHORTCUTS["file.export_quick_png"]))
             export_png_action.triggered.connect(self._file_export_quick_png)
+        self._register("file.export_quick_png", export_png_action)
 
         file_menu.addSeparator()
 
@@ -541,11 +593,13 @@ class MainWindow(QMainWindow):
         self._undo_action.setShortcut(QKeySequence(SHORTCUTS["edit.undo"]))
         self._undo_action.triggered.connect(self._edit_undo)
         edit_menu.addAction(self._undo_action)
+        self._register("edit.undo", self._undo_action)
 
         self._redo_action = QAction("&Redo", self)
         self._redo_action.setShortcut(QKeySequence(SHORTCUTS["edit.redo"]))
         self._redo_action.triggered.connect(self._edit_redo)
         edit_menu.addAction(self._redo_action)
+        self._register("edit.redo", self._redo_action)
 
         edit_menu.addSeparator()
 
@@ -553,16 +607,19 @@ class MainWindow(QMainWindow):
         if cut_action is not None:
             cut_action.setShortcut(QKeySequence(SHORTCUTS["edit.cut"]))
             cut_action.triggered.connect(self._edit_cut)
+        self._register("edit.cut", cut_action)
 
         copy_action = edit_menu.addAction("&Copy")
         if copy_action is not None:
             copy_action.setShortcut(QKeySequence(SHORTCUTS["edit.copy"]))
             copy_action.triggered.connect(self._edit_copy)
+        self._register("edit.copy", copy_action)
 
         paste_action = edit_menu.addAction("&Paste")
         if paste_action is not None:
             paste_action.setShortcut(QKeySequence(SHORTCUTS["edit.paste"]))
             paste_action.triggered.connect(self._edit_paste)
+        self._register("edit.paste", paste_action)
 
         paste_in_place_action = edit_menu.addAction("Paste in &Place")
         if paste_in_place_action is not None:
@@ -573,6 +630,7 @@ class MainWindow(QMainWindow):
         if delete_action is not None:
             delete_action.setShortcuts(key_sequences("edit.delete"))
             delete_action.triggered.connect(self._edit_delete)
+        self._register("edit.delete", delete_action)
 
         edit_menu.addSeparator()
 
@@ -580,6 +638,7 @@ class MainWindow(QMainWindow):
         if duplicate_action is not None:
             duplicate_action.setShortcut(QKeySequence(SHORTCUTS["edit.duplicate"]))
             duplicate_action.triggered.connect(self._edit_duplicate)
+        self._register("edit.duplicate", duplicate_action)
 
         edit_menu.addSeparator()
 
@@ -618,16 +677,19 @@ class MainWindow(QMainWindow):
         if zoom_in is not None:
             zoom_in.setShortcut(QKeySequence(SHORTCUTS["view.zoom_in"]))
             zoom_in.triggered.connect(self._view_zoom_in)
+        self._register("view.zoom_in", zoom_in)
 
         zoom_out = view_menu.addAction("Zoom &Out")
         if zoom_out is not None:
             zoom_out.setShortcut(QKeySequence(SHORTCUTS["view.zoom_out"]))
             zoom_out.triggered.connect(self._view_zoom_out)
+        self._register("view.zoom_out", zoom_out)
 
         fit_action = view_menu.addAction("&Fit to Window")
         if fit_action is not None:
             fit_action.setShortcut(QKeySequence(SHORTCUTS["view.fit_window"]))
             fit_action.triggered.connect(lambda: self._view.fit_in_view_all())
+        self._register("view.fit_window", fit_action)
 
         actual_action = view_menu.addAction("Zoom to &100%")
         if actual_action is not None:
@@ -669,6 +731,11 @@ class MainWindow(QMainWindow):
         view_menu.addSeparator()
 
         # Panel visibility toggles
+        main_toolbar_toggle = self._main_toolbar.toggleViewAction()
+        if main_toolbar_toggle is not None:
+            main_toolbar_toggle.setText("Show &Main Toolbar")
+            view_menu.addAction(main_toolbar_toggle)
+
         toolbar_toggle = self._toolbar.toggleViewAction()
         if toolbar_toggle is not None:
             toolbar_toggle.setText("Show Tool &Palette")
@@ -846,6 +913,7 @@ class MainWindow(QMainWindow):
         self._bring_front_action.setShortcut(QKeySequence(SHORTCUTS["arrange.bring_to_front"]))
         self._bring_front_action.triggered.connect(self._arrange_bring_to_front)
         arrange_menu.addAction(self._bring_front_action)
+        self._register("arrange.bring_to_front", self._bring_front_action)
 
         self._bring_forward_action = QAction("Bring For&ward", self)
         self._bring_forward_action.setShortcut(QKeySequence(SHORTCUTS["arrange.bring_forward"]))
@@ -861,25 +929,27 @@ class MainWindow(QMainWindow):
         self._send_to_back_action.setShortcut(QKeySequence(SHORTCUTS["arrange.send_to_back"]))
         self._send_to_back_action.triggered.connect(self._arrange_send_to_back)
         arrange_menu.addAction(self._send_to_back_action)
+        self._register("arrange.send_to_back", self._send_to_back_action)
 
         arrange_menu.addSeparator()
 
         # Align submenu
         self._align_menu = arrange_menu.addMenu("Ali&gn")
         if self._align_menu is not None:
-            for label, alignment in [
-                ("Align &Left", "left"),
-                ("Align Center (&H)", "center_h"),
-                ("Align &Right", "right"),
-                ("Align &Top", "top"),
-                ("Align &Middle (V)", "middle_v"),
-                ("Align &Bottom", "bottom"),
+            for label, alignment, key in [
+                ("Align &Left", "left", "align_left"),
+                ("Align Center (&H)", "center_h", "align_center"),
+                ("Align &Right", "right", "align_right"),
+                ("Align &Top", "top", "align_top"),
+                ("Align &Middle (V)", "middle_v", "align_middle"),
+                ("Align &Bottom", "bottom", "align_bottom"),
             ]:
                 action = self._align_menu.addAction(label)
                 if action is not None:
                     action.triggered.connect(
                         lambda _checked=False, a=alignment: self._arrange_align(a)
                     )
+                self._register(f"arrange.{key}", action)
 
         arrange_menu.addSeparator()
 
@@ -1176,7 +1246,7 @@ class MainWindow(QMainWindow):
         menu.addMenu(self._build_delay_menu(menu))
         button.setMenu(menu)
         self._capture_button = button
-        self._toolbar.set_capture_button(button)
+        self._main_toolbar.set_capture_button(button)
         self._sync_capture_shortcuts()
 
     def _setup_tray(self) -> None:
@@ -3156,6 +3226,9 @@ class MainWindow(QMainWindow):
             self._property_panel.set_selection(doc.selection_manager)
         if hasattr(self, "_status_bar"):
             self._status_bar.set_view(doc.view)
+        if hasattr(self, "_main_toolbar"):
+            self._main_toolbar.set_view(doc.view)
+            self._main_toolbar.set_selection_manager(doc.selection_manager)
         self._update_title()
         if hasattr(self, "_undo_action"):
             self._update_undo_redo_text()

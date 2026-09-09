@@ -1,6 +1,6 @@
 # Screen Capture Implementation Notes
 
-Last Updated: 09-07-26 23:47 · Revision 1.3
+Last Updated: 09-08-26 18:20 · Revision 1.4
 
 Implements the SnapMock Screen Capture PRD (version 1.0, September 2026): the three capture modes, every entry point (global hotkeys, system tray, Main Toolbar button, Capture menu, command-line invocation with a single-instance channel), the capture options, the region selection overlay, the capture backend abstraction with the Linux X11, Linux Wayland and Windows backends, a stub for macOS, the post-capture handoff to the Library, the Capture preferences category, and the Wayland and macOS onboarding dialogs.
 
@@ -47,7 +47,7 @@ The X11 backend opens its own Xlib display rather than sharing Qt's connection. 
 ### 1.5 MainWindow wiring
 
 - Capture menu after Library and before Help with the three modes (shortcuts follow the hotkey preferences and refresh on `hotkeys_changed`), the Delay radio submenu, the three checkboxes bound to preferences, and Capture Preferences. The delay and checkbox state is mirrored across the Capture menu, the toolbar button menu, and the tray menu through one sync method.
-- Main Toolbar Group 0: one menu-button control at the left end, installed through `SnapToolBar.set_capture_button`; the main click uses the default mode, the arrow menu lists the modes and the Delay submenu, and the tooltip reads "Capture (key)" for the default mode's hotkey.
+- Main Toolbar Group 0: one menu-button control at the left end of the Main Toolbar (`MainToolBar` in `snapmock/ui/toolbar.py`), installed through `MainToolBar.set_capture_button` and separated from Group 1 by a divider; the main click uses the default mode, the arrow menu lists the modes and the Delay submenu, and the tooltip reads "Capture (key)" for the default mode's hotkey. Until General UI Phase 4 (09-08-26) the Main Toolbar did not exist and the button sat at the left end of the tool palette.
 - Tray icon and menu per PRD 3.2, created when the preference is on and a tray exists; left click shows the window except on macOS; the tooltip mirrors the countdown; Keep Running in Tray turns the window close into a hide, keeps the process alive without windows, and Quit SnapMock prompts through the normal close path.
 - `add_to_library(image, *, source, capture_metadata, when)`: the metadata record is written to `manifest.json` beside `library_metadata`, `captured_at` is the grab time, and `Document.capture_metadata` carries it through continuous write-back. The Library panel's Properties dialog lists the fields.
 - Toasts read "Captured to Library: name" or "Captured to Library and clipboard: name"; while the window is hidden in the tray a system notification is shown instead and clicking it shows the window. Failures and refusals follow the same routing, with a notification forced for tray and command-line origins.
@@ -136,6 +136,7 @@ The invisible resize border is excluded as PRD 14.5 requires: for the same windo
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 09-08-26 18:20 | Claude (Claude Code) | Section 1.5: the Capture button moved from the tool palette to Group 0 of the Main Toolbar built by General UI Phase 4. |
 | 1.3 | 09-07-26 23:47 | Claude (Claude Code) | Windows hide made immediate by disabling the DWM close animation, so captures no longer contain a translucent copy of the editor; measured and verified end to end. |
 | 1.2 | 09-07-26 22:24 | Claude (Claude Code) | Windows hand verification run on an unlocked desktop: all three modes, five entry points, the resize border, cursor compositing, and hotkey release recorded; what remains needs a second monitor or Windows 11. |
 | 1.1 | 09-07-26 20:41 | Claude (Claude Code) | Windows backend implemented (Section 1.7); its stub deviation removed and four new ones recorded; `test_windows.py` added; the Windows follow-up closed; Windows hand-verification results and what is still owed recorded. |

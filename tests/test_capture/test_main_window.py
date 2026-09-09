@@ -82,7 +82,7 @@ def test_menu_shortcuts_follow_hotkey_preferences(main_window: MainWindow) -> No
 
 
 def test_toolbar_group_zero_is_first(main_window: MainWindow) -> None:
-    toolbar = main_window._toolbar  # noqa: SLF001
+    toolbar = main_window._main_toolbar  # noqa: SLF001
     first = toolbar.widgetForAction(toolbar.actions()[0])
     assert isinstance(first, QToolButton) and first.text() == "Capture"
     assert first.popupMode() == QToolButton.ToolButtonPopupMode.MenuButtonPopup
