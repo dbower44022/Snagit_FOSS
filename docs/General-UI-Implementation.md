@@ -1,6 +1,6 @@
 # General UI Implementation Notes
 
-Last Updated: 09-09-26 16:30 · Revision 1.9
+Last Updated: 09-09-26 18:05 · Revision 1.10
 
 Implements the SnapMock General User Interface PRD (version 2.2, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
@@ -15,7 +15,7 @@ Implements the SnapMock General User Interface PRD (version 2.2, `PRDs/SnapMock-
 | 4 | Toolbars and status bar | Done | 4ddcf86 to a9ca773, then this close-out commit |
 | 5 | Canvas | Done | 155f908 to 620da91, then this close-out commit |
 | 6 | Panels and colour picker | Done | 485d496 to 0a488d1, then this close-out commit |
-| 7 | Tool themes and presets | Not started | |
+| 7 | Tool themes and presets | In progress | |
 | 8 | First run, accessibility, responsive behaviour | Not started | |
 
 Phase 0 was verified against the repository at commit `a198744` on 09-07-26. The working tree also carried uncommitted Basic Shape Annotation Tools work in `snapmock/items/` and `tests/test_items.py`; it was left untouched and is not part of this inventory.
@@ -187,6 +187,13 @@ Taken at the start of Phase 6 (09-09-26), from `docs/General-UI-Phase-6-Kickoff-
 | 6.1 Layer blend mode | B, defer | The Layer has no blend mode or layer type in this phase. The action bar's blend-mode dropdown and the BG and raster badges of Section 7.4 and 7.5 go to the Navigation and Raster Operations follow-up that owns merging, since both need the per-layer compositing pass the display path lacks. General UI PRD 2.2 row. |
 | 6.2 Item properties without a home | B, keep the Phase 4 deferral | Stroke Style, Fill Opacity, Stroke Opacity, the Shadow section, Blend Mode, and Line Spacing arrive with the Basic Shape and Text PRDs' item work. Every other Property Panel control of Section 8 is built here. General UI PRD 2.2 row. |
 
+Taken at the start of Phase 7 (09-09-26), from `docs/General-UI-Phase-7-Kickoff-Prompt.md`:
+
+| Decision | Choice | Effect |
+|---|---|---|
+| 7.1 Overrides saved with the project | B, application data directory only | Per-tool preset overrides and option values persist per user in the application data directory and never in `manifest.json`; a project file never carries tool settings, since one tool set is shared by every open tab and a per-project snapshot would overwrite the user's own setup on open. Technical Architecture PRD Section 6.1 is untouched. General UI PRD 2.3 row against Section 5.2. |
+| 7.2 Preferences > Tools and the Default theme | A, Preferences edits the Default theme | The seven Preferences > Tools values are the Default theme's values for the keys they cover; the rest of Default comes from the tools' built-in constants. Startup loads the active theme instead of pushing Preferences into every tool; a Preferences change rewrites Default and reaches the tools only while Default is the active theme, and then only the tools without an override. The page names the active theme. General UI PRD 2.3 row against Section 11.3. |
+
 The kickoff's remaining decision (welcome-panel card) is presented at the start of Phase 8.
 
 ### 5.2 As raised by Phase 0
@@ -289,6 +296,7 @@ In commit order: decisions 6.1 and 6.2 with the prompt corrections (Section 3.1)
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.10 | 09-09-26 18:05 | Claude (Claude Code) | Phase 7 in progress: decisions 7.1 and 7.2 (Section 5.1). |
 | 1.9 | 09-09-26 16:30 | Claude (Claude Code) | Phase 6 done: phase table, nine deviations added and two closed (Section 6), tests (Section 7), build summary and next step (Section 13). General UI PRD 2.2, Technical Architecture PRD 1.11. |
 | 1.8 | 09-09-26 09:40 | Claude (Claude Code) | Phase 6 in progress: decisions 6.1 and 6.2 (Section 5.1), the corrections found at the phase's start (Section 3.1). |
 | 1.7 | 09-08-26 23:45 | Claude (Claude Code) | Phase 5 done: phase table, the guide-persistence decision (Section 5.1), three deviations added (Section 6), the guides build and next step (Section 12). General UI PRD 2.1, Technical Architecture PRD 1.10. |
