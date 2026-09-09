@@ -1,6 +1,6 @@
 # General UI Implementation Notes
 
-Last Updated: 09-08-26 22:20 · Revision 1.6
+Last Updated: 09-08-26 23:45 · Revision 1.7
 
 Implements the SnapMock General User Interface PRD (version 2.0, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
@@ -13,7 +13,7 @@ Implements the SnapMock General User Interface PRD (version 2.0, `PRDs/SnapMock-
 | 2 | Export | Done | 8a34cad to c5ddfe5 |
 | 3 | Theme and Preferences | Done | a3d19a2 to 4e15e66 |
 | 4 | Toolbars and status bar | Done | 4ddcf86 to a9ca773, then this close-out commit |
-| 5 | Canvas | In progress | 155f908 to 0fe0a85 (corrections, crosshairs, cursor table); guides wait on decision 3 |
+| 5 | Canvas | Done | 155f908 to 620da91, then this close-out commit |
 | 6 | Panels and colour picker | Not started | |
 | 7 | Tool themes and presets | Not started | |
 | 8 | First run, accessibility, responsive behaviour | Not started | |
@@ -170,7 +170,13 @@ Taken at the start of Phase 4 (09-08-26):
 |---|---|---|
 | Memory usage zone | A, runtime dependency | `psutil` reads the process resident set size behind one guarded import in `snapmock/core/process_memory.py`; Technical Architecture PRD 1.8 lists the module and the dependency under its Section 9.1 policy (the readout is blank without the package). Screen Capture PRD Section 14.5 is unchanged. |
 
-The kickoff's remaining decisions (guide persistence, welcome-panel card) are presented at the start of the phase that needs them.
+Taken in Phase 5 (09-08-26):
+
+| Decision | Choice | Effect |
+|---|---|---|
+| Guide persistence | A, in the project file | `manifest.json` carries an optional `guides` list; `format_version` stays 1; guide changes are undoable commands that dirty the document. Technical Architecture PRD 1.10 records the format change in Section 6.1. |
+
+The kickoff's remaining decision (welcome-panel card) is presented at the start of Phase 8.
 
 ### 5.2 As raised by Phase 0
 
@@ -210,9 +216,12 @@ Each has its change-log row in `PRDs/SnapMock-General-UI-PRD.html` version 1.7 (
 - **Grid and snap toolbar toggles** (Section 4.3). Mentioned by the PRD, listed in no group; none built. Added to Section 4 of these notes.
 - **Memory zone units** (Section 9). A megabyte is 1,048,576 bytes; the zone stays in megabytes above 1 GB; a dash when the value cannot be read.
 - **Selection size** (Section 9). The bounding box of the whole selection, stroke included, as the transform handles draw it.
-- **Forbidden cursor over a locked layer's item** (Section 6.6). Shown by the Select tool and, over a locked text item, by the Text tool: the tools that would otherwise act on the item. Drawing tools keep their crosshair, since they draw on the active layer whatever lies beneath. PRD change-log row owed at the close of Phase 5.
-- **I-beam with highlight** (Section 6.6). Qt has no such cursor; `ui/cursors.py` draws an I-beam over a translucent accent bar. The rotate, magnifier, eyedropper, and raster-selection cursors are the Tabler glyphs with a white halo.
-- **Alt with the Zoom tool** (Sections 6.6, 12.2). The momentary eyedropper of Section 12.2 no longer takes Alt while the Zoom tool is active, since the Zoom tool's own Alt+click zooms out and its cursor swaps to the minus magnifier. PRD change-log row owed at the close of Phase 5.
+- **Forbidden cursor over a locked layer's item** (Section 6.6). Shown by the Select tool and, over a locked text item, by the Text tool: the tools that would otherwise act on the item. Drawing tools keep their crosshair, since they draw on the active layer whatever lies beneath. PRD 2.1 row.
+- **I-beam with highlight** (Section 6.6). Qt has no such cursor; `ui/cursors.py` draws an I-beam over a translucent accent bar. The rotate, magnifier, eyedropper, and raster-selection cursors are the Tabler glyphs with a white halo. PRD 2.1 row.
+- **Alt with the Zoom tool** (Sections 6.6, 12.2). The momentary eyedropper of Section 12.2 no longer takes Alt while the Zoom tool is active, since the Zoom tool's own Alt+click zooms out and its cursor swaps to the minus magnifier. PRD 2.1 row.
+- **Guides above handles** (Section 6.5). Guides draw in the view's foreground pass, above selection handles and tool overlays, where the Technical Architecture PRD Section 7.1 puts guide lines; the General UI PRD asked for below. Drawing there keeps them out of every export without a scene item. PRD 2.1 row.
+- **Only the Select tool grabs a guide** (Section 6.5). A drawing tool started within the 4 px hit zone draws and snaps rather than moving the guide. PRD 2.1 row, with the other silent points: snap tolerance in screen pixels, Shift rounding on ruler drag-out, drop-to-delete only while rulers are shown, hidden guides not grabbable, Show Guides on by default.
+- **Snap to Grid keyed to its toggle** (Section 3.3). A bug before Phase 5: the Select tool snapped whenever the grid was shown. Grid snapping now also covers new shapes and resizes. PRD 2.1 row.
 
 ## 7. Tests
 
@@ -242,18 +251,19 @@ In commit order: the theme manager (`snapmock/core/theme_manager.py`: `ThemeMode
 
 In commit order: decision 2 and `snapmock/core/process_memory.py` (`process_memory_bytes`, `format_memory`, `memory_role`, the 500 MB and 1 GB thresholds) with `psutil` and `types-psutil` in `pyproject.toml` and Technical Architecture PRD 1.8; the Main Toolbar (`MainToolBar`, `ZOOM_PRESETS`, `action_tooltip` in `snapmock/ui/toolbar.py`; `MainWindow._actions`, `_register`, `_populate_main_toolbar`, `_enforce_toolbar_layout`; View > Show Main Toolbar; the Capture button as Group 0; icon-map entries for the two Align labels with axis suffixes); the Left Tool Palette (`SnapToolBar` docked left, 48 px, one column); the Tool Options Bar's shared controls (`BaseTool.options_controls` and `on_option_changed`, `ToolManager.tool_defaults_changed`, `ControlSpec` and `SHARED_CONTROLS` in `snapmock/ui/tool_options_bar.py`, `ColorPicker(swatch_size=)`, the Property Panel's `_notify_defaults_changed`, the tools' declarations, freehand smoothing through `simplify_rdp`, the numbered step `next_number`, the callout's shape, tail style and tail width defaults, the eyedropper's `set_pick_callback` and `pick_serial`, `MainWindow._apply_momentary_pick`); and the status bar (`SnapStatusBar(document)` with `set_document`, the six zones, `zoom_menu`, `set_memory_bytes`, the 5-second timer).
 
-## 12. What Phase 5 has built so far
+## 12. What Phase 5 built
 
 In commit order: the canvas corrections of Sections 6.2 and 6.4 (the empty-canvas prompt names Ctrl+V and File > Import Image; major grid lines every 5 units; minor lines hidden below 200 percent zoom; the `scene` test fixture creates the application first); View > Show Crosshairs (`AppSettings.crosshairs_visible`, `SnapView.set_crosshairs_visible` drawing in the theme's crosshair colour, the Tabler `crosshair` glyph); and the cursor table of Section 6.6 (`snapmock/ui/cursors.py`; `BaseTool.cursor` may return a `QCursor`; `SnapView.set_hover_cursor`; the Select tool's open hand, closed hand, handle cursors, and forbidden cursor; the Text tool's highlighted I-beam; the Zoom tool's magnifiers with Alt; the eyedropper and raster-selection cursors; the Pan tool's hands set on the viewport; the copy action on external image drags; handles ignored while not in the scene). Technical Architecture PRD 1.9 lists the module. Tests: three in `tests/test_canvas_area.py` for the corrections, two for crosshairs, one row added to `tests/test_menus.py`, and `tests/test_cursors.py` (9 tests). At this point the suite passes 739 tests with 13 skipped and the two environmental deselections.
 
-Still to build in Phase 5: guides (creation from the rulers, move, delete, snap, lock, the four View menu rows, the Preferences colour and opacity, persistence per decision 3). One finding for that step: the Select tool snaps a drag to the grid whenever the grid is *visible* and ignores View > Snap to Grid; the guides step owns the snapping code and should key grid snapping to the toggle at the same time.
+Then the guides (commit 620da91): `snapmock/core/guides.py` (`Guide`, `GuideOrientation`, `snap_value`, `snap_rect_delta`), `snapmock/commands/guide_commands.py` (`AddGuideCommand`, `MoveGuideCommand` with merge, `RemoveGuideCommand`, `ClearGuidesCommand`), `SnapScene.guides` with `add_guide`, `remove_guide`, `replace_guide`, `set_guides`, and the `guides_changed` signal; `save_project` and `load_project` carry the manifest key; `SnapView` draws guides in the Preferences colour and opacity (`set_guide_style`), grabs one under the Select tool (`guide_at`, `GUIDE_HIT_TOLERANCE`), moves it with Shift rounding, drops it back on its ruler to remove it, and places a new one dragged out of a `RulerWidget` (`begin_guide_preview`, `update_guide_preview`, `finish_guide_preview`); `snap_point` and `snap_rect_offset` give tools grid and guide snapping under the View toggles (`BaseTool._snap_pos`; the Select tool's move and resize; the rectangle, ellipse, line, and arrow tools); `AppSettings` gains `guides_visible`, `snap_to_guides`, `guides_locked`; the View menu gains Show Guides (Ctrl+;), Snap to Guides, Lock Guides, and Clear All Guides with its confirmation; Preferences' guide colour, opacity, and snap tolerance reach every view. The `RulerWidget` now holds its view through a weak reference, which removes a reference cycle that let the garbage collector clear a view's attributes while Qt was still destroying it. Technical Architecture PRD 1.10 records the format change and the two modules. Tests: `tests/test_guides.py` (19 tests) and four rows added to `tests/test_menus.py`. At the close of Phase 5 the suite passes 758 tests with 13 skipped and the two environmental deselections.
 
-**Next required step:** decision 3 (guide persistence in the project file, which changes the `.smk` format and the Technical Architecture PRD's file-format section), presented with the consequential decision template; then the guides step, the Phase 5 PRD change-log rows, and this document's Phase 5 close-out.
+**Next required step:** Phase 6, Panels and colour picker, in a new session pasting `docs/General-UI-Implementation-Kickoff-Prompt.md`: the Layer Panel of Section 7, the Property Panel's remaining items (Section 2.8 of these notes), and the colour picker popover of Section 11.1. No kickoff decision is scheduled for Phase 6.
 
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.7 | 09-08-26 23:45 | Claude (Claude Code) | Phase 5 done: phase table, the guide-persistence decision (Section 5.1), three deviations added (Section 6), the guides build and next step (Section 12). General UI PRD 2.1, Technical Architecture PRD 1.10. |
 | 1.6 | 09-08-26 22:20 | Claude (Claude Code) | Phase 5 in progress: phase table, three deviations (Section 6), what is built and what remains (Section 12), the Snap to Grid finding. |
 | 1.5 | 09-08-26 19:40 | Claude (Claude Code) | Phase 4 done: phase table, the memory-zone decision (Section 5.1), seven deviations added and two closed (Section 6), a Section 4 inconsistency, tests (Section 7), build summary and next step (Section 11). |
 | 1.4 | 09-08-26 16:30 | Claude (Claude Code) | Phase 3 done: phase table, the icon-set decision (Section 5.1), seven deviations (Section 6), tests (Section 7), build summary and next step (Section 10). |
