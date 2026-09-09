@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.3</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.4</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.3</dd>
-    <dt>Last Updated</dt>    <dd>09-09-26 20:30</dd>
+    <dt>Document version</dt><dd>2.4</dd>
+    <dt>Last Updated</dt>    <dd>09-10-26 01:30</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.4</td>
+        <td class="nowrap">09-10-26 01:30</td>
+        <td>Doug Bower</td>
+        <td>Phase 8 of the implementation (First run, accessibility, responsive behaviour): the Welcome panel and first-run defaults of Section 16, the accessibility requirements of Section 14, the minimum-size behaviour, panel collapse modes, and multi-monitor recovery of Sections 15.1 to 15.3, the canvas preview of Section 11.7, and the zoom level per recent project of Section 15.4 are built. Rows record kickoff decision 5 (the New Blank Canvas card), the ten silences the phase decided, six theme colours lifted to meet the Section 14 contrast requirement, and where the build departs from the wording. No requirement changed except where a row says so.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>2.3</td>
         <td class="nowrap">09-09-26 20:30</td>
@@ -147,6 +154,90 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-10-26 01:30</td>
+        <td>16.1</td>
+        <td>Decision</td>
+        <td>Decision 09-09-26 (Phase 8 kickoff decision 5, option B): the Welcome panel's New Blank Canvas card takes the File &gt; New route and opens an unsaved Untitled document, not a Library file, so all three cards land in the same document and nothing is written to disk that the user did not ask to save; Library &gt; New Canvas keeps its own route. The card opens the size dialog the section names: width and height from the Preferences default canvas size, Lock aspect ratio, OK and Cancel; Cancel creates nothing. The cost is the Unsaved Changes prompt on the first close, softened by the canvas preview of Section 11.7.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 01:30</td>
+        <td>16</td>
+        <td>Added</td>
+        <td>The Welcome panel is a page the central widget shows over the document stack: the tab bar hides while it shows, and opening or activating a document, the Close button, or Escape returns to the canvas (the section lists only the checkbox; the button and the key are additions). Open an Image is File &gt; Import Image into the current document; Paste from Clipboard checks for clipboard content first (Section 1.3) and then runs Edit &gt; Paste, which places the image as a raster region at the viewport centre rather than as a background layer. The four steps carry glyphs; the logo is the application glyph.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 01:30</td>
+        <td>16</td>
+        <td>Decision</td>
+        <td>"No QSettings found" is a first-run flag: the first launch writes the Section 16.2 lines the settings defaults do not already carry (Snap to Grid on, Theme: System) and turns the Welcome panel on, once. "Don't show this again" turns the panel off at launch; until it is ticked the panel opens at every launch, since a one-launch panel would give the checkbox nothing to do. The settings defaults themselves are unchanged, so a user's stored values survive; a user of a build before this phase sees the first run once, because the flag is new.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 01:30</td>
+        <td>14</td>
+        <td>Added</td>
+        <td>Accessible names on every control: a form row's field takes its label, a toolbar widget takes the label before it, a button takes its text (or its tooltip when the text is a glyph), and the rest are named where built; descriptions where a name does not say what the control does (the tool palette, the Welcome cards, the zoom controls, the canvas, the section buttons of the icon strip). The audit is a test over the main window, every tool's options bar, and every dialog.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 01:30</td>
+        <td>14</td>
+        <td>Deviation</td>
+        <td>The Tab chain runs Main Toolbar &gt; Tool Options Bar &gt; Left Tool Palette &gt; Canvas &gt; Layer Panel &gt; Property Panel, then the Library Panel and the status bar, and is rebuilt when the options bar changes tool or the active document changes. The menu bar is not a Tab stop: it is reached with Alt or F10, as on every platform, and putting it in the chain would take Tab away from the first control. Toolbar buttons Qt builds from actions are given Tab focus, which Qt does not by default, so every control is reachable (Section 17.8). Dock titles have no focus rule because they cannot take focus.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 01:30</td>
+        <td>14</td>
+        <td>Decision</td>
+        <td>Status bar messages reach a screen reader through the hint zone as a live label: a label with no accessible name of its own reports each text change as a name change, which is the event assistive technology reads. The zone's description is "Status message". PyQt6 does not expose QAccessible, so no explicit alert event can be raised.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 01:30</td>
+        <td>13.2, 13.3, 14</td>
+        <td>Deviation</td>
+        <td>The contrast test measures seventeen text-on-background pairs in both themes at 4.5:1 (primary and secondary text on the window, panel, toolbar, hover, pressed, input, and tooltip backgrounds; accent text on accent; accent, error, and warning text on the window and toolbar backgrounds; ruler text; the empty-canvas prompt). Six colours failed as tabled and are lifted: light Error/Warning #D32F2F / #F57C00 become #C62828 / #A34A00; dark Text (Secondary) #999999 becomes #A6A6A6; dark Error #EF5350 becomes #FF8A80; the empty-canvas prompt colour, an implementation colour, becomes #6F6F6F light and #A6A6A6 dark. The Section 14 requirement outranks the table values; the tables should be corrected to these values.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 01:30</td>
+        <td>15.1, 15.2</td>
+        <td>Decision</td>
+        <td>The icon-strip threshold is read as "at or below" 1024 px: the window cannot go below its minimum width, so "below 1024 px" could never fire, and Section 15.1 says the strip applies at the minimum size. Narrow mode applies below 1280 px. Both thresholds are Preferences &gt; Appearance rows ("Narrow panels below", "Icon-strip panels at or below", 600 to 5120 px), the category that holds the rest of the chrome's appearance.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 01:30</td>
+        <td>15.2</td>
+        <td>Decision</td>
+        <td>Abbreviated controls: in narrow mode the Property Panel hides its sliders and hex inputs and keeps the spinboxes and swatches, and the Layer Panel drops the opacity column. In icon-strip mode the Layer Panel shows each layer's thumbnail alone, dimmed while hidden and badged while locked, and a click opens a popover with the name, Visible, Locked, and opacity; the Property Panel shows one button per section, and a click opens the whole panel in a popover scrolled to that section. The panels return to their full width when the window grows again.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 01:30</td>
+        <td>15.1</td>
+        <td>Decision</td>
+        <td>The Tool Options Bar's overflow menu is Qt's own toolbar extension button, which collects the controls that do not fit; it is named "More tool options" for assistive technology and tested, as are the Main Toolbar's and the palette's.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 01:30</td>
+        <td>15.3</td>
+        <td>Added</td>
+        <td>After the window state is restored, a floating panel whose frame touches no connected screen is moved onto the primary screen's available area; docked panels and on-screen panels are left where they are. The monitor is not recorded separately: Qt's saved state carries the panel's screen position, and the check covers the disconnected case.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 01:30</td>
+        <td>11.7</td>
+        <td>Added</td>
+        <td>The Unsaved Changes dialog is a dialog of the same wording with a preview of the canvas at most 200 px on its longest side, never upscaled, and Save (default), Don't Save, Cancel; closing it any other way is Cancel.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 01:30</td>
+        <td>15.4</td>
+        <td>Decision</td>
+        <td>The zoom level per recently opened project is a map beside the recent-files list (path to zoom percentage, newest first, at most fifty entries), written when a tab closes and when the session is saved, and applied when the project is opened again. Library files are recorded the same way, keyed by path.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 01:30</td>
+        <td>1.3, 15.1</td>
+        <td>Inconsistency</td>
+        <td>Section 1.3 says the interface adapts from a 1280 by 720 minimum resolution; Section 15.1 sets the minimum window size at 1024 by 600, which the code carries. Section 1.3 should read 1024 by 600.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-09-26 20:30</td>
         <td>5.2</td>
