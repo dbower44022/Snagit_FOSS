@@ -13,6 +13,22 @@ if TYPE_CHECKING:
     from snapmock.core.scene import SnapScene
 
 
+def apply_layer_z_values(scene: SnapScene, layer_id: str) -> None:
+    """Give every top-level item on *layer_id* the z-value of its place in ``item_ids``.
+
+    A group's members are its child items and stack among themselves inside the group,
+    so only the top-level items are walked.
+    """
+    layer = scene.layer_manager.layer_by_id(layer_id)
+    if layer is None:
+        return
+    by_id = {item.item_id: item for item in scene.annotation_items()}
+    for index, item_id in enumerate(layer.item_ids):
+        item = by_id.get(item_id)
+        if item is not None:
+            item.setZValue(layer.z_base + index)
+
+
 class ChangeZOrderCommand(BaseCommand):
     """Change z-order of items within their layer.
 
@@ -82,15 +98,7 @@ class ChangeZOrderCommand(BaseCommand):
                 self._apply_z_values(layer_id)
 
     def _apply_z_values(self, layer_id: str) -> None:
-        """Set zValue on all items in a layer based on their position in item_ids."""
-        layer = self._scene.layer_manager.layer_by_id(layer_id)
-        if layer is None:
-            return
-        for idx, item_id in enumerate(layer.item_ids):
-            for scene_item in self._scene.items():
-                if isinstance(scene_item, SnapGraphicsItem) and scene_item.item_id == item_id:
-                    scene_item.setZValue(layer.z_base + idx)
-                    break
+        apply_layer_z_values(self._scene, layer_id)
 
     @property
     def description(self) -> str:

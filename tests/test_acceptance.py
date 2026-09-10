@@ -308,7 +308,8 @@ SECTION_3_ROWS: dict[str, list[str]] = {
 def test_17_2_every_section_3_row_is_present_and_the_deferred_rows_say_so(
     main_window: MainWindow, unmet_messages: list[tuple[str, str]]
 ) -> None:
-    """Row 6: every table row found by label; the deferred rows show a message."""
+    """Row 6: every table row found by label; the deferred rows show a message;
+    Group and Ungroup act (fixed since the pass by the Group and Ungroup kickoff)."""
     for title, labels in SECTION_3_ROWS.items():
         rows = _rows(_menu(main_window, title))
         missing = [label for label in labels if label not in rows]
@@ -319,17 +320,27 @@ def test_17_2_every_section_3_row_is_present_and_the_deferred_rows_say_so(
     assert "Arc" not in tools and "Polygon" not in tools
     assert main_window.active_theme_text.startswith("Active Theme:")
 
-    # Section 16 row 6, fail: six rows are present and explain a deferral instead of acting.
+    # Section 16 row 6: Group and Ungroup act since the Group and Ungroup kickoff (fixed
+    # since); four rows are present and explain a deferral instead of acting.
+    from snapmock.items.group_item import GroupItem
+
     items = _add_rects(main_window, 2)
     main_window.selection_manager.select_items(items)  # type: ignore[arg-type]
+    arrange = _rows(_menu(main_window, "Arrange"))
+    arrange["Group"].trigger()  # type: ignore[attr-defined]
+    selected = main_window.selection_manager.items
+    assert len(selected) == 1 and isinstance(selected[0], GroupItem)
+    assert selected[0].members == items
+    arrange["Ungroup"].trigger()  # type: ignore[attr-defined]
+    assert main_window.selection_manager.items == items
+    assert all(item.parentItem() is None for item in items)
+    assert unmet_messages == []
+
     manager = main_window.scene.layer_manager
     manager.set_active(manager.add_layer("Layer 2").layer_id)
-    arrange = _rows(_menu(main_window, "Arrange"))
     layer = _rows(_menu(main_window, "Layer"))
     help_menu = _rows(_menu(main_window, "Help"))
     for action in (
-        arrange["Group"],
-        arrange["Ungroup"],
         layer["Merge Down"],
         layer["Merge Visible"],
         layer["Flatten All"],
@@ -337,18 +348,10 @@ def test_17_2_every_section_3_row_is_present_and_the_deferred_rows_say_so(
     ):
         action.trigger()  # type: ignore[attr-defined]
     titles = [title for title, _ in unmet_messages]
-    assert titles == [
-        "Group",
-        "Ungroup",
-        "Merge Down",
-        "Merge Visible",
-        "Flatten All",
-        "Check for Updates",
-    ]
+    assert titles == ["Merge Down", "Merge Visible", "Flatten All", "Check for Updates"]
     texts = dict(unmet_messages)
-    for name in ("Group", "Merge Down", "Merge Visible", "Flatten All", "Check for Updates"):
+    for name in ("Merge Down", "Merge Visible", "Flatten All", "Check for Updates"):
         assert "not available yet" in texts[name] or "later phase" in texts[name], name
-    assert "a group selected" in texts["Ungroup"]
 
 
 # Section 3 shortcuts by code label; the six tool letters are the PRD 1.7 decision's.

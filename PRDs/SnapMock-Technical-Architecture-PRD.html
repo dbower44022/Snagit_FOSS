@@ -16,7 +16,7 @@
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
     <dt>Document version</dt><dd>1.13</dd>
-    <dt>Last Updated</dt>    <dd>09-10-26 07:55</dd>
+    <dt>Last Updated</dt>    <dd>09-10-26 08:30</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -33,13 +33,13 @@
     <tbody>
       <tr>
         <td>1.13</td>
-        <td class="nowrap">09-10-26 07:55</td>
+        <td class="nowrap">09-10-26 08:30</td>
         <td>Doug Bower</td>
         <td>Section 4.2: <code>GroupItem</code> joins the item hierarchy (Group and Ungroup kickoff
         decision 1, 09-10-26, option A: a container item whose members are its child items); Section 2.2:
         the Selection &amp; Transform row names <code>GroupItem</code> in place of the <code>SelectionGroup</code>
         class that was never built; Section 6.1: a group's <code>items.json</code> entry nests its members,
-        <code>format_version</code> stays 1; Section 10: <code>items/group_item.py</code>.</td>
+        <code>format_version</code> stays 1; Section 10: <code>items/group_item.py</code> and <code>commands/group_commands.py</code>.</td>
         <td><span class="status open">Pending</span></td>
       </tr>
       <tr>
@@ -171,6 +171,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-10-26 08:30</td>
+        <td>10</td>
+        <td>Added</td>
+        <td>Group and Ungroup, step 3: <code>commands/group_commands.py</code>, <code>GroupItemsCommand</code> (the selected items become one group at their top-left, in the topmost member's place in the layer's z-order and <code>item_ids</code>; the selection becomes the group) and <code>UngroupItemsCommand</code> (the members return as top-level items with the group's transform composed into their own, in the group's z-position; nested groups are peeled one level; the selection becomes the members). Both restore the selection on undo. <code>arrange_commands.apply_layer_z_values</code> is the shared z-value pass over a layer's top-level items.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-10-26 07:55</td>
         <td>4.2</td>
@@ -1562,6 +1568,7 @@ docstring.</p>
         arrange_commands.py       # Arrange commands — z-order, alignment, and distribution
         canvas_property_commands.py # Canvas property commands — undoable canvas colour and DPI changes
         canvas_transform_commands.py # Canvas transform commands — rotate and flip the entire…
+        group_commands.py         # Group commands — Group and Ungroup of General UI PRD 3.6, both undoable
         guide_commands.py         # Guide commands — undoable add, move, remove, and clear of guides
         layer_commands.py         # Layer commands — undoable layer add, remove, reorder,…
         macro_command.py          # MacroCommand groups multiple sub-commands into a single…

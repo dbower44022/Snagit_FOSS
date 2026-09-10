@@ -3394,15 +3394,36 @@ class MainWindow(QMainWindow):
         ]
         self._scene.command_stack.push(MacroCommand(cmds, "Flip Vertical"))
 
-    _GROUP_DEFERRAL = "Grouping is scheduled for its own implementation after this one."
-
     def _arrange_group(self) -> None:
-        if self._require_selection("Group", 2):
-            show_not_available(self, "Group", self._GROUP_DEFERRAL)
+        """Arrange > Group (PRD 3.6): the selected items become one group on their layer.
+
+        Group and Ungroup kickoff decision 2 (option A): a selection that spans layers is
+        refused with the Section 1.3 message rather than gathered onto one layer.
+        """
+        items = self._require_selection("Group", 2)
+        if not items:
+            return
+        on_one_layer = len({item.layer_id for item in items}) == 1
+        if not self._require("Group", (on_one_layer, "the selected items on one layer")):
+            return
+        from snapmock.commands.group_commands import GroupItemsCommand
+
+        self._scene.command_stack.push(
+            GroupItemsCommand(self._scene, items, self._selection_manager)
+        )
 
     def _arrange_ungroup(self) -> None:
-        # No group item type exists yet, so no selection can contain a group.
-        self._require("Ungroup", (False, "a group selected"))
+        """Arrange > Ungroup (PRD 3.6): every selected group dissolves into its members."""
+        from snapmock.items.group_item import GroupItem
+
+        groups = [item for item in self._selected_snap_items() if isinstance(item, GroupItem)]
+        if not self._require("Ungroup", (bool(groups), "a group selected")):
+            return
+        from snapmock.commands.group_commands import UngroupItemsCommand
+
+        self._scene.command_stack.push(
+            UngroupItemsCommand(self._scene, groups, self._selection_manager)
+        )
 
     def _arrange_align(self, alignment: str) -> None:
         items = self._require_selection("Align", 2)
