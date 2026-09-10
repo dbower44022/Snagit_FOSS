@@ -1,6 +1,6 @@
 # General UI Implementation Notes
 
-Last Updated: 09-10-26 13:45 · Revision 1.25
+Last Updated: 09-10-26 14:40 · Revision 1.26
 
 Implements the SnapMock General User Interface PRD (version 2.4, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
@@ -618,12 +618,13 @@ In commit order. Step 1, b3c591d: the decisions above. Step 2, 0c2542a: `Layer.b
 
 Each has its General UI PRD 2.8 row and its Section 6 bullet: a merge rasterizes both layers and Merge Down requires the merged layers visible; the Background layer is pinned and the Layer Properties dialog shows a Type row; the blend mode is applied per item, the SVG and PDF exports draw every layer as Normal, and both now paint the canvas colour (a finding fixed in step 3); right-click zooms out. The Technical Architecture PRD is at 1.15 (Sections 6.1, 3.2.2, 3.7.3, 3.9, and 10) and the Navigation and Raster Operations PRD at 1.3 (Sections 4.3.2 and 4.6). Section 6 closes three deviations: Merge Down, Merge Visible, Flatten All; Layer blend mode and badges; Drag-and-drop as a background layer. Section 16 rows 6 and 16 are fixed since; row 20 carries the verified cause. The suites of the step 3 to step 6 commits each carried one failure, `tests/test_group.py::test_svg_export_carries_the_group_transform_into_each_member`, which read the first rectangle of the SVG and met the canvas colour's rectangle that step 3 added; the close-out commit points the test at the member's own rectangle. Several document timestamps written ahead of the clock during the steps are corrected to the commit times in the close-out.
 
-**Next required step:** Check for Updates (Section 16.10), the last open row of the General UI PRD, in a session of its own with a kickoff prompt to be written: a query of the GitHub releases API, a version comparison against `snapmock.__version__`, a message with the result, and the Section 1.3 message when the network is unavailable; after it the General UI PRD has no open row. Two display checks are owed before or beside it: step B17 of Section 16.9 for the canvas focus frame of commit efaa830, and the Zoom tool on the desktop (Z, then Alt+click and right-click on the canvas) for row 20.
+**Next required step:** Check for Updates (Section 16.10), the last open row of the General UI PRD, in a new session pasting `docs/Check-for-Updates-Kickoff-Prompt.md` (revision 1.0, starting state at commit d8c5de8): the two owed display checks first (step B17 of Section 16.9 for the canvas focus frame, and the Zoom tool's Alt+click and right-click for row 20), then two decisions (how the request is made; whether the check runs at startup), the module, the Help row, and the close-out, recorded as Section 19 of these notes; after it the General UI PRD has no open row.
 
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.26 | 09-10-26 14:40 | Claude (Claude Code) | Next step points at `docs/Check-for-Updates-Kickoff-Prompt.md`. |
 | 1.25 | 09-10-26 13:17 | Claude (Claude Code) | Navigation and Raster Operations follow-up done: the phase-table row, Section 6 (three deviations closed, four added, the Welcome paste bullet updated), Section 7 tests, Section 16 rows 6 and 16 fixed since and row 20's verified cause, Section 17.2's three new walks, Section 18.2 build summary and 18.3 deviations, the next required step. General UI PRD 2.8, Technical Architecture PRD 1.15, Navigation and Raster Operations PRD 1.3. The suite passes 1000 with 13 skipped and the one environmental deselection at the close-out (970, 977, 987, 995 as the steps landed, each step 3 to 6 suite with the one group SVG test failure fixed here). |
 | 1.24 | 09-10-26 12:36 | Claude (Claude Code) | Navigation and Raster Operations follow-up in progress: Section 18 with the three decisions (A, rasterize; A, a stored type; B, per item) and the eight silences, the phase-table row. |
 | 1.23 | 09-10-26 12:20 | Claude (Claude Code) | Next step points at `docs/Navigation-Raster-Operations-Follow-Up-Kickoff-Prompt.md`. |
