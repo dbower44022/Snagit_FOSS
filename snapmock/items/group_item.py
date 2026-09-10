@@ -68,6 +68,7 @@ class GroupItem(SnapGraphicsItem):
         item.setParentItem(self)
         item.layer_id = self._layer_id
         item.layer_opacity = self._layer_opacity
+        item.layer_blend_mode = self._layer_blend_mode
         item.locked = self._locked
 
     def remove_member(self, item: SnapGraphicsItem) -> None:
@@ -103,6 +104,16 @@ class GroupItem(SnapGraphicsItem):
         SnapGraphicsItem.layer_opacity.fset(self, value)  # type: ignore[attr-defined]
         for member in self.members:
             member.layer_opacity = value
+
+    @property
+    def layer_blend_mode(self) -> str:
+        return self._layer_blend_mode
+
+    @layer_blend_mode.setter
+    def layer_blend_mode(self, value: str) -> None:
+        SnapGraphicsItem.layer_blend_mode.fset(self, value)  # type: ignore[attr-defined]
+        for member in self.members:
+            member.layer_blend_mode = value
 
     @property
     def locked(self) -> bool:

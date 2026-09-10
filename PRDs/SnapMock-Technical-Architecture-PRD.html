@@ -16,7 +16,7 @@
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
     <dt>Document version</dt><dd>1.15</dd>
-    <dt>Last Updated</dt>    <dd>09-10-26 13:20</dd>
+    <dt>Last Updated</dt>    <dd>09-10-26 13:50</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -33,12 +33,14 @@
     <tbody>
       <tr>
         <td>1.15</td>
-        <td class="nowrap">09-10-26 13:20</td>
+        <td class="nowrap">09-10-26 13:50</td>
         <td>Doug Bower</td>
         <td>Navigation and Raster Operations follow-up (General UI implementation, 09-10-26). Section 6.1:
         <code>layers.json</code> carries <code>blend_mode</code> and <code>layer_type</code>, absent reads as Normal and
         Annotation, <code>format_version</code> stays 1; Section 3.2.2: the Background layer is pinned to the bottom of
-        the stack and a duplicate of it is an Annotation layer (follow-up decision 2).</td>
+        the stack and a duplicate of it is an Annotation layer (follow-up decision 2); Section 3.9: the layer blend mode
+        is applied per item as the painter composition mode, on the display and in every export alike, not per layer
+        (follow-up decision 3); the SVG and PDF exports paint the canvas colour and draw every layer as Normal.</td>
         <td><span class="status open">Pending</span></td>
       </tr>
       <tr>
@@ -201,6 +203,23 @@
         <code>Layer</code> fields of Section 3.2.1. An entry without either key, or with a value the build does not know,
         reads as Normal and Annotation, so files from earlier builds load unchanged; <code>format_version</code> stays 1.
         Nothing this work builds assigns the RasterRegion type (follow-up silence 7).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 13:50</td>
+        <td>3.9.1, 3.9.2</td>
+        <td>Departure</td>
+        <td>Decision 09-10-26 (follow-up decision 3, option B): a layer's blend mode is applied per item, not per
+        layer. Each item paints with its layer's composition mode (<code>SnapGraphicsItem.layer_blend_mode</code>, set by
+        the scene beside <code>layer_opacity</code> and carried by a group to its members) in the same painter hook that
+        applies the layer opacity, so the display, the raster exports, the layer thumbnails, printing, and the clipboard
+        copy agree with each other. Where the section says the layer is rendered to an offscreen image and composited
+        once, two overlapping items on one non-Normal layer now blend twice; a blend mode on an annotation layer is rare
+        and the overlap rarer, and the per-layer pass stays available if a layer-parent refactor is wanted for another
+        reason. Verified 09-10-26: Qt's SVG generator and PDF engine write no composition mode, so the SVG and PDF
+        exports draw every layer as Normal under any option; the PNG and JPEG exports carry the mode exactly. Found and
+        fixed in the same step: the SVG and PDF exports rendered the scene without the canvas colour, which the view and
+        the raster exports paint first (General UI PRD 6.2, "included in exports"); both now fill the canvas's part of
+        the page with the canvas colour when it is not fully transparent.</td>
       </tr>
       <tr>
         <td class="nowrap">09-10-26 13:20</td>

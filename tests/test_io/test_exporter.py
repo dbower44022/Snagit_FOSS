@@ -279,3 +279,83 @@ def test_app_settings_remember_export_settings_per_format() -> None:
     assert ExportSettings.from_dict(stored) == saved
     assert settings.export_last_directory("jpeg") == Path("/tmp/out")
     assert settings.export_last_format() == "jpeg"
+
+
+# ---- the layer blend mode in every export (follow-up step 3, decision 3) ----
+
+
+def _multiply_scene(scene: SnapScene) -> None:
+    from PyQt6.QtCore import QRectF
+    from PyQt6.QtGui import QColor
+
+    from snapmock.commands.add_item import AddItemCommand
+    from snapmock.items.rectangle_item import RectangleItem
+
+    scene.set_background_color(QColor("blue"))
+    layer = scene.layer_manager.add_layer("Multiply")
+    scene.layer_manager.set_blend_mode(layer.layer_id, "Multiply")
+    item = RectangleItem(QRectF(0, 0, 100, 100))
+    item.setPos(50, 50)
+    item.fill_color = QColor("yellow")
+    item.stroke_color = QColor("yellow")
+    scene.command_stack.push(AddItemCommand(scene, item, layer.layer_id))
+
+
+def test_png_and_jpeg_exports_carry_the_blend_mode(scene: SnapScene, tmp_path: Path) -> None:
+    from PyQt6.QtGui import QColor, QImage
+
+    from snapmock.io.exporter import ExportFormat, ExportSettings, export_scene
+
+    _multiply_scene(scene)
+    export_scene(scene, tmp_path / "m.png", ExportSettings(format=ExportFormat.PNG))
+    png = QImage(str(tmp_path / "m.png"))
+    assert png.pixelColor(100, 100) == QColor("black")
+    assert png.pixelColor(10, 10) == QColor("blue")
+    export_scene(scene, tmp_path / "m.jpg", ExportSettings(format=ExportFormat.JPEG))
+    jpg = QImage(str(tmp_path / "m.jpg"))
+    dark = jpg.pixelColor(100, 100)
+    assert max(dark.red(), dark.green(), dark.blue()) < 40
+
+
+def test_pdf_export_paints_the_canvas_and_draws_a_blended_layer_as_normal(
+    scene: SnapScene, tmp_path: Path
+) -> None:
+    """Qt's PDF engine writes no blend mode (Technical Architecture PRD 1.15 row); the page
+    carries the canvas colour, which the PDF export did not paint before this work."""
+    import shutil
+    import subprocess
+
+    from PyQt6.QtGui import QImage
+
+    from snapmock.io.exporter import ExportFormat, ExportSettings, export_scene
+
+    if shutil.which("pdftoppm") is None:
+        pytest.skip("pdftoppm is not installed")
+    _multiply_scene(scene)
+    out = tmp_path / "m.pdf"
+    export_scene(scene, out, ExportSettings(format=ExportFormat.PDF, dpi=72))
+    assert b"/BM" not in out.read_bytes()
+    subprocess.run(
+        ["pdftoppm", "-png", "-r", "72", "-singlefile", str(out), str(tmp_path / "page")],
+        check=True,
+    )
+    page = QImage(str(tmp_path / "page.png"))
+    assert (page.width(), page.height()) == (400, 300)
+    blue = page.pixelColor(10, 10)
+    assert blue.blue() > 200 and blue.red() < 40 and blue.green() < 40
+    yellow = page.pixelColor(100, 100)
+    assert yellow.red() > 200 and yellow.green() > 200 and yellow.blue() < 40
+
+
+def test_svg_export_draws_a_blended_layer_as_normal(scene: SnapScene, tmp_path: Path) -> None:
+    """Qt's SVG generator carries no composition mode (Technical Architecture PRD 1.15 row)."""
+    from snapmock.io.exporter import ExportFormat, ExportSettings, export_scene
+
+    _multiply_scene(scene)
+    out = tmp_path / "m.svg"
+    export_scene(scene, out, ExportSettings(format=ExportFormat.SVG))
+    text = out.read_text().lower()
+    assert "#ffff00" in text
+    assert "multiply" not in text
+    # The canvas colour is painted first, as a rectangle the size of the canvas
+    assert 'fill="#0000ff"' in text and '<rect x="0" y="0" width="400" height="300"/>' in text

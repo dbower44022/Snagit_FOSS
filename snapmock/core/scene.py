@@ -55,6 +55,7 @@ class SnapScene(QGraphicsScene):
         self._command_stack = CommandStack(self)
         self._layer_manager.layer_visibility_changed.connect(self._on_layer_visibility_changed)
         self._layer_manager.layer_opacity_changed.connect(self._on_layer_opacity_changed)
+        self._layer_manager.layer_blend_mode_changed.connect(self._on_layer_blend_mode_changed)
 
         # Create default layer
         self._layer_manager.add_layer("Layer 1")
@@ -116,7 +117,7 @@ class SnapScene(QGraphicsScene):
         self.apply_layer_state(item)
 
     def apply_layer_state(self, item: QGraphicsItem | None) -> None:
-        """Give *item* its layer's visibility and opacity; a no-op for non-annotation items."""
+        """Give *item* its layer's visibility, opacity, and blend mode; a no-op otherwise."""
         from snapmock.items.base_item import SnapGraphicsItem
 
         if not isinstance(item, SnapGraphicsItem):
@@ -126,6 +127,7 @@ class SnapScene(QGraphicsScene):
             return
         item.setVisible(layer.visible)
         item.layer_opacity = layer.opacity
+        item.layer_blend_mode = layer.blend_mode
 
     # --- the two walks over annotation items (Group and Ungroup kickoff, step 5) ---
     # A group's members are its child items, so ``self.items()`` returns them beside the
@@ -159,6 +161,14 @@ class SnapScene(QGraphicsScene):
         for item in self.items_on_layer(layer_id):
             if isinstance(item, SnapGraphicsItem):
                 item.layer_opacity = opacity
+
+    def _on_layer_blend_mode_changed(self, layer_id: str, blend_mode: str) -> None:
+        # Top-level items: a group carries the mode to its members
+        from snapmock.items.base_item import SnapGraphicsItem
+
+        for item in self.items_on_layer(layer_id):
+            if isinstance(item, SnapGraphicsItem):
+                item.layer_blend_mode = blend_mode
 
     # --- guides (General UI PRD 6.5); mutate through commands/guide_commands.py ---
 

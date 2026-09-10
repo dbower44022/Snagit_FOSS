@@ -10,6 +10,8 @@ from PyQt6.QtCore import QRectF
 from PyQt6.QtGui import QPainter, QPainterPath, QTransform
 from PyQt6.QtWidgets import QGraphicsObject
 
+from snapmock.core.layer import DEFAULT_BLEND_MODE, composition_mode
+
 
 def transform_to_list(transform: QTransform) -> list[float]:
     """The nine matrix values of *transform*, row by row (the ``transform`` entry)."""
@@ -52,6 +54,7 @@ class SnapGraphicsItem(QGraphicsObject):
         self._flip_horizontal: bool = False
         self._flip_vertical: bool = False
         self._layer_opacity: float = 1.0
+        self._layer_blend_mode: str = DEFAULT_BLEND_MODE
         self._paint_saved: bool = False
         self.setFlag(QGraphicsObject.GraphicsItemFlag.ItemIsSelectable, True)
         self.setFlag(QGraphicsObject.GraphicsItemFlag.ItemIsMovable, False)
@@ -93,6 +96,20 @@ class SnapGraphicsItem(QGraphicsObject):
         self.update()
 
     @property
+    def layer_blend_mode(self) -> str:
+        """The owning layer's blend mode, applied as this item's painter composition mode
+        (follow-up decision 3, option B: per item, on the display and in every export alike).
+
+        Runtime state set by the scene; never serialized.
+        """
+        return self._layer_blend_mode
+
+    @layer_blend_mode.setter
+    def layer_blend_mode(self, value: str) -> None:
+        self._layer_blend_mode = value
+        self.update()
+
+    @property
     def locked(self) -> bool:
         return self._locked
 
@@ -121,15 +138,23 @@ class SnapGraphicsItem(QGraphicsObject):
         self.update()
 
     def _apply_flip(self, painter: QPainter) -> None:
-        """Apply the layer opacity and any flip transform. Call at start of paint()."""
+        """Apply the layer opacity, the layer blend mode, and any flip transform.
+
+        Call at the start of ``paint()``. The blend mode is the layer's, applied per item
+        (Technical Architecture PRD 3.9 departure, follow-up decision 3): two overlapping
+        items on one non-Normal layer blend twice.
+        """
+        blended = self._layer_blend_mode != DEFAULT_BLEND_MODE
         self._paint_saved = (
-            self._flip_horizontal or self._flip_vertical or self._layer_opacity < 1.0
+            self._flip_horizontal or self._flip_vertical or self._layer_opacity < 1.0 or blended
         )
         if not self._paint_saved:
             return
         painter.save()
         if self._layer_opacity < 1.0:
             painter.setOpacity(painter.opacity() * self._layer_opacity)
+        if blended:
+            painter.setCompositionMode(composition_mode(self._layer_blend_mode))
         if self._flip_horizontal or self._flip_vertical:
             br = self.boundingRect()
             cx = br.center().x()

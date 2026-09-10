@@ -232,6 +232,32 @@ def _raster_items(scene: SnapScene) -> list[QGraphicsItem]:
     return [i for i in scene.all_annotation_items() if isinstance(i, RasterRegionItem | StampItem)]
 
 
+def _paint_canvas_colour(
+    painter: QPainter, scene: SnapScene, target: QRectF, region: QRectF
+) -> None:
+    """Fill the canvas's part of *target* with the canvas colour (General UI PRD 6.2).
+
+    The scene draws no background of its own: the view paints the canvas colour, and the
+    raster exports fill their image first. The SVG and PDF exports paint it here, so a
+    blended layer has the canvas beneath it as it has on the display.
+    """
+    colour = scene.background_color
+    if colour.alpha() == 0 or region.isEmpty():
+        return
+    canvas = scene.canvas_rect.intersected(region)
+    if canvas.isEmpty():
+        return
+    sx = target.width() / region.width()
+    sy = target.height() / region.height()
+    fill = QRectF(
+        target.left() + (canvas.left() - region.left()) * sx,
+        target.top() + (canvas.top() - region.top()) * sy,
+        canvas.width() * sx,
+        canvas.height() * sy,
+    )
+    painter.fillRect(fill, colour)
+
+
 def _write_svg(scene: SnapScene, settings: ExportSettings, region: QRectF, target: object) -> None:
     from PyQt6.QtSvg import QSvgGenerator
 
@@ -251,11 +277,9 @@ def _write_svg(scene: SnapScene, settings: ExportSettings, region: QRectF, targe
             item.setVisible(False)
     try:
         painter = QPainter(generator)
-        scene.render(
-            painter,
-            target=QRectF(0, 0, region.width(), region.height()),
-            source=region,
-        )
+        target = QRectF(0, 0, region.width(), region.height())
+        _paint_canvas_colour(painter, scene, target, region)
+        scene.render(painter, target=target, source=region)
         painter.end()
     finally:
         for item in hidden:
@@ -292,6 +316,7 @@ def _write_pdf(scene: SnapScene, settings: ExportSettings, region: QRectF, path:
     device = painter.device()
     page = QRectF(0, 0, device.width(), device.height())  # type: ignore[union-attr]
     target = fit_to_page(QSizeF(region.width(), region.height()), page)
+    _paint_canvas_colour(painter, scene, target, region)
     scene.render(painter, target=target, source=region)
     painter.end()
 

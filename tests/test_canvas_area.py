@@ -1,6 +1,8 @@
 """Tests for canvas area features: pasteboard, grid, rulers, cursors, drag-and-drop."""
 
-from PyQt6.QtCore import QRectF, Qt
+from PyQt6.QtCore import QPointF, QRectF, Qt
+from PyQt6.QtGui import QColor
+from pytestqt.qtbot import QtBot
 
 from snapmock.config.constants import (
     DEFAULT_CANVAS_HEIGHT,
@@ -175,3 +177,32 @@ def test_show_crosshairs_menu_toggle_applies_to_every_document_and_persists(
     action.setChecked(False)
     assert not any(d.view.crosshairs_visible for d in main_window.documents.documents)
     assert not AppSettings().crosshairs_visible()
+
+
+def test_view_displays_a_multiply_layer_like_the_export(qtbot: QtBot, scene: SnapScene) -> None:
+    """Follow-up decision 3: the display and the export agree on a blended layer."""
+    from snapmock.commands.add_item import AddItemCommand
+    from snapmock.items.rectangle_item import RectangleItem
+
+    scene.set_background_color(QColor("blue"))
+    layer = scene.layer_manager.add_layer("Multiply")
+    scene.layer_manager.set_blend_mode(layer.layer_id, "Multiply")
+    item = RectangleItem(QRectF(0, 0, 100, 100))
+    item.setPos(50, 50)
+    item.fill_color = QColor("yellow")
+    item.stroke_color = QColor("yellow")
+    scene.command_stack.push(AddItemCommand(scene, item, layer.layer_id))
+    view = SnapView(scene)
+    qtbot.addWidget(view)
+    view.resize(500, 400)
+    view.show()
+    view.set_zoom(100)
+    view.centerOn(QPointF(100, 100))
+    qtbot.waitExposed(view)
+    viewport = view.viewport()
+    assert viewport is not None
+    image = viewport.grab().toImage()
+    at_item = view.mapFromScene(QPointF(100, 100))
+    assert image.pixelColor(at_item) == QColor("black")
+    on_canvas = view.mapFromScene(QPointF(10, 10))
+    assert image.pixelColor(on_canvas) == QColor("blue")
