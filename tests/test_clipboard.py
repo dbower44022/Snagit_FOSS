@@ -71,3 +71,46 @@ def test_paste_gives_the_copy_new_ids(main_window: MainWindow) -> None:
     new_ids = {pasted[0].item_id} | {m.item_id for m in pasted[0].descendants()}
     assert len(new_ids) == 3 and old_ids.isdisjoint(new_ids)
     assert len({i.item_id for i in scene.all_annotation_items()}) == 6
+
+
+def _system_image(width: int = 30, height: int = 20) -> None:
+    from PyQt6.QtGui import QColor, QImage
+
+    clipboard = QApplication.clipboard()
+    assert clipboard is not None
+    image = QImage(width, height, QImage.Format.Format_ARGB32)
+    image.fill(QColor("blue"))
+    clipboard.setImage(image)
+
+
+def test_pasted_system_image_becomes_the_background_of_an_empty_project(
+    main_window: MainWindow,
+) -> None:
+    """Follow-up step 5: Edit > Paste of a system image on an empty project."""
+    from snapmock.items.raster_region_item import RasterRegionItem
+
+    scene = main_window.scene
+    lm = scene.layer_manager
+    marks = lm.layers[0]
+    _system_image()
+    main_window._edit_paste()  # noqa: SLF001
+    background = lm.layers[0]
+    assert background.is_background and lm.count == 2 and lm.active_layer is marks
+    regions = [i for i in scene.annotation_items() if isinstance(i, RasterRegionItem)]
+    assert len(regions) == 1 and regions[0].layer_id == background.layer_id
+    assert (scene.canvas_size.width(), scene.canvas_size.height()) == (30, 20)
+    # A second paste is a region on the active layer at the viewport centre
+    main_window._edit_paste()  # noqa: SLF001
+    regions = [i for i in scene.annotation_items() if isinstance(i, RasterRegionItem)]
+    assert len(regions) == 2 and lm.count == 2
+    second = next(r for r in regions if r.layer_id == marks.layer_id)
+    viewport = main_window.view.viewport()
+    assert viewport is not None
+    centre = main_window.view.mapToScene(viewport.rect().center())
+    assert second.pos().x() == centre.x() - 15 and second.pos().y() == centre.y() - 10
+    scene.command_stack.undo()
+    scene.command_stack.undo()
+    assert lm.count == 1 and lm.background_layer is None
+    clipboard = QApplication.clipboard()
+    assert clipboard is not None
+    clipboard.clear()

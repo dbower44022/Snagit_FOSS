@@ -206,3 +206,63 @@ def test_view_displays_a_multiply_layer_like_the_export(qtbot: QtBot, scene: Sna
     assert image.pixelColor(at_item) == QColor("black")
     on_canvas = view.mapFromScene(QPointF(10, 10))
     assert image.pixelColor(on_canvas) == QColor("blue")
+
+
+def _drop_image(view: SnapView, x: float, y: float, width: int = 30, height: int = 20) -> None:
+    from PyQt6.QtCore import QMimeData
+    from PyQt6.QtGui import QDropEvent, QImage
+
+    image = QImage(width, height, QImage.Format.Format_ARGB32)
+    image.fill(QColor("green"))
+    mime = QMimeData()
+    mime.setImageData(image)
+    event = QDropEvent(
+        QPointF(x, y),
+        Qt.DropAction.CopyAction,
+        mime,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+    view.dropEvent(event)
+    assert event.isAccepted()
+
+
+def test_dropped_image_becomes_the_background_of_an_empty_project(view: SnapView) -> None:
+    """Follow-up step 5 (General UI PRD 17.4): a drop on an empty project."""
+    from snapmock.items.raster_region_item import RasterRegionItem
+
+    snap = view._snap_scene  # noqa: SLF001
+    assert snap is not None
+    lm = snap.layer_manager
+    marks = lm.layers[0]
+    _drop_image(view, 200, 150)
+    background = lm.layers[0]
+    assert background.is_background and lm.count == 2 and lm.active_layer is marks
+    regions = [i for i in snap.annotation_items() if isinstance(i, RasterRegionItem)]
+    assert len(regions) == 1 and regions[0].layer_id == background.layer_id
+    assert regions[0].pos() == QPointF(0, 0)
+    assert (snap.canvas_size.width(), snap.canvas_size.height()) == (30, 20)
+    assert not view._scene_has_no_user_items(snap)  # noqa: SLF001
+    snap.command_stack.undo()
+    assert lm.count == 1 and view._scene_has_no_user_items(snap)  # noqa: SLF001
+
+
+def test_dropped_image_on_a_project_with_content_is_a_region_at_the_drop(view: SnapView) -> None:
+    from snapmock.commands.add_item import AddItemCommand
+    from snapmock.items.raster_region_item import RasterRegionItem
+    from snapmock.items.rectangle_item import RectangleItem
+
+    snap = view._snap_scene  # noqa: SLF001
+    assert snap is not None
+    lm = snap.layer_manager
+    snap.command_stack.push(
+        AddItemCommand(snap, RectangleItem(QRectF(0, 0, 10, 10)), lm.layers[0].layer_id)
+    )
+    before = (snap.canvas_size.width(), snap.canvas_size.height())
+    _drop_image(view, 100, 100)
+    regions = [i for i in snap.annotation_items() if isinstance(i, RasterRegionItem)]
+    assert len(regions) == 1 and lm.count == 1 and lm.background_layer is None
+    assert regions[0].layer_id == lm.layers[0].layer_id
+    dropped_at = view.mapToScene(100, 100)
+    assert regions[0].pos() == QPointF(dropped_at.x() - 15, dropped_at.y() - 10)
+    assert (snap.canvas_size.width(), snap.canvas_size.height()) == before

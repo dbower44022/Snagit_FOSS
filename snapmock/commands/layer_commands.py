@@ -4,13 +4,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from PyQt6.QtCore import QSizeF
+from PyQt6.QtGui import QPixmap
+
 from snapmock.core.command_stack import BaseCommand
-from snapmock.core.layer import Layer
+from snapmock.core.layer import LAYER_TYPE_BACKGROUND, Layer
 from snapmock.items.base_item import SnapGraphicsItem
 
 if TYPE_CHECKING:
     from snapmock.core.layer_manager import LayerManager
     from snapmock.core.scene import SnapScene
+    from snapmock.items.raster_region_item import RasterRegionItem
+
+BACKGROUND_LAYER_NAME = "Background"
 
 
 class AddLayerCommand(BaseCommand):
@@ -187,3 +193,59 @@ class ChangeLayerPropertyCommand(BaseCommand):
     @property
     def description(self) -> str:
         return f"Change layer {self._prop_name}"
+
+
+class CreateBackgroundLayerCommand(BaseCommand):
+    """A Background layer holding *pixmap* at the bottom of the stack, the canvas resized
+    to the image (General UI PRD 6.2: it fills the canvas exactly), as one undo step.
+
+    The routes that place an image use it while the project has no Background layer and
+    no annotation item (follow-up step 5): a dropped image file, a dropped image, a
+    pasted system image, and File > Import Image. The active layer is left as it was,
+    so the next annotation lands on an annotation layer.
+    """
+
+    def __init__(self, scene: SnapScene, pixmap: QPixmap) -> None:
+        from snapmock.commands.raster_commands import ResizeCanvasCommand
+        from snapmock.items.raster_region_item import RasterRegionItem
+
+        self._scene = scene
+        self._mgr = scene.layer_manager
+        self._layer = Layer(name=BACKGROUND_LAYER_NAME, layer_type=LAYER_TYPE_BACKGROUND)
+        self._item: RasterRegionItem = RasterRegionItem(pixmap=pixmap)
+        self._item.setPos(0, 0)
+        self._resize = ResizeCanvasCommand(
+            scene, QSizeF(max(1, pixmap.width()), max(1, pixmap.height())), anchor=0
+        )
+        self._active_before = self._mgr.active_layer_id
+
+    @property
+    def layer(self) -> Layer:
+        return self._layer
+
+    @property
+    def item(self) -> RasterRegionItem:
+        return self._item
+
+    def redo(self) -> None:
+        self._mgr.insert_layer(self._layer, 0)
+        self._item.layer_id = self._layer.layer_id
+        self._scene.addItem(self._item)
+        self._layer.item_ids = [self._item.item_id]
+        self._item.setZValue(self._layer.z_base)
+        self._resize.redo()
+        if self._mgr.layer_by_id(self._active_before) is not None:
+            self._mgr.set_active(self._active_before)
+
+    def undo(self) -> None:
+        self._resize.undo()
+        self._layer.item_ids = []
+        if self._item.scene() is self._scene:
+            self._scene.removeItem(self._item)
+        self._mgr.remove_layer(self._layer.layer_id)
+        if self._mgr.layer_by_id(self._active_before) is not None:
+            self._mgr.set_active(self._active_before)
+
+    @property
+    def description(self) -> str:
+        return "Add background image"

@@ -161,6 +161,12 @@ class TestRoutes:
         _panel(window).card(CARD_PASTE).click()
         assert not window.welcome_is_showing()
         assert len(_raster_items(window)) == 1
+        # "Pastes clipboard content as background" (Section 16.1): the Background layer
+        # holds it and the canvas takes its size (follow-up step 5)
+        lm = window.scene.layer_manager
+        assert lm.background_layer is lm.layers[0]
+        assert _raster_items(window)[0].layer_id == lm.layers[0].layer_id
+        assert window.scene.canvas_size.width() == 20 and lm.active_layer is lm.layers[1]
         clipboard.clear()
 
     def test_new_blank_canvas_asks_a_size_and_opens_an_unsaved_document(

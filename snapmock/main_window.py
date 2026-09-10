@@ -2840,23 +2840,22 @@ class MainWindow(QMainWindow):
             self._selection_manager.select(item)
 
     def _paste_system_image(self, image: object) -> None:
+        """A system-clipboard image (Navigation PRD 9.3.3; Welcome card of General UI PRD
+        16.1): the background layer on an empty project, else a region at the viewport
+        centre on the active layer."""
+        from PyQt6.QtCore import QPointF
         from PyQt6.QtGui import QPixmap
 
-        from snapmock.commands.add_item import AddItemCommand
-        from snapmock.items.raster_region_item import RasterRegionItem
+        from snapmock.io.importer import place_image
 
         pixmap = QPixmap.fromImage(image)  # type: ignore[arg-type]
-        item = RasterRegionItem(pixmap=pixmap)
-        # Place at viewport center
         view = self._view
         viewport = view.viewport()
         if viewport is None:
             return
         center = view.mapToScene(viewport.rect().center())
-        item.setPos(center.x() - pixmap.width() / 2, center.y() - pixmap.height() / 2)
-        layer = self._scene.layer_manager.active_layer
-        if layer is not None:
-            self._scene.command_stack.push(AddItemCommand(self._scene, item, layer.layer_id))
+        top_left = QPointF(center.x() - pixmap.width() / 2, center.y() - pixmap.height() / 2)
+        place_image(self._scene, pixmap, top_left)
 
     def _edit_paste_in_place(self) -> None:
         """Paste items at their original positions (no offset)."""

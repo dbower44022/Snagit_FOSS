@@ -581,10 +581,12 @@ def test_17_3_no_shown_toolbar_button_is_disabled(main_window: MainWindow) -> No
 # ---- 17.4 Canvas ----
 
 
-def test_17_4_dropped_image_file_lands_on_the_active_layer(
+def test_17_4_dropped_image_file_creates_a_background_layer(
     main_window: MainWindow, tmp_path: Path
 ) -> None:
-    """Row 16: what a dropped image file becomes."""
+    """Row 16: what a dropped image file becomes. Fixed since the pass by the Navigation
+    and Raster Operations follow-up: a Background layer holding the image on an empty
+    project, the canvas resized to it; a raster region on the active layer otherwise."""
     path = tmp_path / "drop.png"
     pixmap = QPixmap(12, 8)
     pixmap.fill(QColor("red"))
@@ -594,25 +596,33 @@ def test_17_4_dropped_image_file_lands_on_the_active_layer(
     active = scene.layer_manager.active_layer
     assert active is not None
 
-    mime = QMimeData()
-    mime.setUrls([QUrl.fromLocalFile(str(path))])
-    event = QDropEvent(
-        QPointF(50, 50),
-        Qt.DropAction.CopyAction,
-        mime,
-        Qt.MouseButton.LeftButton,
-        Qt.KeyboardModifier.NoModifier,
-    )
-    main_window.view.dropEvent(event)
-    assert event.isAccepted()
+    def _drop() -> None:
+        mime = QMimeData()
+        mime.setUrls([QUrl.fromLocalFile(str(path))])
+        event = QDropEvent(
+            QPointF(50, 50),
+            Qt.DropAction.CopyAction,
+            mime,
+            Qt.MouseButton.LeftButton,
+            Qt.KeyboardModifier.NoModifier,
+        )
+        main_window.view.dropEvent(event)
+        assert event.isAccepted()
 
-    # Section 16 row 16, fail: the file becomes a raster region on the active layer, centred
-    # on the drop point; no background layer exists or is created.
+    _drop()
     regions = [i for i in scene.items() if isinstance(i, RasterRegionItem)]
     assert len(regions) == 1
-    assert regions[0].layer_id == active.layer_id
-    assert scene.layer_manager.count == layers_before
-    assert not any("background" in layer.name.lower() for layer in scene.layer_manager.layers)
+    background = scene.layer_manager.layers[0]
+    assert background.is_background and background.name == "Background"
+    assert regions[0].layer_id == background.layer_id and regions[0].pos() == QPointF(0, 0)
+    assert scene.layer_manager.count == layers_before + 1
+    assert scene.layer_manager.active_layer is active
+    assert (scene.canvas_size.width(), scene.canvas_size.height()) == (12, 8)
+    # With a background in place a second drop is a raster region on the active layer
+    _drop()
+    regions = [i for i in scene.items() if isinstance(i, RasterRegionItem)]
+    assert len(regions) == 2 and scene.layer_manager.count == layers_before + 1
+    assert any(r.layer_id == active.layer_id for r in regions)
 
 
 def test_17_4_rulers_track_the_cursor(main_window: MainWindow) -> None:

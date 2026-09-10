@@ -1236,14 +1236,11 @@ class SnapView(QGraphicsView):
         self._import_dropped_pixmap(pixmap, scene_pos)
 
     def _import_dropped_pixmap(self, pixmap: QPixmap, scene_pos: QPointF) -> None:
+        """The background layer on an empty project, else a region centred on the drop."""
         snap = self._snap_scene
         if snap is None:
             return
-        from snapmock.commands.add_item import AddItemCommand
-        from snapmock.items.raster_region_item import RasterRegionItem
+        from snapmock.io.importer import place_image
 
-        item = RasterRegionItem(pixmap=pixmap)
-        item.setPos(scene_pos.x() - pixmap.width() / 2, scene_pos.y() - pixmap.height() / 2)
-        layer = snap.layer_manager.active_layer
-        if layer is not None:
-            snap.command_stack.push(AddItemCommand(snap, item, layer.layer_id))
+        top_left = QPointF(scene_pos.x() - pixmap.width() / 2, scene_pos.y() - pixmap.height() / 2)
+        place_image(snap, pixmap, top_left)
