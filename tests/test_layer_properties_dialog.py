@@ -84,3 +84,32 @@ class TestLayerPropertiesDialogGetChanges:
         changes = dlg.get_changes()
         assert "locked" in changes
         assert changes["locked"] == (False, True)
+
+
+class TestLayerPropertiesDialogBlendModeAndType:
+    """Follow-up step 2: the dialog shows name, opacity, blend mode (PRD 3.4) and the type."""
+
+    def test_shows_blend_mode_and_type(self, qtbot: QtBot) -> None:
+        layer = _make_layer(blend_mode="Screen", layer_type="Background")
+        dlg = LayerPropertiesDialog(layer)
+        qtbot.addWidget(dlg)
+        assert dlg._blend_combo.currentText() == "Screen"
+        assert [dlg._blend_combo.itemText(i) for i in range(dlg._blend_combo.count())] == [
+            "Normal",
+            "Multiply",
+            "Screen",
+            "Overlay",
+            "Darken",
+            "Lighten",
+            "Difference",
+        ]
+        assert dlg._type_label.text() == "Background"
+        assert dlg._blend_combo.accessibleName() == "Blend mode"
+
+    def test_detects_blend_mode_change(self, qtbot: QtBot) -> None:
+        layer = _make_layer()
+        dlg = LayerPropertiesDialog(layer)
+        qtbot.addWidget(dlg)
+        assert dlg.get_changes() == {}
+        dlg._blend_combo.setCurrentText("Difference")
+        assert dlg.get_changes() == {"blend_mode": ("Normal", "Difference")}

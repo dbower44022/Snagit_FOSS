@@ -17,7 +17,7 @@ from snapmock.config.constants import (
     THUMBNAIL_MAX_SIZE,
 )
 from snapmock.core.guides import Guide
-from snapmock.core.layer import Layer
+from snapmock.core.layer import Layer, normalize_blend_mode, normalize_layer_type
 from snapmock.core.scene import SnapScene
 from snapmock.items.arrow_item import ArrowItem
 from snapmock.items.base_item import SnapGraphicsItem
@@ -119,6 +119,8 @@ def save_project(
                 "visible": layer.visible,
                 "locked": layer.locked,
                 "opacity": layer.opacity,
+                "blend_mode": layer.blend_mode,
+                "layer_type": layer.layer_type,
                 "item_ids": layer.item_ids,
             }
         )
@@ -256,6 +258,9 @@ def load_project(path: Path) -> SnapScene:
             visible=ld.get("visible", True),
             locked=ld.get("locked", False),
             opacity=ld.get("opacity", 1.0),
+            # Absent in files from earlier builds: Normal and Annotation
+            blend_mode=normalize_blend_mode(ld.get("blend_mode")),
+            layer_type=normalize_layer_type(ld.get("layer_type")),
             item_ids=ld.get("item_ids", []),
         )
         scene.layer_manager.insert_layer(layer, scene.layer_manager.count)

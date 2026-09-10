@@ -3182,7 +3182,11 @@ class MainWindow(QMainWindow):
         if active is None:
             return
         idx = lm.index_of(active.layer_id)
-        if self._require("Move Layer Up", (idx < lm.count - 1, "a layer above the active layer")):
+        if self._require(
+            "Move Layer Up",
+            (idx < lm.count - 1, "a layer above the active layer"),
+            (not active.is_background, "a layer that is not the Background layer"),
+        ):
             from snapmock.commands.layer_commands import ReorderLayerCommand
 
             cmd = ReorderLayerCommand(lm, active.layer_id, idx + 1)
@@ -3194,7 +3198,14 @@ class MainWindow(QMainWindow):
         if active is None:
             return
         idx = lm.index_of(active.layer_id)
-        if self._require("Move Layer Down", (idx > 0, "a layer below the active layer")):
+        if self._require(
+            "Move Layer Down",
+            (idx > 0, "a layer below the active layer"),
+            (
+                idx <= 0 or not lm.layers[idx - 1].is_background,
+                "a layer below that is not the Background layer",
+            ),
+        ):
             from snapmock.commands.layer_commands import ReorderLayerCommand
 
             cmd = ReorderLayerCommand(lm, active.layer_id, idx - 1)
@@ -3207,7 +3218,9 @@ class MainWindow(QMainWindow):
             return
         idx = lm.index_of(active.layer_id)
         if self._require(
-            "Move Layer to Top", (idx < lm.count - 1, "a layer above the active layer")
+            "Move Layer to Top",
+            (idx < lm.count - 1, "a layer above the active layer"),
+            (not active.is_background, "a layer that is not the Background layer"),
         ):
             from snapmock.commands.layer_commands import ReorderLayerCommand
 
@@ -3220,7 +3233,14 @@ class MainWindow(QMainWindow):
         if active is None:
             return
         idx = lm.index_of(active.layer_id)
-        if self._require("Move Layer to Bottom", (idx > 0, "a layer below the active layer")):
+        if self._require(
+            "Move Layer to Bottom",
+            (idx > 0, "a layer below the active layer"),
+            (
+                idx <= 0 or not lm.layers[idx - 1].is_background,
+                "a layer below that is not the Background layer",
+            ),
+        ):
             from snapmock.commands.layer_commands import ReorderLayerCommand
 
             cmd = ReorderLayerCommand(lm, active.layer_id, 0)

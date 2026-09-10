@@ -20,6 +20,7 @@ from snapmock.config.constants import (
     PROJECT_EXTENSION,
 )
 from snapmock.core.command_stack import CommandStack
+from snapmock.core.layer import LAYER_TYPE_BACKGROUND
 from snapmock.core.scene import SnapScene
 from snapmock.io.project_serializer import save_project, update_library_metadata
 from snapmock.items.raster_region_item import RasterRegionItem
@@ -183,6 +184,7 @@ class LibraryManager(QObject):
             bg_layer = lm.add_layer("Background")
         else:
             lm.rename_layer(bg_layer.layer_id, "Background")
+        lm.set_layer_type(bg_layer.layer_id, LAYER_TYPE_BACKGROUND)
         item = RasterRegionItem(pixmap=pixmap)
         item.layer_id = bg_layer.layer_id
         bg_layer.item_ids.append(item.item_id)

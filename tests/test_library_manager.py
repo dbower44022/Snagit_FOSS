@@ -86,6 +86,10 @@ def test_create_from_image_builds_two_layers_and_metadata(library: LibraryManage
     scene = load_project(path)
     names = [layer.name for layer in scene.layer_manager.layers]
     assert names == ["Background", "Annotations"]
+    assert [layer.layer_type for layer in scene.layer_manager.layers] == [
+        "Background",
+        "Annotation",
+    ]
     assert scene.canvas_size.width() == 40
     assert scene.layer_manager.active_layer is not None
     assert scene.layer_manager.active_layer.name == "Annotations"

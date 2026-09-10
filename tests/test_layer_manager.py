@@ -119,3 +119,90 @@ def test_rename_layer() -> None:
     mgr.rename_layer(layer.layer_id, "New Name")
     result = mgr.layer_by_id(layer.layer_id)
     assert result is not None and result.name == "New Name"
+
+
+# ---- blend mode and layer type (Navigation and Raster Operations follow-up, step 2) ----
+
+
+def test_layer_blend_mode_and_type_defaults_and_clone() -> None:
+    from snapmock.core.layer import (
+        BLEND_MODES,
+        LAYER_TYPE_ANNOTATION,
+        LAYER_TYPE_BACKGROUND,
+        LAYER_TYPES,
+    )
+
+    layer = Layer(name="Test")
+    assert layer.blend_mode == "Normal" and layer.layer_type == LAYER_TYPE_ANNOTATION
+    assert not layer.is_background
+    assert BLEND_MODES == (
+        "Normal",
+        "Multiply",
+        "Screen",
+        "Overlay",
+        "Darken",
+        "Lighten",
+        "Difference",
+    )
+    assert LAYER_TYPES == ("Background", "Annotation", "RasterRegion")
+    background = Layer(name="Background", layer_type=LAYER_TYPE_BACKGROUND, blend_mode="Multiply")
+    assert background.is_background
+    clone = background.clone()
+    # A copy keeps the blend mode and is an Annotation layer (decision 2)
+    assert clone.blend_mode == "Multiply" and clone.layer_type == LAYER_TYPE_ANNOTATION
+
+
+def test_composition_mode_names_map_to_qt() -> None:
+    from PyQt6.QtGui import QPainter
+
+    from snapmock.core.layer import BLEND_MODES, composition_mode, normalize_blend_mode
+
+    modes = {composition_mode(name) for name in BLEND_MODES}
+    assert len(modes) == len(BLEND_MODES)
+    assert composition_mode("Normal") is QPainter.CompositionMode.CompositionMode_SourceOver
+    assert composition_mode("Multiply") is QPainter.CompositionMode.CompositionMode_Multiply
+    assert composition_mode("no such mode") is QPainter.CompositionMode.CompositionMode_SourceOver
+    assert normalize_blend_mode(None) == "Normal" and normalize_blend_mode("Screen") == "Screen"
+
+
+def test_set_blend_mode_and_type_emit() -> None:
+    lm = LayerManager()
+    layer = lm.add_layer("A")
+    seen: list[tuple[str, str]] = []
+    lm.layer_blend_mode_changed.connect(lambda lid, mode: seen.append((lid, mode)))
+    lm.layer_type_changed.connect(lambda lid, kind: seen.append((lid, kind)))
+    lm.set_blend_mode(layer.layer_id, "Overlay")
+    lm.set_blend_mode(layer.layer_id, "bogus")
+    lm.set_layer_type(layer.layer_id, "Background")
+    assert seen == [
+        (layer.layer_id, "Overlay"),
+        (layer.layer_id, "Normal"),
+        (layer.layer_id, "Background"),
+    ]
+    assert lm.background_layer is layer
+
+
+def test_background_layer_is_pinned_to_the_bottom() -> None:
+    lm = LayerManager()
+    a = lm.add_layer("A")
+    b = lm.add_layer("B")
+    c = lm.add_layer("C")
+    # Making a layer Background moves it to the bottom
+    lm.set_layer_type(b.layer_id, "Background")
+    assert [layer.name for layer in lm.layers] == ["B", "A", "C"]
+    # The Background layer never moves
+    lm.move_layer(b.layer_id, 2)
+    assert [layer.name for layer in lm.layers] == ["B", "A", "C"]
+    # No other layer moves below it: Move to Bottom lands above it
+    lm.move_layer(c.layer_id, 0)
+    assert [layer.name for layer in lm.layers] == ["B", "C", "A"]
+    # No layer is inserted below it
+    lm.add_layer("D", 0)
+    assert [layer.name for layer in lm.layers] == ["B", "D", "C", "A"]
+    lm.insert_layer(Layer(name="E"), 0)
+    assert [layer.name for layer in lm.layers] == ["B", "E", "D", "C", "A"]
+    assert lm.layers[0].z_base == 0 and lm.layers[1].z_base == LAYER_Z_RANGE
+    # Without a Background layer the bottom is open
+    lm.set_layer_type(b.layer_id, "Annotation")
+    lm.move_layer(a.layer_id, 0)
+    assert lm.layers[0] is a

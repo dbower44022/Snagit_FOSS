@@ -13,6 +13,7 @@ from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
 from PyQt6.QtGui import QColor, QFont, QImage, QPixmap
 
 from snapmock.config.constants import VerticalAlign
+from snapmock.core.layer import LAYER_TYPE_BACKGROUND
 from snapmock.core.scene import SnapScene
 from snapmock.io.rtf_utils import extract_font_from_rtf, extract_text_from_rtf
 from snapmock.items.arrow_item import ArrowItem
@@ -52,6 +53,7 @@ def load_snagx(path: Path) -> SnapScene:
             bg_layer = scene.layer_manager.add_layer("Background")
         else:
             scene.layer_manager.rename_layer(bg_layer.layer_id, "Background")
+        scene.layer_manager.set_layer_type(bg_layer.layer_id, LAYER_TYPE_BACKGROUND)
 
         bg_image_name = page.get("CaptureBackgroundImage", "")
         if bg_image_name and bg_image_name in zf.namelist():

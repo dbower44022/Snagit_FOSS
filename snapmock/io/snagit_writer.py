@@ -489,23 +489,31 @@ def _item_to_image(item: RasterRegionItem) -> dict[str, Any]:
 def _split_bg_and_annotations(
     scene: SnapScene,
 ) -> tuple[RasterRegionItem | None, list[SnapGraphicsItem]]:
-    """Find the lowest-z top-level RasterRegionItem as background; rest are annotations.
+    """The background raster region and the annotation items, bottom first.
 
-    A group is written as its members, each at the position the group showed it (the
-    group's translation composed in; a group's scale, rotation, or skew has no Snagit
-    form and is dropped), with no warning (Group and Ungroup kickoff, silence 4).
+    The background is the lowest top-level ``RasterRegionItem`` on the Background layer
+    when the project has one (follow-up decision 2), else the lowest anywhere. A group is
+    written as its members, each at the position the group showed it (the group's
+    translation composed in; a group's scale, rotation, or skew has no Snagit form and is
+    dropped), with no warning (Group and Ungroup kickoff, silence 4).
     """
     from snapmock.items.group_item import GroupItem
 
     # Top-level items in z-order, bottom first
     all_items = sorted(scene.annotation_items(), key=lambda i: i.zValue())
-
+    rasters = [i for i in all_items if isinstance(i, RasterRegionItem)]
+    background_layer = scene.layer_manager.background_layer
     bg: RasterRegionItem | None = None
+    if background_layer is not None:
+        bg = next((r for r in rasters if r.layer_id == background_layer.layer_id), None)
+    if bg is None and rasters:
+        bg = rasters[0]
+
     annotations: list[SnapGraphicsItem] = []
     for item in all_items:
-        if bg is None and isinstance(item, RasterRegionItem):
-            bg = item
-        elif isinstance(item, GroupItem):
+        if item is bg:
+            continue
+        if isinstance(item, GroupItem):
             annotations.extend(m for m in item.descendants() if not isinstance(m, GroupItem))
         else:
             annotations.append(item)

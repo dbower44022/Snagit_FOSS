@@ -127,7 +127,7 @@ class ReorderLayerCommand(BaseCommand):
 
 
 class ChangeLayerPropertyCommand(BaseCommand):
-    """Change a layer property (visibility, lock, opacity, name).
+    """Change a layer property (visibility, lock, opacity, name, blend mode, layer type).
 
     With *mergeable* set, consecutive changes to the same property of the
     same layer collapse into one undo entry (the Layer Panel's opacity slider).
@@ -173,6 +173,10 @@ class ChangeLayerPropertyCommand(BaseCommand):
             self._mgr.set_opacity(self._layer_id, float(value))  # type: ignore[arg-type]
         elif self._prop_name == "name":
             self._mgr.rename_layer(self._layer_id, str(value))
+        elif self._prop_name == "blend_mode":
+            self._mgr.set_blend_mode(self._layer_id, str(value))
+        elif self._prop_name == "layer_type":
+            self._mgr.set_layer_type(self._layer_id, str(value))
 
     def redo(self) -> None:
         self._apply(self._new_value)

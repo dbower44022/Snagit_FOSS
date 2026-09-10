@@ -31,6 +31,7 @@ from PyQt6.QtGui import (
     QDragLeaveEvent,
     QDragMoveEvent,
     QDropEvent,
+    QFont,
     QFontMetrics,
     QMouseEvent,
     QPainter,
@@ -41,12 +42,14 @@ from PyQt6.QtGui import (
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
+    QComboBox,
     QDockWidget,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QSizePolicy,
     QSlider,
     QStyle,
     QStyledItemDelegate,
@@ -65,6 +68,7 @@ from snapmock.commands.layer_commands import (
 from snapmock.commands.macro_command import MacroCommand
 from snapmock.config.settings import AppSettings
 from snapmock.core.command_stack import BaseCommand
+from snapmock.core.layer import BLEND_MODES, LAYER_TYPE_BACKGROUND, LAYER_TYPE_RASTER_REGION
 from snapmock.core.render_engine import RenderEngine
 from snapmock.core.theme_manager import current_theme, theme_manager
 from snapmock.ui.icons import ACTION_ICONS
@@ -96,7 +100,13 @@ _CHECKER_CELL = 5
 LAYER_ID_ROLE = Qt.ItemDataRole.UserRole
 
 ACTION_BAR_LABELS = ("New Layer", "Delete Layer", "Duplicate Layer", "Merge Down")
-"""The bottom action bar's buttons in order (PRD 7.4); the blend-mode dropdown is deferred."""
+"""The bottom action bar's buttons in order (PRD 7.4), followed by the blend-mode dropdown."""
+BLEND_MODE_COMBO_NAME = "Layer Blend Mode"
+"""Accessible name of the action bar's dropdown (PRD 7.4)."""
+BADGE_SIZE = 16
+"""Side of the BG and raster badges on the thumbnail (PRD 7.5)."""
+BLEND_COMBO_MAX_WIDTH = 110
+"""Widest the action bar's dropdown grows; it shrinks with the panel."""
 
 
 def _checkerboard(size: int) -> QPixmap:
@@ -338,6 +348,21 @@ class _LayerRowDelegate(QStyledItemDelegate):
             overlay = QRect(0, 0, TOGGLE_SIZE, TOGGLE_SIZE)
             overlay.moveCenter(rects.thumbnail.center())
             manager.icon("lock").paint(painter, overlay)
+        # Layer type badges (PRD 7.5): BG on a Background layer, a raster grid on a
+        # RasterRegion layer, nothing on an Annotation layer
+        badge = QRect(0, 0, BADGE_SIZE, BADGE_SIZE)
+        badge.moveBottomRight(rects.thumbnail.bottomRight())
+        if layer.layer_type == LAYER_TYPE_BACKGROUND:
+            painter.fillRect(badge, theme.accent)
+            painter.setPen(theme.accent_text)
+            font = QFont(option.font)
+            font.setPixelSize(9)
+            font.setBold(True)
+            painter.setFont(font)
+            painter.drawText(badge, int(Qt.AlignmentFlag.AlignCenter), "BG")
+        elif layer.layer_type == LAYER_TYPE_RASTER_REGION:
+            painter.fillRect(badge, theme.panel_bg)
+            manager.icon("grid-dots").paint(painter, badge.adjusted(1, 1, -1, -1))
 
         # Name, elided (PRD 7.2)
         if not rects.name.isEmpty():
@@ -617,6 +642,18 @@ class LayerPanel(QDockWidget):
             button.setIconSize(theme_manager().icon_qsize())
             btn_layout.addWidget(button)
             self._buttons[label] = button
+        # Layer Blend Mode dropdown (PRD 7.4): follows the active layer, pushes a command
+        self._blend_combo = QComboBox()
+        self._blend_combo.addItems(list(BLEND_MODES))
+        self._blend_combo.setToolTip(BLEND_MODE_COMBO_NAME)
+        self._blend_combo.setAccessibleName(BLEND_MODE_COMBO_NAME)
+        self._blend_combo.setAccessibleDescription("The active layer's blend mode")
+        # A small dropdown (PRD 7.4): its size hint is ignored so the action bar never
+        # pushes the panel past its 200 px minimum; it takes the room the bar has left
+        self._blend_combo.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+        self._blend_combo.setMaximumWidth(BLEND_COMBO_MAX_WIDTH)
+        self._blend_combo.activated.connect(self._on_blend_mode_picked)
+        btn_layout.addWidget(self._blend_combo)
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
         self._fallback_actions: dict[str, QAction] = {}
@@ -721,6 +758,8 @@ class LayerPanel(QDockWidget):
         lm.layer_visibility_changed.connect(self._refresh_flag)
         lm.layer_lock_changed.connect(self._refresh_flag)
         lm.layer_opacity_changed.connect(self._refresh_opacity)
+        lm.layer_blend_mode_changed.connect(self._refresh_renamed)
+        lm.layer_type_changed.connect(self._refresh_renamed)
         self._scene.command_stack.stack_changed.connect(self.schedule_thumbnails)
 
     def _disconnect_scene(self) -> None:
@@ -734,6 +773,8 @@ class LayerPanel(QDockWidget):
             (lm.layer_visibility_changed, self._refresh_flag),
             (lm.layer_lock_changed, self._refresh_flag),
             (lm.layer_opacity_changed, self._refresh_opacity),
+            (lm.layer_blend_mode_changed, self._refresh_renamed),
+            (lm.layer_type_changed, self._refresh_renamed),
             (self._scene.command_stack.stack_changed, self.schedule_thumbnails),
         )
         for signal, slot in pairs:
@@ -786,6 +827,10 @@ class LayerPanel(QDockWidget):
             item.setData(LAYER_ID_ROLE, layer.layer_id)
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
             states = []
+            if layer.layer_type == LAYER_TYPE_BACKGROUND:
+                states.append("background layer")
+            elif layer.layer_type == LAYER_TYPE_RASTER_REGION:
+                states.append("raster region layer")
             if not layer.visible:
                 states.append("hidden")
             if layer.locked:
@@ -810,7 +855,32 @@ class LayerPanel(QDockWidget):
             if row_item is not None and row_item.data(LAYER_ID_ROLE) in multi:
                 row_item.setSelected(True)
         self._list.blockSignals(False)
+        self._sync_blend_combo()
         self._viewport().update()
+
+    @property
+    def blend_combo(self) -> QComboBox:
+        """The action bar's Layer Blend Mode dropdown (PRD 7.4)."""
+        return self._blend_combo
+
+    def _sync_blend_combo(self) -> None:
+        active = self._layer_manager.active_layer
+        mode = active.blend_mode if active is not None else BLEND_MODES[0]
+        if self._blend_combo.currentText() != mode:
+            self._blend_combo.blockSignals(True)
+            self._blend_combo.setCurrentText(mode)
+            self._blend_combo.blockSignals(False)
+
+    def _on_blend_mode_picked(self, index: int) -> None:
+        active = self._layer_manager.active_layer
+        mode = self._blend_combo.itemText(index)
+        if active is None or mode == active.blend_mode:
+            return
+        self._push(
+            ChangeLayerPropertyCommand(
+                self._layer_manager, active.layer_id, "blend_mode", active.blend_mode, mode
+            )
+        )
 
     def _viewport(self) -> QWidget:
         viewport = self._list.viewport()

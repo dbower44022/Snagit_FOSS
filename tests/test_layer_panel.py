@@ -370,3 +370,75 @@ def test_list_reports_hovered_row(qtbot: QtBot, scene: SnapScene) -> None:
     qtbot.mouseMove(viewport, pos=rects.name.center())
     qtbot.mouseMove(viewport, pos=QPoint(rects.name.center().x(), ROW_HEIGHT * 3))
     assert seen == [layer.layer_id, ""]
+
+
+# ---- blend-mode dropdown and type badges (follow-up step 2, PRD 7.4 and 7.5) ----
+
+
+def test_blend_mode_dropdown_follows_the_active_layer_and_pushes_a_command(
+    qtbot: QtBot, scene: SnapScene
+) -> None:
+    from snapmock.ui.layer_panel import BLEND_MODE_COMBO_NAME
+
+    panel = _panel(qtbot, scene)
+    combo = panel.blend_combo
+    assert combo.accessibleName() == BLEND_MODE_COMBO_NAME
+    assert [combo.itemText(i) for i in range(combo.count())] == [
+        "Normal",
+        "Multiply",
+        "Screen",
+        "Overlay",
+        "Darken",
+        "Lighten",
+        "Difference",
+    ]
+    lm = scene.layer_manager
+    first = lm.layers[0]
+    second = lm.add_layer("Second")
+    lm.set_active(second.layer_id)
+    # A pick pushes ChangeLayerPropertyCommand on the active layer
+    combo.setCurrentText("Multiply")
+    combo.activated.emit(combo.currentIndex())
+    assert second.blend_mode == "Multiply" and first.blend_mode == "Normal"
+    assert scene.command_stack.undo_text == "Change layer blend_mode"
+    # The dropdown follows the active layer
+    lm.set_active(first.layer_id)
+    assert combo.currentText() == "Normal"
+    lm.set_active(second.layer_id)
+    assert combo.currentText() == "Multiply"
+    scene.command_stack.undo()
+    assert second.blend_mode == "Normal" and combo.currentText() == "Normal"
+    assert panel.minimumWidth() == MIN_PANEL_WIDTH
+
+
+def test_rows_carry_the_bg_and_raster_badges(qtbot: QtBot, scene: SnapScene) -> None:
+    from snapmock.core.theme_manager import current_theme
+    from snapmock.ui.layer_panel import BADGE_SIZE
+
+    panel = _panel(qtbot, scene)
+    lm = scene.layer_manager
+    background = lm.layers[0]
+    raster = lm.add_layer("Regions")
+    plain = lm.add_layer("Marks")
+    lm.set_layer_type(background.layer_id, "Background")
+    lm.set_layer_type(raster.layer_id, "RasterRegion")
+    rows = panel.list_widget
+    texts = {
+        rows.item(r).data(Qt.ItemDataRole.AccessibleTextRole)  # type: ignore[union-attr]
+        for r in range(rows.count())
+    }
+    assert any("background layer" in t for t in texts)
+    assert any("raster region layer" in t for t in texts)
+    assert not any("layer," in t and "Marks" in t and "region" in t for t in texts)
+
+    image = panel.list_widget.viewport().grab().toImage()  # type: ignore[union-attr]
+    accent = current_theme().accent
+
+    def badge_corner(layer_id: str) -> tuple[int, int]:
+        rect = _row_rect(panel, layer_id).thumbnail
+        return rect.right() - BADGE_SIZE + 2, rect.bottom() - BADGE_SIZE + 2
+
+    x, y = badge_corner(background.layer_id)
+    assert image.pixelColor(x, y).name() == accent.name()  # the BG badge's ground
+    x, y = badge_corner(plain.layer_id)
+    assert image.pixelColor(x, y).name() != accent.name()  # no badge on an Annotation layer

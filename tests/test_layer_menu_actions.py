@@ -123,3 +123,43 @@ def test_auto_trim_explains_on_an_empty_canvas(
     window._image_auto_trim()  # noqa: SLF001
     assert unmet_messages == [("Auto-Trim", "Auto-Trim needs visible content on the canvas.")]
     assert window.scene.canvas_size.width() == 1920
+
+
+# ---- the Background layer is pinned (follow-up decision 2) ----
+
+
+def test_background_layer_pins_the_bottom_of_the_stack(
+    window: MainWindow, unmet_messages: list[tuple[str, str]]
+) -> None:
+    lm = window.scene.layer_manager
+    background = lm.layers[0]
+    lm.set_layer_type(background.layer_id, "Background")
+    above = lm.add_layer("Above")
+    top = lm.add_layer("Top")
+    lm.set_active(above.layer_id)
+    window._layer_move_down()  # noqa: SLF001
+    assert unmet_messages[-1][0] == "Move Layer Down"
+    assert "not the Background layer" in unmet_messages[-1][1]
+    window._layer_move_to_bottom()  # noqa: SLF001
+    assert unmet_messages[-1][0] == "Move Layer to Bottom"
+    assert [layer.name for layer in lm.layers] == ["Layer 1", "Above", "Top"]
+    # Move to Bottom from higher up lands above the Background layer
+    lm.set_active(top.layer_id)
+    window._layer_move_to_bottom()  # noqa: SLF001
+    assert [layer.name for layer in lm.layers] == ["Layer 1", "Top", "Above"]
+    window.scene.command_stack.undo()
+    assert [layer.name for layer in lm.layers] == ["Layer 1", "Above", "Top"]
+    # The Background layer itself never moves up
+    lm.set_active(background.layer_id)
+    window._layer_move_up()  # noqa: SLF001
+    assert unmet_messages[-1][0] == "Move Layer Up"
+    window._layer_move_to_top()  # noqa: SLF001
+    assert unmet_messages[-1][0] == "Move Layer to Top"
+    assert lm.layers[0] is background
+    # New Layer Below on the Background layer lands above it; a duplicate is an Annotation
+    window._layer_new_relative(background.layer_id, above=False)  # noqa: SLF001
+    assert lm.layers[0] is background and lm.layers[1].name == "Layer 4"
+    window._layer_duplicate()  # noqa: SLF001
+    assert lm.layers[0] is background and lm.layers[1].layer_type == "Annotation"
+    assert lm.layers[1].name == "Layer 1 copy"
+    window.scene.command_stack.mark_clean()

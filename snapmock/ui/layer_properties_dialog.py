@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from PyQt6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDialog,
     QDialogButtonBox,
     QFormLayout,
@@ -15,7 +16,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from snapmock.core.layer import Layer
+from snapmock.core.layer import BLEND_MODES, Layer
 from snapmock.ui.accessibility import apply_default_names
 
 
@@ -47,6 +48,15 @@ class LayerPropertiesDialog(QDialog):
         self._opacity_spin.setValue(int(layer.opacity * 100))
         props_layout.addRow("Opacity:", self._opacity_spin)
 
+        # Blend mode (General UI PRD 3.4: name, opacity, blend mode)
+        self._blend_combo = QComboBox()
+        self._blend_combo.addItems(list(BLEND_MODES))
+        self._blend_combo.setCurrentText(layer.blend_mode)
+        props_layout.addRow("Blend mode:", self._blend_combo)
+
+        self._type_label = QLabel(layer.layer_type)
+        props_layout.addRow("Type:", self._type_label)
+
         self._visible_cb = QCheckBox()
         self._visible_cb.setChecked(layer.visible)
         props_layout.addRow("Visible:", self._visible_cb)
@@ -64,6 +74,7 @@ class LayerPropertiesDialog(QDialog):
         # --- Snapshot originals ---
         self._orig_name = layer.name
         self._orig_opacity = layer.opacity
+        self._orig_blend_mode = layer.blend_mode
         self._orig_visible = layer.visible
         self._orig_locked = layer.locked
 
@@ -90,6 +101,10 @@ class LayerPropertiesDialog(QDialog):
         new_opacity = self._opacity_spin.value() / 100.0
         if new_opacity != self._orig_opacity:
             changes["opacity"] = (self._orig_opacity, new_opacity)
+
+        new_blend_mode = self._blend_combo.currentText()
+        if new_blend_mode != self._orig_blend_mode:
+            changes["blend_mode"] = (self._orig_blend_mode, new_blend_mode)
 
         new_visible = self._visible_cb.isChecked()
         if new_visible != self._orig_visible:

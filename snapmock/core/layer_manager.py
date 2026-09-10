@@ -5,7 +5,7 @@ from __future__ import annotations
 from PyQt6.QtCore import QObject, pyqtSignal
 
 from snapmock.config.constants import LAYER_Z_RANGE
-from snapmock.core.layer import Layer
+from snapmock.core.layer import Layer, normalize_blend_mode, normalize_layer_type
 
 
 class LayerManager(QObject):
@@ -25,6 +25,14 @@ class LayerManager(QObject):
     layer_lock_changed(str, bool)
     layer_opacity_changed(str, float)
     layer_renamed(str, str)
+    layer_blend_mode_changed(str, str)
+        Emitted with the layer's id and its new blend mode name.
+    layer_type_changed(str, str)
+        Emitted with the layer's id and its new layer type name.
+
+    The Background layer is pinned to the bottom of the stack (Navigation and Raster
+    Operations follow-up decision 2): no layer is inserted or moved below it, and it is
+    never moved.
     """
 
     layer_added = pyqtSignal(object)
@@ -35,6 +43,8 @@ class LayerManager(QObject):
     layer_lock_changed = pyqtSignal(str, bool)
     layer_opacity_changed = pyqtSignal(str, float)
     layer_renamed = pyqtSignal(str, str)
+    layer_blend_mode_changed = pyqtSignal(str, str)
+    layer_type_changed = pyqtSignal(str, str)
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -72,6 +82,20 @@ class LayerManager(QObject):
                 return i
         return -1
 
+    @property
+    def background_layer(self) -> Layer | None:
+        """The Background layer, which sits at the bottom of the stack; None without one."""
+        for layer in self._layers:
+            if layer.is_background:
+                return layer
+        return None
+
+    def _pinned_index(self, layer: Layer, index: int) -> int:
+        """*index*, lifted above the Background layer at the bottom for any other layer."""
+        if not layer.is_background and self._layers and self._layers[0].is_background:
+            return max(1, index)
+        return index
+
     # --- mutations ---
 
     def add_layer(self, name: str | None = None, index: int | None = None) -> Layer:
@@ -81,7 +105,7 @@ class LayerManager(QObject):
         layer = Layer(name=name)
         if index is None:
             index = len(self._layers)
-        self._layers.insert(index, layer)
+        self._layers.insert(self._pinned_index(layer, index), layer)
         self._recalc_z_bases()
         if not self._active_id:
             self._active_id = layer.layer_id
@@ -90,8 +114,8 @@ class LayerManager(QObject):
         return layer
 
     def insert_layer(self, layer: Layer, index: int) -> None:
-        """Insert an existing layer object at *index*."""
-        self._layers.insert(index, layer)
+        """Insert an existing layer object at *index* (above a Background layer at 0)."""
+        self._layers.insert(self._pinned_index(layer, index), layer)
         self._recalc_z_bases()
         self.layer_added.emit(layer)
 
@@ -117,8 +141,14 @@ class LayerManager(QObject):
         old_idx = self.index_of(layer_id)
         if old_idx < 0 or old_idx == new_index:
             return
+        if self._layers[old_idx].is_background:
+            return  # pinned to the bottom
         layer = self._layers.pop(old_idx)
         new_index = max(0, min(new_index, len(self._layers)))
+        new_index = self._pinned_index(layer, new_index)
+        if new_index == old_idx:
+            self._layers.insert(old_idx, layer)
+            return
         self._layers.insert(new_index, layer)
         self._recalc_z_bases()
         self.layers_reordered.emit()
@@ -154,6 +184,25 @@ class LayerManager(QObject):
         if layer is not None:
             layer.name = name
             self.layer_renamed.emit(layer_id, name)
+
+    def set_blend_mode(self, layer_id: str, blend_mode: str) -> None:
+        layer = self.layer_by_id(layer_id)
+        if layer is not None:
+            layer.blend_mode = normalize_blend_mode(blend_mode)
+            self.layer_blend_mode_changed.emit(layer_id, layer.blend_mode)
+
+    def set_layer_type(self, layer_id: str, layer_type: str) -> None:
+        """Set the type; a layer made Background moves to the bottom of the stack."""
+        layer = self.layer_by_id(layer_id)
+        if layer is None:
+            return
+        layer.layer_type = normalize_layer_type(layer_type)
+        self.layer_type_changed.emit(layer_id, layer.layer_type)
+        if layer.is_background and self._layers[0] is not layer:
+            self._layers.remove(layer)
+            self._layers.insert(0, layer)
+            self._recalc_z_bases()
+            self.layers_reordered.emit()
 
     # --- internal ---
 

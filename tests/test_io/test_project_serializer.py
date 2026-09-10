@@ -125,3 +125,55 @@ def test_stacking_order_survives_save_and_load(scene: SnapScene, tmp_path: Path)
     assert RenderEngine(loaded).render_to_image().pixelColor(60, 60) == QColor("blue")
     z = {i.item_id: i.zValue() for i in loaded.annotation_items()}
     assert z[top.item_id] > z[bottom.item_id]
+
+
+def test_layer_blend_mode_and_type_round_trip(scene: SnapScene, tmp_path: Path) -> None:
+    """Follow-up step 2: layers.json carries blend_mode and layer_type."""
+    import json
+    import zipfile
+
+    lm = scene.layer_manager
+    first = lm.layers[0]
+    lm.set_layer_type(first.layer_id, "Background")
+    second = lm.add_layer("Marks")
+    lm.set_blend_mode(second.layer_id, "Multiply")
+    path = tmp_path / "typed.smk"
+    save_project(scene, path)
+    with zipfile.ZipFile(path) as archive:
+        manifest = json.loads(archive.read("manifest.json"))
+        layers = json.loads(archive.read("layers.json"))
+    assert manifest["format_version"] == 1
+    assert [(ld["blend_mode"], ld["layer_type"]) for ld in layers] == [
+        ("Normal", "Background"),
+        ("Multiply", "Annotation"),
+    ]
+    loaded = load_project(path)
+    assert loaded.layer_manager.layers[0].is_background
+    assert loaded.layer_manager.layers[1].blend_mode == "Multiply"
+    assert loaded.layer_manager.background_layer is loaded.layer_manager.layers[0]
+
+
+def test_file_without_the_layer_keys_loads_as_normal_annotation(
+    scene: SnapScene, tmp_path: Path
+) -> None:
+    """A file from an earlier build has neither key; format_version stays 1."""
+    import json
+    import zipfile
+
+    path = tmp_path / "old.smk"
+    save_project(scene, path)
+    rewritten = tmp_path / "rewritten.smk"
+    with zipfile.ZipFile(path) as src, zipfile.ZipFile(rewritten, "w") as dst:
+        for info in src.infolist():
+            data = src.read(info.filename)
+            if info.filename == "layers.json":
+                layers = json.loads(data)
+                for ld in layers:
+                    del ld["blend_mode"]
+                    del ld["layer_type"]
+                layers[0]["blend_mode"] = "not a mode"
+                data = json.dumps(layers).encode("utf-8")
+            dst.writestr(info.filename, data)
+    loaded = load_project(rewritten)
+    layer = loaded.layer_manager.layers[0]
+    assert layer.blend_mode == "Normal" and layer.layer_type == "Annotation"
