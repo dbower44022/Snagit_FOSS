@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.5</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.6</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.5</dd>
-    <dt>Last Updated</dt>    <dd>09-10-26 06:00</dd>
+    <dt>Document version</dt><dd>2.6</dd>
+    <dt>Last Updated</dt>    <dd>09-10-26 11:35</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,19 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.6</td>
+        <td class="nowrap">09-10-26 11:35</td>
+        <td>Doug Bower</td>
+        <td>Group and Ungroup built (Section 3.6, the two rows deferred by the 09-08-26 decision; implementation
+        notes Section 17): a group is a container item whose members are its child items (kickoff decision 1,
+        option A), Group refuses a selection that spans layers (decision 2, option A), and the six silences are
+        decided (double-click, the Property Panel, the file format, the Snagit writer, a locked group, the panels).
+        Two deviations: the SVG export writes each member's own group element with the composed transform rather
+        than one element per group, and the Snagit writer keeps only a group's translation. Three findings
+        outside this work go to the follow-up list. Technical Architecture PRD 1.13.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>2.5</td>
         <td class="nowrap">09-10-26 06:00</td>
@@ -161,6 +174,60 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-10-26 11:35</td>
+        <td>3.6</td>
+        <td>Built</td>
+        <td>Group (Ctrl+G) and Ungroup (Ctrl+Shift+G) act, from the Group and Ungroup kickoff of 09-10-26 (implementation notes Section 17). Group combines the selected items into one group on their layer, placed at the members' top-left and in the topmost member's place in the layer's z-order; the members keep their positions and transforms; the selection becomes the group. Ungroup dissolves every selected group one level: each member returns as a top-level item with the group's transform composed into its own, so its position and shape are what the user saw, in the group's z-position; a member that is itself a group stays a group; the selection becomes the members. Both are one undo step and restore the selection on undo. The two rows keep their Section 1.3 messages: Group needs at least two items selected, Ungroup needs a group selected.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 11:35</td>
+        <td>3.6</td>
+        <td>Decision</td>
+        <td>Decision 09-10-26 (Group and Ungroup kickoff decision 1, option A): a group is a container item, <code>GroupItem</code>, whose members are its child items in the scene graph (Technical Architecture PRD 4.2). The group owns the layer membership, the z-value, the lock, and the transform; its members carry its layer, layer opacity, and lock. The Select tool resolves a click, a rubber band, and the hover cursor on a member to the outermost group, so a member is never selected on its own; the handles frame the group; move, resize, rotate, skew, flip, and the arrow-key nudge act on the group as one item through the existing single-item paths; Tab cycles a group as one stop; Delete removes the group with its members; Duplicate makes a deep copy with new ids; Move to Layer and Lock Item take the group and its members; Align, Distribute, and Align to Canvas Center treat the group as one box; z-order moves the group as one entry. The cost is that every walk over the scene's items now says whether it means the top-level items or every item, and that a member cannot be edited in place without Ungroup. The alternative, a membership tag on each item with no new item type, would have left "one unit" a convention that every selection path and every future feature had to honour by hand.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 11:35</td>
+        <td>3.6, 1.3</td>
+        <td>Decision</td>
+        <td>Decision 09-10-26 (kickoff decision 2, option A): Group requires every selected item on one layer. A selection that spans layers is refused with the Section 1.3 message "Group needs the selected items on one layer", shown after the two-item check; nothing is moved between layers inside Group. Ungroup returns the members to the group's layer, which is the layer they were grouped on. The alternative, gathering the members onto the active or topmost layer, would have moved items between layers inside one command without the user naming it.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 11:35</td>
+        <td>3.6, 6.6, 9</td>
+        <td>Decision</td>
+        <td>A double-click on a group selects it and does nothing else; the status bar's hint zone reads "Group selected | Ungroup (Ctrl+Shift+G) to edit its items" until the next click. The Text tool does not find a group's text member, so text inside a group is edited after Ungroup. Every member of a locked group is locked and none is selectable on its own: the group's lock is the members' lock, as a layer's lock is its items'. The Layer Panel and the Library panel show nothing group-specific; a group is an item like any other to both, and a layer's thumbnail paints a group's members with the group.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 11:35</td>
+        <td>8</td>
+        <td>Decision</td>
+        <td>The Property Panel for a selected group shows Transform (the group's position, size, rotation, and flips; a flip on a group is applied as a transform around its bounding-box centre) and Item Info with Item Type "Group (N items)", the Layer dropdown, and Item Lock. Appearance shows when every selected item is a vector item or a group with at least one vector item below it, and its controls apply to the group's vector members, nested groups included, as one undoable command with the Section 8.6 mixed indicators; Opacity is the group's own. The Text section stays hidden for a group.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 11:35</td>
+        <td>3.2</td>
+        <td>Decision</td>
+        <td>Select All and Select All Layers select a group as one item and never its members. Select All Text selects text-containing items inside groups as well as top-level ones, so the Property Panel's batch font, size, and colour changes reach text inside a group; Find/Replace Color reaches a member's colours in the same way. Duplicate makes a deep copy of a group, every item below it with a new id, offset by 10 pixels.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 11:35</td>
+        <td>11.2</td>
+        <td>Deviation</td>
+        <td>The SVG export carries a group's transform into each member's own group element (Qt's generator writes one element per painted item with the composed transform) rather than one nesting element per group with the members inside it; the file draws the same picture. A dedicated SVG writer would be needed for a nesting element and is not built.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 11:35</td>
+        <td>3.1</td>
+        <td>Decision</td>
+        <td>Save As to a Snagit file writes a group as its members, each at the position the group showed it, with no warning; Snagit files have no group in the mapping the reader knows. Only the group's translation is composed in: a group's scale, rotation, or skew has no Snagit form and is dropped. The Technical Architecture PRD's format table (1.13) records that a group's entry in <code>items.json</code> nests its members and that <code>format_version</code> stays 1.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 11:35</td>
+        <td>3.6, 3.2, 3.1</td>
+        <td>Noted</td>
+        <td>Found while reading for this work, outside its scope, recorded on the follow-up list of implementation notes Section 16.10 for a decision: no item type serializes its Qt transform, so a handle resize, rotation, or skew of any item is lost on save (the group serializes its own); stacking order is reversed after a save and load, since the loader assigns no z-values and adds the items topmost first (verified 09-10-26 with two overlapping rectangles); and Paste keeps the pasted items' ids, so a pasted copy shares its id with the original.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-10-26 06:00</td>
         <td>17</td>
