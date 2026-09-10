@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from PyQt6.QtCore import QRectF, QSizeF, pyqtSignal
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QGraphicsItem, QGraphicsScene
@@ -15,6 +17,9 @@ from snapmock.config.constants import (
 from snapmock.core.command_stack import CommandStack
 from snapmock.core.guides import Guide
 from snapmock.core.layer_manager import LayerManager
+
+if TYPE_CHECKING:
+    from snapmock.items.base_item import SnapGraphicsItem
 
 
 class SnapScene(QGraphicsScene):
@@ -122,12 +127,27 @@ class SnapScene(QGraphicsScene):
         item.setVisible(layer.visible)
         item.layer_opacity = layer.opacity
 
-    def items_on_layer(self, layer_id: str) -> list[QGraphicsItem]:
+    # --- the two walks over annotation items (Group and Ungroup kickoff, step 5) ---
+    # A group's members are its child items, so ``self.items()`` returns them beside the
+    # group. A walk says which it means: the top-level items alone, or every item.
+
+    def annotation_items(self) -> list[SnapGraphicsItem]:
+        """The top-level annotation items: a group counts once and its members not at all."""
         from snapmock.items.base_item import SnapGraphicsItem
 
         return [
-            i for i in self.items() if isinstance(i, SnapGraphicsItem) and i.layer_id == layer_id
+            i for i in self.items() if isinstance(i, SnapGraphicsItem) and i.parentItem() is None
         ]
+
+    def all_annotation_items(self) -> list[SnapGraphicsItem]:
+        """Every annotation item, groups and their members included."""
+        from snapmock.items.base_item import SnapGraphicsItem
+
+        return [i for i in self.items() if isinstance(i, SnapGraphicsItem)]
+
+    def items_on_layer(self, layer_id: str) -> list[QGraphicsItem]:
+        """The top-level annotation items on *layer_id*."""
+        return [i for i in self.annotation_items() if i.layer_id == layer_id]
 
     def _on_layer_visibility_changed(self, layer_id: str, visible: bool) -> None:
         for item in self.items_on_layer(layer_id):

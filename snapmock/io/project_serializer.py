@@ -25,6 +25,7 @@ from snapmock.items.blur_item import BlurItem
 from snapmock.items.callout_item import CalloutItem
 from snapmock.items.ellipse_item import EllipseItem
 from snapmock.items.freehand_item import FreehandItem
+from snapmock.items.group_item import GroupItem
 from snapmock.items.highlight_item import HighlightItem
 from snapmock.items.line_item import LineItem
 from snapmock.items.numbered_step_item import NumberedStepItem
@@ -44,6 +45,7 @@ ITEM_REGISTRY: dict[str, type[SnapGraphicsItem]] = {
     "BlurItem": BlurItem,
     "NumberedStepItem": NumberedStepItem,
     "RasterRegionItem": RasterRegionItem,
+    "GroupItem": GroupItem,
 }
 
 
@@ -121,10 +123,9 @@ def save_project(
             }
         )
 
-    # Serialize all items from the scene
-    for qitem in scene.items():
-        if isinstance(qitem, SnapGraphicsItem):
-            items_data.append(qitem.serialize())
+    # Serialize the top-level items; a group's entry carries its members
+    for item in scene.annotation_items():
+        items_data.append(item.serialize())
 
     thumb_png = _encode_png(render_thumbnail(scene)) if write_thumbnail else b""
 
