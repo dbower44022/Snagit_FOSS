@@ -1,6 +1,6 @@
 # General UI Implementation Notes
 
-Last Updated: 09-10-26 01:45 · Revision 1.13
+Last Updated: 09-10-26 02:15 · Revision 1.14
 
 Implements the SnapMock General User Interface PRD (version 2.4, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
@@ -325,12 +325,13 @@ In commit order: decisions 7.1 and 7.2 (Section 5.1); the model and storage (`sn
 
 In commit order: decision 5 (Section 5.1); the Welcome panel (`snapmock/ui/welcome_panel.py`: `WelcomePanel` with the logo, tagline, the three `WelcomeCard`s, the four steps, the checkbox, and Close; `CanvasSizeDialog`; `DocumentTabs.show_page`, `show_documents`, and `current_page`; `AppSettings.first_run_done` and `show_welcome_at_startup`; `MainWindow._apply_first_run_defaults`, `show_welcome`, `hide_welcome`, `welcome_is_showing`, the three card routes, `_file_import_image` returning whether an image landed, and Help > Welcome / Getting Started); accessibility (`snapmock/ui/accessibility.py`: `name_form_fields`, `name_toolbar_widgets`, `name_buttons_from_text`, `apply_default_names`, `unnamed_controls`, `focusable_controls`, `set_tab_order`; names and descriptions across the tabs, canvas, toolbars, options bar, panels, status bar, toast, and every dialog; `MainWindow._apply_tab_order`; the focus rules and the six lifted colours in both style sheets; the status hint's description); responsive behaviour (`snapmock/ui/panel_modes.py`: `PanelMode`, `mode_for_width`, `panel_width_for`; `LayerPanel.set_mode`, `_RowRects` per mode, `_LayerPopover`, `open_layer_popover`; `PropertyPanel.set_mode`, the section strip, `_PropertyPopover`; `AppSettings.panel_narrow_threshold` and `panel_strip_threshold` with their Preferences > Appearance rows; `MainWindow._update_panel_modes`, `resizeEvent`, `panel_mode`, `_name_extension_buttons`); and window management (`snapmock/ui/unsaved_changes_dialog.py`: `UnsavedChangesDialog`, `message_text`, `render_preview`; `MainWindow._recover_floating_panels` after the state restore; `AppSettings.recent_file_zoom` and `set_recent_file_zoom`; `MainWindow._remember_zoom` on tab close and session save, the zoom applied in `_open_project`). Technical Architecture PRD Section 10 lists the four new modules; General UI PRD 2.4 carries the phase's rows.
 
-**Next required step:** the acceptance pass against General UI PRD Section 17, in a new session: a section in these notes that walks every Section 17 bullet and says pass, fail, or not applicable with the reason. The Group and Ungroup kickoff (decision 4) and the Navigation and Raster Operations follow-up (merging, layer blend mode, badges) follow the acceptance pass.
+**Next required step:** the acceptance pass against General UI PRD Section 17, in a new session pasting `docs/General-UI-Acceptance-Pass-Kickoff-Prompt.md` (revision 1.0, starting state at commit 3d1f252): a section in these notes that walks every Section 17 bullet and says pass, fail, or not applicable with the evidence. The Group and Ungroup kickoff (decision 4) and the Navigation and Raster Operations follow-up (merging, layer blend mode, badges) follow the acceptance pass.
 
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.14 | 09-10-26 02:15 | Claude (Claude Code) | Next step points at `docs/General-UI-Acceptance-Pass-Kickoff-Prompt.md`. |
 | 1.13 | 09-10-26 01:45 | Claude (Claude Code) | Phase 8 done: phase table, two PRD inconsistencies (Section 4), nine deviations (Section 6), tests (Section 7), build summary and next step (Section 15). General UI PRD 2.4, Technical Architecture PRD Section 10 rows. |
 | 1.12 | 09-09-26 22:05 | Claude (Claude Code) | Phase 8 in progress: decision 5 (Section 5.1), the phase table. |
 | 1.11 | 09-09-26 21:25 | Claude (Claude Code) | Next step points at `docs/General-UI-Phase-8-Kickoff-Prompt.md`. |
