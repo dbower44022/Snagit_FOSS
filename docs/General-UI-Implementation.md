@@ -1,6 +1,6 @@
 # General UI Implementation Notes
 
-Last Updated: 09-10-26 12:20 · Revision 1.23
+Last Updated: 09-10-26 12:40 · Revision 1.24
 
 Implements the SnapMock General User Interface PRD (version 2.4, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
@@ -19,6 +19,7 @@ Implements the SnapMock General User Interface PRD (version 2.4, `PRDs/SnapMock-
 | 8 | First run, accessibility, responsive behaviour | Done | c17752f to 5dbc027, then this close-out commit |
 | Acceptance pass | Section 17 verdicts, four small fixes | Done | 132fc18 to efaa830, then this close-out commit |
 | Group and Ungroup | The group item, its two commands, the Select tool, every item walk (Section 17) | Done | a4c3dd3 to c07a352, then this close-out commit |
+| Navigation and Raster Operations follow-up | Merge Down, Merge Visible, Flatten All; the layer blend mode and the BG and raster badges; the background layer on drop and paste; the Zoom tool's Alt+click (Section 18) | In progress | this commit onward |
 
 Phase 0 was verified against the repository at commit `a198744` on 09-07-26. The working tree also carried uncommitted Basic Shape Annotation Tools work in `snapmock/items/` and `tests/test_items.py`; it was left untouched and is not part of this inventory.
 
@@ -573,10 +574,36 @@ Each has its General UI PRD 2.6 row and its Section 6 bullet: the SVG export's p
 
 **Next required step:** the Navigation and Raster Operations follow-up, in a new session pasting `docs/Navigation-Raster-Operations-Follow-Up-Kickoff-Prompt.md` (revision 1.0, starting state at commit 8b7089f): Merge Down, Merge Visible, and Flatten All; the layer blend mode and the BG and raster badges (decision 6.1); the background layer on drop and paste (acceptance pass row 16); the Zoom tool's Alt+click check (acceptance pass row 20); three decisions at the start (what a merge produces, what the layer type is, where the blend mode is applied) and eight silences, recorded as Section 18 of these notes. Before it, the display confirmation of step B17 (Section 16.9) is still owed.
 
+## 18. Navigation and Raster Operations follow-up
+
+Run from `docs/Navigation-Raster-Operations-Follow-Up-Kickoff-Prompt.md` (revision 1.0) against General UI PRD 2.7, Technical Architecture PRD 1.14, and Navigation and Raster Operations PRD 1.2, starting at commit a078d2b on 09-10-26. Builds the five things the General UI implementation deferred here: Merge Down, Merge Visible, and Flatten All (the Phase 1 decision of 09-08-26); the layer blend mode and the BG and raster badges (Phase 6 decision 6.1); the background layer on drop and paste (acceptance pass row 16); the Zoom tool's Alt+click (acceptance pass row 20). Seven steps, one commit each: the decisions, the layer model, rendering, merging, the background layer, the Zoom tool, the close-out.
+
+### 18.1 Decisions, taken 09-10-26
+
+| Decision | Choice | Effect |
+|---|---|---|
+| 1 What a merge produces | A, rasterize | `MergeLayersCommand` in `snapmock/commands/merge_commands.py` renders the merged layers together into one raster region the size of the canvas, at the canvas origin, on the result layer; every item of every merged layer is gone from the scene, the upper layers are removed, and undo restores the layers, their properties, their items, and the active layer. This is Technical Architecture PRD Sections 3.2.2 and 3.7.3 as written. The result layer keeps its own name, opacity, blend mode, type, lock, and visibility; the upper layers' opacity and blend mode are baked into the pixels. Items outside the canvas are dropped, as they are from every export. The cost: every annotation on both layers stops being editable, with undo the only way back, so Merge Down and Merge Visible ask once per session (silence 1). The edge left: a result layer below 100 percent then scales the baked upper pixels too, which the original did not. The alternative, moving the upper layers' top-level items onto the lower layer, would have kept every annotation editable but could not keep a layer's opacity or blend mode on moved items and would have departed from both sections. |
+| 2 What the layer type is | A, a stored type | `Layer.layer_type` (Background, Annotation, RasterRegion; Annotation by default) is written to `layers.json` beside `blend_mode`; a file without the keys reads as Annotation and Normal, and `format_version` stays 1. Set by the code that creates the layer: Background by drop, paste, Import Image, Flatten All, the library manager, and the Snagit reader; Annotation by New Layer and Duplicate Layer. The BG badge reads the type. The Background layer is pinned to the bottom: Move Layer Down onto it is refused with the Section 1.3 message "a layer below that is not the Background layer", Move Layer to Bottom and a Layer Panel drag land above it, and New Layer Below on it lands above it. Duplicate Layer on a Background layer makes an Annotation layer, so a project never has two backgrounds by accident; Delete Layer treats it like any other. The Snagit writer's background is the Background layer's raster region when one exists. The alternative, a kind derived from the bottom layer's contents, would have changed under the user's hands and pinned nothing. |
+| 3 Where the blend mode is applied | B, per item, everywhere | Each item paints with its layer's composition mode beside the layer opacity it already applies in `SnapGraphicsItem._apply_flip`, on the display, in the raster exports, in the PDF, and in the thumbnails alike; every concrete item type paints through that hook, and a group propagates the mode to its members as it propagates layer opacity. The seven names map to Qt composition modes one for one. The cost: two overlapping items on the same non-Normal layer blend twice where Technical Architecture PRD Section 3.9 composites the layer once (Technical Architecture PRD 1.15 row); option A, a per-layer offscreen pass, stays available when a layer-parent refactor is wanted for another reason. Qt's SVG generator ignores composition modes, so the SVG export draws every layer as Normal under every option; recorded as a deviation. |
+
+The kickoff's eight silences, each decided as the kickoff recommended:
+
+| Silence | Decision |
+|---|---|
+| Merge Down asks before rasterizing | Yes, once per session, a question with a "Don't ask again this session" checkbox; not when the Preferences setting "Confirm before deleting layers" is off. Merge Visible asks the same way; Flatten All's name says what it does and does not ask. |
+| What Flatten All produces | One layer named "Background" of type Background holding one raster region the size of the canvas, the canvas colour painted first when it is opaque and left transparent when it is not, the layer active, every other layer gone. Hidden layers are not painted. |
+| Merge Visible and the active layer | The lowest visible layer is the result and becomes active; hidden layers keep their positions relative to it. |
+| A group on a merged layer | Rendered like any item; the group and its members are gone with the layer's other items. |
+| The canvas when a background is created on an empty project | Resized to the image through the Resize Canvas command anchored top-left, in the same undo step (General UI PRD 6.2, "fills the canvas exactly"). |
+| Drop and paste when a Background layer exists | A raster region on the active layer as today, never a replacement. The same when the project has any annotation item. |
+| The RasterRegion layer type | Exists in the model with its raster-grid badge in the delegate; nothing this work builds assigns it. Left for the Numbered Steps, Stamps, and Emoji work or a later raster kickoff. |
+| The Zoom tool when the desktop takes Alt+click | Right-click zooms out as a second route; the status hint reads "Click to zoom in \| Alt+click or right-click to zoom out \| Drag to zoom region"; the release reads the modifier captured at the press as well as at the release; the momentary eyedropper is unchanged. Built whatever the display check finds. |
+
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.24 | 09-10-26 12:40 | Claude (Claude Code) | Navigation and Raster Operations follow-up in progress: Section 18 with the three decisions (A, rasterize; A, a stored type; B, per item) and the eight silences, the phase-table row. |
 | 1.23 | 09-10-26 12:20 | Claude (Claude Code) | Next step points at `docs/Navigation-Raster-Operations-Follow-Up-Kickoff-Prompt.md`. |
 | 1.22 | 09-10-26 11:55 | Claude (Claude Code) | The three Section 16.10 findings fixed by decision: transforms saved, stacking order restored on load, Paste renews ids. General UI PRD 2.7, Technical Architecture PRD 1.14. Suite count in the commit message. |
 | 1.21 | 09-10-26 11:35 | Claude (Claude Code) | Group and Ungroup done: the phase-table row, Section 16 row 6 fixed since, four deviations (Section 6), tests (Section 7), three follow-up findings (Section 16.10), Section 17.2 build summary with the walk table, Section 17.3 deviations, the next required step. General UI PRD 2.6. The suite passes 953 with 13 skipped and the one environmental deselection at every one of the five commits (924, 930, 939, 953 as the steps landed). |
