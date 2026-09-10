@@ -21,6 +21,7 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QDialog,
     QFileDialog,
     QLabel,
@@ -323,6 +324,8 @@ class MainWindow(QMainWindow):
         self._layer_move_bottom_action: QAction | None = None
         self._layer_delete_action: QAction | None = None
         self._layer_merge_down_action: QAction | None = None
+        # Merge Down and Merge Visible ask once per session (follow-up silence 1)
+        self._merge_dont_ask: bool = False
         # Tools menu action map
         self._tool_actions: dict[str, QAction] = {}
         # Menu actions the Main Toolbar reuses, keyed like SHORTCUTS (PRD 4.2)
@@ -3109,24 +3112,96 @@ class MainWindow(QMainWindow):
         )
         self._scene.command_stack.push(MacroCommand(cmds, description))
 
-    _MERGE_DEFERRAL = "Layer merging is scheduled for the raster operations follow-up."
+    # ---- Merge Down, Merge Visible, Flatten All (PRD 3.4; follow-up decision 1) ----
+
+    MERGE_DONT_ASK_TEXT = "Don't ask again this session"
+
+    def _build_merge_question(self, title: str, text: str) -> QMessageBox:
+        """The once-per-session question a merge asks before rasterizing (silence 1)."""
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Question)
+        box.setWindowTitle(title)
+        box.setText(text)
+        box.setInformativeText(
+            "The items on the merged layers become one image and stop being editable."
+        )
+        box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        box.setDefaultButton(QMessageBox.StandardButton.No)
+        check = QCheckBox(self.MERGE_DONT_ASK_TEXT, box)
+        check.setAccessibleName(self.MERGE_DONT_ASK_TEXT)
+        box.setCheckBox(check)
+        return box
+
+    def _ask_merge(self, title: str, text: str) -> bool:
+        """True when the merge may go ahead; asks unless told not to this session or the
+        Preferences setting "Confirm before deleting layers" is off."""
+        if self._merge_dont_ask or not self._settings.confirm_delete_layers():
+            return True
+        box = self._build_merge_question(title, text)
+        answer = box.exec()
+        check = box.checkBox()
+        if check is not None and check.isChecked():
+            self._merge_dont_ask = True
+        return answer == QMessageBox.StandardButton.Yes
+
+    def _merge(self, layer_ids: list[str], target_id: str | None, description: str) -> None:
+        from snapmock.commands.merge_commands import MergeLayersCommand
+
+        self._scene.command_stack.push(
+            MergeLayersCommand(self._scene, layer_ids, target_id, description=description)
+        )
 
     def _layer_merge_down(self) -> None:
+        """The active layer into the layer below it; a Ctrl+click selection that includes
+        the active layer merges the selected layers into the lowest of them (PRD 7.3)."""
         lm = self._scene.layer_manager
         active = lm.active_layer
         idx = lm.index_of(active.layer_id) if active is not None else -1
-        if self._require("Merge Down", (idx > 0, "a layer below the active layer")):
-            show_not_available(self, "Merge Down", self._MERGE_DEFERRAL)
+        selected = self._layer_panel.selected_layer_ids()
+        batch = active is not None and len(selected) > 1 and active.layer_id in selected
+        if batch:
+            layers = sorted(
+                (layer for layer in (lm.layer_by_id(lid) for lid in selected) if layer),
+                key=lambda layer: lm.index_of(layer.layer_id),
+            )
+        elif active is not None and idx > 0:
+            layers = [lm.layers[idx - 1], active]
+        else:
+            layers = []
+        if not self._require(
+            "Merge Down",
+            (active is not None, "an active layer"),
+            (idx > 0 or batch, "a layer below the active layer"),
+            (all(layer.visible for layer in layers), "the merged layers visible"),
+        ):
+            return
+        target = layers[0]
+        upper = ", ".join(f'"{layer.name}"' for layer in layers[1:])
+        if not self._ask_merge("Merge Down", f'Merge {upper} into "{target.name}"?'):
+            return
+        self._merge([layer.layer_id for layer in layers], target.layer_id, "Merge Down")
 
     def _layer_merge_visible(self) -> None:
-        visible = sum(1 for layer in self._scene.layer_manager.layers if layer.visible)
-        if self._require("Merge Visible", (visible >= 2, "at least two visible layers")):
-            show_not_available(self, "Merge Visible", self._MERGE_DEFERRAL)
+        """Every visible layer into the lowest visible one; hidden layers stay (silence 3)."""
+        lm = self._scene.layer_manager
+        visible = [layer for layer in lm.layers if layer.visible]
+        if not self._require("Merge Visible", (len(visible) >= 2, "at least two visible layers")):
+            return
+        target = visible[0]
+        if not self._ask_merge(
+            "Merge Visible", f'Merge the {len(visible)} visible layers into "{target.name}"?'
+        ):
+            return
+        self._merge([layer.layer_id for layer in visible], target.layer_id, "Merge Visible")
 
     def _layer_flatten(self) -> None:
+        """Every layer into one Background layer holding one raster region (silence 2)."""
         count = self._scene.layer_manager.count
-        if self._require("Flatten All", (count >= 2, "at least two layers")):
-            show_not_available(self, "Flatten All", self._MERGE_DEFERRAL)
+        if not self._require("Flatten All", (count >= 2, "at least two layers")):
+            return
+        self._merge(
+            [layer.layer_id for layer in self._scene.layer_manager.layers], None, "Flatten All"
+        )
 
     def _layer_rename(self) -> None:
         """Rename Layer (F2) opens the Layer Panel's inline editor (General UI PRD 7.2)."""

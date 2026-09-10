@@ -16,7 +16,7 @@
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
     <dt>Document version</dt><dd>1.15</dd>
-    <dt>Last Updated</dt>    <dd>09-10-26 13:50</dd>
+    <dt>Last Updated</dt>    <dd>09-10-26 14:30</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -33,14 +33,16 @@
     <tbody>
       <tr>
         <td>1.15</td>
-        <td class="nowrap">09-10-26 13:50</td>
+        <td class="nowrap">09-10-26 14:30</td>
         <td>Doug Bower</td>
         <td>Navigation and Raster Operations follow-up (General UI implementation, 09-10-26). Section 6.1:
         <code>layers.json</code> carries <code>blend_mode</code> and <code>layer_type</code>, absent reads as Normal and
         Annotation, <code>format_version</code> stays 1; Section 3.2.2: the Background layer is pinned to the bottom of
         the stack and a duplicate of it is an Annotation layer (follow-up decision 2); Section 3.9: the layer blend mode
         is applied per item as the painter composition mode, on the display and in every export alike, not per layer
-        (follow-up decision 3); the SVG and PDF exports paint the canvas colour and draw every layer as Normal.</td>
+        (follow-up decision 3); the SVG and PDF exports paint the canvas colour and draw every layer as Normal;
+        Section 3.7.3 and Section 10: <code>MergeLayersCommand</code> in <code>commands/merge_commands.py</code>
+        (follow-up decision 1).</td>
         <td><span class="status open">Pending</span></td>
       </tr>
       <tr>
@@ -203,6 +205,27 @@
         <code>Layer</code> fields of Section 3.2.1. An entry without either key, or with a value the build does not know,
         reads as Normal and Annotation, so files from earlier builds load unchanged; <code>format_version</code> stays 1.
         Nothing this work builds assigns the RasterRegion type (follow-up silence 7).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 14:30</td>
+        <td>3.2.2, 3.7.3, 10</td>
+        <td>Built</td>
+        <td>Decision 09-10-26 (follow-up decision 1, option A): <code>MergeLayersCommand</code> in
+        <code>commands/merge_commands.py</code> (Section 10 row) serves Merge Down, Merge Visible, and Flatten All. The
+        merged layers are rendered together, as displayed, into one raster region the size of the canvas at the canvas
+        origin on the result layer (<code>RenderEngine.render_layers_composite</code>); every item of every merged layer
+        leaves the scene, a group with its members; the other merged layers leave the stack; undo restores the layers at
+        their places, their properties, their items in their order, and the active layer. Merge Down's result is the
+        lower layer and Merge Visible's the lowest visible layer, each keeping its own name, opacity, blend mode, type,
+        lock, and visibility while the upper layers' opacity and blend mode are baked into the pixels; hidden layers stay
+        where they are under Merge Visible, and Merge Down requires the merged layers visible, since a hidden layer
+        would rasterize to nothing. Flatten All's result is a new Background layer named "Background" holding one
+        region, the canvas colour painted first when it is opaque, hidden layers not painted, every other layer gone.
+        Merge Down and Merge Visible ask once per session before rasterizing, with a "Don't ask again this session"
+        checkbox, and not at all while the Preferences setting "Confirm before deleting layers" is off; Flatten All does
+        not ask. A Ctrl+click selection of the Layer Panel that includes the active layer makes Merge Down merge the
+        selected layers into the lowest of them (General UI PRD 7.3). Items outside the canvas are dropped, as from
+        every export; a merged annotation stops being editable, with undo the only way back.</td>
       </tr>
       <tr>
         <td class="nowrap">09-10-26 13:50</td>
@@ -1650,6 +1673,7 @@ docstring.</p>
         guide_commands.py         # Guide commands — undoable add, move, remove, and clear of guides
         layer_commands.py         # Layer commands — undoable layer add, remove, reorder,…
         macro_command.py          # MacroCommand groups multiple sub-commands into a single…
+        merge_commands.py         # Merge commands — Merge Down, Merge Visible, and Flatten All of General UI PRD 3.4
         modify_property.py        # Property commands — change one property on one item or on a whole…
         move_item_layer.py        # move items between layers
         move_items.py             # undoable movement of one or more items

@@ -336,22 +336,25 @@ def test_17_2_every_section_3_row_is_present_and_the_deferred_rows_say_so(
     assert all(item.parentItem() is None for item in items)
     assert unmet_messages == []
 
+    # Merge Down, Merge Visible, and Flatten All act since the Navigation and Raster
+    # Operations follow-up (fixed since); Check for Updates still explains its deferral.
     manager = main_window.scene.layer_manager
     manager.set_active(manager.add_layer("Layer 2").layer_id)
+    main_window._merge_dont_ask = True  # noqa: SLF001
     layer = _rows(_menu(main_window, "Layer"))
+    layer["Merge Down"].trigger()  # type: ignore[attr-defined]
+    assert manager.count == 1 and main_window.scene.command_stack.undo_text == "Merge Down"
+    manager.add_layer("Layer 2")
+    layer["Merge Visible"].trigger()  # type: ignore[attr-defined]
+    assert manager.count == 1 and main_window.scene.command_stack.undo_text == "Merge Visible"
+    manager.add_layer("Layer 2")
+    layer["Flatten All"].trigger()  # type: ignore[attr-defined]
+    assert manager.count == 1 and manager.layers[0].is_background
+    assert unmet_messages == []
     help_menu = _rows(_menu(main_window, "Help"))
-    for action in (
-        layer["Merge Down"],
-        layer["Merge Visible"],
-        layer["Flatten All"],
-        help_menu["Check for Updates"],
-    ):
-        action.trigger()  # type: ignore[attr-defined]
-    titles = [title for title, _ in unmet_messages]
-    assert titles == ["Merge Down", "Merge Visible", "Flatten All", "Check for Updates"]
-    texts = dict(unmet_messages)
-    for name in ("Merge Down", "Merge Visible", "Flatten All", "Check for Updates"):
-        assert "not available yet" in texts[name] or "later phase" in texts[name], name
+    help_menu["Check for Updates"].trigger()  # type: ignore[attr-defined]
+    assert [title for title, _ in unmet_messages] == ["Check for Updates"]
+    assert "later phase" in unmet_messages[0][1]
 
 
 # Section 3 shortcuts by code label; the six tool letters are the PRD 1.7 decision's.

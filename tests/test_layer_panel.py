@@ -321,8 +321,13 @@ def test_action_bar_reuses_menu_actions(main_window: MainWindow, unmet_messages:
     lm = main_window.scene.layer_manager
     panel.button("New Layer").click()
     assert lm.count == 2
-    panel.button("Merge Down").click()  # the deferred feature explains itself
-    assert unmet_messages and unmet_messages[-1][0] == "Merge Down"
+    main_window._merge_dont_ask = True  # noqa: SLF001
+    lm.set_active(lm.layers[-1].layer_id)
+    panel.button("Merge Down").click()  # merges Layer 2 into Layer 1 (follow-up step 4)
+    assert lm.count == 1 and unmet_messages == []
+    assert main_window.scene.command_stack.undo_text == "Merge Down"
+    panel.button("New Layer").click()
+    lm.set_active(lm.layers[-1].layer_id)  # the empty layer: Delete Layer asks nothing
     panel.button("Delete Layer").click()
     assert lm.count == 1
 
