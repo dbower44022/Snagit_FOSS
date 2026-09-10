@@ -442,9 +442,9 @@ def test_17_2_shortcuts_match_section_3(main_window: MainWindow) -> None:
                 wrong.append(f"{title} > {label}: {actual!r} for {expected!r}")
     assert wrong == []
     view = _rows(_menu(main_window, "View"))
-    # Section 16 row 7, fail: the table binds Zoom In to Ctrl++; the action carries Ctrl+=
-    # only, and Qt does not treat the two as one key.
-    assert [s.toString() for s in view["Zoom In"].shortcuts()] == ["Ctrl+="]  # type: ignore[attr-defined]
+    # Section 16 row 7 failed as found (Ctrl+= only, and Qt does not treat Ctrl++ as the
+    # same key) and is fixed since: the table's Ctrl++ is the alternate sequence.
+    assert [s.toString() for s in view["Zoom In"].shortcuts()] == ["Ctrl+=", "Ctrl++"]  # type: ignore[attr-defined]
     assert QKeySequence("Ctrl++") != QKeySequence("Ctrl+=")
     # Delete / Backspace (Section 3.2) and Pan on Space (Section 3.7, handled as a key event).
     edit = _rows(_menu(main_window, "Edit"))

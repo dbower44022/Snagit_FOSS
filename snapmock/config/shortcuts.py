@@ -96,6 +96,8 @@ SHORTCUTS: dict[str, str] = {
 
 ALTERNATE_SHORTCUTS: dict[str, list[str]] = {
     "edit.delete": ["Backspace"],
+    # General UI PRD 3.3 binds Zoom In to Ctrl++; Ctrl+= is the same key without Shift.
+    "view.zoom_in": ["Ctrl++"],
 }
 
 

@@ -849,7 +849,7 @@ class MainWindow(QMainWindow):
 
         zoom_in = view_menu.addAction("Zoom &In")
         if zoom_in is not None:
-            zoom_in.setShortcut(QKeySequence(SHORTCUTS["view.zoom_in"]))
+            zoom_in.setShortcuts(key_sequences("view.zoom_in"))
             zoom_in.triggered.connect(self._view_zoom_in)
         self._register("view.zoom_in", zoom_in)
 
