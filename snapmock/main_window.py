@@ -1837,6 +1837,10 @@ class MainWindow(QMainWindow):
     def _on_tool_changed_for_tab_order(self, _tool_id: str) -> None:
         self._apply_tab_order()
 
+    def show_status_hint(self, text: str) -> None:
+        """Put *text* in the status bar's hint zone (General UI PRD 9)."""
+        self._status_bar.set_hint(text)
+
     def _on_tool_changed_for_hint(self, _tool_id: str) -> None:
         tool = self._tool_manager.active_tool
         if tool is not None:

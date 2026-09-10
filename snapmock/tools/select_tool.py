@@ -14,6 +14,7 @@ from snapmock.commands.move_items import MoveItemsCommand
 from snapmock.config.constants import DRAG_THRESHOLD, MIN_TEXT_BOX_HEIGHT
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.callout_item import CalloutItem
+from snapmock.items.group_item import GroupItem
 from snapmock.items.text_item import TextItem
 from snapmock.tools.base_tool import BaseTool
 from snapmock.ui.transform_handles import (
@@ -60,6 +61,8 @@ class SelectTool(BaseTool):
         self._handle_item_originals: list[tuple[SnapGraphicsItem, QPointF, QTransform]] = []
         # Original geometry for text items (keyed by id(item))
         self._text_originals: dict[int, dict[str, Any]] = {}
+        # Set by a double-click on a group; shown in the status bar (kickoff silence 1)
+        self._group_hint: bool = False
 
     @property
     def tool_id(self) -> str:
@@ -140,6 +143,19 @@ class SelectTool(BaseTool):
             return view.mapToScene(event.pos())
         return None
 
+    @staticmethod
+    def _top_level(item: SnapGraphicsItem) -> SnapGraphicsItem:
+        """The item itself, or the outermost group holding it.
+
+        A group's members are its child items (General UI PRD 3.6); a click or a rubber
+        band on a member selects the group, never the member.
+        """
+        parent = item.parentItem()
+        while isinstance(parent, SnapGraphicsItem):
+            item = parent
+            parent = item.parentItem()
+        return item
+
     def _item_at(self, scene_pos: QPointF) -> SnapGraphicsItem | None:
         if self._scene is None:
             return None
@@ -148,11 +164,12 @@ class SelectTool(BaseTool):
             return None
         for gitem in self._scene.items(scene_pos):
             if isinstance(gitem, SnapGraphicsItem):
+                item = self._top_level(gitem)
                 # Skip items on locked/hidden layers
-                layer = self._scene.layer_manager.layer_by_id(gitem.layer_id)
+                layer = self._scene.layer_manager.layer_by_id(item.layer_id)
                 if layer is not None and (layer.locked or not layer.visible):
                     continue
-                return gitem
+                return item
         return None
 
     def _locked_item_at(self, scene_pos: QPointF) -> bool:
@@ -161,7 +178,8 @@ class SelectTool(BaseTool):
             return False
         for gitem in self._scene.items(scene_pos):
             if isinstance(gitem, SnapGraphicsItem):
-                layer = self._scene.layer_manager.layer_by_id(gitem.layer_id)
+                item = self._top_level(gitem)
+                layer = self._scene.layer_manager.layer_by_id(item.layer_id)
                 if layer is not None and layer.locked and layer.visible:
                     return True
         return False
@@ -208,6 +226,7 @@ class SelectTool(BaseTool):
         self._press_pos = scene_pos
         self._drag_total = QPointF(0, 0)
         self._constrain_axis = None
+        self._group_hint = False
 
         # Check if clicking on a transform handle (only while the handles are shown)
         if self._handles is not None and self._handles.scene() is not None:
@@ -335,10 +354,13 @@ class SelectTool(BaseTool):
 
         item = self._item_at(scene_pos)
         if item is not None:
-            from snapmock.items.callout_item import CalloutItem
-            from snapmock.items.text_item import TextItem
-
             self._selection_manager.select(item)
+            if isinstance(item, GroupItem):
+                # A group's members are edited after Ungroup (kickoff silence 1); the
+                # status bar says so.
+                self._group_hint = True
+                self._show_status_hint()
+                return True
             # Double-click on text/callout: switch to text tool
             if isinstance(item, (TextItem, CalloutItem)):
                 view = self._view
@@ -356,6 +378,14 @@ class SelectTool(BaseTool):
             else:
                 view.set_zoom(100)
         return True
+
+    def _show_status_hint(self) -> None:
+        """Push the current hint to the main window's status bar, when there is one."""
+        view = self._view
+        window = view.window() if view is not None else None
+        show = getattr(window, "show_status_hint", None)
+        if callable(show):
+            show(self.status_hint)
 
     # --- drag movement ---
 
@@ -472,14 +502,16 @@ class SelectTool(BaseTool):
             self._state = _State.IDLE
             return True
 
-        # Find items in the rubber-band rectangle
-        items_in_rect: list[SnapGraphicsItem] = []
+        # Find items in the rubber-band rectangle; a member counts as its group, once
+        found: dict[SnapGraphicsItem, None] = {}
         for gitem in self._scene.items(rect, Qt.ItemSelectionMode.IntersectsItemShape):
             if isinstance(gitem, SnapGraphicsItem):
-                layer = self._scene.layer_manager.layer_by_id(gitem.layer_id)
+                item = self._top_level(gitem)
+                layer = self._scene.layer_manager.layer_by_id(item.layer_id)
                 if layer is not None and (layer.locked or not layer.visible):
                     continue
-                items_in_rect.append(gitem)
+                found[item] = None
+        items_in_rect: list[SnapGraphicsItem] = list(found)
 
         # Modifier logic
         shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
@@ -972,12 +1004,9 @@ class SelectTool(BaseTool):
         if active is None:
             return False
         order = {item_id: n for n, item_id in enumerate(active.item_ids)}
+        # Top-level items only: a group is one stop and its members are none
         candidates = sorted(
-            (
-                i
-                for i in self._scene.items()
-                if isinstance(i, SnapGraphicsItem) and i.layer_id == active.layer_id
-            ),
+            (i for i in self._scene.annotation_items() if i.layer_id == active.layer_id),
             key=lambda i: (order.get(i.item_id, len(order)), i.zValue()),
         )
         if not candidates:
@@ -1021,6 +1050,8 @@ class SelectTool(BaseTool):
             if self._text_originals:
                 return "Shift: scale text | Alt: from center"
             return "Shift: proportional | Alt: from center | Ctrl+edge: skew"
+        if self._group_hint:
+            return "Group selected | Ungroup (Ctrl+Shift+G) to edit its items"
         return "Click to select | Drag to move | Shift+click: add | Right-click: menu"
 
     # --- context menu ---

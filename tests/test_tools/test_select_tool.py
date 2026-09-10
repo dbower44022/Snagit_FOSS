@@ -1,13 +1,17 @@
 """Tests for SelectTool."""
 
 import pytest
-from PyQt6.QtCore import QPointF
-from PyQt6.QtGui import QTransform
+from PyQt6.QtCore import QEvent, QPointF, QRectF, Qt
+from PyQt6.QtGui import QKeyEvent, QMouseEvent, QTransform
 from PyQt6.QtWidgets import QApplication
+from pytestqt.qtbot import QtBot
 
 from snapmock.commands.add_item import AddItemCommand
+from snapmock.commands.group_commands import GroupItemsCommand
 from snapmock.core.scene import SnapScene
 from snapmock.core.selection_manager import SelectionManager
+from snapmock.core.view import SnapView
+from snapmock.items.group_item import GroupItem
 from snapmock.items.rectangle_item import RectangleItem
 from snapmock.items.text_item import TextItem
 from snapmock.tools.select_tool import SelectTool, _State
@@ -114,3 +118,187 @@ def test_horizontal_resize_keeps_auto_size(scene: SnapScene) -> None:
     assert item.auto_size is True
     assert item.text_height is None
     assert item.text_width == pytest.approx(orig_w * 1.5)
+
+
+# --- groups (General UI PRD 3.6, Group and Ungroup kickoff step 4) ---
+
+
+def _view_for(qtbot: QtBot, scene: SnapScene) -> SnapView:
+    view = SnapView(scene)
+    view.resize(800, 600)
+    qtbot.addWidget(view)
+    view.show()
+    view.centerOn(200, 200)
+    return view
+
+
+def _mouse(
+    view: SnapView,
+    kind: QEvent.Type,
+    scene_pos: QPointF,
+    button: Qt.MouseButton = Qt.MouseButton.LeftButton,
+    modifiers: Qt.KeyboardModifier = Qt.KeyboardModifier.NoModifier,
+) -> QMouseEvent:
+    vp_pos = QPointF(view.mapFromScene(scene_pos))
+    return QMouseEvent(kind, vp_pos, vp_pos, button, button, modifiers)
+
+
+def _grouped_scene(
+    scene: SnapScene,
+) -> tuple[GroupItem, RectangleItem, RectangleItem, RectangleItem]:
+    """A group of two rectangles (a at 0,0 and b at 200,0) and a loose rectangle c at 0,200."""
+    layer = scene.layer_manager.active_layer
+    assert layer is not None
+    items = []
+    for x, y in ((0, 0), (200, 0), (0, 200)):
+        item = RectangleItem(rect=QRectF(0, 0, 100, 60))
+        item.fill_color = item.stroke_color
+        item.setPos(x, y)
+        scene.command_stack.push(AddItemCommand(scene, item, layer.layer_id))
+        items.append(item)
+    a, b, c = items
+    command = GroupItemsCommand(scene, [a, b])
+    scene.command_stack.push(command)
+    group = command.group
+    assert group is not None
+    return group, a, b, c
+
+
+def test_click_on_a_member_selects_its_group_and_frames_it(qtbot: QtBot, scene: SnapScene) -> None:
+    view = _view_for(qtbot, scene)
+    sm = SelectionManager(scene)
+    tool = SelectTool()
+    tool.activate(scene, sm)
+    group, a, b, c = _grouped_scene(scene)
+    tool.mouse_press(_mouse(view, QEvent.Type.MouseButtonPress, QPointF(250, 30)))  # inside b
+    tool.mouse_release(_mouse(view, QEvent.Type.MouseButtonRelease, QPointF(250, 30)))
+    assert sm.items == [group]
+    assert tool._handles is not None
+    assert tool._handles.current_rect == group.sceneBoundingRect()
+    tool.mouse_press(_mouse(view, QEvent.Type.MouseButtonPress, QPointF(50, 230)))  # inside c
+    tool.mouse_release(_mouse(view, QEvent.Type.MouseButtonRelease, QPointF(50, 230)))
+    assert sm.items == [c]
+
+
+def test_rubber_band_over_members_selects_the_group_once(qtbot: QtBot, scene: SnapScene) -> None:
+    view = _view_for(qtbot, scene)
+    sm = SelectionManager(scene)
+    tool = SelectTool()
+    tool.activate(scene, sm)
+    group, a, b, c = _grouped_scene(scene)
+    tool.mouse_press(_mouse(view, QEvent.Type.MouseButtonPress, QPointF(-20, -20)))
+    tool.mouse_move(_mouse(view, QEvent.Type.MouseMove, QPointF(320, 80)))
+    tool.mouse_release(_mouse(view, QEvent.Type.MouseButtonRelease, QPointF(320, 80)))
+    assert sm.items == [group]
+
+
+def test_drag_on_a_member_moves_the_whole_group(qtbot: QtBot, scene: SnapScene) -> None:
+    view = _view_for(qtbot, scene)
+    sm = SelectionManager(scene)
+    tool = SelectTool()
+    tool.activate(scene, sm)
+    group, a, b, c = _grouped_scene(scene)
+    before = (a.sceneBoundingRect(), b.sceneBoundingRect(), c.sceneBoundingRect())
+    tool.mouse_press(_mouse(view, QEvent.Type.MouseButtonPress, QPointF(50, 30)))
+    tool.mouse_move(_mouse(view, QEvent.Type.MouseMove, QPointF(80, 70)))
+    tool.mouse_release(_mouse(view, QEvent.Type.MouseButtonRelease, QPointF(80, 70)))
+    assert a.sceneBoundingRect() == before[0].translated(30, 40)
+    assert b.sceneBoundingRect() == before[1].translated(30, 40)
+    assert c.sceneBoundingRect() == before[2]
+    assert scene.command_stack.undo_text.endswith("Move 1 item")
+
+
+def test_arrow_keys_nudge_the_group_as_one_item(qtbot: QtBot, scene: SnapScene) -> None:
+    _view_for(qtbot, scene)
+    sm = SelectionManager(scene)
+    tool = SelectTool()
+    tool.activate(scene, sm)
+    group, a, b, c = _grouped_scene(scene)
+    sm.select_items([group])
+    before = a.sceneBoundingRect()
+    event = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_Right, Qt.KeyboardModifier.ShiftModifier)
+    assert tool.key_press(event)
+    assert a.sceneBoundingRect() == before.translated(10, 0)
+    assert group.pos().x() == pytest.approx(-1 + 10)
+
+
+def test_tab_cycles_a_group_as_one_stop(qtbot: QtBot, scene: SnapScene) -> None:
+    _view_for(qtbot, scene)
+    sm = SelectionManager(scene)
+    tool = SelectTool()
+    tool.activate(scene, sm)
+    group, a, b, c = _grouped_scene(scene)
+    sm.deselect_all()
+    seen = []
+    for _ in range(3):
+        assert tool.cycle_selection(forward=True)
+        seen.append(sm.items[0])
+    assert seen == [group, c, group]  # the group holds b's place below c
+
+
+def test_double_click_on_a_group_selects_it_and_says_to_ungroup(
+    qtbot: QtBot, scene: SnapScene
+) -> None:
+    view = _view_for(qtbot, scene)
+    sm = SelectionManager(scene)
+    tool = SelectTool()
+    tool.activate(scene, sm)
+    layer = scene.layer_manager.active_layer
+    assert layer is not None
+    text = TextItem()
+    text.text = "Hello"
+    text.setPos(0, 0)
+    scene.command_stack.push(AddItemCommand(scene, text, layer.layer_id))
+    other = RectangleItem(rect=QRectF(0, 0, 100, 60))
+    other.setPos(200, 0)
+    scene.command_stack.push(AddItemCommand(scene, other, layer.layer_id))
+    command = GroupItemsCommand(scene, [text, other])
+    scene.command_stack.push(command)
+    group = command.group
+    assert group is not None
+    assert tool.mouse_double_click(_mouse(view, QEvent.Type.MouseButtonDblClick, QPointF(10, 8)))
+    assert sm.items == [group]
+    assert "Ungroup" in tool.status_hint
+    tool.mouse_press(_mouse(view, QEvent.Type.MouseButtonPress, QPointF(-50, -50)))
+    assert "Ungroup" not in tool.status_hint
+
+
+def test_text_tool_does_not_edit_a_member(qtbot: QtBot, scene: SnapScene) -> None:
+    from snapmock.tools.text_tool import TextTool
+
+    _view_for(qtbot, scene)
+    sm = SelectionManager(scene)
+    layer = scene.layer_manager.active_layer
+    assert layer is not None
+    text = TextItem()
+    text.text = "Hello"
+    text.setPos(0, 0)
+    scene.command_stack.push(AddItemCommand(scene, text, layer.layer_id))
+    other = RectangleItem(rect=QRectF(0, 0, 100, 60))
+    other.setPos(200, 0)
+    scene.command_stack.push(AddItemCommand(scene, other, layer.layer_id))
+    text_tool = TextTool()
+    text_tool.activate(scene, sm)
+    assert text_tool._text_item_at(QPointF(10, 8)) is text
+    scene.command_stack.push(GroupItemsCommand(scene, [text, other]))
+    assert text_tool._text_item_at(QPointF(10, 8)) is None
+
+
+def test_delete_removes_the_group_with_its_members(qtbot: QtBot, scene: SnapScene) -> None:
+    _view_for(qtbot, scene)
+    sm = SelectionManager(scene)
+    tool = SelectTool()
+    tool.activate(scene, sm)
+    group, a, b, c = _grouped_scene(scene)
+    layer = scene.layer_manager.active_layer
+    assert layer is not None
+    sm.select_items([group])
+    delete = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_Delete, Qt.KeyboardModifier.NoModifier)
+    assert tool.key_press(delete)
+    assert scene.annotation_items() == [c]
+    assert scene.all_annotation_items() == [c]
+    assert layer.item_ids == [c.item_id]
+    scene.command_stack.undo()
+    assert set(scene.annotation_items()) == {group, c}
+    assert a.parentItem() is group
+    assert layer.item_ids == [c.item_id, group.item_id]

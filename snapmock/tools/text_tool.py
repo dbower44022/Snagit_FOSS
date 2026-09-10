@@ -522,7 +522,7 @@ class TextTool(BaseTool):
             view.set_hover_cursor(text_hover_cursor())
             return
         for gitem in self._scene.items(scene_pos):
-            if isinstance(gitem, (TextItem, CalloutItem)):
+            if isinstance(gitem, (TextItem, CalloutItem)) and gitem.parentItem() is None:
                 layer = self._scene.layer_manager.layer_by_id(gitem.layer_id)
                 if layer is not None and layer.locked and layer.visible:
                     view.set_hover_cursor(Qt.CursorShape.ForbiddenCursor)
@@ -530,11 +530,15 @@ class TextTool(BaseTool):
         view.set_hover_cursor(None)
 
     def _text_item_at(self, scene_pos: QPointF) -> _TextLike | None:
-        """Find a TextItem or CalloutItem under the given scene position."""
+        """Find a top-level TextItem or CalloutItem under the given scene position.
+
+        A group's member is not found: its text is edited after Ungroup (General UI
+        PRD 3.6, Group and Ungroup kickoff silence 1).
+        """
         if self._scene is None:
             return None
         for gitem in self._scene.items(scene_pos):
-            if isinstance(gitem, (TextItem, CalloutItem)):
+            if isinstance(gitem, (TextItem, CalloutItem)) and gitem.parentItem() is None:
                 layer = self._scene.layer_manager.layer_by_id(gitem.layer_id)
                 if layer is not None and (layer.locked or not layer.visible):
                     continue

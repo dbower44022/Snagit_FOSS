@@ -168,6 +168,34 @@ def test_select_tool_hover_open_hand_drag_closed_hand_locked_forbidden(qtbot: Qt
     assert _shape(view) == Shape.ArrowCursor
 
 
+def test_select_tool_hover_over_a_member_reads_the_group(qtbot: QtBot) -> None:
+    """A group's member is dragged as the group: open hand over it, forbidden when the
+    group's layer is locked (Group and Ungroup kickoff step 4)."""
+    from snapmock.commands.group_commands import GroupItemsCommand
+
+    scene, view, tm = _view_with_tools(qtbot)
+    a = _add_rect(scene)
+    b = _add_rect(scene)
+    b.setPos(300, 100)
+    scene.command_stack.push(GroupItemsCommand(scene, [a, b]))
+    tm.activate("select")
+    view.centerOn(250, 150)
+    _move(view, QPointF(100, 150))  # a's left stroke
+    assert _shape(view) == Shape.OpenHandCursor
+    _move(view, QPointF(250, 150))  # the gap between the members
+    assert _shape(view) == Shape.ArrowCursor
+    _press(view, QPointF(100, 150))
+    assert _shape(view) == Shape.ClosedHandCursor
+    _release(view, QPointF(100, 150))
+    assert tm._selection_manager.items == [a.parentItem()]  # noqa: SLF001
+    layer = scene.layer_manager.active_layer
+    assert layer is not None
+    tm._selection_manager.deselect_all()  # noqa: SLF001
+    scene.layer_manager.set_locked(layer.layer_id, True)
+    _move(view, QPointF(300, 150))  # b's left stroke
+    assert _shape(view) == Shape.ForbiddenCursor
+
+
 def test_rotate_handle_carries_the_rotation_cursor(qtbot: QtBot) -> None:
     scene, _view, _tm = _view_with_tools(qtbot)
     handles = TransformHandles(scene)
