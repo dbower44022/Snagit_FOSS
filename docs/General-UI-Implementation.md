@@ -1,6 +1,6 @@
 # General UI Implementation Notes
 
-Last Updated: 09-10-26 06:45 · Revision 1.19
+Last Updated: 09-10-26 07:30 · Revision 1.20
 
 Implements the SnapMock General User Interface PRD (version 2.4, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
@@ -18,6 +18,7 @@ Implements the SnapMock General User Interface PRD (version 2.4, `PRDs/SnapMock-
 | 7 | Tool themes and presets | Done | 443ce55 to 2c3cc23, then this close-out commit |
 | 8 | First run, accessibility, responsive behaviour | Done | c17752f to 5dbc027, then this close-out commit |
 | Acceptance pass | Section 17 verdicts, four small fixes | Done | 132fc18 to efaa830, then this close-out commit |
+| Group and Ungroup | The group item, its two commands, the Select tool, every item walk (Section 17) | In progress | from the commit that records the decisions |
 
 Phase 0 was verified against the repository at commit `a198744` on 09-07-26. The working tree also carried uncommitted Basic Shape Annotation Tools work in `snapmock/items/` and `tests/test_items.py`; it was left untouched and is not part of this inventory.
 
@@ -509,10 +510,43 @@ Rows the pass created for a later kickoff; nothing in this implementation builds
 - **Check for Updates** (Section 3.8, row 6). The Help row says it is scheduled for a later phase. Needs a query of the GitHub releases API for `dbower44022/Snagit_FOSS`, a version comparison against `snapmock.__version__`, a message with the result, and the Section 1.3 message when the network is unavailable. Decided 09-10-26: this list, not a small fix.
 
 
+## 17. Group and Ungroup
+
+Run from `docs/Group-Ungroup-Kickoff-Prompt.md` (revision 1.0) against General UI PRD 2.5 and Technical Architecture PRD 1.12, starting at commit 0d91611 on 09-10-26. Builds the Group (Ctrl+G) and Ungroup (Ctrl+Shift+G) rows of General UI PRD Section 3.6, which the Phase 1 decision of 09-08-26 deferred to this kickoff, and everything a new item type touches. Six steps, one commit each: the decisions, the item, the commands and the rows, the Select tool, every other walk, the close-out.
+
+### 17.1 Decisions, taken 09-10-26
+
+| Decision | Choice | Effect |
+|---|---|---|
+| 1 What a group is | A, a container item | `GroupItem` in `snapmock/items/group_item.py` is a `SnapGraphicsItem` whose members are its Qt child items. The group owns the layer membership, the z-value, the lock, and the transform; a click on a member resolves to the group; `items.json` nests the member entries inside the group's entry; Ungroup re-parents the members to the scene with the group's transform composed into each. The cost is step 5: every walk over the scene's items meets child items and must say whether it means top-level items or all items, and a member cannot be edited in place without Ungroup. The reading found thirteen such walks, not the nine the kickoff named: the four it did not name are the layer duplicate command, the delete-layer item count, the view's hover highlight, and the Snagit writer's background split. |
+| 2 Members on different layers | A, refuse | Group requires every selected item on one layer; the Section 1.3 message reads "Group needs the selected items on one layer" and runs after the two-item check. No layer move happens inside Group. Ungroup returns the members to the group's layer, which is the layer they were grouped on. |
+
+The kickoff's six silences, each decided as the kickoff recommended:
+
+| Silence | Decision |
+|---|---|
+| Double-click on a group | Nothing. Text editing needs Ungroup first; the status hint says so. |
+| Property Panel Appearance for a group | The Section 8.6 multi-selection controls over the group's vector members, applied as one command; hidden when no member is a vector item. |
+| `format_version` with nested entries | Stays 1. An earlier build skips the unknown `GroupItem` type and loses the group and its members; recorded in the Technical Architecture format table (Section 3.8, "Section 6.1" in its change-log rows). Every build so far is a development build. |
+| Snagit writer | Writes the members as individual items, with the group's transform composed in, and no warning. |
+| A locked group's members | Not selectable; the group's lock is the members' lock, as a layer's lock is its items'. |
+| Library panel and Layer Panel | Nothing group-specific; a group is an item like any other to both. |
+
+Follow-on detail fixed with decision 1: the Technical Architecture PRD's component map replaces the `SelectionGroup` name with `GroupItem`; Section 4.2 lists `GroupItem` beside `RasterRegionItem` directly under `SnapGraphicsItem`, not under `VectorItem`. The base class applies flips in the item's own paint pass and a group paints nothing, so a group's flip is applied as a transform around its bounding-box centre.
+
+### 17.2 What was built
+
+Filled in as the steps land.
+
+### 17.3 Deviations
+
+Filled in at the close-out.
+
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.20 | 09-10-26 07:30 | Claude (Claude Code) | Group and Ungroup in progress: Section 17 with the two decisions (A, a container item; A, refuse across layers) and the six silences, the phase-table row. |
 | 1.19 | 09-10-26 06:45 | Claude (Claude Code) | Next step points at `docs/Group-Ungroup-Kickoff-Prompt.md`. |
 | 1.18 | 09-10-26 06:10 | Claude (Claude Code) | Acceptance pass close-out: Section 16 summary and totals, the 09-10-26 decisions on the six fails (Section 5.1), the four fixes noted in their rows with commit hashes, the General UI follow-up list (Section 16.10), three deviations (Section 6), the phase-table row, tests (Section 7), the next required step. General UI PRD 2.5. |
 | 1.17 | 09-10-26 05:20 | Claude (Claude Code) | Acceptance pass, step 3: the seventeen display rows filled from Doug's checklist answers, quoted. Sixteen pass, one fails (row 36, no focus outline on the canvas); the Zoom tool's Alt+click and the Orca start-up warnings recorded as findings. Totals: 30 pass, 6 fail (2, 6, 7, 16, 32, 36), 0 not applicable. |
