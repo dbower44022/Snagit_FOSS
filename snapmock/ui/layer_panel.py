@@ -575,8 +575,12 @@ class LayerPanel(QDockWidget):
         self._popover: _OpacityPopover | None = None
         self._layer_popover: _LayerPopover | None = None
         self._mode = PanelMode.FULL
+        # Left, right, or bottom (General UI PRD 2.3); the acceptance pass found the
+        # bottom edge missing (implementation notes Section 16, row 2).
         self.setAllowedAreas(
-            Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea
+            Qt.DockWidgetArea.LeftDockWidgetArea
+            | Qt.DockWidgetArea.RightDockWidgetArea
+            | Qt.DockWidgetArea.BottomDockWidgetArea
         )
         self.setMinimumWidth(MIN_PANEL_WIDTH)
 

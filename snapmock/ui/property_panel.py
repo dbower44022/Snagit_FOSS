@@ -159,8 +159,12 @@ class PropertyPanel(QDockWidget):
         self._editor_connected: bool = False
         self._connected_editor: QWidget | None = None
 
+        # Left, right, or bottom (General UI PRD 2.3); the acceptance pass found the
+        # bottom edge missing (implementation notes Section 16, row 2).
         self.setAllowedAreas(
-            Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea
+            Qt.DockWidgetArea.LeftDockWidgetArea
+            | Qt.DockWidgetArea.RightDockWidgetArea
+            | Qt.DockWidgetArea.BottomDockWidgetArea
         )
 
         # Scroll area wrapper

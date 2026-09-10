@@ -103,12 +103,22 @@ def test_17_1_panels_dock_float_tab_close_and_reopen(main_window: MainWindow) ->
     """Row 2: dock areas against Section 2.3, float, tab, close, reopen via View."""
     layer = main_window._layer_panel  # noqa: SLF001
     prop = main_window._property_panel  # noqa: SLF001
-    left_right = Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea
-    # Section 16 row 2, fail: Section 2.3 allows the left, right, and bottom edges; the
-    # two panels allow the left and right edges only.
-    assert layer.allowedAreas() == left_right
-    assert prop.allowedAreas() == left_right
-    assert not (layer.allowedAreas() & Qt.DockWidgetArea.BottomDockWidgetArea)
+    # Section 16 row 2 failed as found (the bottom edge was refused) and is fixed since:
+    # Section 2.3 allows the left, right, and bottom edges.
+    edges = (
+        Qt.DockWidgetArea.LeftDockWidgetArea
+        | Qt.DockWidgetArea.RightDockWidgetArea
+        | Qt.DockWidgetArea.BottomDockWidgetArea
+    )
+    assert layer.allowedAreas() == edges
+    assert prop.allowedAreas() == edges
+    main_window.removeDockWidget(layer)
+    main_window.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, layer)
+    layer.show()
+    assert main_window.dockWidgetArea(layer) == Qt.DockWidgetArea.BottomDockWidgetArea
+    main_window.removeDockWidget(layer)
+    main_window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, layer)
+    layer.show()
 
     layer.setFloating(True)
     assert layer.isFloating()
