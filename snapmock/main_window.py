@@ -1015,21 +1015,21 @@ class MainWindow(QMainWindow):
 
         image_menu.addSeparator()
 
-        rotate_cw_action = image_menu.addAction("Rotate 90° C&W")
+        rotate_cw_action = image_menu.addAction("Rotate Canvas 90° C&W")
         if rotate_cw_action is not None:
             rotate_cw_action.triggered.connect(self._image_rotate_cw)
 
-        rotate_ccw_action = image_menu.addAction("Rotate 90° CC&W")
+        rotate_ccw_action = image_menu.addAction("Rotate Canvas 90° CC&W")
         if rotate_ccw_action is not None:
             rotate_ccw_action.triggered.connect(self._image_rotate_ccw)
 
         image_menu.addSeparator()
 
-        flip_h_action = image_menu.addAction("Flip &Horizontal")
+        flip_h_action = image_menu.addAction("Flip Canvas &Horizontal")
         if flip_h_action is not None:
             flip_h_action.triggered.connect(self._image_flip_h)
 
-        flip_v_action = image_menu.addAction("Flip &Vertical")
+        flip_v_action = image_menu.addAction("Flip Canvas &Vertical")
         if flip_v_action is not None:
             flip_v_action.triggered.connect(self._image_flip_v)
 

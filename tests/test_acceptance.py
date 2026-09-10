@@ -248,10 +248,10 @@ SECTION_3_ROWS: dict[str, list[str]] = {
         "Crop to Canvas",
         "Resize Canvas...",
         "Resize Image...",
-        "Rotate 90° CW",  # table: Rotate Canvas 90° CW
-        "Rotate 90° CCW",  # table: Rotate Canvas 90° CCW
-        "Flip Horizontal",  # table: Flip Canvas Horizontal
-        "Flip Vertical",  # table: Flip Canvas Vertical
+        "Rotate Canvas 90° CW",
+        "Rotate Canvas 90° CCW",
+        "Flip Canvas Horizontal",
+        "Flip Canvas Vertical",
         "Auto-Trim",
     ],
     "Arrange": [
