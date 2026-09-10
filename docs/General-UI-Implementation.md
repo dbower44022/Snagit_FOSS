@@ -1,6 +1,6 @@
 # General UI Implementation Notes
 
-Last Updated: 09-10-26 02:15 · Revision 1.14
+Last Updated: 09-10-26 03:55 · Revision 1.15
 
 Implements the SnapMock General User Interface PRD (version 2.4, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
@@ -327,10 +327,168 @@ In commit order: decision 5 (Section 5.1); the Welcome panel (`snapmock/ui/welco
 
 **Next required step:** the acceptance pass against General UI PRD Section 17, in a new session pasting `docs/General-UI-Acceptance-Pass-Kickoff-Prompt.md` (revision 1.0, starting state at commit 3d1f252): a section in these notes that walks every Section 17 bullet and says pass, fail, or not applicable with the evidence. The Group and Ungroup kickoff (decision 4) and the Navigation and Raster Operations follow-up (merging, layer blend mode, badges) follow the acceptance pass.
 
+## 16. Acceptance pass against PRD Section 17
+
+Run from `docs/General-UI-Acceptance-Pass-Kickoff-Prompt.md` (revision 1.0) against General UI PRD 2.4, starting at commit 7f2b109 on 09-10-26. The pass verifies; it does not build. Every row carries one verdict, the evidence kind, and, for a fail, the cause and the owner.
+
+**Summary.** Filled at close-out.
+
+**How to read a row.** The verdict is one of three words. "Pass" means the bullet holds as written or under a recorded decision the row cites. "Fail" means it does not, and a deferral by decision is a fail whose owner the row names. "Not applicable" means the bullet could not be judged, and the row says why. "Pending display" is not a verdict: it marks a row waiting for Doug's answer to the display checklist in Section 16.9. Evidence kinds: **existing** (a test that was already in the suite, named by file and test), **new** (a test written for this pass in `tests/test_acceptance.py`, one per bullet, named after the bullet), **display** (a check on the real display, with its step letter in Section 16.9 and Doug's answer quoted). A row may carry more than one kind; it passes only when every kind passes.
+
+### 16.1 Window & Layout (17.1)
+
+| # | Bullet | Evidence | Verdict | Cause, owner, notes |
+|---|---|---|---|---|
+| 1 | The main window opens at a reasonable default size (80% of screen) with all panels in their default positions. | New: `test_17_1_window_opens_at_80_percent_of_the_screen` (the size formula against the primary screen, never below 1024 by 600, and a fresh window taking it; offscreen the screen is 1280 by 800, so the window opens at 1024 by 640). Display: B1, B2. | Pending display | |
+| 2 | All panels can be docked, undocked, tabbed, closed, and re-opened via the View menu. | New: `test_17_1_panels_dock_float_tab_close_and_reopen` (allowed dock areas against Section 2.3, floating, tabbing, closing, reopening through the View toggle). Display: B3 to B6. | Pending display | |
+| 3 | Panel positions and sizes are saved and restored across sessions. | Existing: `tests/test_window_layout.py::test_docks_and_toolbars_have_object_names_for_state_persistence`. New: `test_17_1_panel_layout_is_restored_in_a_new_window` (a floated Layer Panel and a left-docked Property Panel come back in a second window). | Pending | |
+| 4 | "Reset Layout" restores the default arrangement. | Existing: `tests/test_window_layout.py::test_reset_layout_restores_hidden_panels_and_default_area`, `tests/test_main_toolbar.py::test_view_menu_toggle_and_reset_layout`, `tests/test_responsive.py::TestWindowModes::test_reset_layout_keeps_the_mode`. | Pending | |
+| 5 | The window title updates correctly with the project name and dirty flag asterisk. | Existing: `tests/test_app.py::test_main_window_title`. New: `test_17_1_window_title_shows_the_name_and_the_dirty_asterisk` (the asterisk after a command, gone after a save, the file's stem after Save As). | Pending | |
+
+### 16.2 Menu Bar (17.2)
+
+| # | Bullet | Evidence | Verdict | Cause, owner, notes |
+|---|---|---|---|---|
+| 6 | All menus listed in Section 3 are present with all specified items. | Existing: `tests/test_menus.py::test_all_ten_menus_exist`, `test_file_menu_order_and_open_recent`, `test_view_menu_labels_and_status_bar_toggle`, `test_arrange_menu_order_and_group_rows`, `test_help_menu_order_and_links`, `test_tools_menu_has_all_registered_tools`. New: `test_17_2_every_section_3_row_is_present_and_the_deferred_rows_say_so` (every row of the eight Section 3 tables found by label, and the six deferred rows showing their message instead of acting). | Pending | Known before the pass: Group and Ungroup (decision 4), Merge Down, Merge Visible, Flatten All (Phase 1 decision), Check for Updates (no owner). |
+| 7 | Keyboard shortcuts work as specified. | Existing: `tests/test_shortcuts_dialog.py::test_rows_cover_every_bound_shortcut_and_the_conventions`, `tests/test_menus.py::test_delete_row_has_backspace_alternate`. New: `test_17_2_shortcuts_match_section_3` (every shortcut in the Section 3 tables against the menu action's, the six tool letters against the PRD 1.7 decision, and Ctrl+' toggling the grid through the key press). | Pending | |
+| 8 | Menu items are never disabled. Clicking a menu item whose requirements are not met displays an informative message identifying the unmet requirements. | Existing: `tests/test_menus.py::test_no_menu_action_is_ever_disabled`, `test_arrange_actions_explain_unmet_selection`, `test_layer_delete_explains_with_single_layer`, `test_recent_files_placeholder_explains`. | Pending | |
+| 9 | Menu items that are toggles (checkmarks) accurately reflect the current state. | Existing: `tests/test_menus.py::test_active_tool_is_checked`, `test_tool_check_updates_on_switch`, `test_view_menu_labels_and_status_bar_toggle`, `tests/test_theme.py::TestDarkModeMenu::test_toggle_persists_and_switches`, `test_preferences_mode_updates_the_action`, `tests/test_canvas_area.py::test_show_crosshairs_menu_toggle_applies_to_every_document_and_persists`. New: `test_17_2_view_toggles_reflect_the_state` (a panel closed by its own button unchecks its row; Show Grid and Show Rulers reflect the view; Snap to Guides and Lock Guides reflect the settings). | Pending | |
+
+### 16.3 Toolbars (17.3)
+
+| # | Bullet | Evidence | Verdict | Cause, owner, notes |
+|---|---|---|---|---|
+| 10 | The Main Toolbar shows all button groups with correct icons and tooltips. | Existing: `tests/test_main_toolbar.py::test_groups_in_prd_order_with_dividers`, `test_buttons_are_icon_only_with_shortcut_tooltips`, `test_action_tooltip_drops_ellipsis`, `tests/test_theme.py::TestIcons::test_every_named_icon_file_exists`. Display: B16 (icons read as their action). | Pending display | |
+| 11 | The Tool Options Bar dynamically updates when the active tool changes. | Existing: `tests/test_tool_options_bar.py::test_shape_tools_compose_the_shared_set_in_order`, `test_text_tool_controls_and_alignment_slot`, `test_select_tool_bar_shows_selection_and_alignment`, `test_tools_without_options_show_only_their_name`. | Pending | |
+| 12 | The Left Tool Palette shows all 18 tools with correct icons. | Existing: `tests/test_main_toolbar.py::test_tool_palette_is_a_vertical_left_column`, `tests/test_theme.py::TestIcons::test_tool_palette_buttons_show_icons`, `tests/test_accessibility.py::TestAccessibleNames::test_tool_palette_buttons_carry_a_name_and_a_description`. New: `test_17_3_palette_shows_eighteen_tools_with_icons` (eighteen buttons, one per registered tool, each with a non-empty icon and a "Name (Shortcut)" tooltip). Display: B16. | Pending display | |
+| 13 | The active tool is visually highlighted in the tool palette. | New: `test_17_3_active_tool_button_is_checked` (the palette's checked button follows the active tool through the menu, the key, and the palette itself; both style sheets carry a `QToolButton:checked` rule). Display: B14. | Pending display | |
+| 14 | Toolbar buttons are never disabled. Clicking a toolbar button whose requirements are not met displays an informative message identifying the unmet requirements. | Existing: `tests/test_main_toolbar.py::test_toolbar_button_shows_unmet_requirement`, `test_alignment_group_shown_with_two_or_more_selected`. New: `test_17_3_no_shown_toolbar_button_is_disabled` (every button of the Main Toolbar, the Left Tool Palette, and the Tool Options Bar enabled, with Group 5 shown by a two-item selection). | Pending | Group 5's Align buttons are hidden below two selected items by Section 4.2; a hidden `QAction` is also disabled by Qt, which is not a greyed-out control. |
+
+### 16.4 Canvas (17.4)
+
+| # | Bullet | Evidence | Verdict | Cause, owner, notes |
+|---|---|---|---|---|
+| 15 | The empty canvas prompt is shown when no image is loaded. | Existing: `tests/test_canvas_area.py::test_empty_canvas_prompt`, `test_empty_canvas_prompt_wording_follows_prd_6_2`. Display: B2. | Pending display | "No image is loaded" is read as no user item on the canvas, which is when the view draws the prompt. |
+| 16 | Drag-and-drop of image files onto the canvas creates a background layer. | New: `test_17_4_dropped_image_file_lands_on_the_active_layer` (a file URL dropped on the view: what is created and on which layer). | Pending | Known before the pass: the import path may create a raster region on the active layer. |
+| 17 | Rulers display correctly when enabled and track cursor position. | Existing: `tests/test_canvas_area.py::test_view_rulers_toggle`. New: `test_17_4_rulers_track_the_cursor` (a mouse move over the viewport moves both rulers' marker to the scene position). Display: B7. | Pending display | |
+| 18 | Grid displays correctly when enabled and respects zoom level. | Existing: `tests/test_canvas_area.py::test_view_grid_toggle`, `test_grid_major_lines_every_five_units`, `test_minor_grid_lines_hide_below_200_percent`. Display: B8. | Pending display | |
+| 19 | Canvas background shows checkerboard for transparent areas. | Existing: `tests/test_theme.py::TestCanvasReadsTheme::test_checkerboard_tile_uses_theme_colours_and_size`. New: `test_17_4_checkerboard_shows_through_a_transparent_canvas` (the rendered view carries both checkerboard colours inside the canvas once the canvas colour is transparent, and neither while it is white). Display: B9. | Pending display | |
+| 20 | All cursor changes listed in Section 6.5 work correctly. | Existing: `tests/test_canvas_area.py::test_cursor_applied_on_tool_change`, `tests/test_cursors.py` (every row of the table: open and closed hand, forbidden, rotation, highlighted I-beam, magnifiers with Alt, eyedropper and raster selection, the Pan hands, the copy action on an external drag). Display: B10, B11. | Pending display | The table is Section 6.6 (implementation notes Section 4). |
+
+### 16.5 Panels (17.5)
+
+| # | Bullet | Evidence | Verdict | Cause, owner, notes |
+|---|---|---|---|---|
+| 21 | Layer Panel correctly shows all layers with thumbnails, names, visibility, and lock state. | Existing: `tests/test_layer_panel.py::test_panel_geometry_and_rows`, `test_active_row_follows_manager`, `test_eye_and_lock_clicks_push_commands`, `test_thumbnail_renders_layer_items_after_delay`, `test_inline_rename_pushes_command`. Display: B12. | Pending display | |
+| 22 | Layer drag-and-drop reordering works smoothly. | Existing: `tests/test_layer_panel.py::test_drop_target_index_mapping`, `test_reorder_pushes_command`. Display: B13 (a real drag with the insertion line). | Pending display | |
+| 23 | Property Panel updates in real-time when items are selected, deselected, or modified. | Existing: `tests/test_property_panel.py::test_canvas_mode_when_empty`, `test_item_mode_when_selected`, `test_transform_reflects_item_position`, `test_transform_reflects_item_size`. New: `test_17_5_property_panel_follows_selection_and_commands` (select, a move command, deselect, each reflected at once). | Pending | |
+| 24 | Property changes in the panel are immediately reflected on the canvas. | Existing: `tests/test_property_panel_phase6.py::test_aspect_lock_scales_both_axes`, `test_mixed_values_show_dash_and_apply_to_all`, `test_slider_drag_over_a_selection_is_one_undo_entry`. New: `test_17_5_property_edit_moves_the_item_at_once` (the X spinbox moves the item on the scene in the same event, undoable). | Pending | |
+| 25 | Status Bar shows correct values for all zones and updates in real-time. | Existing: `tests/test_status_bar.py::test_zone_widths_and_height`, `test_cursor_and_canvas_formats`, `test_selection_size_blank_until_selected`, `test_zoom_zone_is_a_clickable_preset_menu`, `test_memory_zone_text_and_colour_roles`, `test_memory_refresh_reads_the_process`, `test_zones_follow_the_active_tab`. | Pending | |
+
+### 16.6 Theming (17.6)
+
+| # | Bullet | Evidence | Verdict | Cause, owner, notes |
+|---|---|---|---|---|
+| 26 | Light and Dark themes render correctly with no visual glitches. | Existing, supporting only: `tests/test_theme.py::TestThemeFiles::test_tables_of_section_13`, `TestThemeManager::test_set_mode_dark_applies_live`. Display: B15, C2. | Pending display | |
+| 27 | Theme switching is instant with no restart required. | Existing: `tests/test_theme.py::TestThemeManager::test_set_mode_dark_applies_live`, `test_system_follows_the_style_hint`, `TestDarkModeMenu::test_toggle_persists_and_switches`, `TestCanvasReadsTheme::test_handles_recolour_on_theme_change`, `tests/test_preferences_dialog.py::TestApply::test_appearance_changes_apply_live`. Display: C1, C5 (the switch as seen), D1 to D3 (the System option, which needs a desktop that reports a colour scheme). | Pending display | |
+| 28 | All text meets WCAG 2.1 AA contrast requirements in both themes. | Existing: `tests/test_accessibility.py::TestContrast::test_text_pairs_meet_aa` (seventeen text-on-background pairs per theme at 4.5:1: primary and secondary text on the window, panel, toolbar, hover, pressed, input, and tooltip backgrounds; accent text on accent; accent, error, and warning text on the window and toolbar backgrounds; ruler text; the empty-canvas prompt). | Pending | Scope: the test covers text the theme colours. Text drawn on the canvas by the Text and Callout tools is the user's colour choice, not the theme's, and is outside the bullet. Every pair is held at 4.5:1, which also satisfies the 3:1 large-text bound. |
+| 29 | Icons are legible in both themes. | Existing, supporting only: `tests/test_theme.py::TestIcons::test_icon_is_rendered_and_recoloured`. Display: B16, C3, C4. | Pending display | |
+
+### 16.7 Dialogs (17.7)
+
+| # | Bullet | Evidence | Verdict | Cause, owner, notes |
+|---|---|---|---|---|
+| 30 | Color picker popover opens near the clicked swatch, shows correct color, and applies changes live. | Existing: `tests/test_color_picker.py::test_swatch_opens_popover_beside_it_without_a_toggle`, `test_square_and_bars_apply_live`, `test_inputs_sync_each_other`, `test_setting_color_updates_an_open_popover_without_emitting`. | Pending | |
+| 31 | Export dialog shows correct options per format and produces valid output. | Existing: `tests/test_export_dialog.py::test_default_path_and_format_switch`, `test_custom_dpi_shows_spinbox`, `test_file_export_writes_through_the_dialog`, `test_pdf_page_size_round_trips_through_the_dialog`, `test_preview_and_size_estimate_follow_the_settings`; `tests/test_io/test_exporter.py::test_export_png_dpi_depth_and_transparency`, `test_export_jpeg_quality_changes_size`, `test_export_svg_viewbox_and_raster_embedding`, `test_export_pdf_page_sizes`. | Pending | |
+| 32 | Preferences dialog saves all settings and they take effect immediately. | Existing: `tests/test_preferences_dialog.py` (`TestLayout::test_sidebar_lists_every_category_in_order`, `TestInitialValues` (six tests), `TestGetChanges::test_reports_only_changed_keys`, `TestApply` (six tests: General and Performance, the autosave timer, Appearance, Tools at once and at startup, and the Delete Layer confirmation)). New: `test_17_7_preferences_carries_every_section_11_3_row` (every row of the five Section 11.3 categories found by label). | Pending | |
+| 33 | Unsaved changes dialog appears when appropriate and all three buttons work correctly. | Existing: `tests/test_window_management.py::TestUnsavedChangesDialog` (`test_wording_buttons_and_preview`, `test_preview_never_upscales`, `test_each_button_reports_itself`, `test_closing_the_dialog_is_cancel`, `test_window_close_path_uses_the_dialog`), `tests/test_window_layout.py::test_unsaved_changes_dialog_wording_and_dont_save`, `tests/test_documents.py::test_close_clean_tab_without_prompt`. Display: F1. | Pending display | "When appropriate" is read under document tabs (Library PRD): the dialog appears when a dirty tab closes and when the window closes or quits; File > New and Open open a new tab and never discard a document, so they do not prompt. |
+
+### 16.8 Accessibility (17.8)
+
+| # | Bullet | Evidence | Verdict | Cause, owner, notes |
+|---|---|---|---|---|
+| 34 | All controls are reachable via Tab key navigation. | Existing: `tests/test_accessibility.py::TestTabOrder::test_zones_follow_the_prd_order`, `test_order_survives_a_tool_change`. New: `test_17_8_every_tab_stop_is_reached_from_the_first` (the focus chain, walked from the first Main Toolbar button, visits every Tab stop of the window). | Pending | The menu bar is reached with Alt or F10, not Tab, by decision (PRD 2.4 row). |
+| 35 | Screen reader announces control names and states correctly. | Display: E1 to E5 (Orca). Existing, supporting only: `tests/test_accessibility.py::TestAccessibleNames::test_main_window_controls_are_named`, `TestStatusAnnouncements::test_hint_zone_is_a_live_label`. | Pending display | No automated evidence is possible: PyQt6 does not expose `QAccessible`. |
+| 36 | Focus indicators are visible on all interactive controls. | Existing: `tests/test_accessibility.py::TestFocusOutline::test_style_sheets_outline_every_control_kind`. Display: B17. | Pending display | |
+
+### 16.9 Display checklist
+
+Run on the Linux machine with the display, in a fresh settings profile so the first run and the System theme can be seen. Every step says what to look for. When a step does not show what it says, write down exactly what you see against the step's letter and go on to the next step; the pass records the answer, and stopping would leave the later rows without evidence. Answer every step, even with "as described".
+
+**A. In a terminal.** The application runs from the repository in a throwaway profile.
+
+1. In a terminal, type the line below and press Enter:
+   ```bash
+   cd /home/doug/Dropbox/Projects/Snagit_FOSS
+   ```
+   You should see the prompt again with the folder name in it. If not, note what you see against A1 and continue.
+2. In the same terminal, type the line below and press Enter:
+   ```bash
+   XDG_CONFIG_HOME=/tmp/snapmock-acceptance uv run python -m snapmock
+   ```
+   You should see the SnapMock window open with the Welcome panel in its centre: the logo, the tagline, three cards, and four steps. If not, note what you see against A2 and continue.
+
+**B. In the SnapMock window, light theme.** Rows 1, 2, 13, 15, 17 to 22, 26, 29, and 36.
+
+1. Look at the window before touching it. You should see a window about four fifths of the screen wide and four fifths high, not maximised, not the full screen. Note the rough fraction you see against B1.
+2. Click the **Close** button at the bottom of the Welcome panel. You should see, from the top: the menu bar, the Main Toolbar (New, Open, Save, and the rest), the Tool Options Bar reading "Select", the Left Tool Palette as one column of icons on the left, the white canvas in the middle with the grey prompt "Drag an image here, paste from clipboard (Ctrl+V), or go to File > Import Image", the Layers panel above the Properties panel on the right, the Library panel along the bottom, and the status bar. If anything is missing or elsewhere, note it against B2 and continue.
+3. Press the mouse button on the title of the Layers panel (the word "Layers" at its top), drag it to the middle of the canvas, and release. You should see the Layers panel floating as its own small window over the canvas. If not, note what you see against B3 and continue.
+4. Drag the floating Layers panel by its title to the right edge of the SnapMock window and hold it there before releasing. You should see a blue highlight showing where it will dock, and after you release, the panel docked back on the right. If not, note what you see against B4 and continue.
+5. Drag the Layers panel by its title to the bottom edge of the SnapMock window, hold it over the Library panel, and release. You should see it refuse the bottom edge: no highlight appears there and the panel stays where it was or floats. (The automated test found that the Layers and Properties panels allow the left and right edges only; the PRD allows the bottom too.) Note what you see against B5 and continue.
+6. Drag the Properties panel by its title onto the title of the Layers panel and release. You should see the two panels become tabs of one panel, with two tab labels "Layers" and "Properties" at its bottom or top. Then open the **View** menu and click **Reset Layout**. You should see the two panels stacked again, Layers above Properties. If not, note what you see against B6 and continue.
+7. Press **Ctrl+R**, then move the mouse across the canvas. You should see a ruler along the top and the left of the canvas area, with numbers, and a small triangle on each ruler that follows the mouse. If not, note what you see against B7 and continue.
+8. Press **Ctrl+'** (Ctrl and the apostrophe key). You should see a faint grid on the white canvas with slightly stronger lines every fifth line only. Press **Ctrl+=** four times. You should see the zoom in the status bar pass 200% and the finer grid lines appear between the stronger ones. Press **Ctrl+0**. You should see the whole canvas again with only the stronger lines. Press **Ctrl+'** again to hide the grid. If any of that differs, note it against B8 and continue.
+9. In the Properties panel on the right, find the **Canvas** section and click the **Canvas color** swatch. You should see a colour popover open beside the swatch. Click the swatch labelled **Transparent** inside it, then click on the canvas outside the popover. You should see the canvas filled with a grey and white checkerboard instead of white. Press **Ctrl+Z**. You should see the canvas white again. If any of that differs, note it against B9 and continue.
+10. Press **R**, then press the mouse button on the canvas, drag to draw a rectangle about the size of a playing card, and release. Press **V**. Move the mouse over the rectangle's edge without pressing. You should see an open-hand cursor. Press the mouse button on the rectangle's edge and drag it a little. You should see a closed-hand cursor while dragging. Release. Move the mouse over the small handle above the rectangle. You should see a circular-arrow cursor. Move the mouse over a corner handle. You should see a diagonal double-arrow cursor. If any cursor differs, note which against B10 and continue.
+11. Press **T** and move the mouse over empty canvas. You should see an I-beam cursor. Press **I** and move over the canvas. You should see an eyedropper cursor. Press **Z** and move over the canvas. You should see a magnifier with a plus sign. Hold **Alt**. You should see the plus become a minus. Release Alt and press **V**. If any cursor differs, note which against B11 and continue.
+12. Press **Ctrl+Shift+N**. You should see the Layers panel show two rows, "Layer 2" above "Layer 1", each row with an eye icon, a lock icon, a small square thumbnail, the name, and "100%" at the right; within a second the thumbnail of Layer 1 shows the rectangle. If anything is missing, note it against B12 and continue.
+13. Press the mouse button on the "Layer 2" row, drag it slowly down below the "Layer 1" row, and release. You should see a thin blue line move with the pointer between the rows while dragging, and after release the order Layer 1 above Layer 2 with no flicker or jump. If not, note what you see against B13 and continue.
+14. Press **R**. You should see the Rectangle button in the Left Tool Palette shown with a darker, pressed-looking background, and no other palette button pressed. Press **V**. You should see the pressed background move to the Select button. If not, note what you see against B14 and continue.
+15. Open each of the ten menus in turn by clicking its name, then press **Escape**. Press **Ctrl+,** and click each category in the left list of the Preferences dialog, then click **Cancel**. Press **Ctrl+E**, look at the Export dialog, and click **Cancel**. Open **Help** and click **About SnapMock**, then close it. You should see every menu, page, and dialog with readable text, no clipped labels, no controls overlapping, and no control drawn in a different style from its neighbours. Note anything that looks wrong, with the dialog and the control, against B15, and continue.
+16. Look at the icons on the Main Toolbar, the Left Tool Palette, and in the **File** and **Edit** menus. You should be able to tell each icon's meaning at a glance and see it as a crisp black glyph on the light background. Note any icon that is blurry, faint, or unrecognisable against B16 and continue.
+17. Click inside the zoom percentage box on the Main Toolbar (the box reading "100%" next to the magnifier buttons), then press **Tab** twenty times, slowly, watching where the focus goes. You should see a 2 px blue outline on each control the focus lands on: the Zoom In and Fit to Window buttons, the Tool Options Bar, the palette buttons, the canvas, the layer list, the Properties panel controls. Note any control that takes focus without a visible outline, and any control you expected to reach that Tab skipped, against B17, and continue.
+
+**C. In the SnapMock window, dark theme.** Rows 26, 27, and 29.
+
+1. Open the **View** menu and click **Dark Mode**. You should see the whole window turn dark at once: menus, toolbars, panels, the area around the canvas, and the status bar, with no restart, no blank window, and no part left light. If not, note what you see against C1 and continue.
+2. Repeat step B15 in the dark theme: the ten menus, the Preferences categories, the Export dialog, the About dialog. You should see readable text and consistently styled controls everywhere. Note anything wrong against C2 and continue.
+3. Repeat step B16 in the dark theme. You should see each icon as a crisp light glyph on the dark background. Note any icon that is hard to read against C3 and continue.
+4. Press **Ctrl+,**, click **Appearance**, set **Icon size** to **Large (32 px)**, and click **OK**. You should see the palette and toolbar icons grow at once. Press **Ctrl+,** again, set **Icon size** to **Small (16 px)**, and click **OK**. You should see them shrink and still be readable. Press **Ctrl+,** again, set **Icon size** back to **Medium (24 px)**, and click **OK**. Note anything wrong against C4 and continue.
+5. Open the **View** menu and click **Dark Mode** again. You should see the window return to the light theme at once. If not, note what you see against C5 and continue.
+
+**D. In Cinnamon's System Settings and the SnapMock window.** Row 27's System option: the application should follow the desktop's dark or light choice while it runs.
+
+1. In the SnapMock window, press **Ctrl+,**, click **Appearance**, set **Theme** to **System**, and click **OK**. You should see the window stay light (the desktop is currently light) with no other change. If not, note what you see against D1 and continue.
+2. Open the Cinnamon menu, open **System Settings**, open **Themes**, and pick a dark desktop theme (in the Mint layout, the **Mint-Y-Dark** application theme; the control is called **Applications** or **Desktop** depending on the Cinnamon version). Look at the SnapMock window. You should see it switch to the dark theme on its own within a second or two. If it stays light, note that against D2 and continue: the desktop may not publish its colour scheme to Qt, which decides whether the row is a fail or not applicable.
+3. In **Themes**, set the desktop theme back to what it was. You should see SnapMock return to light if it went dark in step D2. Note what you see against D3 and continue.
+
+**E. In a second terminal and the SnapMock window, with Orca.** Row 35: Orca is installed at /usr/bin/orca.
+
+1. In a second terminal, type the line below and press Enter:
+   ```bash
+   orca &
+   ```
+   You should hear Orca start speaking (a welcome message or "screen reader on") and see a small Orca window or tray icon. If Orca does not start, note what you see against E1, skip to section F, and say so.
+2. Click the SnapMock window's title bar, then click inside the zoom percentage box on the Main Toolbar, then press **Tab** ten times slowly. You should hear Orca name each control the focus lands on, with its kind: for example "Zoom In, button", "Fit to Window, button", "Select, button". Note against E2 which controls were named, which were silent, and any that were named wrongly, and continue.
+3. Press **R**, wait a moment, then press **V**. You should hear Orca read the status bar's new hint text after each key, for example a sentence about dragging to draw a rectangle. Note against E3 whether the hint was read after each key, and continue.
+4. Press **Tab** until the focus reaches the layer list on the right (the rows "Layer 1" and "Layer 2"), then press the **Down** and **Up** arrow keys. You should hear Orca read each layer's name as the arrows move. Note against E4 what Orca said, and continue.
+5. In the second terminal, type the line below and press Enter:
+   ```bash
+   pkill orca
+   ```
+   You should hear Orca stop and see the prompt again. If not, note what you see against E5 and continue.
+
+**F. In the SnapMock window, closing.** Row 33's dialog as seen on the display.
+
+1. Open the **File** menu and click **Quit**. You should see the Unsaved Changes dialog: the text "You have unsaved changes to Untitled. Do you want to save before closing?", a small preview of the canvas with the rectangle, and three buttons, Save, Don't Save, Cancel. Click **Don't Save**. You should see the window close and, in the first terminal, the prompt return. If not, note what you see against F1.
+
+Answers go in Section 16.3 to 16.8 rows by step letter, quoted.
+
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.15 | 09-10-26 03:55 | Claude (Claude Code) | Acceptance pass, step 1: Section 16 with the evidence map for the thirty-six Section 17 bullets (existing tests named, new tests planned, display steps) and the display checklist of Section 16.9; every verdict pending. |
 | 1.14 | 09-10-26 02:15 | Claude (Claude Code) | Next step points at `docs/General-UI-Acceptance-Pass-Kickoff-Prompt.md`. |
 | 1.13 | 09-10-26 01:45 | Claude (Claude Code) | Phase 8 done: phase table, two PRD inconsistencies (Section 4), nine deviations (Section 6), tests (Section 7), build summary and next step (Section 15). General UI PRD 2.4, Technical Architecture PRD Section 10 rows. |
 | 1.12 | 09-09-26 22:05 | Claude (Claude Code) | Phase 8 in progress: decision 5 (Section 5.1), the phase table. |
