@@ -17,6 +17,7 @@ from PyQt6.QtGui import (
     QKeyEvent,
     QMouseEvent,
     QPainter,
+    QPaintEvent,
     QPen,
     QPixmap,
     QWheelEvent,
@@ -1105,6 +1106,42 @@ class SnapView(QGraphicsView):
                 active.cancel()
         self._stop_auto_scroll()
         super().focusOutEvent(event)  # type: ignore[arg-type]
+        self._repaint_focus_frame()
+
+    # --- focus indicator (General UI PRD 14) ---
+
+    FOCUS_FRAME_WIDTH = 2
+
+    def focusInEvent(self, event: object) -> None:  # noqa: N802
+        super().focusInEvent(event)  # type: ignore[arg-type]
+        self._repaint_focus_frame()
+
+    def _repaint_focus_frame(self) -> None:
+        vp = self.viewport()
+        if vp is not None:
+            vp.update()
+
+    def paintEvent(self, event: QPaintEvent | None) -> None:  # noqa: N802
+        """The scene, then the 2 px accent frame while the view has keyboard focus.
+
+        The style sheet's ``QGraphicsView:focus`` border does not show on this view
+        (acceptance pass, implementation notes Section 16 row 36), so the frame is
+        painted inside the viewport, where the rulers' margins cannot hide it.
+        """
+        super().paintEvent(event)
+        if not self.hasFocus():
+            return
+        vp = self.viewport()
+        if vp is None:
+            return
+        painter = QPainter(vp)
+        width = self.FOCUS_FRAME_WIDTH
+        pen = QPen(current_theme().accent, width)
+        pen.setJoinStyle(Qt.PenJoinStyle.MiterJoin)
+        painter.setPen(pen)
+        half = width / 2
+        painter.drawRect(QRectF(half, half, vp.width() - width, vp.height() - width))
+        painter.end()
 
     # --- context menu ---
 

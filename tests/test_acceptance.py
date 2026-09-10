@@ -772,3 +772,27 @@ def test_17_8_every_tab_stop_is_reached_from_the_first(main_window: MainWindow) 
     stops = [w for w in focusable_controls(main_window) if w.window() is main_window]
     unreached = [describe(w) for w in stops if w not in seen]
     assert unreached == []
+
+
+def test_17_8_canvas_paints_its_focus_frame(main_window: MainWindow) -> None:
+    """Row 36 failed as found (the style sheet's focus border did not show on the canvas)
+    and is fixed since: the view paints a 2 px accent frame inside its viewport while it
+    has keyboard focus, and nothing while it does not."""
+    main_window.show()
+    QApplication.setActiveWindow(main_window)
+    view = main_window.view
+    viewport = view.viewport()
+    assert viewport is not None
+    accent = tm.current_theme().accent.name().upper()
+
+    main_window._layer_panel.setFocus()  # noqa: SLF001
+    assert not view.hasFocus()
+    image = viewport.grab().toImage()
+    assert image.pixelColor(1, 1).name().upper() != accent
+
+    view.setFocus()
+    assert view.hasFocus()
+    image = viewport.grab().toImage()
+    for x, y in ((1, 1), (viewport.width() - 2, 1), (1, viewport.height() - 2), (30, 0)):
+        assert image.pixelColor(x, y).name().upper() == accent, (x, y)
+    assert image.pixelColor(30, 4).name().upper() != accent
