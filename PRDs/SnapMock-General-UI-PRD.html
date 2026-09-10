@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.4</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.5</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.4</dd>
-    <dt>Last Updated</dt>    <dd>09-10-26 01:30</dd>
+    <dt>Document version</dt><dd>2.5</dd>
+    <dt>Last Updated</dt>    <dd>09-10-26 06:00</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.5</td>
+        <td class="nowrap">09-10-26 06:00</td>
+        <td>Doug Bower</td>
+        <td>Acceptance pass against Section 17 (implementation notes Section 16): thirty-six bullets, thirty pass and six fail, none not applicable; four fails fixed since in their own commits (the bottom dock edge, Ctrl++ for Zoom In, the Image menu labels, the canvas focus frame). Rows record the pass, the decisions of 09-10-26 on the fails without an owner (menu labels and order kept as shipped for the Layer and Tools menus, the Hardware acceleration setting removed, drag-and-drop as a background layer deferred with the layer type), and two findings outside the bullets. Two requirements changed, each where a row says so.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>2.4</td>
         <td class="nowrap">09-10-26 01:30</td>
@@ -154,6 +161,48 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-10-26 06:00</td>
+        <td>17</td>
+        <td>Verified</td>
+        <td>Acceptance pass run on 09-10-26 against version 2.4 from the kickoff prompt of that date: every bullet has one verdict with its evidence in implementation notes Section 16 (an existing test, a test in tests/test_acceptance.py, or a check on the real display answered by Doug). Thirty pass, six fail, none not applicable. The fails: the bottom dock edge (17.1), the six deferred menu rows and the label and order departures (17.2), Ctrl++ for Zoom In (17.2), a dropped image file as a raster region rather than a background layer (17.4), the Hardware acceleration setting (17.7), and the canvas focus outline (17.8). Four are fixed since; the rows below record the rest.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 06:00</td>
+        <td>2.3, 3.3, 3.5, 14</td>
+        <td>Built</td>
+        <td>Fixed after the pass, each in its own commit: the Layer Panel and Property Panel accept the bottom dock edge as Section 2.3 lists; View &gt; Zoom In answers to Ctrl++ as Section 3.3 binds it, beside the shipped Ctrl+=; the Image menu's rotate and flip rows read Rotate Canvas 90° CW, Rotate Canvas 90° CCW, Flip Canvas Horizontal, and Flip Canvas Vertical as Section 3.5 tables them, so the Image and Arrange menus no longer share a label; the canvas paints a 2 px accent frame inside its viewport while it has keyboard focus, since the style sheet's focus border did not show on it (Section 14).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 06:00</td>
+        <td>3.4, 3.7, 3.3, 3.2</td>
+        <td>Decision</td>
+        <td>Decision 09-10-26: the shipped labels and order stay where the pass found them differing from the tables and the built form is the clearer one. Layer menu: Move Up, Move Down, Move to Top, Move to Bottom, unambiguous under their own menu. Tools menu: each row carries the tool's display name, the same name the palette tooltip and the Tool Options Bar use (Select, Raster Select, Lasso Select, Crop, Freehand, Text, Callout, Blur, Highlight, Stamp, Pan); the tool IDs are unchanged. View menu: Fit to Window before Zoom to 100%, Show Tool Palette before Show Tool Options, Reset Layout and Dark Mode in one group. Edit menu: Duplicate after Delete in its own group. The tables should be read with these labels and this order.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 06:00</td>
+        <td>11.3</td>
+        <td>Removed</td>
+        <td>Decision 09-10-26: the Performance category's Hardware acceleration checkbox (enable or disable OpenGL rendering) is withdrawn until a rendering need appears. Nothing renders through OpenGL, the Technical Architecture PRD names no such path, and Section 1.3 forbids a control with nothing behind it. The pass found the row unbuilt with no record of why; this row is that record.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 06:00</td>
+        <td>17.4, 6.2</td>
+        <td>Deferred</td>
+        <td>Decision 09-10-26: drag-and-drop of an image file onto the canvas lands as a raster region on the active layer, centred on the drop point, as Paste from Clipboard does (version 2.4 row against Section 16). The background layer this bullet names arrives with the layer type and the BG badge that decision 6.1 sent to the Navigation and Raster Operations follow-up; the bullet stays failed until then.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 06:00</td>
+        <td>3.8</td>
+        <td>Deferred</td>
+        <td>Check for Updates still says it is scheduled for a later phase. Decision 09-10-26: it is the first row of the General UI follow-up list in implementation notes Section 16.10, which a later kickoff picks up; no phase of this implementation builds it.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 06:00</td>
+        <td>6.6</td>
+        <td>Noted</td>
+        <td>Found on the display during the pass, outside the cursor bullet: with the Zoom tool active, holding Alt swaps the cursor to the minus magnifier, but Alt+click did not zoom out on the Linux desktop used (Cinnamon), whose default Alt+left-button gesture moves the window before the click reaches the view. The tool handles Alt on release; the cause is not verified. Recorded for the Navigation and Raster Operations follow-up, which owns the Zoom tool.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-10-26 01:30</td>
         <td>16.1</td>
