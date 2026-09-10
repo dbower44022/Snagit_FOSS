@@ -1,6 +1,6 @@
 # General UI Implementation Notes
 
-Last Updated: 09-10-26 11:55 · Revision 1.22
+Last Updated: 09-10-26 12:20 · Revision 1.23
 
 Implements the SnapMock General User Interface PRD (version 2.4, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
@@ -571,12 +571,13 @@ Every walk over the scene's items, and the walk it now means:
 
 Each has its General UI PRD 2.6 row and its Section 6 bullet: the SVG export's per-member group element, the Snagit writer's dropped scale, rotation, and skew, Select All Text selecting members directly, and the per-item lock's effect on selection left as it was. Three findings outside the work's scope went to the follow-up list of Section 16.10 and were fixed by Doug's decision of 09-10-26 in the commit after the close-out: item transforms not saved, stacking order reversed on load, Paste keeping item ids (General UI PRD 2.7, Technical Architecture PRD 1.14; two tests in `tests/test_io/test_project_serializer.py`, one in `tests/test_clipboard.py`). At the close of the kickoff the suite passes with the one environmental deselection (`test_font_combo_reflects_text_item_font`); the count is in the change-log row.
 
-**Next required step:** the Navigation and Raster Operations follow-up, in a new session with a kickoff prompt to be written: Merge Down, Merge Visible, and Flatten All; the layer blend mode and the BG and raster badges (decision 6.1); the background layer on drop and paste (acceptance pass row 16); the Zoom tool's Alt+click check (acceptance pass row 20). Before it, the display confirmation of step B17 (Section 16.9) is still owed.
+**Next required step:** the Navigation and Raster Operations follow-up, in a new session pasting `docs/Navigation-Raster-Operations-Follow-Up-Kickoff-Prompt.md` (revision 1.0, starting state at commit 8b7089f): Merge Down, Merge Visible, and Flatten All; the layer blend mode and the BG and raster badges (decision 6.1); the background layer on drop and paste (acceptance pass row 16); the Zoom tool's Alt+click check (acceptance pass row 20); three decisions at the start (what a merge produces, what the layer type is, where the blend mode is applied) and eight silences, recorded as Section 18 of these notes. Before it, the display confirmation of step B17 (Section 16.9) is still owed.
 
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.23 | 09-10-26 12:20 | Claude (Claude Code) | Next step points at `docs/Navigation-Raster-Operations-Follow-Up-Kickoff-Prompt.md`. |
 | 1.22 | 09-10-26 11:55 | Claude (Claude Code) | The three Section 16.10 findings fixed by decision: transforms saved, stacking order restored on load, Paste renews ids. General UI PRD 2.7, Technical Architecture PRD 1.14. Suite count in the commit message. |
 | 1.21 | 09-10-26 11:35 | Claude (Claude Code) | Group and Ungroup done: the phase-table row, Section 16 row 6 fixed since, four deviations (Section 6), tests (Section 7), three follow-up findings (Section 16.10), Section 17.2 build summary with the walk table, Section 17.3 deviations, the next required step. General UI PRD 2.6. The suite passes 953 with 13 skipped and the one environmental deselection at every one of the five commits (924, 930, 939, 953 as the steps landed). |
 | 1.20 | 09-10-26 07:30 | Claude (Claude Code) | Group and Ungroup in progress: Section 17 with the two decisions (A, a container item; A, refuse across layers) and the six silences, the phase-table row. |
