@@ -2903,13 +2903,11 @@ class MainWindow(QMainWindow):
         """Select every unlocked item on the active layer (PRD 3.2)."""
         lm = self._scene.layer_manager
         active = lm.active_layer
+        # Top-level items: a group is selected as one, never its members
         items: list[QGraphicsItem] = [
             i
-            for i in self._scene.items()
-            if isinstance(i, SnapGraphicsItem)
-            and active is not None
-            and i.layer_id == active.layer_id
-            and not i.locked
+            for i in self._scene.annotation_items()
+            if active is not None and i.layer_id == active.layer_id and not i.locked
         ]
         if self._require("Select All", (bool(items), "at least one item on the active layer")):
             self._selection_manager.select_items(items)
@@ -2919,9 +2917,7 @@ class MainWindow(QMainWindow):
         lm = self._scene.layer_manager
         usable = {layer.layer_id for layer in lm.layers if layer.visible and not layer.locked}
         items: list[QGraphicsItem] = [
-            i
-            for i in self._scene.items()
-            if isinstance(i, SnapGraphicsItem) and i.layer_id in usable and not i.locked
+            i for i in self._scene.annotation_items() if i.layer_id in usable and not i.locked
         ]
         if self._require("Select All Layers", (bool(items), "at least one item on the canvas")):
             self._selection_manager.select_items(items)
@@ -2930,7 +2926,9 @@ class MainWindow(QMainWindow):
         """Select every text-containing item on visible, unlocked layers (PRD 3.2).
 
         Batch changes to the selection's font, size, and colour arrive with the
-        Property Panel's multi-selection behaviour (PRD 8.6, Phase 6).
+        Property Panel's multi-selection behaviour (PRD 8.6, Phase 6). A group's text
+        members are included, so the batch reaches text inside groups (Group and
+        Ungroup kickoff, step 5).
         """
         from snapmock.items.callout_item import CalloutItem
         from snapmock.items.text_item import TextItem
@@ -2939,7 +2937,7 @@ class MainWindow(QMainWindow):
         usable = {layer.layer_id for layer in lm.layers if layer.visible and not layer.locked}
         items: list[QGraphicsItem] = [
             i
-            for i in self._scene.items()
+            for i in self._scene.all_annotation_items()
             if isinstance(i, (TextItem, CalloutItem)) and i.layer_id in usable and not i.locked
         ]
         if self._require("Select All Text", (bool(items), "at least one text-containing item")):
@@ -2949,7 +2947,7 @@ class MainWindow(QMainWindow):
     def _edit_find_replace_color(self) -> None:
         from snapmock.ui.find_replace_color_dialog import FindReplaceColorDialog
 
-        has_items = any(isinstance(i, SnapGraphicsItem) for i in self._scene.items())
+        has_items = bool(self._scene.annotation_items())
         if not self._require("Find/Replace Color", (has_items, "at least one item on the canvas")):
             return
         dlg = FindReplaceColorDialog(self._scene, self)
@@ -3014,8 +3012,8 @@ class MainWindow(QMainWindow):
         lm = self._scene.layer_manager
         visible = {layer.layer_id for layer in lm.layers if layer.visible}
         bounds = QRectF()
-        for item in self._scene.items():
-            if isinstance(item, SnapGraphicsItem) and item.layer_id in visible:
+        for item in self._scene.annotation_items():
+            if item.layer_id in visible:
                 bounds = bounds.united(item.sceneBoundingRect())
         return bounds.intersected(self._scene.canvas_rect)
 
@@ -3084,9 +3082,8 @@ class MainWindow(QMainWindow):
         from snapmock.core.command_stack import BaseCommand
 
         ids = {layer.layer_id for layer in targets}
-        items = [
-            i for i in self._scene.items() if isinstance(i, SnapGraphicsItem) and i.layer_id in ids
-        ]
+        # Top-level items: a group is removed with its members and counts once
+        items = [i for i in self._scene.annotation_items() if i.layer_id in ids]
         if items and self._settings.confirm_delete_layers():
             count = len(items)
             noun = "item" if count == 1 else "items"

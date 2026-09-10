@@ -172,14 +172,14 @@ def _round_trip_update(item: SnapGraphicsItem, obj: dict[str, Any]) -> dict[str,
     # Update PointsArray from item position for the common case
     if isinstance(item, (ArrowItem, LineItem)):
         line = item._line
-        pos = item.pos()
+        pos = item.scenePos()
         x1 = line.x1() + pos.x()
         y1 = line.y1() + pos.y()
         x2 = line.x2() + pos.x()
         y2 = line.y2() + pos.y()
         obj["PointsArray"] = [f"{x1:.0f},{y1:.0f}", f"{x2:.0f},{y2:.0f}"]
     elif isinstance(item, RectangleItem):
-        pos = item.pos()
+        pos = item.scenePos()
         r = item._rect
         x1 = r.x() + pos.x()
         y1 = r.y() + pos.y()
@@ -187,7 +187,7 @@ def _round_trip_update(item: SnapGraphicsItem, obj: dict[str, Any]) -> dict[str,
         y2 = y1 + r.height()
         obj["PointsArray"] = [f"{x1:.0f},{y1:.0f}", f"{x2:.0f},{y2:.0f}"]
     elif isinstance(item, CalloutItem):
-        pos = item.pos()
+        pos = item.scenePos()
         r = item._rect
         x1 = r.x() + pos.x()
         y1 = r.y() + pos.y()
@@ -198,7 +198,7 @@ def _round_trip_update(item: SnapGraphicsItem, obj: dict[str, Any]) -> dict[str,
         tip = item._tail_tip
         obj["CalloutTails"] = [f"{tip.x() + pos.x():.0f},{tip.y() + pos.y():.0f}"]
     elif isinstance(item, TextItem):
-        pos = item.pos()
+        pos = item.scenePos()
         w = item._width
         br = item.boundingRect()
         obj["PointsArray"] = [
@@ -213,7 +213,7 @@ def _round_trip_update(item: SnapGraphicsItem, obj: dict[str, Any]) -> dict[str,
 
 def _item_to_arrow(item: ArrowItem) -> dict[str, Any]:
     line = item._line
-    pos = item.pos()
+    pos = item.scenePos()
     x1 = line.x1() + pos.x()
     y1 = line.y1() + pos.y()
     x2 = line.x2() + pos.x()
@@ -240,7 +240,7 @@ def _item_to_arrow(item: ArrowItem) -> dict[str, Any]:
 
 def _item_to_line(item: LineItem) -> dict[str, Any]:
     line = item._line
-    pos = item.pos()
+    pos = item.scenePos()
     x1 = line.x1() + pos.x()
     y1 = line.y1() + pos.y()
     x2 = line.x2() + pos.x()
@@ -266,7 +266,7 @@ def _item_to_line(item: LineItem) -> dict[str, Any]:
 
 
 def _item_to_shape(item: RectangleItem) -> dict[str, Any]:
-    pos = item.pos()
+    pos = item.scenePos()
     r = item._rect
     x1 = r.x() + pos.x()
     y1 = r.y() + pos.y()
@@ -306,7 +306,7 @@ def _item_to_shape(item: RectangleItem) -> dict[str, Any]:
 
 
 def _item_to_highlight(item: HighlightItem) -> dict[str, Any]:
-    pos = item.pos()
+    pos = item.scenePos()
     br = item.boundingRect()
     x1 = br.x() + pos.x()
     y1 = br.y() + pos.y()
@@ -323,7 +323,7 @@ def _item_to_highlight(item: HighlightItem) -> dict[str, Any]:
 
 def _item_to_highlight_rect(item: RectangleItem) -> dict[str, Any]:
     """Convert a RectangleItem tagged as a Snagit highlight."""
-    pos = item.pos()
+    pos = item.scenePos()
     r = item._rect
     x1 = r.x() + pos.x()
     y1 = r.y() + pos.y()
@@ -351,7 +351,7 @@ def _get_halign_str(item: TextItem | CalloutItem) -> str:
 
 
 def _item_to_callout(item: CalloutItem) -> dict[str, Any]:
-    pos = item.pos()
+    pos = item.scenePos()
     r = item._rect
     x1 = r.x() + pos.x()
     y1 = r.y() + pos.y()
@@ -408,7 +408,7 @@ def _item_to_callout(item: CalloutItem) -> dict[str, Any]:
 
 
 def _item_to_text(item: TextItem) -> dict[str, Any]:
-    pos = item.pos()
+    pos = item.scenePos()
     w = item._width
     br = item.boundingRect()
     x1 = pos.x()
@@ -462,7 +462,7 @@ def _item_to_text(item: TextItem) -> dict[str, Any]:
 
 
 def _item_to_image(item: RasterRegionItem) -> dict[str, Any]:
-    pos = item.pos()
+    pos = item.scenePos()
     pw = item._pixmap.width()
     ph = item._pixmap.height()
     x1 = pos.x()
@@ -489,19 +489,24 @@ def _item_to_image(item: RasterRegionItem) -> dict[str, Any]:
 def _split_bg_and_annotations(
     scene: SnapScene,
 ) -> tuple[RasterRegionItem | None, list[SnapGraphicsItem]]:
-    """Find the lowest-z RasterRegionItem as background; rest are annotations."""
-    all_items: list[SnapGraphicsItem] = []
-    for qitem in scene.items():
-        if isinstance(qitem, SnapGraphicsItem):
-            all_items.append(qitem)
-    # Sort by z-value ascending
-    all_items.sort(key=lambda i: i.zValue())
+    """Find the lowest-z top-level RasterRegionItem as background; rest are annotations.
+
+    A group is written as its members, each at the position the group showed it (the
+    group's translation composed in; a group's scale, rotation, or skew has no Snagit
+    form and is dropped), with no warning (Group and Ungroup kickoff, silence 4).
+    """
+    from snapmock.items.group_item import GroupItem
+
+    # Top-level items in z-order, bottom first
+    all_items = sorted(scene.annotation_items(), key=lambda i: i.zValue())
 
     bg: RasterRegionItem | None = None
     annotations: list[SnapGraphicsItem] = []
     for item in all_items:
         if bg is None and isinstance(item, RasterRegionItem):
             bg = item
+        elif isinstance(item, GroupItem):
+            annotations.extend(m for m in item.descendants() if not isinstance(m, GroupItem))
         else:
             annotations.append(item)
     return bg, annotations

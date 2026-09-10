@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 from PyQt6.QtCore import QPointF, QSizeF
 
 from snapmock.core.command_stack import BaseCommand
-from snapmock.items.base_item import SnapGraphicsItem
 
 if TYPE_CHECKING:
     from snapmock.core.scene import SnapScene
@@ -31,39 +30,37 @@ class RotateCanvasCommand(BaseCommand):
 
         # Save old positions
         self._old_positions.clear()
-        for scene_item in self._scene.items():
-            if isinstance(scene_item, SnapGraphicsItem):
-                self._old_positions[scene_item.item_id] = QPointF(scene_item.pos())
+        # Top-level items only: a group's members ride with the group
+        for scene_item in self._scene.annotation_items():
+            self._old_positions[scene_item.item_id] = QPointF(scene_item.pos())
 
         # Swap canvas dimensions
         new_size = QSizeF(h, w)
         self._scene.set_canvas_size(new_size)
 
         # Rotate each item's position around old canvas center
-        for scene_item in self._scene.items():
-            if isinstance(scene_item, SnapGraphicsItem):
-                pos = self._old_positions.get(scene_item.item_id)
-                if pos is None:
-                    continue
-                if self._clockwise:
-                    # (x, y) -> (h - y, x) when rotating CW (old h becomes new w)
-                    new_x = h - pos.y()
-                    new_y = pos.x()
-                else:
-                    # (x, y) -> (y, w - x) when rotating CCW
-                    new_x = pos.y()
-                    new_y = w - pos.x()
-                scene_item.setPos(new_x, new_y)
+        for scene_item in self._scene.annotation_items():
+            pos = self._old_positions.get(scene_item.item_id)
+            if pos is None:
+                continue
+            if self._clockwise:
+                # (x, y) -> (h - y, x) when rotating CW (old h becomes new w)
+                new_x = h - pos.y()
+                new_y = pos.x()
+            else:
+                # (x, y) -> (y, w - x) when rotating CCW
+                new_x = pos.y()
+                new_y = w - pos.x()
+            scene_item.setPos(new_x, new_y)
 
     def undo(self) -> None:
         # Restore canvas size
         self._scene.set_canvas_size(self._old_size)
         # Restore positions
-        for scene_item in self._scene.items():
-            if isinstance(scene_item, SnapGraphicsItem):
-                old_pos = self._old_positions.get(scene_item.item_id)
-                if old_pos is not None:
-                    scene_item.setPos(old_pos)
+        for scene_item in self._scene.annotation_items():
+            old_pos = self._old_positions.get(scene_item.item_id)
+            if old_pos is not None:
+                scene_item.setPos(old_pos)
 
     @property
     def description(self) -> str:
@@ -88,29 +85,27 @@ class FlipCanvasCommand(BaseCommand):
         h = canvas.height()
 
         self._old_positions.clear()
-        for scene_item in self._scene.items():
-            if isinstance(scene_item, SnapGraphicsItem):
-                self._old_positions[scene_item.item_id] = QPointF(scene_item.pos())
+        # Top-level items only: a group's members ride with the group
+        for scene_item in self._scene.annotation_items():
+            self._old_positions[scene_item.item_id] = QPointF(scene_item.pos())
 
-        for scene_item in self._scene.items():
-            if isinstance(scene_item, SnapGraphicsItem):
-                pos = scene_item.pos()
-                rect = scene_item.boundingRect()
-                if self._horizontal:
-                    # Mirror across vertical center axis
-                    new_x = w - pos.x() - rect.width()
-                    scene_item.setPos(new_x, pos.y())
-                else:
-                    # Mirror across horizontal center axis
-                    new_y = h - pos.y() - rect.height()
-                    scene_item.setPos(pos.x(), new_y)
+        for scene_item in self._scene.annotation_items():
+            pos = scene_item.pos()
+            rect = scene_item.boundingRect()
+            if self._horizontal:
+                # Mirror across vertical center axis
+                new_x = w - pos.x() - rect.width()
+                scene_item.setPos(new_x, pos.y())
+            else:
+                # Mirror across horizontal center axis
+                new_y = h - pos.y() - rect.height()
+                scene_item.setPos(pos.x(), new_y)
 
     def undo(self) -> None:
-        for scene_item in self._scene.items():
-            if isinstance(scene_item, SnapGraphicsItem):
-                old_pos = self._old_positions.get(scene_item.item_id)
-                if old_pos is not None:
-                    scene_item.setPos(old_pos)
+        for scene_item in self._scene.annotation_items():
+            old_pos = self._old_positions.get(scene_item.item_id)
+            if old_pos is not None:
+                scene_item.setPos(old_pos)
 
     @property
     def description(self) -> str:

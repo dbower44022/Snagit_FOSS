@@ -24,10 +24,10 @@ class CropCanvasCommand(BaseCommand):
         self._old_size = QSizeF(scene.canvas_size)
         self._offset = QPointF(crop_rect.topLeft())
         # Store original item positions for undo
-        self._item_positions: list[tuple[SnapGraphicsItem, QPointF]] = []
-        for gitem in scene.items():
-            if isinstance(gitem, SnapGraphicsItem):
-                self._item_positions.append((gitem, QPointF(gitem.pos())))
+        # Top-level items only: a group's members ride with the group
+        self._item_positions: list[tuple[SnapGraphicsItem, QPointF]] = [
+            (gitem, QPointF(gitem.pos())) for gitem in scene.annotation_items()
+        ]
         # Track items removed because they were entirely outside the crop
         self._removed_items: list[tuple[SnapGraphicsItem, str]] = []
 
@@ -137,10 +137,10 @@ class ResizeCanvasCommand(BaseCommand):
         self._old_size = QSizeF(scene.canvas_size)
         self._anchor = anchor
         self._fill_color = fill_color or QColor("white")
-        self._item_offsets: list[tuple[SnapGraphicsItem, QPointF]] = []
-        for gitem in scene.items():
-            if isinstance(gitem, SnapGraphicsItem):
-                self._item_offsets.append((gitem, QPointF(gitem.pos())))
+        # Top-level items only: a group's members ride with the group
+        self._item_offsets: list[tuple[SnapGraphicsItem, QPointF]] = [
+            (gitem, QPointF(gitem.pos())) for gitem in scene.annotation_items()
+        ]
         self._offset = self._compute_offset()
 
     def _compute_offset(self) -> QPointF:
@@ -179,10 +179,10 @@ class ResizeImageCommand(BaseCommand):
         self._new_size = QSizeF(new_size)
         self._old_size = QSizeF(scene.canvas_size)
         # Store serialized item state for undo (captures all geometry)
-        self._item_snapshots: list[tuple[SnapGraphicsItem, QPointF, dict[str, Any]]] = []
-        for gitem in scene.items():
-            if isinstance(gitem, SnapGraphicsItem):
-                self._item_snapshots.append((gitem, QPointF(gitem.pos()), gitem.serialize()))
+        # Top-level items only: a group scales its members and their offsets itself
+        self._item_snapshots: list[tuple[SnapGraphicsItem, QPointF, dict[str, Any]]] = [
+            (gitem, QPointF(gitem.pos()), gitem.serialize()) for gitem in scene.annotation_items()
+        ]
 
     def redo(self) -> None:
         sx = self._new_size.width() / max(self._old_size.width(), 1)
@@ -214,6 +214,7 @@ class ResizeImageCommand(BaseCommand):
         from snapmock.items.callout_item import CalloutItem
         from snapmock.items.ellipse_item import EllipseItem
         from snapmock.items.freehand_item import FreehandItem
+        from snapmock.items.group_item import GroupItem
         from snapmock.items.highlight_item import HighlightItem
         from snapmock.items.line_item import LineItem
         from snapmock.items.numbered_step_item import NumberedStepItem
@@ -224,6 +225,14 @@ class ResizeImageCommand(BaseCommand):
         from snapmock.items.vector_item import VectorItem
 
         target.prepareGeometryChange()
+
+        if isinstance(target, GroupItem) and isinstance(source, GroupItem):
+            # A group's snapshot carries its members: restore each member from its own
+            # entry, position included, since the group scaled their offsets too.
+            for member, restored in zip(target.members, source.members):
+                member.setPos(restored.pos())
+                ResizeImageCommand._restore_geometry(member, restored)
+            return
 
         # Restore stroke properties for vector items
         if isinstance(target, VectorItem) and isinstance(source, VectorItem):

@@ -54,10 +54,11 @@ class DuplicateLayerCommand(BaseCommand):
         if self._layer is None:
             self._layer = source.clone()
             self._layer.item_ids = []
+            # Top-level items: a group's clone carries its members
             self._clones = [
                 item.clone()
-                for item in self._scene.items()
-                if isinstance(item, SnapGraphicsItem) and item.layer_id == self._source_id
+                for item in self._scene.annotation_items()
+                if item.layer_id == self._source_id
             ]
         self._mgr.insert_layer(self._layer, self._mgr.index_of(self._source_id) + 1)
         for clone in self._clones:

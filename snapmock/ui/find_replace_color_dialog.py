@@ -37,9 +37,8 @@ COLOR_PROPERTIES: tuple[str, ...] = (
 def color_matches(scene: SnapScene, color: QColor) -> list[tuple[SnapGraphicsItem, str]]:
     """Every ``(item, property)`` whose current colour equals *color* exactly, alpha included."""
     matches: list[tuple[SnapGraphicsItem, str]] = []
-    for item in scene.items():
-        if not isinstance(item, SnapGraphicsItem):
-            continue
+    # Every item, a group's members included: a colour inside a group is replaced too
+    for item in scene.all_annotation_items():
         for prop in COLOR_PROPERTIES:
             if not hasattr(type(item), prop):
                 continue

@@ -101,12 +101,12 @@ class RenderEngine:
         image = QImage(w, h, QImage.Format.Format_ARGB32_Premultiplied)
         image.fill(Qt.GlobalColor.transparent)
 
-        # Temporarily hide items not on the target layer, and show the target's
+        # Temporarily hide items not on the target layer, and show the target's.
+        # Top-level items only: a group's members follow the group, and toggling a
+        # member's own flag would leave it hidden inside a group shown again later.
         hidden_items: list[SnapGraphicsItem] = []
         shown_items: list[SnapGraphicsItem] = []
-        for gitem in self._scene.items():
-            if not isinstance(gitem, SnapGraphicsItem):
-                continue
+        for gitem in self._scene.annotation_items():
             if gitem.layer_id != layer_id:
                 if gitem.isVisible():
                     gitem.setVisible(False)

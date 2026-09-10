@@ -228,7 +228,8 @@ def _raster_items(scene: SnapScene) -> list[QGraphicsItem]:
     from snapmock.items.raster_region_item import RasterRegionItem
     from snapmock.items.stamp_item import StampItem
 
-    return [i for i in scene.items() if isinstance(i, RasterRegionItem | StampItem)]
+    # Members included: a raster inside a group is hidden with the rest
+    return [i for i in scene.all_annotation_items() if isinstance(i, RasterRegionItem | StampItem)]
 
 
 def _write_svg(scene: SnapScene, settings: ExportSettings, region: QRectF, target: object) -> None:

@@ -42,6 +42,7 @@ from snapmock.core.command_stack import BaseCommand
 from snapmock.core.theme_manager import current_theme, theme_manager
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.callout_item import CalloutItem
+from snapmock.items.group_item import GroupItem
 from snapmock.items.text_item import TextItem
 from snapmock.items.vector_item import VectorItem
 from snapmock.ui.collapsible_section import CollapsibleSection
@@ -669,7 +670,25 @@ class PropertyPanel(QDockWidget):
         return items[0] if items else None
 
     def _selected_vectors(self) -> list[VectorItem]:
-        return [i for i in self._selected_items() if isinstance(i, VectorItem)]
+        """The vector items an Appearance edit reaches: a group stands for its vector
+        members, nested groups included (Group and Ungroup kickoff, silence 2)."""
+        found: list[VectorItem] = []
+        for item in self._selected_items():
+            if isinstance(item, VectorItem):
+                found.append(item)
+            elif isinstance(item, GroupItem):
+                found.extend(m for m in item.descendants() if isinstance(m, VectorItem))
+        return found
+
+    @staticmethod
+    def _shows_appearance(item: SnapGraphicsItem) -> bool:
+        """Whether *item* takes the Appearance section: a vector item, or a group with
+        at least one vector item below it."""
+        if isinstance(item, VectorItem):
+            return True
+        if isinstance(item, GroupItem):
+            return any(isinstance(m, VectorItem) for m in item.descendants())
+        return False
 
     def _selected_text_items(self) -> list[_TextLike]:
         return [i for i in self._selected_items() if isinstance(i, (TextItem, CalloutItem))]
@@ -681,7 +700,7 @@ class PropertyPanel(QDockWidget):
         try:
             items = self._selected_items()
             has_selection = bool(items)
-            all_vector = has_selection and all(isinstance(i, VectorItem) for i in items)
+            all_vector = has_selection and all(self._shows_appearance(i) for i in items)
             all_text = has_selection and all(isinstance(i, (TextItem, CalloutItem)) for i in items)
             all_text_items = has_selection and all(isinstance(i, TextItem) for i in items)
 
@@ -705,7 +724,7 @@ class PropertyPanel(QDockWidget):
             elif items:
                 self._populate_transform(items)
                 if all_vector:
-                    self._populate_appearance([i for i in items if isinstance(i, VectorItem)])
+                    self._populate_appearance(self._selected_vectors())
                 if all_text:
                     self._populate_text(self._selected_text_items(), all_text_items)
                 self._populate_info(items)
@@ -733,7 +752,8 @@ class PropertyPanel(QDockWidget):
         self._stroke_w_slider.setValue(int(value) if uniform else 0)
         self._set_spin(self._stroke_w_spin, widths)
         self._set_color(self._fill_color_picker, self._fill_hex, [i.fill_color for i in items])
-        opacities = [int(i.opacity_pct) for i in items]
+        # Opacity is the selected items' own: a group's, not its members'
+        opacities = [int(i.opacity_pct) for i in self._selected_items()]
         value, uniform = _uniform(opacities)
         self._opacity_slider.setValue(int(value) if uniform else 0)
         self._set_spin(self._opacity_spin, opacities)
@@ -783,7 +803,11 @@ class PropertyPanel(QDockWidget):
 
     def _populate_info(self, items: list[SnapGraphicsItem]) -> None:
         value, uniform = _uniform([i.type_name for i in items])
-        self._type_label.setText(str(value) if uniform else f"{len(items)} items")
+        text = str(value) if uniform else f"{len(items)} items"
+        if len(items) == 1 and isinstance(items[0], GroupItem):
+            count = items[0].member_count
+            text = f"Group ({count} item{'' if count == 1 else 's'})"
+        self._type_label.setText(text)
         self._rebuild_layer_combo()
         self._set_check(self._locked_check, [i.locked for i in items])
 
