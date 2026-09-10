@@ -96,6 +96,7 @@ class VectorItem(SnapGraphicsItem):
             "pos": [self.pos().x(), self.pos().y()],
             "rotation": self.rotation(),
             "opacity": self.opacity(),
+            "transform": self._transform_entry(),
             "stroke_color": self._stroke_color.name(QColor.NameFormat.HexArgb),
             "stroke_width": self._stroke_width,
             "fill_color": self._fill_color.name(QColor.NameFormat.HexArgb),
@@ -110,6 +111,7 @@ class VectorItem(SnapGraphicsItem):
         self.setPos(pos[0], pos[1])
         self.setRotation(data.get("rotation", 0.0))
         self.setOpacity(data.get("opacity", 1.0))
+        self._apply_transform_entry(data)
         self._stroke_color = QColor(data.get("stroke_color", DEFAULT_STROKE_COLOR))
         self._stroke_width = data.get("stroke_width", DEFAULT_STROKE_WIDTH)
         self._fill_color = QColor(data.get("fill_color", DEFAULT_FILL_COLOR))

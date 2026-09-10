@@ -2781,6 +2781,8 @@ class MainWindow(QMainWindow):
             cls = ITEM_REGISTRY.get(item_type)
             if cls is not None:
                 item = cls.deserialize(item_data)
+                # A pasted copy is a new item: the original keeps its id
+                item.renew_ids()
                 if offset:
                     item.setPos(item.pos().x() + 10, item.pos().y() + 10)
                 self._scene.command_stack.push(AddItemCommand(self._scene, item, layer.layer_id))

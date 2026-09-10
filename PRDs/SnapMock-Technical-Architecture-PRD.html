@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Technical Architecture</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.13</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.14</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
-    <dt>Document version</dt><dd>1.13</dd>
-    <dt>Last Updated</dt>    <dd>09-10-26 08:30</dd>
+    <dt>Document version</dt><dd>1.14</dd>
+    <dt>Last Updated</dt>    <dd>09-10-26 11:55</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,16 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.14</td>
+        <td class="nowrap">09-10-26 11:55</td>
+        <td>Doug Bower</td>
+        <td>Section 6.1: every item entry in <code>items.json</code> carries its Qt transform under
+        <code>transform</code>, and the loader restores stacking order from each layer's <code>item_ids</code>
+        (the two save-and-load findings of the Group and Ungroup kickoff, fixed 09-10-26 by decision);
+        Section 3.1.4: a pasted item takes a new id through <code>renew_ids</code>. <code>format_version</code> stays 1.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.13</td>
         <td class="nowrap">09-10-26 08:30</td>
@@ -171,6 +181,18 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-10-26 11:55</td>
+        <td>6.1</td>
+        <td>Changed</td>
+        <td>Decision 09-10-26 (the three findings of General UI PRD 2.6, fixed at once): every item entry in <code>items.json</code> carries its Qt transform as the nine matrix values under <code>transform</code>, written by every item type through <code>SnapGraphicsItem._transform_entry</code> and read back through <code>_apply_transform_entry</code>; an entry without the key reads as the identity, so files from earlier builds load as before. <code>load_project</code> ends by giving every top-level item the z-value of its place in its layer's <code>item_ids</code> through <code>arrange_commands.apply_layer_z_values</code>, so stacking order survives the file; before this the loader assigned no z-values and the saved array's topmost-first order put the topmost item at the bottom. <code>format_version</code> stays 1.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 11:55</td>
+        <td>3.1.4</td>
+        <td>Added</td>
+        <td><code>SnapGraphicsItem.renew_ids</code> gives an item a new id, and a group gives one to every item below it; <code>clone</code> and Paste use it, so a pasted copy no longer shares its id with the original. The <code>transform</code> helpers <code>transform_to_list</code> and <code>transform_from_list</code> moved from the group item to the base module.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-10-26 08:30</td>
         <td>10</td>
@@ -1146,7 +1168,7 @@ enabling unlimited undo/redo.</p>
   <tbody>
     <tr><th>manifest.json</th><td>JSON</td><td>Project metadata: version, canvas size and DPI (<code>canvas.dpi</code>, default 72), creation date, last modified, application version; an optional <code>guides</code> list of horizontal and vertical guide positions (General UI PRD 6.5), present only when the project has guides.</td></tr>
     <tr><th>layers.json</th><td>JSON</td><td>Ordered array of Layer objects with all properties.</td></tr>
-    <tr><th>items.json</th><td>JSON</td><td>Array of all top-level SnapGraphicsItem objects, serialized with their full property sets, keyed by <code>item_id</code>. A <code>GroupItem</code> entry (Section 4.2) carries its transform matrix under <code>transform</code> and its members' entries under <code>members</code>, nested to any depth; a build that does not know the type skips the entry and its members.</td></tr>
+    <tr><th>items.json</th><td>JSON</td><td>Array of all top-level SnapGraphicsItem objects, serialized with their full property sets, keyed by <code>item_id</code>; every entry carries the item's Qt transform under <code>transform</code> (nine matrix values; absent reads as the identity), and the loader restores stacking order from each layer's <code>item_ids</code>. A <code>GroupItem</code> entry (Section 4.2) carries its transform matrix under <code>transform</code> and its members' entries under <code>members</code>, nested to any depth; a build that does not know the type skips the entry and its members.</td></tr>
     <tr><th>raster/</th><td>Directory</td><td>Contains raster data files (PNG) for RasterRegionItems and background layers, named by <code>item_id</code>.</td></tr>
     <tr><th>thumbnails/</th><td>Directory</td><td>Contains layer thumbnail PNGs for fast preview loading.</td></tr>
     <tr><th>fonts/</th><td>Directory</td><td>Embedded font files used by text annotations (optional, for portability).</td></tr>

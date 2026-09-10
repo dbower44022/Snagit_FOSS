@@ -566,6 +566,7 @@ class CalloutItem(RichTextMixin, SnapGraphicsItem):
             "item_id": self.item_id,
             "layer_id": self.layer_id,
             "pos": [self.pos().x(), self.pos().y()],
+            "transform": self._transform_entry(),
             "text": self._document.toPlainText(),
             "html": self._document.toHtml(),
             "rect": [self._rect.x(), self._rect.y(), self._rect.width(), self._rect.height()],
@@ -608,6 +609,7 @@ class CalloutItem(RichTextMixin, SnapGraphicsItem):
         )
         pos = data.get("pos", [0, 0])
         item.setPos(pos[0], pos[1])
+        item._apply_transform_entry(data)
         item.item_id = data.get("item_id", item.item_id)
         item.layer_id = data.get("layer_id", "")
         if "bg_color" in data:

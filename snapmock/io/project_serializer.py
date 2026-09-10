@@ -274,6 +274,13 @@ def load_project(path: Path) -> SnapScene:
             item = cls.deserialize(item_data)
             scene.addItem(item)
 
+    # Stacking order: the saved array is topmost first, so give every top-level item
+    # the z-value of its place in its layer's item_ids
+    from snapmock.commands.arrange_commands import apply_layer_z_values
+
+    for layer in scene.layer_manager.layers:
+        apply_layer_z_values(scene, layer.layer_id)
+
     raw_guides = manifest.get("guides", [])
     if isinstance(raw_guides, list):
         guides = [g for g in (Guide.from_dict(entry) for entry in raw_guides) if g is not None]

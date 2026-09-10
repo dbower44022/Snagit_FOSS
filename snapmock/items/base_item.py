@@ -7,8 +7,34 @@ from abc import abstractmethod
 from typing import Any
 
 from PyQt6.QtCore import QRectF
-from PyQt6.QtGui import QPainter, QPainterPath
+from PyQt6.QtGui import QPainter, QPainterPath, QTransform
 from PyQt6.QtWidgets import QGraphicsObject
+
+
+def transform_to_list(transform: QTransform) -> list[float]:
+    """The nine matrix values of *transform*, row by row (the ``transform`` entry)."""
+    return [
+        transform.m11(),
+        transform.m12(),
+        transform.m13(),
+        transform.m21(),
+        transform.m22(),
+        transform.m23(),
+        transform.m31(),
+        transform.m32(),
+        transform.m33(),
+    ]
+
+
+def transform_from_list(values: object) -> QTransform:
+    """The transform of nine matrix values; the identity when *values* is not that."""
+    if not isinstance(values, list) or len(values) != 9:
+        return QTransform()
+    try:
+        m = [float(v) for v in values]
+    except (TypeError, ValueError):
+        return QTransform()
+    return QTransform(m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8])
 
 
 class SnapGraphicsItem(QGraphicsObject):
@@ -185,11 +211,24 @@ class SnapGraphicsItem(QGraphicsObject):
     def deserialize(cls, data: dict[str, Any]) -> SnapGraphicsItem:
         """Reconstruct an item from serialized data."""
 
+    def _transform_entry(self) -> list[float]:
+        """The ``transform`` entry every item's serialized form carries: the Qt transform
+        the handles set on a resize, rotation, or skew (Technical Architecture PRD 6.1)."""
+        return transform_to_list(self.transform())
+
+    def _apply_transform_entry(self, data: dict[str, Any]) -> None:
+        """Restore the transform from a serialized entry; the identity when absent."""
+        self.setTransform(transform_from_list(data.get("transform")))
+
+    def renew_ids(self) -> None:
+        """Give this item a new id. A container also renews every item below it."""
+        self._item_id = uuid.uuid4().hex
+
     def clone(self) -> SnapGraphicsItem:
         """Return a deep copy with a new item_id."""
         data = self.serialize()
         new_item = type(self).deserialize(data)
-        new_item._item_id = uuid.uuid4().hex
+        new_item.renew_ids()
         return new_item
 
     # --- geometry scaling ---

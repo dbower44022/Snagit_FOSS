@@ -72,6 +72,7 @@ class BlurItem(SnapGraphicsItem):
             "item_id": self.item_id,
             "layer_id": self.layer_id,
             "pos": [self.pos().x(), self.pos().y()],
+            "transform": self._transform_entry(),
             "rect": [self._rect.x(), self._rect.y(), self._rect.width(), self._rect.height()],
             "blur_radius": self._blur_radius,
             "flip_horizontal": self._flip_horizontal,
@@ -87,6 +88,7 @@ class BlurItem(SnapGraphicsItem):
         )
         pos = data.get("pos", [0, 0])
         item.setPos(pos[0], pos[1])
+        item._apply_transform_entry(data)
         item.item_id = data.get("item_id", item.item_id)
         item.layer_id = data.get("layer_id", "")
         item._flip_horizontal = data.get("flip_horizontal", False)

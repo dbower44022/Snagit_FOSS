@@ -2,40 +2,19 @@
 
 from __future__ import annotations
 
-import uuid
 from typing import Any
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import QPainterPath, QTransform
 from PyQt6.QtWidgets import QGraphicsItem, QGraphicsObject
 
-from snapmock.items.base_item import SnapGraphicsItem
+from snapmock.items.base_item import (
+    SnapGraphicsItem,
+    transform_from_list,
+    transform_to_list,
+)
 
-
-def transform_to_list(transform: QTransform) -> list[float]:
-    """The nine matrix values of *transform*, row by row."""
-    return [
-        transform.m11(),
-        transform.m12(),
-        transform.m13(),
-        transform.m21(),
-        transform.m22(),
-        transform.m23(),
-        transform.m31(),
-        transform.m32(),
-        transform.m33(),
-    ]
-
-
-def transform_from_list(values: object) -> QTransform:
-    """The transform of nine matrix values; the identity when *values* is not that."""
-    if not isinstance(values, list) or len(values) != 9:
-        return QTransform()
-    try:
-        m = [float(v) for v in values]
-    except (TypeError, ValueError):
-        return QTransform()
-    return QTransform(m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8])
+__all__ = ["GroupItem", "transform_from_list", "transform_to_list"]
 
 
 class GroupItem(SnapGraphicsItem):
@@ -241,12 +220,16 @@ class GroupItem(SnapGraphicsItem):
                 group.add_member(member)
         return group
 
+    def renew_ids(self) -> None:
+        """A new id for the group and for every item below it."""
+        super().renew_ids()
+        for item in self.descendants():
+            item.renew_ids()
+
     def clone(self) -> GroupItem:
         """A deep copy with a new id for the group and for every item below it."""
         new_group = type(self).deserialize(self.serialize())
-        new_group._item_id = uuid.uuid4().hex
-        for item in new_group.descendants():
-            item._item_id = uuid.uuid4().hex
+        new_group.renew_ids()
         return new_group
 
     # --- type label ---
