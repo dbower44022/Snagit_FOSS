@@ -606,7 +606,8 @@ def test_svg_export_carries_the_group_transform_into_each_member(
     export_svg(scene, path)
     text = path.read_text()
     assert '<rect x="0" y="0" width="50" height="40"/>' in text
-    start = text.index('<rect x="0"')
+    # The canvas colour's own rect comes first since the follow-up (exporter 3.9 row)
+    start = text.index('<rect x="0" y="0" width="50" height="40"/>')
     element = text[text.rfind("<g ", 0, start) : start]
     assert 'transform="matrix(2,0,0,1,11,10)"' in element
 
