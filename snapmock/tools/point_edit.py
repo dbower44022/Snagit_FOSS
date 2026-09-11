@@ -21,10 +21,11 @@ from PyQt6.QtWidgets import QGraphicsItem
 from snapmock.commands.geometry_commands import ModifyGeometryCommand, copy_geometry
 from snapmock.config.constants import LineStyle
 from snapmock.core.command_stack import BaseCommand
-from snapmock.core.path_utils import constrain_angle
+from snapmock.core.path_utils import BezierSegment, constrain_angle
 from snapmock.core.theme_manager import current_theme
 from snapmock.items.arrow_item import ArrowItem
 from snapmock.items.base_item import SnapGraphicsItem
+from snapmock.items.freehand_item import FreehandItem
 from snapmock.items.line_item import LineItem
 
 CONTROL_COLOR = QColor("#2E9E44")
@@ -115,6 +116,14 @@ class PointEditSession:
     def drag_to(self, key: str, scene_pos: QPointF, modifiers: Qt.KeyboardModifier) -> None:
         """Move the handle *key* to *scene_pos*, live."""
         raise NotImplementedError
+
+    def double_click(self, scene_pos: QPointF) -> BaseCommand | None:
+        """The command a double-click on the item makes (an inserted point), if any."""
+        return None
+
+    def right_click(self, scene_pos: QPointF) -> BaseCommand | None:
+        """The command a right-click on a handle makes (a deleted point), if any."""
+        return None
 
     # --- hit testing ---
 
@@ -243,8 +252,163 @@ class ArrowPointSession(LinePointSession):
             super().drag_to(key, scene_pos, modifiers)
 
 
+def _lerp(a: QPointF, b: QPointF, t: float) -> QPointF:
+    return QPointF(a.x() + (b.x() - a.x()) * t, a.y() + (b.y() - a.y()) * t)
+
+
+def _cubic_at(seg: BezierSegment, t: float) -> QPointF:
+    p0, p1, p2, p3 = seg
+    u = 1.0 - t
+    return QPointF(
+        u**3 * p0.x() + 3 * u * u * t * p1.x() + 3 * u * t * t * p2.x() + t**3 * p3.x(),
+        u**3 * p0.y() + 3 * u * u * t * p1.y() + 3 * u * t * t * p2.y() + t**3 * p3.y(),
+    )
+
+
+def split_cubic(seg: BezierSegment, t: float) -> tuple[BezierSegment, BezierSegment]:
+    """*seg* split at *t* into two segments that trace the same curve (de Casteljau)."""
+    p0, p1, p2, p3 = seg
+    a, b, c = _lerp(p0, p1, t), _lerp(p1, p2, t), _lerp(p2, p3, t)
+    d, e = _lerp(a, b, t), _lerp(b, c, t)
+    f = _lerp(d, e, t)
+    return (QPointF(p0), a, d, f), (QPointF(f), e, c, QPointF(p3))
+
+
+class FreehandPointSession(PointEditSession):
+    """A freehand stroke's Bezier points (Basic Shape PRD 9.7): the on-curve points as blue
+    6 px circles and each segment's two control handles as green 5 px hollow circles on
+    dashed lines to their on-curve point.
+
+    Dragging an on-curve point carries its two handles along, so the curve stays smooth
+    through it; dragging a handle turns the opposite handle to stay in line, keeping its
+    length. Alt breaks that continuity: the point or the handle moves alone, making a
+    corner. A double-click on the stroke inserts an on-curve point there, splitting the
+    segment without changing the curve; a right-click on an on-curve point deletes it,
+    merging its two segments, while at least two points remain.
+    """
+
+    HINT = (
+        "Drag points to reshape. Alt+drag: corner. Double-click segment: insert. "
+        "Right-click: delete. Escape: exit."
+    )
+
+    item: FreehandItem
+
+    @staticmethod
+    def _parse(key: str) -> tuple[str, int]:
+        """("point", i), ("cp1", i), or ("cp2", i) for a handle key."""
+        if key.startswith("p"):
+            return "point", int(key[1:])
+        return ("cp1" if key.endswith("a") else "cp2"), int(key[1:-1])
+
+    def handles(self) -> list[PointHandle]:
+        segments = self.item.bezier_segments
+        handles: list[PointHandle] = []
+        for i, (_start, cp1, cp2, _end) in enumerate(segments):
+            handles.append(PointHandle(f"c{i}a", self.to_scene(cp1), HandleKind.OFF_CURVE))
+            handles.append(PointHandle(f"c{i}b", self.to_scene(cp2), HandleKind.OFF_CURVE))
+        # The on-curve points last, so they win where a handle lies on its point
+        for i, seg in enumerate(segments):
+            handles.append(PointHandle(f"p{i}", self.to_scene(seg[0]), HandleKind.ON_CURVE))
+        if segments:
+            end = self.to_scene(segments[-1][3])
+            handles.append(PointHandle(f"p{len(segments)}", end, HandleKind.ON_CURVE))
+        return handles
+
+    def guide_lines(self) -> list[QLineF]:
+        lines: list[QLineF] = []
+        for start, cp1, cp2, end in self.item.bezier_segments:
+            lines.append(QLineF(self.to_scene(start), self.to_scene(cp1)))
+            lines.append(QLineF(self.to_scene(end), self.to_scene(cp2)))
+        return lines
+
+    def property_for(self, key: str) -> str:
+        return "bezier_segments"
+
+    def drag_to(self, key: str, scene_pos: QPointF, modifiers: Qt.KeyboardModifier) -> None:
+        segs = [list(s) for s in self.item.bezier_segments]
+        if not segs:
+            return
+        local = self.to_local(scene_pos)
+        corner = bool(modifiers & Qt.KeyboardModifier.AltModifier)
+        kind, i = self._parse(key)
+        n = len(segs)
+        if kind == "point":
+            old = segs[i][0] if i < n else segs[n - 1][3]
+            delta = local - old
+            if i < n:
+                segs[i][0] = QPointF(local)
+                if not corner:
+                    segs[i][1] = segs[i][1] + delta
+            if i > 0:
+                segs[i - 1][3] = QPointF(local)
+                if not corner:
+                    segs[i - 1][2] = segs[i - 1][2] + delta
+        elif kind == "cp1":
+            segs[i][1] = QPointF(local)
+            if not corner and i > 0:
+                self._align(segs[i][0], segs[i][1], segs[i - 1], 2)
+        else:
+            segs[i][2] = QPointF(local)
+            if not corner and i + 1 < n:
+                self._align(segs[i][3], segs[i][2], segs[i + 1], 1)
+        self.item.bezier_segments = [(s[0], s[1], s[2], s[3]) for s in segs]
+
+    @staticmethod
+    def _align(anchor: QPointF, moved: QPointF, other: list[QPointF], index: int) -> None:
+        """Turn *other*'s handle at *index* to point away from *moved* through *anchor*,
+        keeping its length, so the curve stays smooth through the anchor."""
+        length = QLineF(anchor, other[index]).length()
+        direction = QLineF(moved, anchor)
+        if direction.length() <= 1e-9:
+            return
+        direction.setLength(direction.length() + length)
+        other[index] = direction.p2()
+
+    def _nearest_on_path(self, scene_pos: QPointF) -> tuple[int, float, float]:
+        """The segment, the parameter, and the distance of the stroke nearest *scene_pos*."""
+        local = self.to_local(scene_pos)
+        best = (0, 0.0, float("inf"))
+        for i, seg in enumerate(self.item.bezier_segments):
+            for step in range(1, 64):
+                t = step / 64.0
+                p = _cubic_at(seg, t)
+                d = QLineF(p, local).length()
+                if d < best[2]:
+                    best = (i, t, d)
+        return best
+
+    def double_click(self, scene_pos: QPointF) -> BaseCommand | None:
+        segs = self.item.bezier_segments
+        if not segs:
+            return None
+        index, t, distance = self._nearest_on_path(scene_pos)
+        if distance > max(self.item.stroke_width / 2.0 + 4.0, 6.0):
+            return None
+        left, right = split_cubic(segs[index], t)
+        new = segs[:index] + [left, right] + segs[index + 1 :]
+        return ModifyGeometryCommand(self.item, "bezier_segments", segs, new, point="insert")
+
+    def right_click(self, scene_pos: QPointF) -> BaseCommand | None:
+        key = self.handle_at(scene_pos)
+        segs = self.item.bezier_segments
+        if key is None or not key.startswith("p") or len(segs) < 2:
+            return None  # a stroke keeps at least two on-curve points
+        i = int(key[1:])
+        if i == 0:
+            new = segs[1:]
+        elif i == len(segs):
+            new = segs[:-1]
+        else:
+            before, after = segs[i - 1], segs[i]
+            new = segs[: i - 1] + [(before[0], before[1], after[2], after[3])] + segs[i + 1 :]
+        return ModifyGeometryCommand(self.item, "bezier_segments", segs, new, point="delete")
+
+
 def session_for(item: SnapGraphicsItem) -> PointEditSession | None:
     """The point-editing session for *item*, or None when the item has no points to edit."""
+    if isinstance(item, FreehandItem):
+        return FreehandPointSession(item)
     if isinstance(item, ArrowItem):
         return ArrowPointSession(item)
     if isinstance(item, LineItem):

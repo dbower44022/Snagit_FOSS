@@ -4172,6 +4172,8 @@ class MainWindow(QMainWindow):
             and not event.isAutoRepeat()
             and self._momentary_tool is None
             and self._tool_manager.active_tool_id not in ("eyedropper", "pan", "zoom")
+            # Alt+drag breaks a curve's continuity in point-editing mode (Basic Shape 9.7)
+            and getattr(self._tool_manager.active_tool, "point_session", None) is None
         ):
             active = self._tool_manager.active_tool
             if active is None or not active.is_active_operation:

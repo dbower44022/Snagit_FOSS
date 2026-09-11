@@ -480,9 +480,13 @@ class SelectTool(BaseTool):
             return False
 
         item = self._item_at(scene_pos)
-        if item is not None and self._point_session is not None:
-            if item is self._point_session.item:
-                return True
+        session = self._point_session
+        if session is not None and (item is session.item or session.handle_at(scene_pos)):
+            # A double-click on the item in point-editing mode inserts a point (9.7, 8.5)
+            command = session.double_click(scene_pos)
+            if command is not None:
+                self._scene.command_stack.push(command)
+            return True
         if item is not None:
             self._selection_manager.select(item)
             if isinstance(item, GroupItem):
@@ -1218,6 +1222,14 @@ class SelectTool(BaseTool):
             return False
 
         scene_pos = view.mapToScene(event.pos())
+        # In point-editing mode a right-click on a handle deletes that point (9.7, 8.5)
+        # rather than opening the menu, even where the minimum refuses the deletion
+        session = self._point_session
+        if session is not None and session.handle_at(scene_pos) is not None:
+            command = session.right_click(scene_pos)
+            if command is not None:
+                self._scene.command_stack.push(command)
+            return True
         # The view now lives inside the document tab stack, so its direct parent is a
         # QStackedWidget; the context-menu builders need the MainWindow.
         parent = view.window()
