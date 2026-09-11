@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.8</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.9</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.8</dd>
-    <dt>Last Updated</dt>    <dd>09-10-26 13:17</dd>
+    <dt>Document version</dt><dd>2.9</dd>
+    <dt>Last Updated</dt>    <dd>09-10-26 21:31</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,18 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.9</td>
+        <td class="nowrap">09-10-26 21:31</td>
+        <td>Doug Bower</td>
+        <td>Check for Updates (implementation notes Section 19): the last open row of Section 3.8 acts; it queries the
+        GitHub releases API for the repository, compares the release's tag with the running version, and reports one of
+        six outcomes (3.8, 1.3, 17.2). Rows record the two decisions (Qt's network module on the event loop; the Help row
+        as the only trigger, no startup check and no Preferences row), the seven silences decided, the additions to the
+        wording, and the two display checks still owed. No requirement changed. No Section 3 row explains a deferral.
+        Technical Architecture PRD 1.16.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>2.8</td>
         <td class="nowrap">09-10-26 13:17</td>
@@ -195,6 +207,72 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-10-26 21:31</td>
+        <td>3.8, 17.2</td>
+        <td>Built</td>
+        <td>Check for Updates acts, from the Check for Updates kickoff of 09-10-26 (implementation notes Section 19),
+        closing the Phase 1 deferral of 09-08-26 and the 2.5 row. The row sends one request to
+        <code>https://api.github.com/repos/dbower44022/Snagit_FOSS/releases/latest</code> (the repository path derived from
+        <code>REPOSITORY_URL</code>; drafts and pre-releases excluded) with <code>Accept: application/vnd.github+json</code>
+        and <code>User-Agent: SnapMock/&lt;version&gt;</code> and a 10 second timeout, shows "Checking for updates…" in
+        the status bar's hint zone meanwhile, and reports one message: a newer release ("SnapMock v0.2.0 is available.
+        You are running SnapMock 0.1.0.") with an Open Release Page button that opens the release page in the browser as
+        Report a Bug opens the issues page; up to date; no release published yet, with an Open Repository Page button; the
+        release could not be read; "GitHub declined the request; try again later." for a rate-limited request (403 or
+        429). A failed or timed-out request, and a machine whose Qt lacks TLS, show the Section 1.3 message "Check for
+        Updates needs a network connection"; a second click while a check runs shows "Check for Updates needs the running
+        check to finish". The hint returns to the active tool's when the message closes. Nothing is downloaded inside the
+        application and nothing is remembered. The Section 17.2 fail on this row is fixed; no Section 3 row explains a
+        deferral.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 21:31</td>
+        <td>3.8</td>
+        <td>Decision</td>
+        <td>Decision 09-10-26 (Check for Updates kickoff decision 1, option A): the request is made through Qt's
+        network module (<code>QNetworkAccessManager</code> from <code>PyQt6.QtNetwork</code>, inside the PyQt6 wheel
+        already installed) on the event loop, the reply arriving as a signal; no thread and no new dependency, so
+        Technical Architecture PRD 9.1 holds. The cost is a second Qt module in the import footprint and TLS through
+        Qt's own backend, which some Linux installs lack; that case is reported as the network-unavailable message.
+        The alternative, the standard library on a worker thread, would have introduced the first thread in the code,
+        a signal to hand the result back, and a request that cannot be cancelled once started. Verified 09-10-26 on the
+        development machine: the module imports and reports TLS through OpenSSL 3.0.13.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 21:31</td>
+        <td>3.8, 11.3</td>
+        <td>Decision</td>
+        <td>Decision 09-10-26 (kickoff decision 2, option A): the Help row is the only trigger. No check runs at
+        startup, no settings key is written, and Section 11.3 gains no "Check for updates at startup" row; nothing
+        leaves the machine unless the user clicks the row. The cost is that a user never learns of a release unless
+        they click. A startup check can be added by a later row when a release exists to find; today the repository
+        has none, and the row reports so.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 21:31</td>
+        <td>3.8, 1.3</td>
+        <td>Decision</td>
+        <td>The kickoff's seven silences, each decided as the kickoff recommended (implementation notes Section 19.1):
+        the <code>releases/latest</code> endpoint with the two headers and the 10 second timeout; "newer" as the
+        release's <code>tag_name</code>, with an optional leading v, parsed into integers and compared as a tuple with
+        the running version parsed the same way, a tag that does not parse being "could not be read" and an equal or
+        older release being "up to date"; 404 as "no release has been published yet" with the repository page offered;
+        403 and 429 as rate limited; the newer-release message offering the tag, the running version, and Open Release
+        Page; nothing remembered; an information message box from the main window with accessible names on its
+        buttons, the hint restored when it closes. Additions to the wording of Section 3.8, none of them a change to
+        it: the Open Repository Page button, the running-check message, and the network-unavailable case as a Section
+        1.3 message rather than an error box.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-10-26 21:31</td>
+        <td>17.8, 6.6</td>
+        <td>Noted</td>
+        <td>The two display checks the kickoff opens with, owed since the 2.5 rows (step B17 for the canvas focus
+        frame of acceptance pass row 36; Z, Alt+click, and right-click on the canvas for the Zoom tool of row 20), were
+        asked for at the start of the Check for Updates session and again at its close. The answers are recorded in
+        implementation notes Section 16 rows 36 and 20 when given; the rows stand as recorded until then.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-10-26 13:17</td>
         <td>3.4, 7.4, 10.3, 17.2</td>
