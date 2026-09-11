@@ -55,6 +55,7 @@ from snapmock.config.constants import (
     HeadStyle,
     LabelPosition,
     LineStyle,
+    PolygonMode,
     VerticalAlign,
 )
 from snapmock.config.settings import AppSettings
@@ -71,6 +72,13 @@ from snapmock.items.emoji_item import EmojiItem
 from snapmock.items.freehand_item import FreehandItem
 from snapmock.items.group_item import GroupItem
 from snapmock.items.numbered_step_item import NumberedStepItem
+from snapmock.items.polygon_item import (
+    SIDES_MAX,
+    SIDES_MIN,
+    STAR_INDENT_MAX,
+    STAR_INDENT_MIN,
+    PolygonItem,
+)
 from snapmock.items.rectangle_item import RectangleItem
 from snapmock.items.shadow import ShadowMixin
 from snapmock.items.stamp_item import StampItem
@@ -222,6 +230,7 @@ class PropertyPanel(QDockWidget):
         self._build_appearance_section()
         self._build_arrow_section()
         self._build_arc_section()
+        self._build_polygon_section()
         self._build_rectangle_section()
         self._build_freehand_section()
         self._build_step_section()
@@ -237,6 +246,7 @@ class PropertyPanel(QDockWidget):
             self._appearance_section,
             self._arrow_section,
             self._arc_section,
+            self._polygon_section,
             self._rectangle_section,
             self._freehand_section,
             self._step_section,
@@ -621,6 +631,30 @@ class PropertyPanel(QDockWidget):
         self._arc_size_combo.setAccessibleName("Arc head size")
         self._arc_section.add_row("Head size:", self._arc_size_combo)
         self._main_layout.addWidget(self._arc_section)
+
+    def _build_polygon_section(self) -> None:
+        """A placed polygon's sides, star, and closure (Basic Shape PRD 8.3), since the bar
+        edits creation defaults only: the first three for a regular polygon, Closed for a
+        freeform one."""
+        self._polygon_section = CollapsibleSection("Polygon")
+        self._polygon_sides_spin = QSpinBox()
+        self._polygon_sides_spin.setRange(SIDES_MIN - 1, SIDES_MAX)
+        self._polygon_sides_spin.setSpecialValueText(MIXED_TEXT)
+        self._polygon_sides_spin.setKeyboardTracking(False)
+        self._polygon_sides_spin.setAccessibleName("Sides")
+        self._polygon_section.add_row("Sides:", self._polygon_sides_spin)
+        self._polygon_star_check = QCheckBox("Star")
+        self._polygon_star_check.setAccessibleName("Star")
+        self._polygon_section.add_row("Star:", self._polygon_star_check)
+        self._polygon_indent_spin = self._make_double_spin(
+            STAR_INDENT_MIN - 0.01, STAR_INDENT_MAX, 2, "", "Star indent"
+        )
+        self._polygon_indent_spin.setSingleStep(0.05)
+        self._polygon_section.add_row("Indent:", self._polygon_indent_spin)
+        self._polygon_closed_check = QCheckBox("Closed")
+        self._polygon_closed_check.setAccessibleName("Closed polygon")
+        self._polygon_section.add_row("Path:", self._polygon_closed_check)
+        self._main_layout.addWidget(self._polygon_section)
 
     def _build_rectangle_section(self) -> None:
         """The rectangle's corner radius (Basic Shape PRD 5.3, 5.4), for a placed rectangle."""
@@ -1124,6 +1158,14 @@ class PropertyPanel(QDockWidget):
             self._on_freehand_smoothing_spin_changed
         )
         self._freehand_closed_check.toggled.connect(self._on_freehand_closed_changed)
+        self._polygon_sides_spin.valueChanged.connect(self._on_polygon_sides_changed)
+        self._polygon_star_check.toggled.connect(
+            lambda checked: self._on_polygon_flag_changed("star_enabled", checked)
+        )
+        self._polygon_indent_spin.valueChanged.connect(self._on_polygon_indent_changed)
+        self._polygon_closed_check.toggled.connect(
+            lambda checked: self._on_polygon_flag_changed("closed", checked)
+        )
         for combo, prop in (
             (self._arc_type_combo, "arc_type"),
             (self._arc_head_combo, "head_style"),
@@ -1262,6 +1304,9 @@ class PropertyPanel(QDockWidget):
     def _selected_freehand(self) -> list[FreehandItem]:
         return [i for i in self._selected_items() if isinstance(i, FreehandItem)]
 
+    def _selected_polygons(self) -> list[PolygonItem]:
+        return [i for i in self._selected_items() if isinstance(i, PolygonItem)]
+
     def _selected_arcs(self) -> list[ArcItem]:
         return [i for i in self._selected_items() if isinstance(i, ArcItem)]
 
@@ -1317,6 +1362,7 @@ class PropertyPanel(QDockWidget):
             all_text_items = has_selection and all(isinstance(i, TextItem) for i in items)
             all_arrows = has_selection and all(isinstance(i, ArrowItem) for i in items)
             all_arcs = has_selection and all(isinstance(i, ArcItem) for i in items)
+            all_polygons = has_selection and all(isinstance(i, PolygonItem) for i in items)
             all_rectangles = has_selection and all(isinstance(i, RectangleItem) for i in items)
             all_freehand = has_selection and all(isinstance(i, FreehandItem) for i in items)
             all_steps = has_selection and all(isinstance(i, NumberedStepItem) for i in items)
@@ -1332,6 +1378,7 @@ class PropertyPanel(QDockWidget):
             self._appearance_section.setVisible(all_vector or in_vector_defaults)
             self._arrow_section.setVisible(all_arrows)
             self._arc_section.setVisible(all_arcs)
+            self._polygon_section.setVisible(all_polygons)
             self._rectangle_section.setVisible(all_rectangles)
             self._freehand_section.setVisible(all_freehand)
             self._step_section.setVisible(all_steps)
@@ -1369,6 +1416,8 @@ class PropertyPanel(QDockWidget):
                     self._populate_arrow(self._selected_arrows())
                 if all_arcs:
                     self._populate_arc(self._selected_arcs())
+                if all_polygons:
+                    self._populate_polygon(self._selected_polygons())
                 if all_rectangles:
                     self._populate_rectangle(self._selected_rectangles())
                 if all_freehand:
@@ -1495,6 +1544,21 @@ class PropertyPanel(QDockWidget):
         self._freehand_smoothing_slider.setValue(int(value) if uniform else 0)
         self._set_spin(self._freehand_smoothing_spin, percents)
         self._set_check(self._freehand_closed_check, [i.is_closed for i in items])
+
+    def _populate_polygon(self, items: list[PolygonItem]) -> None:
+        regular = all(i.polygon_mode is PolygonMode.REGULAR for i in items)
+        section = self._polygon_section
+        for widget in (
+            self._polygon_sides_spin,
+            self._polygon_star_check,
+            self._polygon_indent_spin,
+        ):
+            self._set_row_visible(section, widget, regular)
+        self._set_row_visible(section, self._polygon_closed_check, not regular)
+        self._set_spin(self._polygon_sides_spin, [i.sides for i in items])
+        self._set_check(self._polygon_star_check, [i.star_enabled for i in items])
+        self._set_spin(self._polygon_indent_spin, [i.star_indent for i in items])
+        self._set_check(self._polygon_closed_check, [i.closed for i in items])
 
     def _populate_arc(self, items: list[ArcItem]) -> None:
         self._set_combo_data(self._arc_type_combo, [i.arc_type for i in items])
@@ -2458,6 +2522,21 @@ class PropertyPanel(QDockWidget):
         if self._updating:
             return
         self._push_property(self._selected_freehand(), "is_closed", bool(checked))
+
+    def _on_polygon_sides_changed(self, value: int) -> None:
+        if self._updating or value < SIDES_MIN:
+            return
+        self._push_property(self._selected_polygons(), "sides", int(value))
+
+    def _on_polygon_indent_changed(self, value: float) -> None:
+        if self._updating or value < STAR_INDENT_MIN:
+            return
+        self._push_property(self._selected_polygons(), "star_indent", float(value))
+
+    def _on_polygon_flag_changed(self, prop: str, checked: bool) -> None:
+        if self._updating:
+            return
+        self._push_property(self._selected_polygons(), prop, bool(checked))
 
     def _on_arc_combo_changed(self, combo: QComboBox, prop: str, index: int) -> None:
         if self._updating or index < 0:

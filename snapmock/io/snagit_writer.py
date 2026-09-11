@@ -28,6 +28,7 @@ from snapmock.items.freehand_item import FreehandItem
 from snapmock.items.highlight_item import HighlightItem
 from snapmock.items.line_item import LineItem
 from snapmock.items.numbered_step_item import NumberedStepItem
+from snapmock.items.polygon_item import PolygonItem
 from snapmock.items.raster_region_item import RasterRegionItem
 from snapmock.items.rectangle_item import RectangleItem
 from snapmock.items.stamp_item import StampItem
@@ -162,7 +163,16 @@ def _item_to_snagit(item: SnapGraphicsItem, warnings: list[str]) -> dict[str, An
     type_name = type(item).__name__
     if isinstance(
         item,
-        (EllipseItem, FreehandItem, BlurItem, NumberedStepItem, StampItem, EmojiItem, ArcItem),
+        (
+            EllipseItem,
+            FreehandItem,
+            BlurItem,
+            NumberedStepItem,
+            StampItem,
+            EmojiItem,
+            ArcItem,
+            PolygonItem,
+        ),
     ):
         warnings.append(f"{type_name} is not supported in .snagx format — skipped")
         log.warning("Skipping unsupported item type %s for .snagx export", type_name)

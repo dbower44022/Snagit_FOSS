@@ -31,6 +31,7 @@ from snapmock.items.group_item import GroupItem
 from snapmock.items.highlight_item import HighlightItem
 from snapmock.items.line_item import LineItem
 from snapmock.items.numbered_step_item import NumberedStepItem
+from snapmock.items.polygon_item import PolygonItem
 from snapmock.items.raster_region_item import RasterRegionItem
 from snapmock.items.rectangle_item import RectangleItem
 from snapmock.items.stamp_item import StampItem
@@ -42,6 +43,7 @@ ITEM_REGISTRY: dict[str, type[SnapGraphicsItem]] = {
     "LineItem": LineItem,
     "ArrowItem": ArrowItem,
     "ArcItem": ArcItem,
+    "PolygonItem": PolygonItem,
     "TextItem": TextItem,
     "FreehandItem": FreehandItem,
     "CalloutItem": CalloutItem,

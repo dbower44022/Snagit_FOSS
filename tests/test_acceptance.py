@@ -282,6 +282,7 @@ SECTION_3_ROWS: dict[str, list[str]] = {
         "Arrow",
         "Line",
         "Arc",  # the twentieth tool (Basic Shape remainder decision 3)
+        "Polygon",  # the twenty-first
         "Rectangle",
         "Ellipse",
         "Freehand",  # table: Freehand / Pen
@@ -319,10 +320,6 @@ def test_17_2_every_section_3_row_is_present_and_the_deferred_rows_say_so(
         rows = _rows(_menu(main_window, title))
         missing = [label for label in labels if label not in rows]
         assert missing == [], f"{title}: {missing}"
-    tools = _rows(_menu(main_window, "Tools"))
-    # Arc and Polygon belong to the Basic Shape Annotation Tools PRD and are not registered
-    # (implementation notes Section 4: Section 3.7 lists 20 tools, Section 17.3 says 18).
-    assert "Polygon" not in tools  # the twenty-first tool arrives with Phase 4
     assert main_window.active_theme_text.startswith("Active Theme:")
 
     # Section 16 row 6: Group and Ungroup act since the Group and Ungroup kickoff (fixed
@@ -536,13 +533,13 @@ def test_17_2_view_toggles_reflect_the_state(main_window: MainWindow) -> None:
 
 
 def test_17_3_palette_shows_every_registered_tool_with_icons(main_window: MainWindow) -> None:
-    """Row 12: one button per registered tool, twenty since the Arc tool of the Basic Shape
-    remainder work (decision 3; General UI PRD 2.12 counted nineteen), each with an icon and
-    a "Name (Shortcut)" tooltip."""
+    """Row 12: one button per registered tool, twenty-one since the Arc and Polygon tools
+    of the Basic Shape remainder work (decision 3; General UI PRD 2.12 counted nineteen),
+    each with an icon and a "Name (Shortcut)" tooltip."""
     palette = main_window._toolbar  # noqa: SLF001
     buttons = palette._buttons  # noqa: SLF001
-    assert len(buttons) == 20
-    assert "emoji" in buttons and "arc" in buttons
+    assert len(buttons) == 21
+    assert {"emoji", "arc", "polygon"} <= set(buttons)
     assert list(buttons) == list(main_window.tool_manager.tool_ids)
     for tool_id, button in buttons.items():
         tool = main_window.tool_manager.tool(tool_id)

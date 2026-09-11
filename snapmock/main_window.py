@@ -118,6 +118,7 @@ from snapmock.tools.lasso_select_tool import LassoSelectTool
 from snapmock.tools.line_tool import LineTool
 from snapmock.tools.numbered_step_tool import NumberedStepTool
 from snapmock.tools.pan_tool import PanTool
+from snapmock.tools.polygon_tool import PolygonTool
 from snapmock.tools.raster_select_tool import RasterSelectTool
 from snapmock.tools.rectangle_tool import RectangleTool
 from snapmock.tools.select_tool import SelectTool
@@ -605,6 +606,7 @@ class MainWindow(QMainWindow):
         self._tool_manager.register(ArrowTool())
         self._tool_manager.register(LineTool())
         self._tool_manager.register(ArcTool())
+        self._tool_manager.register(PolygonTool())
         self._tool_manager.register(TextTool())
         self._tool_manager.register(FreehandTool())
         self._tool_manager.register(BlurTool())
@@ -1236,6 +1238,7 @@ class MainWindow(QMainWindow):
                 ("tool.line", "line"),
                 ("tool.arrow", "arrow"),
                 ("tool.arc", "arc"),
+                ("tool.polygon", "polygon"),
                 ("tool.freehand", "freehand"),
             ],
             # Text & annotation
@@ -2711,7 +2714,8 @@ class MainWindow(QMainWindow):
 
     def _edit_deselect(self) -> None:
         # Escape ends the active tool's own operation first: point-editing mode leaves and
-        # keeps the selection (Basic Shape PRD 3.5); an arc in progress is cancelled (7.2)
+        # keeps the selection (Basic Shape PRD 3.5); an arc or a polygon in progress is
+        # cancelled (7.2, 8.2)
         active = self._tool_manager.active_tool
         if active is not None and active.handle_escape():
             return
