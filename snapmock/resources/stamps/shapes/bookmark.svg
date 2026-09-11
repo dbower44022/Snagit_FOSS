@@ -1,0 +1,14 @@
+<!-- Tabler Icons v3.46.0, icons/outline/bookmark.svg (MIT, see LICENSE); stroke set to #FF0000 for SnapMock's colour substitution -->
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="64"
+  height="64"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="#FF0000"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M18 7v14l-6 -4l-6 4v-14a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4" />
+</svg>

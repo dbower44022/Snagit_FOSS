@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Technical Architecture</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.19</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.20</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
-    <dt>Document version</dt><dd>1.19</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 00:10</dd>
+    <dt>Document version</dt><dd>1.20</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 00:50</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,18 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.20</td>
+        <td class="nowrap">09-11-26 00:50</td>
+        <td>Doug Bower</td>
+        <td>Numbered Steps, Stamps, and Emoji implementation, Phase 2 step 1: Section 10 gains
+        <code>core/stamp_library.py</code> (the stamp index, the custom directory, the colour substitution, the
+        renderer cache, the placeholder, the SVG import) and the contents of <code>resources/stamps/</code>
+        (<code>stamp_index.json</code>, five category directories, <code>README.md</code>, and the Tabler
+        <code>LICENSE</code>; decision 3, option B). Section 9 is unchanged: rendering uses
+        <code>PyQt6.QtSvg</code>, which ships inside the PyQt6 wheel.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.19</td>
         <td class="nowrap">09-11-26 00:10</td>
@@ -236,6 +248,20 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 00:50</td>
+        <td>10, 4.3</td>
+        <td>Added</td>
+        <td>Numbered Steps, Stamps, and Emoji implementation, Phase 2 step 1: <code>core/stamp_library.py</code>
+        (<code>StampInfo</code>, <code>StampLibrary</code> with the built-in and custom indexes merged and cached,
+        <code>search</code> over names and tags, <code>svg_data</code>, a renderer cache keyed by SVG and colours,
+        <code>substitute_colors</code> for <code>#FF0000</code> and <code>#0000FF</code>, the missing-stamp
+        placeholder, <code>import_svg</code> into <code>&lt;application data&gt;/stamps/custom/</code> with its own
+        index, and the application-wide <code>stamp_library()</code>); 56 built-in stamps under
+        <code>resources/stamps/</code>, 42 Tabler Icons glyphs (release v3.46.0, MIT, stroke set to
+        <code>#FF0000</code>) and 14 hand-authored, catalogued in <code>stamp_index.json</code> with a README and
+        the licence. The custom stamp directory joins the application data directory's contents of Section 4.3.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 00:10</td>
         <td>10</td>
@@ -1809,6 +1835,7 @@ docstring.</p>
         rich_text_mixin.py        # shared QTextDocument-based rich text for TextItem and…
         scene.py                  # the backbone QGraphicsScene that owns LayerManager +…
         selection_manager.py      # tracks the set of currently selected scene items
+        stamp_library.py          # the index of built-in and custom stamps and their SVG rendering
         process_memory.py         # process memory readout for the status bar (psutil, guarded import)
         theme_manager.py          # light and dark themes, the System option, live switching, icons
         tool_themes.py            # tool presets and themes: model, codec, JSON stores, session state, .smktheme
@@ -1848,7 +1875,10 @@ docstring.</p>
         icons/
             tabler/               # vendored Tabler Icons subset (MIT); LICENSE alongside the SVG files
         sounds/
-        stamps/
+        stamps/                   # the built-in stamp set (Numbered Steps, Stamps & Emoji PRD 3.3)
+            stamp_index.json      # id, name, category, filename, tags, default_size, colorizable, source
+            README.md             # the Tabler release and the hand-authored files; LICENSE alongside
+            status/  arrows/  ui/  shapes/  decorative/   # one SVG per stamp on a 64 by 64 viewport
         themes/
             light.qss             # light theme constants and rules (General UI PRD 13.2)
             dark.qss              # dark theme constants and rules (General UI PRD 13.3)

@@ -1,0 +1,1193 @@
+{
+  "format_version": 1,
+  "categories": [
+    {
+      "id": "status",
+      "name": "Status"
+    },
+    {
+      "id": "arrows",
+      "name": "Arrows & Pointers"
+    },
+    {
+      "id": "ui",
+      "name": "UI Annotations"
+    },
+    {
+      "id": "shapes",
+      "name": "Shapes & Symbols"
+    },
+    {
+      "id": "decorative",
+      "name": "Decorative"
+    }
+  ],
+  "stamps": [
+    {
+      "id": "status/approved",
+      "name": "Approved",
+      "category": "status",
+      "filename": "status/approved.svg",
+      "tags": [
+        "approved",
+        "ok",
+        "accepted",
+        "accept",
+        "yes",
+        "tick",
+        "done",
+        "circle",
+        "check",
+        "round",
+        "circular",
+        "confirm",
+        "approve"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:circle-check"
+    },
+    {
+      "id": "status/rejected",
+      "name": "Rejected",
+      "category": "status",
+      "filename": "status/rejected.svg",
+      "tags": [
+        "rejected",
+        "denied",
+        "no",
+        "cancel",
+        "\"no\"",
+        "circle",
+        "round",
+        "circular",
+        "geometry",
+        "form",
+        "figure",
+        "pattern",
+        "outline"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:circle-x"
+    },
+    {
+      "id": "status/draft",
+      "name": "Draft",
+      "category": "status",
+      "filename": "status/draft.svg",
+      "tags": [
+        "draft",
+        "stamp",
+        "wip",
+        "text"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "snapmock"
+    },
+    {
+      "id": "status/attention",
+      "name": "Attention",
+      "category": "status",
+      "filename": "status/attention.svg",
+      "tags": [
+        "attention",
+        "warning",
+        "exclamation",
+        "danger",
+        "caution",
+        "risk",
+        "alert",
+        "triangle",
+        "control",
+        "operation",
+        "function",
+        "interface"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:alert-triangle"
+    },
+    {
+      "id": "status/question",
+      "name": "Question",
+      "category": "status",
+      "filename": "status/question.svg",
+      "tags": [
+        "question",
+        "help",
+        "unknown",
+        "assist",
+        "support",
+        "guide",
+        "aid",
+        "resolve",
+        "explain",
+        "instruct",
+        "clarify",
+        "circle"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:help-circle"
+    },
+    {
+      "id": "status/info",
+      "name": "Info",
+      "category": "status",
+      "filename": "status/info.svg",
+      "tags": [
+        "info",
+        "information",
+        "note",
+        "advice",
+        "news",
+        "tip",
+        "sign",
+        "circle",
+        "control",
+        "operation",
+        "round"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:info-circle"
+    },
+    {
+      "id": "status/star",
+      "name": "Star",
+      "category": "status",
+      "filename": "status/star.svg",
+      "tags": [
+        "star",
+        "favourite",
+        "favorite",
+        "rating",
+        "like",
+        "mark",
+        "bookmark",
+        "grade",
+        "control",
+        "operation",
+        "function"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:star"
+    },
+    {
+      "id": "status/heart",
+      "name": "Heart",
+      "category": "status",
+      "filename": "status/heart.svg",
+      "tags": [
+        "heart",
+        "love",
+        "like",
+        "emotion",
+        "favorite",
+        "relationship",
+        "geometry",
+        "form",
+        "figure",
+        "pattern"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:heart"
+    },
+    {
+      "id": "status/thumbs-up",
+      "name": "Thumbs Up",
+      "category": "status",
+      "filename": "status/thumbs-up.svg",
+      "tags": [
+        "thumbs up",
+        "like",
+        "good",
+        "approve",
+        "emotion",
+        "love",
+        "thumb",
+        "top",
+        "increase",
+        "control",
+        "operation",
+        "rise"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:thumb-up"
+    },
+    {
+      "id": "status/thumbs-down",
+      "name": "Thumbs Down",
+      "category": "status",
+      "filename": "status/thumbs-down.svg",
+      "tags": [
+        "thumbs down",
+        "dislike",
+        "bad",
+        "emotion",
+        "thumb",
+        "down",
+        "bottom",
+        "decrease",
+        "control",
+        "operation",
+        "fall"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:thumb-down"
+    },
+    {
+      "id": "arrows/curved-arrow-cw",
+      "name": "Curved Arrow (Clockwise)",
+      "category": "arrows",
+      "filename": "arrows/curved-arrow-cw.svg",
+      "tags": [
+        "curved",
+        "arrow",
+        "clockwise",
+        "rotate",
+        "refresh",
+        "synchronization",
+        "reload",
+        "restart",
+        "spinner",
+        "loader",
+        "ajax",
+        "update",
+        "arrows"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:rotate-clockwise"
+    },
+    {
+      "id": "arrows/curved-arrow-ccw",
+      "name": "Curved Arrow (Counter-clockwise)",
+      "category": "arrows",
+      "filename": "arrows/curved-arrow-ccw.svg",
+      "tags": [
+        "curved",
+        "arrow",
+        "counter-clockwise",
+        "rotate",
+        "refresh",
+        "synchronization",
+        "reload",
+        "restart",
+        "spinner",
+        "loader",
+        "ajax",
+        "update",
+        "arrows"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:rotate"
+    },
+    {
+      "id": "arrows/thick-arrow-right",
+      "name": "Thick Arrow (Right)",
+      "category": "arrows",
+      "filename": "arrows/thick-arrow-right.svg",
+      "tags": [
+        "arrow",
+        "right",
+        "thick",
+        "next",
+        "direction",
+        "east",
+        "west",
+        "big",
+        "pointer",
+        "navigation",
+        "flow",
+        "navigate"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:arrow-big-right"
+    },
+    {
+      "id": "arrows/thick-arrow-left",
+      "name": "Thick Arrow (Left)",
+      "category": "arrows",
+      "filename": "arrows/thick-arrow-left.svg",
+      "tags": [
+        "arrow",
+        "left",
+        "thick",
+        "back",
+        "direction",
+        "west",
+        "big",
+        "pointer",
+        "navigation",
+        "flow",
+        "navigate",
+        "move"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:arrow-big-left"
+    },
+    {
+      "id": "arrows/thick-arrow-up",
+      "name": "Thick Arrow (Up)",
+      "category": "arrows",
+      "filename": "arrows/thick-arrow-up.svg",
+      "tags": [
+        "arrow",
+        "up",
+        "thick",
+        "direction",
+        "north",
+        "big",
+        "pointer",
+        "top",
+        "increase",
+        "navigation",
+        "flow",
+        "navigate"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:arrow-big-up"
+    },
+    {
+      "id": "arrows/thick-arrow-down",
+      "name": "Thick Arrow (Down)",
+      "category": "arrows",
+      "filename": "arrows/thick-arrow-down.svg",
+      "tags": [
+        "arrow",
+        "down",
+        "thick",
+        "direction",
+        "south",
+        "big",
+        "pointer",
+        "bottom",
+        "decrease",
+        "navigation",
+        "flow"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:arrow-big-down"
+    },
+    {
+      "id": "arrows/double-arrow-horizontal",
+      "name": "Double Arrow (Horizontal)",
+      "category": "arrows",
+      "filename": "arrows/double-arrow-horizontal.svg",
+      "tags": [
+        "arrow",
+        "double",
+        "horizontal",
+        "resize",
+        "zoom",
+        "stretch",
+        "left",
+        "right",
+        "arrows",
+        "navigation",
+        "flow",
+        "movement",
+        "route"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:arrows-horizontal"
+    },
+    {
+      "id": "arrows/double-arrow-vertical",
+      "name": "Double Arrow (Vertical)",
+      "category": "arrows",
+      "filename": "arrows/double-arrow-vertical.svg",
+      "tags": [
+        "arrow",
+        "double",
+        "vertical",
+        "resize",
+        "expand",
+        "stretch",
+        "top",
+        "bottom",
+        "arrows",
+        "navigation",
+        "flow",
+        "movement",
+        "route"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:arrows-vertical"
+    },
+    {
+      "id": "arrows/pointer-hand",
+      "name": "Pointer Hand",
+      "category": "arrows",
+      "filename": "arrows/pointer-hand.svg",
+      "tags": [
+        "hand",
+        "finger",
+        "point",
+        "pointer",
+        "show",
+        "index",
+        "forefinger",
+        "body",
+        "human",
+        "palm",
+        "click",
+        "press",
+        "touch",
+        "mouse"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:hand-finger"
+    },
+    {
+      "id": "arrows/magnifying-glass",
+      "name": "Magnifying Glass",
+      "category": "arrows",
+      "filename": "arrows/magnifying-glass.svg",
+      "tags": [
+        "magnify",
+        "zoom",
+        "search",
+        "look",
+        "magnifying glass",
+        "location",
+        "navigation",
+        "enlarge",
+        "scale",
+        "focus",
+        "view",
+        "in",
+        "accessibility",
+        "a11y",
+        "vision",
+        "low-vision"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:zoom-in"
+    },
+    {
+      "id": "arrows/target",
+      "name": "Target Crosshair",
+      "category": "arrows",
+      "filename": "arrows/target.svg",
+      "tags": [
+        "target",
+        "crosshair",
+        "aim",
+        "focus",
+        "bullseye",
+        "location",
+        "navigation",
+        "geography",
+        "place",
+        "position"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:target"
+    },
+    {
+      "id": "ui/cursor-arrow",
+      "name": "Mouse Cursor (Arrow)",
+      "category": "ui",
+      "filename": "ui/cursor-arrow.svg",
+      "tags": [
+        "cursor",
+        "mouse",
+        "arrow",
+        "pointer",
+        "point",
+        "click",
+        "control",
+        "operation",
+        "function",
+        "interface"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:pointer"
+    },
+    {
+      "id": "ui/cursor-hand",
+      "name": "Mouse Cursor (Hand)",
+      "category": "ui",
+      "filename": "ui/cursor-hand.svg",
+      "tags": [
+        "cursor",
+        "hand",
+        "pointer",
+        "link",
+        "gesture",
+        "touch",
+        "press",
+        "phone",
+        "finger",
+        "index",
+        "forefinger",
+        "mouse",
+        "click"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:hand-click"
+    },
+    {
+      "id": "ui/click",
+      "name": "Click Indicator",
+      "category": "ui",
+      "filename": "ui/click.svg",
+      "tags": [
+        "click",
+        "tap",
+        "circles",
+        "press"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "snapmock"
+    },
+    {
+      "id": "ui/double-click",
+      "name": "Double-click Indicator",
+      "category": "ui",
+      "filename": "ui/double-click.svg",
+      "tags": [
+        "double",
+        "click",
+        "twice"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "snapmock"
+    },
+    {
+      "id": "ui/right-click",
+      "name": "Right-click Indicator",
+      "category": "ui",
+      "filename": "ui/right-click.svg",
+      "tags": [
+        "right",
+        "click",
+        "mouse",
+        "context"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "snapmock"
+    },
+    {
+      "id": "ui/drag",
+      "name": "Drag Indicator",
+      "category": "ui",
+      "filename": "ui/drag.svg",
+      "tags": [
+        "drag",
+        "move",
+        "hand",
+        "grab",
+        "gesture",
+        "swipe",
+        "right",
+        "left",
+        "up",
+        "down",
+        "transfer",
+        "shift"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:hand-move"
+    },
+    {
+      "id": "ui/scroll",
+      "name": "Scroll Indicator",
+      "category": "ui",
+      "filename": "ui/scroll.svg",
+      "tags": [
+        "scroll",
+        "mouse",
+        "wheel",
+        "pointer",
+        "cursor",
+        "device",
+        "hardware",
+        "technology",
+        "electronic",
+        "gadget",
+        "equipment"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:mouse"
+    },
+    {
+      "id": "ui/key",
+      "name": "Keyboard Key",
+      "category": "ui",
+      "filename": "ui/key.svg",
+      "tags": [
+        "keyboard",
+        "key",
+        "shortcut",
+        "type",
+        "computer",
+        "laptop",
+        "device",
+        "hardware",
+        "technology",
+        "electronic",
+        "gadget",
+        "equipment"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:keyboard"
+    },
+    {
+      "id": "ui/tap",
+      "name": "Touch / Tap Indicator",
+      "category": "ui",
+      "filename": "ui/tap.svg",
+      "tags": [
+        "touch",
+        "tap",
+        "finger",
+        "ripple"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "snapmock"
+    },
+    {
+      "id": "shapes/checkmark",
+      "name": "Checkmark",
+      "category": "shapes",
+      "filename": "shapes/checkmark.svg",
+      "tags": [
+        "check",
+        "tick",
+        "done",
+        "yes",
+        "\"yes\"",
+        "confirm",
+        "control",
+        "operation",
+        "approve",
+        "function",
+        "interface",
+        "management"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:check"
+    },
+    {
+      "id": "shapes/x-mark",
+      "name": "X Mark",
+      "category": "shapes",
+      "filename": "shapes/x-mark.svg",
+      "tags": [
+        "x",
+        "cross",
+        "close",
+        "no",
+        "wrong",
+        "cancel",
+        "remove",
+        "delete",
+        "empty"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:x"
+    },
+    {
+      "id": "shapes/plus",
+      "name": "Plus",
+      "category": "shapes",
+      "filename": "shapes/plus.svg",
+      "tags": [
+        "plus",
+        "add",
+        "new",
+        "create",
+        "\"+\"",
+        "calculation",
+        "equation",
+        "more",
+        "increase",
+        "positive"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:plus"
+    },
+    {
+      "id": "shapes/minus",
+      "name": "Minus",
+      "category": "shapes",
+      "filename": "shapes/minus.svg",
+      "tags": [
+        "minus",
+        "remove",
+        "subtract",
+        "less",
+        "calculation",
+        "equation",
+        "decrease",
+        "negative",
+        "mathematics",
+        "numeric"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:minus"
+    },
+    {
+      "id": "shapes/warning",
+      "name": "Warning Triangle",
+      "category": "shapes",
+      "filename": "shapes/warning.svg",
+      "tags": [
+        "warning",
+        "caution",
+        "alert",
+        "triangle",
+        "danger",
+        "risk",
+        "control",
+        "operation",
+        "function",
+        "interface"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:alert-triangle"
+    },
+    {
+      "id": "shapes/lock",
+      "name": "Lock",
+      "category": "shapes",
+      "filename": "shapes/lock.svg",
+      "tags": [
+        "lock",
+        "locked",
+        "secure",
+        "private",
+        "security",
+        "password",
+        "control",
+        "operation",
+        "protected",
+        "closed",
+        "function"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:lock"
+    },
+    {
+      "id": "shapes/unlock",
+      "name": "Unlock",
+      "category": "shapes",
+      "filename": "shapes/unlock.svg",
+      "tags": [
+        "unlock",
+        "open",
+        "unlocked",
+        "security",
+        "password",
+        "secure",
+        "unprotected",
+        "lock",
+        "private",
+        "control",
+        "operation",
+        "protected"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:lock-open"
+    },
+    {
+      "id": "shapes/eye",
+      "name": "Eye (Visible)",
+      "category": "shapes",
+      "filename": "shapes/eye.svg",
+      "tags": [
+        "eye",
+        "visible",
+        "show",
+        "view",
+        "watch",
+        "control",
+        "operation",
+        "function",
+        "interface",
+        "management",
+        "visibility",
+        "accessibility",
+        "a11y",
+        "vision"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:eye"
+    },
+    {
+      "id": "shapes/eye-off",
+      "name": "Eye Crossed (Hidden)",
+      "category": "shapes",
+      "filename": "shapes/eye-off.svg",
+      "tags": [
+        "eye",
+        "hidden",
+        "hide",
+        "invisible",
+        "view",
+        "watch",
+        "off",
+        "control",
+        "operation",
+        "disabled",
+        "inactive",
+        "function",
+        "interface",
+        "visibility",
+        "accessibility",
+        "a11y"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:eye-off"
+    },
+    {
+      "id": "shapes/bolt",
+      "name": "Lightning Bolt",
+      "category": "shapes",
+      "filename": "shapes/bolt.svg",
+      "tags": [
+        "bolt",
+        "lightning",
+        "fast",
+        "power",
+        "energy",
+        "electricity",
+        "storm",
+        "flash",
+        "quick",
+        "speed"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:bolt"
+    },
+    {
+      "id": "shapes/gear",
+      "name": "Gear / Settings",
+      "category": "shapes",
+      "filename": "shapes/gear.svg",
+      "tags": [
+        "gear",
+        "settings",
+        "cog",
+        "options",
+        "edit",
+        "preferences",
+        "tools",
+        "config",
+        "control",
+        "operation"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:settings"
+    },
+    {
+      "id": "shapes/pencil",
+      "name": "Pencil / Edit",
+      "category": "shapes",
+      "filename": "shapes/pencil.svg",
+      "tags": [
+        "pencil",
+        "edit",
+        "write",
+        "draft",
+        "note",
+        "creative",
+        "artistic",
+        "visual",
+        "aesthetic",
+        "style"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:pencil"
+    },
+    {
+      "id": "shapes/trash",
+      "name": "Trash / Delete",
+      "category": "shapes",
+      "filename": "shapes/trash.svg",
+      "tags": [
+        "trash",
+        "delete",
+        "bin",
+        "remove",
+        "garbage",
+        "ash-bin",
+        "uninstall",
+        "dustbin",
+        "control",
+        "operation"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:trash"
+    },
+    {
+      "id": "shapes/link",
+      "name": "Link",
+      "category": "shapes",
+      "filename": "shapes/link.svg",
+      "tags": [
+        "link",
+        "chain",
+        "url",
+        "zoom-filled",
+        "connection",
+        "hyperlink",
+        "reference",
+        "attach",
+        "join",
+        "typography",
+        "writing"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:link"
+    },
+    {
+      "id": "shapes/unlink",
+      "name": "Unlink",
+      "category": "shapes",
+      "filename": "shapes/unlink.svg",
+      "tags": [
+        "unlink",
+        "broken",
+        "chain",
+        "zoom-filled",
+        "link",
+        "off",
+        "disabled",
+        "inactive",
+        "url",
+        "connection",
+        "hyperlink",
+        "reference",
+        "attach"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:link-off"
+    },
+    {
+      "id": "shapes/bookmark",
+      "name": "Pin / Bookmark",
+      "category": "shapes",
+      "filename": "shapes/bookmark.svg",
+      "tags": [
+        "bookmark",
+        "pin",
+        "save",
+        "mark",
+        "read",
+        "clip",
+        "marker",
+        "tag",
+        "file",
+        "paper",
+        "text",
+        "record",
+        "information"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:bookmark"
+    },
+    {
+      "id": "decorative/starburst",
+      "name": "Starburst / Explosion",
+      "category": "decorative",
+      "filename": "decorative/starburst.svg",
+      "tags": [
+        "starburst",
+        "explosion",
+        "burst",
+        "new",
+        "wow"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "snapmock"
+    },
+    {
+      "id": "decorative/speech-bubble",
+      "name": "Speech Bubble",
+      "category": "decorative",
+      "filename": "decorative/speech-bubble.svg",
+      "tags": [
+        "speech",
+        "bubble",
+        "talk",
+        "comment",
+        "chat",
+        "reply",
+        "message",
+        "circle",
+        "contact",
+        "conversation",
+        "round",
+        "circular",
+        "messaging"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "tabler:message-circle"
+    },
+    {
+      "id": "decorative/thought-bubble",
+      "name": "Thought Bubble",
+      "category": "decorative",
+      "filename": "decorative/thought-bubble.svg",
+      "tags": [
+        "thought",
+        "bubble",
+        "think",
+        "cloud"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "snapmock"
+    },
+    {
+      "id": "decorative/ribbon",
+      "name": "Banner / Ribbon",
+      "category": "decorative",
+      "filename": "decorative/ribbon.svg",
+      "tags": [
+        "banner",
+        "ribbon",
+        "label",
+        "award"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "snapmock"
+    },
+    {
+      "id": "decorative/bracket-left",
+      "name": "Bracket (Left)",
+      "category": "decorative",
+      "filename": "decorative/bracket-left.svg",
+      "tags": [
+        "bracket",
+        "left",
+        "brace"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "snapmock"
+    },
+    {
+      "id": "decorative/bracket-right",
+      "name": "Bracket (Right)",
+      "category": "decorative",
+      "filename": "decorative/bracket-right.svg",
+      "tags": [
+        "bracket",
+        "right",
+        "brace"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "snapmock"
+    },
+    {
+      "id": "decorative/brackets",
+      "name": "Brackets (Both)",
+      "category": "decorative",
+      "filename": "decorative/brackets.svg",
+      "tags": [
+        "bracket",
+        "brackets",
+        "both",
+        "group"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "snapmock"
+    },
+    {
+      "id": "decorative/swoosh",
+      "name": "Underline Swoosh",
+      "category": "decorative",
+      "filename": "decorative/swoosh.svg",
+      "tags": [
+        "underline",
+        "swoosh",
+        "emphasis",
+        "line"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "snapmock"
+    },
+    {
+      "id": "decorative/circle-highlight",
+      "name": "Circle Highlight",
+      "category": "decorative",
+      "filename": "decorative/circle-highlight.svg",
+      "tags": [
+        "circle",
+        "highlight",
+        "ring",
+        "emphasis"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "snapmock"
+    },
+    {
+      "id": "decorative/box-highlight",
+      "name": "Box Highlight",
+      "category": "decorative",
+      "filename": "decorative/box-highlight.svg",
+      "tags": [
+        "box",
+        "highlight",
+        "rectangle",
+        "frame"
+      ],
+      "default_size": 48.0,
+      "colorizable": true,
+      "source": "snapmock"
+    }
+  ]
+}
