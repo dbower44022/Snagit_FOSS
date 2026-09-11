@@ -1,6 +1,6 @@
 # General UI Implementation Notes
 
-Last Updated: 09-10-26 21:31 · Revision 1.28
+Last Updated: 09-10-26 21:49 · Revision 1.29
 
 Implements the SnapMock General User Interface PRD (version 2.4, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
@@ -659,12 +659,13 @@ In commit order. Step 1, f45cf44: the decisions above. Step 2, e844ebe: `snapmoc
 
 None from the wording of Section 3.8; the additions are recorded as one Section 6 bullet and one General UI PRD 2.9 row: the Open Repository Page button when no release has been published (silence 3), the running-check message for a second click, and the network-unavailable case as the Section 1.3 message (silence 7). The Technical Architecture PRD is at 1.16 (Section 10 row; Section 9 unchanged, since `PyQt6.QtNetwork` ships inside the PyQt6 wheel). Section 6 closes the Check for Updates deviation; Section 16 row 6 is fixed since, and Section 16.10's first bullet is closed. One finding for the kickoff prompt, not for the code: it names Technical Architecture PRD "Section 8 (platforms)", but platforms are Section 7 and Section 8 is Performance; Section 7 was read. The check behaves the same on every platform, since it uses Qt's network module and the desktop's URL opener only.
 
-**Next required step:** the General UI PRD has no open row, so the next kickoff is chosen from the other PRDs. Two are ready: the Numbered Steps, Stamps, and Emoji work, which the RasterRegion layer type (Section 18.1, silence 7) and the StampItem registry gap are waiting on, and the Windows backend (`docs/Windows-Backend-Kickoff-Prompt.md`), which waits for a Windows machine. Recommended: the Numbered Steps, Stamps, and Emoji work, since it runs on this machine. Before either, the two display answers of Section 19.2 are recorded in Section 16 rows 36 and 20 in a small commit when Doug gives them.
+**Next required step:** the General UI PRD has no open row, so the next kickoff is chosen from the other PRDs. Two are ready: the Numbered Steps, Stamps, and Emoji work, which the RasterRegion layer type (Section 18.1, silence 7) and the StampItem registry gap are waiting on, and the Windows backend (`docs/Windows-Backend-Kickoff-Prompt.md`), which waits for a Windows machine. Recommended: the Numbered Steps, Stamps, and Emoji work, since it runs on this machine; its kickoff is `docs/Numbered-Steps-Stamps-Emoji-Kickoff-Prompt.md` (revision 1.0, starting state at commit ea5f36b), three phases with four decisions and fourteen silences, recorded in its own notes document. Before either, the two display answers of Section 19.2 are recorded in Section 16 rows 36 and 20 in a small commit when Doug gives them.
 
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.29 | 09-10-26 21:49 | Claude (Claude Code) | Next step points at `docs/Numbered-Steps-Stamps-Emoji-Kickoff-Prompt.md`. |
 | 1.28 | 09-10-26 21:31 | Claude (Claude Code) | Check for Updates done: the phase-table row, Section 5.1's row 6 entry, Section 6 (the Check for Updates deviation closed, one bullet added), Section 7 tests, Section 16 row 6 fixed since, Section 16.10's first bullet closed, Section 19.2 display checks still owed, 19.3 build summary, 19.4 deviations, the next required step. General UI PRD 2.9, Technical Architecture PRD 1.16. The suite passes 1043 passed with 13 skipped and the one environmental deselection at the step 3 commit. |
 | 1.27 | 09-10-26 21:12 | Claude (Claude Code) | Check for Updates in progress: Section 19 with the two decisions (A, Qt's network module; A, manual only) and the seven silences, the phase-table row; the two display checks asked for. |
 | 1.26 | 09-10-26 14:40 | Claude (Claude Code) | Next step points at `docs/Check-for-Updates-Kickoff-Prompt.md`. |
