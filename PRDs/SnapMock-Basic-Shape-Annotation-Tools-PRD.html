@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Basic Shape Annotation Tools</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.6</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.7</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Line · Arrow · Rectangle · Ellipse · Arc · Polygon · Freehand / Pen</dd>
-    <dt>Document version</dt><dd>1.6</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 11:13</dd>
+    <dt>Document version</dt><dd>1.7</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 12:09</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -32,6 +32,13 @@
     </thead>
     <tbody>
       <tr>
+        <td>1.7</td>
+        <td class="nowrap">09-11-26 12:09</td>
+        <td>Doug Bower</td>
+        <td>Vector Item Properties Phase 1 built: the Section 2.2 shared properties on every vector item, the 2.6 bar in its order, the shadows and caps of 3.6, 3.7, 6.5, and 9.8; the departures recorded.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
+      <tr>
         <td>1.6</td>
         <td class="nowrap">09-11-26 11:13</td>
         <td>Doug Bower</td>
@@ -43,7 +50,7 @@
         <td class="nowrap">09-08-26 13:21</td>
         <td>Doug Bower</td>
         <td>Departure recorded: the Line tool ships on L, not U.</td>
-        <td><span class="status open">Pending</span></td>
+        <td><span class="status closed">Superseded</span></td>
       </tr>
       <tr>
         <td>1.4</td>
@@ -114,6 +121,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 12:09</td>
+        <td>2.2, 2.6, 3.6, 3.7, 4.4, 5.5, 6.5, 9.6, 9.8, 12</td>
+        <td>Built</td>
+        <td>Vector Item Properties Phase 1 (09-11-26; notes Section 3): every <code>VectorItem</code> carries the Section 2.2 properties. <code>stroke_style</code> is the <code>BorderStyle</code> enum, <code>stroke_cap</code> and <code>stroke_join</code> the new <code>StrokeCap</code> and <code>StrokeJoin</code> enums (Round by default; the Highlighter's cap Flat), <code>fill_opacity</code> and <code>stroke_opacity</code> render multipliers over the colours' own alpha, and the shadow the helper of <code>items/shadow.py</code> with this section's defaults, painted first as an offset, blurred copy of the shape: the stroke's area (with the dash pattern) plus the interior when the fill is not transparent, so an unfilled rectangle's shadow follows its outline. The shared bar of 2.6 is built in its order for every shape tool, with Fill Color and Fill Opacity omitted for the Line, Arrow, Freehand, and Highlighter tools, which draw no fill, and no opacity control for the Highlighter, whose colour's alpha is its opacity (Blur PRD 3.7). No bar or Property Panel control for <code>stroke_cap</code> or <code>stroke_join</code> is built (kickoff silence 3): 2.6 lists none, 9.6's Stroke Cap toggles for the Freehand tool wait for the Freehand kickoff, and the Highlighter's Cap Style toggles arrive in Phase 2. The arrowhead takes the stroke colour at the stroke opacity (4.4). A file saved before this work loads with every new property at its default; <code>format_version</code> stays 1. The Section 12 rows "All stroke properties render correctly" and "Shadow renders correctly when enabled" for Line, Arrow, and Freehand are met by pixel tests; the SVG export lands the shadow as a raster image (kickoff silence 9).</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 11:13</td>
         <td>2.2, 2.6, 3.6, 3.7, 4.3, 4.4, 4.7, 5.4, 6.5, 9.8</td>
