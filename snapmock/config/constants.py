@@ -128,11 +128,31 @@ class TailBaseEdge(Enum):
 
 
 class BorderStyle(Enum):
+    """The five stroke styles: ``stroke_style`` on a vector item (Basic Shape PRD 2.2) and
+    ``border_style`` on the text box, the callout, and the numbered step (Vector Item
+    Properties silence 1: one enum, two key names)."""
+
     SOLID = "solid"
     DASHED = "dashed"
     DOTTED = "dotted"
     DASHDOT = "dashdot"
     DASHDOTDOT = "dashdotdot"
+
+
+class StrokeCap(Enum):
+    """Line cap style (Basic Shape PRD 2.2): line endpoints and dash caps."""
+
+    FLAT = "flat"
+    SQUARE = "square"
+    ROUND = "round"
+
+
+class StrokeJoin(Enum):
+    """Line join style (Basic Shape PRD 2.2): the corners of rectangles and polygons."""
+
+    MITER = "miter"
+    BEVEL = "bevel"
+    ROUND = "round"
 
 
 # Zoom step ladder (percentage values)
@@ -206,6 +226,12 @@ MARKER_MIN_HIT_SIZE = 24.0  # the minimum hit area of Sections 2.10, 3.10, and 4
 DEFAULT_SHADOW_COLOR = "#66000000"  # the PRD's #00000066 in Qt's #AARRGGBB form
 DEFAULT_SHADOW_OFFSET = 2.0
 DEFAULT_SHADOW_BLUR = 4.0
+
+# --- Shadow of the vector items and the text items (Basic Shape PRD 2.2; Vector Item
+# Properties silence 2: each PRD's own defaults) ---
+DEFAULT_VECTOR_SHADOW_COLOR = "#80000000"  # the PRD's #00000080 in Qt's #AARRGGBB form
+DEFAULT_VECTOR_SHADOW_OFFSET = 3.0
+DEFAULT_VECTOR_SHADOW_BLUR = 5.0
 
 
 class BadgeShape(Enum):

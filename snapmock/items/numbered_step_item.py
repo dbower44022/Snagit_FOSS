@@ -43,16 +43,7 @@ from snapmock.config.constants import (
     FontWeight,
     LabelPosition,
 )
-from snapmock.items.shadow import ShadowMixin
-from snapmock.items.vector_item import VectorItem
-
-_BORDER_STYLE_MAP = {
-    BorderStyle.SOLID: Qt.PenStyle.SolidLine,
-    BorderStyle.DASHED: Qt.PenStyle.DashLine,
-    BorderStyle.DOTTED: Qt.PenStyle.DotLine,
-    BorderStyle.DASHDOT: Qt.PenStyle.DashDotLine,
-    BorderStyle.DASHDOTDOT: Qt.PenStyle.DashDotDotLine,
-}
+from snapmock.items.vector_item import VectorItem, with_alpha
 
 _LABEL_GAP = 6.0
 """Pixels between the badge edge and the label box (Section 2.6)."""
@@ -114,8 +105,13 @@ def roman_for(number: int) -> str:
     return out
 
 
-class NumberedStepItem(ShadowMixin, VectorItem):
-    """A step badge: shape, number or text, border, shadow, and an optional label."""
+class NumberedStepItem(VectorItem):
+    """A step badge: shape, number or text, border, shadow, and an optional label.
+
+    The border style, the fill and stroke opacities, and the shadow are the vector base's
+    (Vector Item Properties work); the shadow keeps the marker PRD's defaults and is on
+    by default (Section 2.4).
+    """
 
     def __init__(
         self,
@@ -124,7 +120,7 @@ class NumberedStepItem(ShadowMixin, VectorItem):
         parent: VectorItem | None = None,
     ) -> None:
         super().__init__(parent)
-        self._init_shadow(enabled=True)
+        self._init_shadow(enabled=True)  # the marker PRD's defaults over the vector base's
         self._number_value: int = int(number_value)
         self._display_mode: DisplayMode = DisplayMode.NUMBER
         self._custom_text: str = ""
@@ -134,9 +130,6 @@ class NumberedStepItem(ShadowMixin, VectorItem):
         self._font_family: str = DEFAULT_BADGE_FONT_FAMILY
         self._font_size: float = 0.0
         self._font_weight: FontWeight = FontWeight.BOLD
-        self._border_style: BorderStyle = BorderStyle.SOLID
-        self._fill_opacity: float = 1.0
-        self._stroke_opacity: float = 1.0
         self._label_text: str = ""
         self._label_position: LabelPosition = LabelPosition.RIGHT
         self._label_font_size: float = DEFAULT_LABEL_FONT_SIZE
@@ -282,32 +275,12 @@ class NumberedStepItem(ShadowMixin, VectorItem):
 
     @property
     def border_style(self) -> BorderStyle:
-        return self._border_style
+        """The badge border's style (Section 2.4); the same value as ``stroke_style``."""
+        return self._stroke_style
 
     @border_style.setter
     def border_style(self, value: BorderStyle) -> None:
-        self._border_style = BorderStyle(value)
-        self.update()
-
-    @property
-    def fill_opacity(self) -> float:
-        """Opacity of the badge fill and its text, 0.0 to 1.0 (PRD 1.2)."""
-        return self._fill_opacity
-
-    @fill_opacity.setter
-    def fill_opacity(self, value: float) -> None:
-        self._fill_opacity = max(0.0, min(1.0, float(value)))
-        self.update()
-
-    @property
-    def stroke_opacity(self) -> float:
-        """Opacity of the badge border, 0.0 to 1.0 (PRD 1.2)."""
-        return self._stroke_opacity
-
-    @stroke_opacity.setter
-    def stroke_opacity(self, value: float) -> None:
-        self._stroke_opacity = max(0.0, min(1.0, float(value)))
-        self.update()
+        self.stroke_style = value
 
     # ------------------------------------------------------------ the label
 
@@ -556,11 +529,6 @@ class NumberedStepItem(ShadowMixin, VectorItem):
             path.addRect(self._min_hit_rect())
         return path
 
-    def _with_alpha(self, color: QColor, factor: float) -> QColor:
-        out = QColor(color)
-        out.setAlphaF(out.alphaF() * factor)
-        return out
-
     def paint(self, painter: QPainter | None, option: Any, widget: Any = None) -> None:
         if painter is None:
             return
@@ -571,28 +539,23 @@ class NumberedStepItem(ShadowMixin, VectorItem):
         self.paint_shadow(painter, path)
         # The fill
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QBrush(self._with_alpha(self._fill_color, self._fill_opacity)))
+        painter.setBrush(self.brush())
         painter.drawPath(path)
         # The border
         if self._stroke_width > 0:
-            pen = QPen(
-                self._with_alpha(self._stroke_color, self._stroke_opacity), self._stroke_width
-            )
-            pen.setStyle(_BORDER_STYLE_MAP.get(self._border_style, Qt.PenStyle.SolidLine))
-            pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-            painter.setPen(pen)
+            painter.setPen(self.pen())
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawPath(path)
         # The number or text, centred in the badge body
         text = self.display_string()
         if text:
             painter.setFont(self._badge_font())
-            painter.setPen(self._with_alpha(self._text_color, self._fill_opacity))
+            painter.setPen(with_alpha(self._text_color, self._fill_opacity))
             painter.drawText(self.badge_rect(), Qt.AlignmentFlag.AlignCenter, text)
         # The label line
         if self._label_text:
             start, end = self._connector()
-            line_pen = QPen(self._with_alpha(self._fill_color, 0.5), 1.0)
+            line_pen = QPen(with_alpha(self._fill_color, 0.5), 1.0)
             line_pen.setCosmetic(True)
             painter.setPen(line_pen)
             painter.drawLine(start, end)
@@ -603,7 +566,7 @@ class NumberedStepItem(ShadowMixin, VectorItem):
                 painter.setBrush(QBrush(self._label_background))
                 painter.drawRoundedRect(label, radius, radius)
             painter.setFont(self._label_font())
-            painter.setPen(self._with_alpha(self._label_color, self._fill_opacity))
+            painter.setPen(with_alpha(self._label_color, self._fill_opacity))
             painter.drawText(label, Qt.AlignmentFlag.AlignCenter, self._label_text)
         self._end_flip(painter)
 
@@ -611,8 +574,9 @@ class NumberedStepItem(ShadowMixin, VectorItem):
 
     def serialize(self) -> dict[str, Any]:
         data = self._base_data()
-        # The badge colour and border are the Section 5 keys, not the vector base's.
-        for key in ("stroke_color", "stroke_width", "fill_color"):
+        # The badge colour, border, and border style are the Section 5 keys, not the
+        # vector base's; the base's cap and join keys stay (the badge takes the defaults).
+        for key in ("stroke_color", "stroke_width", "fill_color", "stroke_style"):
             data.pop(key, None)
         data.update(
             {
@@ -629,9 +593,7 @@ class NumberedStepItem(ShadowMixin, VectorItem):
                 "font_weight": self._font_weight.value,
                 "border_color": self._stroke_color.name(QColor.NameFormat.HexArgb),
                 "border_width": self._stroke_width,
-                "border_style": self._border_style.value,
-                "fill_opacity": self._fill_opacity,
-                "stroke_opacity": self._stroke_opacity,
+                "border_style": self._stroke_style.value,
                 "label_text": self._label_text,
                 "label_position": self._label_position.value,
                 "label_font_size": self._label_font_size,
@@ -640,7 +602,6 @@ class NumberedStepItem(ShadowMixin, VectorItem):
                 "label_background_enabled": self._label_background_enabled,
             }
         )
-        data.update(self._shadow_data())
         return data
 
     @classmethod
@@ -661,9 +622,7 @@ class NumberedStepItem(ShadowMixin, VectorItem):
         item._font_family = str(data.get("font_family", DEFAULT_BADGE_FONT_FAMILY))
         item._font_size = max(0.0, float(data.get("font_size", 0.0)))
         item._font_weight = _enum(FontWeight, data.get("font_weight"), FontWeight.BOLD)
-        item._border_style = _enum(BorderStyle, data.get("border_style"), BorderStyle.SOLID)
-        item._fill_opacity = max(0.0, min(1.0, float(data.get("fill_opacity", 1.0))))
-        item._stroke_opacity = max(0.0, min(1.0, float(data.get("stroke_opacity", 1.0))))
+        item._stroke_style = _enum(BorderStyle, data.get("border_style"), BorderStyle.SOLID)
         item._label_text = str(data.get("label_text", ""))
         item._label_position = _enum(
             LabelPosition, data.get("label_position"), LabelPosition.RIGHT
@@ -676,7 +635,6 @@ class NumberedStepItem(ShadowMixin, VectorItem):
             str(data.get("label_background", DEFAULT_LABEL_BACKGROUND))
         )
         item._label_background_enabled = bool(data.get("label_background_enabled", False))
-        item._apply_shadow_data(data)
         return item
 
     @property

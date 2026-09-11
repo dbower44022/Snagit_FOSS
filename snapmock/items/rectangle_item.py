@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from PyQt6.QtCore import QRectF
-from PyQt6.QtGui import QBrush, QPainter, QPainterPath
+from PyQt6.QtGui import QPainter, QPainterPath
 
 from snapmock.items.vector_item import VectorItem
 
@@ -40,7 +40,16 @@ class RectangleItem(VectorItem):
     @corner_radius.setter
     def corner_radius(self, value: float) -> None:
         self._corner_radius = max(0.0, value)
-        self.update()
+        self._geometry_changed()
+
+    def outline(self) -> QPainterPath:
+        """The rectangle's edge, rounded when ``corner_radius`` is above zero."""
+        path = QPainterPath()
+        if self._corner_radius > 0:
+            path.addRoundedRect(self._rect, self._corner_radius, self._corner_radius)
+        else:
+            path.addRect(self._rect)
+        return path
 
     def scale_geometry(self, sx: float, sy: float) -> None:
         super().scale_geometry(sx, sy)
@@ -55,23 +64,21 @@ class RectangleItem(VectorItem):
     # --- QGraphicsItem overrides ---
 
     def boundingRect(self) -> QRectF:
-        half = self._stroke_width / 2
-        return self._rect.adjusted(-half, -half, half, half)
+        margin = self.stroke_margin()
+        body = self._rect.adjusted(-margin, -margin, margin, margin)
+        return body.united(self.shadow_rect(body))
 
     def shape(self) -> QPainterPath:
-        path = QPainterPath()
-        if self._corner_radius > 0:
-            path.addRoundedRect(self._rect, self._corner_radius, self._corner_radius)
-        else:
-            path.addRect(self._rect)
-        return self.hit_shape(path)
+        return self.hit_shape(self.outline())
 
     def paint(self, painter: QPainter | None, option: Any, widget: Any = None) -> None:
         if painter is None:
             return
         self._apply_flip(painter)
+        outline = self.outline()
+        self.paint_shadow(painter, self.shadow_path(outline))
         painter.setPen(self.pen())
-        painter.setBrush(QBrush(self._fill_color))
+        painter.setBrush(self.brush())
         if self._corner_radius > 0:
             painter.drawRoundedRect(self._rect, self._corner_radius, self._corner_radius)
         else:

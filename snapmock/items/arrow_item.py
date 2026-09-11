@@ -8,7 +8,7 @@ from typing import Any
 from PyQt6.QtCore import QLineF, QPointF, QRectF
 from PyQt6.QtGui import QBrush, QPainter, QPainterPath, QPainterPathStroker, QPolygonF
 
-from snapmock.items.vector_item import VectorItem
+from snapmock.items.vector_item import VectorItem, with_alpha
 
 _ARROW_SIZE = 12.0
 
@@ -61,21 +61,31 @@ class ArrowItem(VectorItem):
         )
         return QPolygonF([p2, p1, p3])
 
+    def line_path(self) -> QPainterPath:
+        path = QPainterPath()
+        path.moveTo(self._line.p1())
+        path.lineTo(self._line.p2())
+        return path
+
+    def _head_path(self) -> QPainterPath:
+        head = QPainterPath()
+        head.addPolygon(self._arrowhead_polygon())
+        head.closeSubpath()
+        return head
+
     def boundingRect(self) -> QRectF:
         margin = _ARROW_SIZE + self._stroke_width + 4
-        return (
+        body = (
             QRectF(self._line.p1(), self._line.p2())
             .normalized()
             .adjusted(-margin, -margin, margin, margin)
         )
+        return body.united(self.shadow_rect(body))
 
     def shape(self) -> QPainterPath:
-        path = QPainterPath()
-        path.moveTo(self._line.p1())
-        path.lineTo(self._line.p2())
         stroker = QPainterPathStroker()
         stroker.setWidth(max(self._stroke_width, 4.0))
-        stroke_path = stroker.createStroke(path)
+        stroke_path = stroker.createStroke(self.line_path())
         stroke_path.addPolygon(self._arrowhead_polygon())
         return stroke_path
 
@@ -83,9 +93,14 @@ class ArrowItem(VectorItem):
         if painter is None:
             return
         self._apply_flip(painter)
+        head = self._head_path()
+        shadow = self.shadow_path(self.line_path(), closed=False)
+        shadow = shadow.united(head.united(self.stroke_outline(head)))
+        self.paint_shadow(painter, shadow)
         painter.setPen(self.pen())
         painter.drawLine(self._line)
-        painter.setBrush(QBrush(self._stroke_color))
+        # The head takes the stroke colour at the stroke opacity (Basic Shape PRD 4.4).
+        painter.setBrush(QBrush(with_alpha(self._stroke_color, self._stroke_opacity)))
         painter.drawPolygon(self._arrowhead_polygon())
         self._end_flip(painter)
 

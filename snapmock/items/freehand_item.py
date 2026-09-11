@@ -46,8 +46,9 @@ class FreehandItem(VectorItem):
                 self._path.lineTo(QPointF(x, y))
 
     def boundingRect(self) -> QRectF:
-        half = self._stroke_width / 2 + 2
-        return self._path.boundingRect().adjusted(-half, -half, half, half)
+        margin = self.stroke_margin() + 2.0
+        body = self._path.boundingRect().adjusted(-margin, -margin, margin, margin)
+        return body.united(self.shadow_rect(body))
 
     def shape(self) -> QPainterPath:
         stroker = QPainterPathStroker()
@@ -58,6 +59,7 @@ class FreehandItem(VectorItem):
         if painter is None:
             return
         self._apply_flip(painter)
+        self.paint_shadow(painter, self.shadow_path(self._path, closed=False))
         painter.setPen(self.pen())
         painter.drawPath(self._path)
         self._end_flip(painter)

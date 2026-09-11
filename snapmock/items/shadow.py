@@ -1,8 +1,11 @@
-"""Shadow helper — the five shadow properties and their painting, shared by the marker items.
+"""Shadow helper — the five shadow properties and their painting, shared by every item
+that has a shadow.
 
 Numbered Steps, Stamps & Emoji PRD Sections 2.4, 3.5, and 4.4 give the numbered step, the
-stamp, and the emoji a drop shadow; implementation decision 1 (option B) builds it once
-here and mixes it into those three items. The shadow is an offset, blurred copy of the
+stamp, and the emoji a drop shadow; implementation decision 1 (option B) built it once
+here and mixed it into those three items. The Vector Item Properties work mixes it into
+``VectorItem`` (Basic Shape PRD 2.2) and the two text items (Text and Callout PRD 3.7,
+4.8), each with its PRD's own defaults. The shadow is an offset, blurred copy of the
 item's shape painted inside the item's own ``paint``, never a Qt graphics effect, so the
 display, the raster exports, the layer thumbnails, and the clipboard agree. The blurred
 copy is rendered into an image at the painter's current scale and cached until the shape,
@@ -12,7 +15,7 @@ the colour, the blur, or the scale changes.
 from __future__ import annotations
 
 import math
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from PyQt6.QtCore import QPointF, QRectF, Qt
@@ -98,19 +101,29 @@ class ShadowMixin:
     _shadow_cache_image: QImage | None
     _shadow_cache_rect: QRectF
 
-    def _init_shadow(self, enabled: bool = False) -> None:
+    def _init_shadow(
+        self,
+        enabled: bool = False,
+        *,
+        color: str = DEFAULT_SHADOW_COLOR,
+        offset: float = DEFAULT_SHADOW_OFFSET,
+        blur: float = DEFAULT_SHADOW_BLUR,
+    ) -> None:
+        """Set the shadow's defaults: the marker PRD's unless the item passes its own."""
         self._shadow_enabled = enabled
-        self._shadow_color = QColor(DEFAULT_SHADOW_COLOR)
-        self._shadow_offset_x = DEFAULT_SHADOW_OFFSET
-        self._shadow_offset_y = DEFAULT_SHADOW_OFFSET
-        self._shadow_blur = DEFAULT_SHADOW_BLUR
+        self._shadow_color = QColor(color)
+        self._shadow_offset_x = float(offset)
+        self._shadow_offset_y = float(offset)
+        self._shadow_blur = float(blur)
         self._shadow_cache_key = None
         self._shadow_cache_image = None
         self._shadow_cache_rect = QRectF()
 
-    # The item's own methods, named here for the type checker.
-    def prepareGeometryChange(self) -> None: ...  # noqa: N802
-    def update(self, *args: Any) -> None: ...
+    if TYPE_CHECKING:
+        # The item's own methods, named for the type checker only: a real method here
+        # would sit ahead of Qt's in the method resolution order and swallow the call.
+        def prepareGeometryChange(self) -> None: ...  # noqa: N802
+        def update(self, *args: Any) -> None: ...
 
     def _shadow_changed(self) -> None:
         self._shadow_cache_key = None

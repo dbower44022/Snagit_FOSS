@@ -40,26 +40,31 @@ class LineItem(VectorItem):
             self._line.y2() * sy,
         )
 
-    def boundingRect(self) -> QRectF:
-        half = self._stroke_width / 2 + 2
-        return (
-            QRectF(self._line.p1(), self._line.p2())
-            .normalized()
-            .adjusted(-half, -half, half, half)
-        )
-
-    def shape(self) -> QPainterPath:
+    def line_path(self) -> QPainterPath:
         path = QPainterPath()
         path.moveTo(self._line.p1())
         path.lineTo(self._line.p2())
+        return path
+
+    def boundingRect(self) -> QRectF:
+        margin = self.stroke_margin() + 2.0
+        body = (
+            QRectF(self._line.p1(), self._line.p2())
+            .normalized()
+            .adjusted(-margin, -margin, margin, margin)
+        )
+        return body.united(self.shadow_rect(body))
+
+    def shape(self) -> QPainterPath:
         stroker = QPainterPathStroker()
         stroker.setWidth(max(self._stroke_width, 4.0))
-        return stroker.createStroke(path)
+        return stroker.createStroke(self.line_path())
 
     def paint(self, painter: QPainter | None, option: Any, widget: Any = None) -> None:
         if painter is None:
             return
         self._apply_flip(painter)
+        self.paint_shadow(painter, self.shadow_path(self.line_path(), closed=False))
         painter.setPen(self.pen())
         painter.drawLine(self._line)
         self._end_flip(painter)

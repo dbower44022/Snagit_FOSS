@@ -291,7 +291,8 @@ def test_panel_shows_appearance_step_and_shadow_sections_for_a_step(qtbot: QtBot
     assert panel._type_label.text() == "Numbered Step"  # noqa: SLF001
 
 
-def test_panel_hides_the_step_and_shadow_sections_for_a_rectangle(qtbot: QtBot) -> None:
+def test_panel_hides_the_step_section_for_a_rectangle(qtbot: QtBot) -> None:
+    """A rectangle shows Appearance and, since the Vector Item Properties work, Shadow."""
     panel, scene, sm = _panel(qtbot)
     layer = scene.layer_manager.active_layer
     assert layer is not None
@@ -300,10 +301,11 @@ def test_panel_hides_the_step_and_shadow_sections_for_a_rectangle(qtbot: QtBot) 
     sm.select(rect)
     assert panel._appearance_section.isVisible()  # noqa: SLF001
     assert not panel._step_section.isVisible()  # noqa: SLF001
-    assert not panel._shadow_section.isVisible()  # noqa: SLF001
+    assert panel._shadow_section.isVisible()  # noqa: SLF001
     step = _add_step(scene, 1, 10, 10)
     sm.select_items([rect, step])
-    assert not panel._shadow_section.isVisible()  # noqa: SLF001
+    assert panel._shadow_section.isVisible()  # noqa: SLF001
+    assert not panel._step_section.isVisible()  # noqa: SLF001
 
 
 def test_panel_edits_push_undoable_commands(qtbot: QtBot) -> None:

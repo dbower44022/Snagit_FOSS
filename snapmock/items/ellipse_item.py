@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from PyQt6.QtCore import QRectF
-from PyQt6.QtGui import QBrush, QPainter, QPainterPath
+from PyQt6.QtGui import QPainter, QPainterPath
 
 from snapmock.items.vector_item import VectorItem
 
@@ -40,21 +40,26 @@ class EllipseItem(VectorItem):
             self._rect.height() * sy,
         )
 
-    def boundingRect(self) -> QRectF:
-        half = self._stroke_width / 2
-        return self._rect.adjusted(-half, -half, half, half)
-
-    def shape(self) -> QPainterPath:
+    def outline(self) -> QPainterPath:
         path = QPainterPath()
         path.addEllipse(self._rect)
-        return self.hit_shape(path)
+        return path
+
+    def boundingRect(self) -> QRectF:
+        margin = self.stroke_margin()
+        body = self._rect.adjusted(-margin, -margin, margin, margin)
+        return body.united(self.shadow_rect(body))
+
+    def shape(self) -> QPainterPath:
+        return self.hit_shape(self.outline())
 
     def paint(self, painter: QPainter | None, option: Any, widget: Any = None) -> None:
         if painter is None:
             return
         self._apply_flip(painter)
+        self.paint_shadow(painter, self.shadow_path(self.outline()))
         painter.setPen(self.pen())
-        painter.setBrush(QBrush(self._fill_color))
+        painter.setBrush(self.brush())
         painter.drawEllipse(self._rect)
         self._end_flip(painter)
 

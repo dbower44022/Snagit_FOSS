@@ -1,12 +1,18 @@
-"""HighlightItem — semi-transparent wide stroke annotation."""
+"""HighlightItem — semi-transparent wide stroke annotation.
+
+Blur, Highlighter & Eyedropper PRD Section 3: the stroke colour is the highlight colour,
+whose alpha is the primary opacity (3.7); the cap is Flat by default (3.4) so the band
+has a clean marker edge; the shadow, when enabled, is drawn first (3.7).
+"""
 
 from __future__ import annotations
 
 from typing import Any
 
 from PyQt6.QtCore import QRectF
-from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPainterPathStroker, QPen
+from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPainterPathStroker
 
+from snapmock.config.constants import StrokeCap
 from snapmock.items.vector_item import VectorItem
 
 
@@ -17,6 +23,7 @@ class HighlightItem(VectorItem):
         super().__init__(parent)
         self._stroke_color = QColor(255, 255, 0, 128)  # semi-transparent yellow
         self._stroke_width = 20.0
+        self._stroke_cap = StrokeCap.FLAT
         self._path = QPainterPath()
         self._points: list[tuple[float, float]] = []
 
@@ -43,8 +50,9 @@ class HighlightItem(VectorItem):
                 self._path.lineTo(x, y)
 
     def boundingRect(self) -> QRectF:
-        half = self._stroke_width / 2 + 2
-        return self._path.boundingRect().adjusted(-half, -half, half, half)
+        margin = self.stroke_margin() + 2.0
+        body = self._path.boundingRect().adjusted(-margin, -margin, margin, margin)
+        return body.united(self.shadow_rect(body))
 
     def shape(self) -> QPainterPath:
         stroker = QPainterPathStroker()
@@ -55,10 +63,8 @@ class HighlightItem(VectorItem):
         if painter is None:
             return
         self._apply_flip(painter)
-        pen = QPen(self._stroke_color, self._stroke_width)
-        pen.setCapStyle(pen.capStyle().RoundCap)
-        pen.setJoinStyle(pen.joinStyle().RoundJoin)
-        painter.setPen(pen)
+        self.paint_shadow(painter, self.shadow_path(self._path, closed=False))
+        painter.setPen(self.pen())
         painter.drawPath(self._path)
         self._end_flip(painter)
 
