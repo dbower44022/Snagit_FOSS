@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Technical Architecture</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.18</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.19</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
-    <dt>Document version</dt><dd>1.18</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 00:05</dd>
+    <dt>Document version</dt><dd>1.19</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 00:40</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,14 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.19</td>
+        <td class="nowrap">09-11-26 00:40</td>
+        <td>Doug Bower</td>
+        <td>Numbered Steps, Stamps, and Emoji implementation, Phase 1 step 4: Section 10 gains
+        <code>ui/step_inline_editor.py</code>, the inline editor of the tool PRD's Section 2.8.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.18</td>
         <td class="nowrap">09-11-26 00:05</td>
@@ -228,6 +236,16 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 00:40</td>
+        <td>10</td>
+        <td>Added</td>
+        <td>Numbered Steps, Stamps, and Emoji implementation, Phase 1 step 4: <code>ui/step_inline_editor.py</code>
+        (<code>StepInlineEditor</code>: two line edits over the badge for the value and the label; Tab between them,
+        Enter applies as one undo entry, Escape closes without applying, focus leaving finishes). The main window
+        owns one editor at a time through <code>open_marker_editor</code> and <code>close_marker_editor</code>, the
+        route both the Select tool's and the placing tool's double-click take (kickoff silence 9).</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 00:05</td>
         <td>10</td>
@@ -1881,6 +1899,7 @@ docstring.</p>
         ruler_widget.py           # pixel ruler for horizontal and vertical axes
         selection_overlay.py      # marching ants border for raster selections
         shortcuts_dialog.py       # the searchable keyboard shortcut reference (Help menu)
+        step_inline_editor.py     # inline editor for a numbered step: the value and the label, over the badge
         status_bar.py             # the six status bar zones of the General UI PRD Section 9
         toast.py                  # transient notification shown at the bottom of the main…
         tool_options_bar.py       # the shared control set and per-tool options (General UI PRD 5)

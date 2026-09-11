@@ -36,13 +36,24 @@ from snapmock.commands.modify_property import ModifyPropertiesCommand, ModifyPro
 from snapmock.commands.move_item_layer import MoveItemToLayerCommand
 from snapmock.commands.raster_commands import ResizeCanvasCommand
 from snapmock.commands.scale_geometry_command import ScaleGeometryCommand
-from snapmock.config.constants import VerticalAlign
+from snapmock.config.constants import (
+    BADGE_SIZE_MAX,
+    BADGE_SIZE_MIN,
+    BadgeShape,
+    BorderStyle,
+    DisplayMode,
+    FontWeight,
+    LabelPosition,
+    VerticalAlign,
+)
 from snapmock.config.settings import AppSettings
 from snapmock.core.command_stack import BaseCommand
 from snapmock.core.theme_manager import current_theme, theme_manager
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.callout_item import CalloutItem
 from snapmock.items.group_item import GroupItem
+from snapmock.items.numbered_step_item import NumberedStepItem
+from snapmock.items.shadow import ShadowMixin
 from snapmock.items.text_item import TextItem
 from snapmock.items.vector_item import VectorItem
 from snapmock.ui.collapsible_section import CollapsibleSection
@@ -179,6 +190,8 @@ class PropertyPanel(QDockWidget):
 
         self._build_transform_section()
         self._build_appearance_section()
+        self._build_step_section()
+        self._build_shadow_section()
         self._build_text_section()
         self._build_text_box_section()
         self._build_info_section()
@@ -186,6 +199,8 @@ class PropertyPanel(QDockWidget):
         self._sections = (
             self._transform_section,
             self._appearance_section,
+            self._step_section,
+            self._shadow_section,
             self._text_section,
             self._text_box_section,
             self._info_section,
@@ -436,6 +451,151 @@ class PropertyPanel(QDockWidget):
         )
         self._main_layout.addWidget(self._appearance_section)
 
+    def _build_step_section(self) -> None:
+        """The numbered step's own properties (Numbered Steps, Stamps & Emoji PRD 2.4):
+        everything the Appearance section does not already show as the stroke and fill."""
+        from snapmock.ui.tool_options_bar import badge_shape_icon
+
+        self._step_section = CollapsibleSection("Numbered Step")
+
+        self._step_value_spin = QSpinBox()
+        self._step_value_spin.setRange(-1, 9999)
+        self._step_value_spin.setSpecialValueText(MIXED_TEXT)
+        self._step_value_spin.setKeyboardTracking(False)
+        self._step_value_spin.setAccessibleName("Step number")
+        self._step_section.add_row("Number:", self._step_value_spin)
+
+        self._step_mode_combo = QComboBox()
+        for label, mode in (
+            ("Number", DisplayMode.NUMBER),
+            ("Letter", DisplayMode.LETTER),
+            ("Roman", DisplayMode.ROMAN),
+            ("Custom Text", DisplayMode.TEXT),
+        ):
+            self._step_mode_combo.addItem(label, mode)
+        self._step_mode_combo.setAccessibleName("Display mode")
+        self._step_section.add_row("Mode:", self._step_mode_combo)
+
+        self._step_text_edit = QLineEdit()
+        self._step_text_edit.setAccessibleName("Custom text")
+        self._step_text_edit.setPlaceholderText("Text in Custom Text mode")
+        self._step_section.add_row("Text:", self._step_text_edit)
+
+        self._step_shape_combo = QComboBox()
+        for shape in BadgeShape:
+            self._step_shape_combo.addItem(
+                badge_shape_icon(shape), shape.value.replace("_", " ").title(), shape
+            )
+        self._step_shape_combo.setAccessibleName("Badge shape")
+        self._step_section.add_row("Shape:", self._step_shape_combo)
+
+        self._step_size_spin = self._make_double_spin(
+            BADGE_SIZE_MIN - 1.0, BADGE_SIZE_MAX, 1, " px", "Badge size"
+        )
+        self._step_section.add_row("Size:", self._step_size_spin)
+
+        self._step_weight_combo = QComboBox()
+        self._step_weight_combo.addItem("Normal", FontWeight.NORMAL)
+        self._step_weight_combo.addItem("Bold", FontWeight.BOLD)
+        self._step_weight_combo.setAccessibleName("Badge font weight")
+        self._step_section.add_row("Weight:", self._step_weight_combo)
+
+        self._step_border_style_combo = QComboBox()
+        for style in BorderStyle:
+            self._step_border_style_combo.addItem(
+                style.value.replace("dashdot", "dash-dot").title(), style
+            )
+        self._step_border_style_combo.setAccessibleName("Border style")
+        self._step_section.add_row("Border style:", self._step_border_style_combo)
+
+        self._fill_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self._fill_opacity_slider.setRange(0, 100)
+        self._fill_opacity_spin = QSpinBox()
+        self._fill_opacity_spin.setRange(-1, 100)
+        self._fill_opacity_spin.setSuffix("%")
+        self._fill_opacity_spin.setSpecialValueText(MIXED_TEXT)
+        self._fill_opacity_spin.setKeyboardTracking(False)
+        self._step_section.add_row(
+            "Fill opacity:",
+            self._slider_spin_row(
+                self._fill_opacity_spin, self._fill_opacity_slider, "Fill opacity"
+            ),
+        )
+        self._stroke_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self._stroke_opacity_slider.setRange(0, 100)
+        self._stroke_opacity_spin = QSpinBox()
+        self._stroke_opacity_spin.setRange(-1, 100)
+        self._stroke_opacity_spin.setSuffix("%")
+        self._stroke_opacity_spin.setSpecialValueText(MIXED_TEXT)
+        self._stroke_opacity_spin.setKeyboardTracking(False)
+        self._step_section.add_row(
+            "Stroke opacity:",
+            self._slider_spin_row(
+                self._stroke_opacity_spin, self._stroke_opacity_slider, "Stroke opacity"
+            ),
+        )
+
+        self._step_label_edit = QLineEdit()
+        self._step_label_edit.setAccessibleName("Label text")
+        self._step_label_edit.setPlaceholderText("No label")
+        self._step_section.add_row("Label:", self._step_label_edit)
+
+        self._step_label_pos_combo = QComboBox()
+        for position in LabelPosition:
+            self._step_label_pos_combo.addItem(position.value.title(), position)
+        self._step_label_pos_combo.setAccessibleName("Label position")
+        self._step_section.add_row("Label position:", self._step_label_pos_combo)
+
+        self._step_label_size_spin = self._make_double_spin(
+            0.0, 200.0, 1, " pt", "Label font size"
+        )
+        self._step_section.add_row("Label size:", self._step_label_size_spin)
+
+        self._step_label_color_picker = ColorPicker(QColor("black"))
+        self._step_label_color_picker.setAccessibleName("Label color")
+        self._step_section.add_row("Label color:", self._step_label_color_picker)
+
+        self._step_label_bg_picker = ColorPicker(QColor("white"))
+        self._step_label_bg_picker.setAccessibleName("Label background")
+        self._step_section.add_row("Label background:", self._step_label_bg_picker)
+
+        self._step_label_pill_check = QCheckBox("Background pill")
+        self._step_label_pill_check.setAccessibleName("Label background pill")
+        self._step_section.add_row("", self._step_label_pill_check)
+        self._main_layout.addWidget(self._step_section)
+
+    def _build_shadow_section(self) -> None:
+        """The Shadow section of General UI PRD 8.3, for the items that carry a shadow
+        (Numbered Steps, Stamps, and Emoji decision 1)."""
+        self._shadow_section = CollapsibleSection("Shadow")
+
+        self._shadow_check = QCheckBox("Enabled")
+        self._shadow_check.setAccessibleName("Shadow enabled")
+        self._shadow_section.add_row("", self._shadow_check)
+
+        self._shadow_color_picker = ColorPicker(QColor(0, 0, 0, 102))
+        self._shadow_color_picker.setAccessibleName("Shadow color")
+        self._shadow_section.add_row("Color:", self._shadow_color_picker)
+
+        self._shadow_x_spin = self._make_double_spin(-101.0, 100.0, 1, " px", "Shadow offset X")
+        self._shadow_section.add_row("Offset X:", self._shadow_x_spin)
+        self._shadow_y_spin = self._make_double_spin(-101.0, 100.0, 1, " px", "Shadow offset Y")
+        self._shadow_section.add_row("Offset Y:", self._shadow_y_spin)
+
+        self._shadow_blur_slider = QSlider(Qt.Orientation.Horizontal)
+        self._shadow_blur_slider.setRange(0, 50)
+        self._shadow_blur_spin = QDoubleSpinBox()
+        self._shadow_blur_spin.setRange(-1.0, 50.0)
+        self._shadow_blur_spin.setDecimals(1)
+        self._shadow_blur_spin.setSuffix(" px")
+        self._shadow_blur_spin.setSpecialValueText(MIXED_TEXT)
+        self._shadow_blur_spin.setKeyboardTracking(False)
+        self._shadow_section.add_row(
+            "Blur radius:",
+            self._slider_spin_row(self._shadow_blur_spin, self._shadow_blur_slider, "Shadow blur"),
+        )
+        self._main_layout.addWidget(self._shadow_section)
+
     def _build_text_section(self) -> None:
         self._text_section = CollapsibleSection("Text")
 
@@ -603,6 +763,31 @@ class PropertyPanel(QDockWidget):
         self._text_padding_spin.valueChanged.connect(self._on_text_padding_changed)
         self._text_valign_combo.currentIndexChanged.connect(self._on_text_valign_changed)
         self._text_auto_size_check.toggled.connect(self._on_text_auto_size_changed)
+        self._step_value_spin.valueChanged.connect(self._on_step_value_changed)
+        self._step_mode_combo.currentIndexChanged.connect(self._on_step_mode_changed)
+        self._step_text_edit.editingFinished.connect(self._on_step_text_edited)
+        self._step_shape_combo.currentIndexChanged.connect(self._on_step_shape_changed)
+        self._step_size_spin.valueChanged.connect(self._on_step_size_changed)
+        self._step_weight_combo.currentIndexChanged.connect(self._on_step_weight_changed)
+        self._step_border_style_combo.currentIndexChanged.connect(
+            self._on_step_border_style_changed
+        )
+        self._fill_opacity_slider.valueChanged.connect(self._on_fill_opacity_slider_changed)
+        self._fill_opacity_spin.valueChanged.connect(self._on_fill_opacity_spin_changed)
+        self._stroke_opacity_slider.valueChanged.connect(self._on_stroke_opacity_slider_changed)
+        self._stroke_opacity_spin.valueChanged.connect(self._on_stroke_opacity_spin_changed)
+        self._step_label_edit.editingFinished.connect(self._on_step_label_edited)
+        self._step_label_pos_combo.currentIndexChanged.connect(self._on_step_label_pos_changed)
+        self._step_label_size_spin.valueChanged.connect(self._on_step_label_size_changed)
+        self._step_label_color_picker.color_changed.connect(self._on_step_label_color_changed)
+        self._step_label_bg_picker.color_changed.connect(self._on_step_label_bg_changed)
+        self._step_label_pill_check.toggled.connect(self._on_step_label_pill_changed)
+        self._shadow_check.toggled.connect(self._on_shadow_enabled_changed)
+        self._shadow_color_picker.color_changed.connect(self._on_shadow_color_changed)
+        self._shadow_x_spin.valueChanged.connect(self._on_shadow_x_changed)
+        self._shadow_y_spin.valueChanged.connect(self._on_shadow_y_changed)
+        self._shadow_blur_slider.valueChanged.connect(self._on_shadow_blur_slider_changed)
+        self._shadow_blur_spin.valueChanged.connect(self._on_shadow_blur_spin_changed)
 
     # ------------------------------------------------------------ wiring
 
@@ -690,6 +875,13 @@ class PropertyPanel(QDockWidget):
             return any(isinstance(m, VectorItem) for m in item.descendants())
         return False
 
+    def _selected_steps(self) -> list[NumberedStepItem]:
+        return [i for i in self._selected_items() if isinstance(i, NumberedStepItem)]
+
+    def _selected_shadowed(self) -> list[Any]:
+        """The selected items that carry a shadow (the marker items, decision 1)."""
+        return [i for i in self._selected_items() if isinstance(i, ShadowMixin)]
+
     def _selected_text_items(self) -> list[_TextLike]:
         return [i for i in self._selected_items() if isinstance(i, (TextItem, CalloutItem))]
 
@@ -703,6 +895,8 @@ class PropertyPanel(QDockWidget):
             all_vector = has_selection and all(self._shows_appearance(i) for i in items)
             all_text = has_selection and all(isinstance(i, (TextItem, CalloutItem)) for i in items)
             all_text_items = has_selection and all(isinstance(i, TextItem) for i in items)
+            all_steps = has_selection and all(isinstance(i, NumberedStepItem) for i in items)
+            all_shadow = has_selection and all(isinstance(i, ShadowMixin) for i in items)
 
             in_tool_defaults = not has_selection and self._active_tool_id in ("text", "callout")
             in_vector_defaults = not has_selection and self._active_tool_id in _VECTOR_TOOL_IDS
@@ -710,6 +904,8 @@ class PropertyPanel(QDockWidget):
             # Section visibility (PRD 8.3 to 8.6)
             self._transform_section.setVisible(has_selection)
             self._appearance_section.setVisible(all_vector or in_vector_defaults)
+            self._step_section.setVisible(all_steps)
+            self._shadow_section.setVisible(all_shadow)
             self._text_section.setVisible(all_text or in_tool_defaults)
             self._text_box_section.setVisible(all_text or in_tool_defaults)
             self._info_section.setVisible(has_selection)
@@ -727,6 +923,10 @@ class PropertyPanel(QDockWidget):
                     self._populate_appearance(self._selected_vectors())
                 if all_text:
                     self._populate_text(self._selected_text_items(), all_text_items)
+                if all_steps:
+                    self._populate_step(self._selected_steps())
+                if all_shadow:
+                    self._populate_shadow(self._selected_shadowed())
                 self._populate_info(items)
             else:
                 self._populate_canvas()
@@ -800,6 +1000,41 @@ class PropertyPanel(QDockWidget):
                 self._text_auto_size_check,
                 [i.auto_size for i in items if isinstance(i, TextItem)],
             )
+
+    def _populate_step(self, items: list[NumberedStepItem]) -> None:
+        self._set_spin(self._step_value_spin, [i.number_value for i in items])
+        self._set_combo_data(self._step_mode_combo, [i.display_mode for i in items])
+        text, uniform = _uniform([i.custom_text for i in items])
+        self._step_text_edit.setText(str(text) if uniform else "")
+        self._set_combo_data(self._step_shape_combo, [i.badge_shape for i in items])
+        self._set_spin(self._step_size_spin, [i.badge_size for i in items])
+        self._set_combo_data(self._step_weight_combo, [i.font_weight for i in items])
+        self._set_combo_data(self._step_border_style_combo, [i.border_style for i in items])
+        fills = [int(round(i.fill_opacity * 100)) for i in items]
+        value, uniform = _uniform(fills)
+        self._fill_opacity_slider.setValue(int(value) if uniform else 0)
+        self._set_spin(self._fill_opacity_spin, fills)
+        strokes = [int(round(i.stroke_opacity * 100)) for i in items]
+        value, uniform = _uniform(strokes)
+        self._stroke_opacity_slider.setValue(int(value) if uniform else 0)
+        self._set_spin(self._stroke_opacity_spin, strokes)
+        label, uniform = _uniform([i.label_text for i in items])
+        self._step_label_edit.setText(str(label) if uniform else "")
+        self._set_combo_data(self._step_label_pos_combo, [i.label_position for i in items])
+        self._set_spin(self._step_label_size_spin, [i.label_font_size for i in items])
+        self._set_color(self._step_label_color_picker, None, [i.label_color for i in items])
+        self._set_color(self._step_label_bg_picker, None, [i.label_background for i in items])
+        self._set_check(self._step_label_pill_check, [i.label_background_enabled for i in items])
+
+    def _populate_shadow(self, items: list[Any]) -> None:
+        self._set_check(self._shadow_check, [bool(i.shadow_enabled) for i in items])
+        self._set_color(self._shadow_color_picker, None, [QColor(i.shadow_color) for i in items])
+        self._set_spin(self._shadow_x_spin, [float(i.shadow_offset_x) for i in items])
+        self._set_spin(self._shadow_y_spin, [float(i.shadow_offset_y) for i in items])
+        blurs = [float(i.shadow_blur) for i in items]
+        value, uniform = _uniform(blurs)
+        self._shadow_blur_slider.setValue(int(value) if uniform else 0)
+        self._set_spin(self._shadow_blur_spin, blurs)
 
     def _populate_info(self, items: list[SnapGraphicsItem]) -> None:
         value, uniform = _uniform([i.type_name for i in items])
@@ -1577,6 +1812,157 @@ class PropertyPanel(QDockWidget):
             return
         if self._in_tool_defaults_mode() or self._in_vector_defaults_mode():
             self._refresh_from_selection()
+
+    # --- numbered step handlers (Numbered Steps, Stamps & Emoji PRD 2.4) ---
+
+    def _on_step_value_changed(self, value: int) -> None:
+        if self._updating or value < 0:
+            return
+        self._push_property(self._selected_steps(), "number_value", int(value))
+
+    def _on_step_mode_changed(self, index: int) -> None:
+        if self._updating or index < 0:
+            return
+        mode = self._step_mode_combo.itemData(index)
+        if isinstance(mode, DisplayMode):
+            self._push_property(self._selected_steps(), "display_mode", mode)
+
+    def _on_step_text_edited(self) -> None:
+        if self._updating:
+            return
+        text = self._step_text_edit.text()
+        items = [i for i in self._selected_steps() if i.custom_text != text]
+        self._push_property(items, "custom_text", text)
+
+    def _on_step_shape_changed(self, index: int) -> None:
+        if self._updating or index < 0:
+            return
+        shape = self._step_shape_combo.itemData(index)
+        if isinstance(shape, BadgeShape):
+            self._push_property(self._selected_steps(), "badge_shape", shape)
+
+    def _on_step_size_changed(self, value: float) -> None:
+        if self._updating or value < BADGE_SIZE_MIN:
+            return
+        self._push_property(self._selected_steps(), "badge_size", float(value))
+
+    def _on_step_weight_changed(self, index: int) -> None:
+        if self._updating or index < 0:
+            return
+        weight = self._step_weight_combo.itemData(index)
+        if isinstance(weight, FontWeight):
+            self._push_property(self._selected_steps(), "font_weight", weight)
+
+    def _on_step_border_style_changed(self, index: int) -> None:
+        if self._updating or index < 0:
+            return
+        style = self._step_border_style_combo.itemData(index)
+        if isinstance(style, BorderStyle):
+            self._push_property(self._selected_steps(), "border_style", style)
+
+    def _on_fill_opacity_slider_changed(self, value: int) -> None:
+        if self._updating:
+            return
+        self._updating = True
+        self._fill_opacity_spin.setValue(value)
+        self._updating = False
+        self._push_property(self._selected_steps(), "fill_opacity", value / 100.0)
+
+    def _on_fill_opacity_spin_changed(self, value: int) -> None:
+        if self._updating or value < 0:
+            return
+        self._updating = True
+        self._fill_opacity_slider.setValue(value)
+        self._updating = False
+        self._push_property(self._selected_steps(), "fill_opacity", value / 100.0)
+
+    def _on_stroke_opacity_slider_changed(self, value: int) -> None:
+        if self._updating:
+            return
+        self._updating = True
+        self._stroke_opacity_spin.setValue(value)
+        self._updating = False
+        self._push_property(self._selected_steps(), "stroke_opacity", value / 100.0)
+
+    def _on_stroke_opacity_spin_changed(self, value: int) -> None:
+        if self._updating or value < 0:
+            return
+        self._updating = True
+        self._stroke_opacity_slider.setValue(value)
+        self._updating = False
+        self._push_property(self._selected_steps(), "stroke_opacity", value / 100.0)
+
+    def _on_step_label_edited(self) -> None:
+        if self._updating:
+            return
+        text = self._step_label_edit.text()
+        items = [i for i in self._selected_steps() if i.label_text != text]
+        self._push_property(items, "label_text", text)
+
+    def _on_step_label_pos_changed(self, index: int) -> None:
+        if self._updating or index < 0:
+            return
+        position = self._step_label_pos_combo.itemData(index)
+        if isinstance(position, LabelPosition):
+            self._push_property(self._selected_steps(), "label_position", position)
+
+    def _on_step_label_size_changed(self, value: float) -> None:
+        if self._updating or value <= 0:
+            return
+        self._push_property(self._selected_steps(), "label_font_size", float(value))
+
+    def _on_step_label_color_changed(self, color: QColor) -> None:
+        if self._updating:
+            return
+        self._push_property(self._selected_steps(), "label_color", QColor(color))
+
+    def _on_step_label_bg_changed(self, color: QColor) -> None:
+        if self._updating:
+            return
+        self._push_property(self._selected_steps(), "label_background", QColor(color))
+
+    def _on_step_label_pill_changed(self, checked: bool) -> None:
+        if self._updating:
+            return
+        self._push_property(self._selected_steps(), "label_background_enabled", bool(checked))
+
+    # --- shadow handlers (General UI PRD 8.3; decision 1) ---
+
+    def _on_shadow_enabled_changed(self, checked: bool) -> None:
+        if self._updating:
+            return
+        self._push_property(self._selected_shadowed(), "shadow_enabled", bool(checked))
+
+    def _on_shadow_color_changed(self, color: QColor) -> None:
+        if self._updating:
+            return
+        self._push_property(self._selected_shadowed(), "shadow_color", QColor(color))
+
+    def _on_shadow_x_changed(self, value: float) -> None:
+        if self._updating or value == self._shadow_x_spin.minimum():
+            return
+        self._push_property(self._selected_shadowed(), "shadow_offset_x", float(value))
+
+    def _on_shadow_y_changed(self, value: float) -> None:
+        if self._updating or value == self._shadow_y_spin.minimum():
+            return
+        self._push_property(self._selected_shadowed(), "shadow_offset_y", float(value))
+
+    def _on_shadow_blur_slider_changed(self, value: int) -> None:
+        if self._updating:
+            return
+        self._updating = True
+        self._shadow_blur_spin.setValue(float(value))
+        self._updating = False
+        self._push_property(self._selected_shadowed(), "shadow_blur", float(value))
+
+    def _on_shadow_blur_spin_changed(self, value: float) -> None:
+        if self._updating or value < 0:
+            return
+        self._updating = True
+        self._shadow_blur_slider.setValue(int(value))
+        self._updating = False
+        self._push_property(self._selected_shadowed(), "shadow_blur", float(value))
 
     def refresh_tool_defaults(self) -> None:
         """Re-read the active tool's creation defaults (Preferences > Tools changed)."""

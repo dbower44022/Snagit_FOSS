@@ -32,6 +32,7 @@ from PyQt6.QtWidgets import (
     QProgressDialog,
     QSystemTrayIcon,
     QToolButton,
+    QWidget,
     QWidgetAction,
 )
 
@@ -98,6 +99,7 @@ from snapmock.io.project_serializer import (
 from snapmock.io.snagit_reader import load_snagx
 from snapmock.io.snagit_writer import save_snagx
 from snapmock.items.base_item import SnapGraphicsItem
+from snapmock.items.numbered_step_item import NumberedStepItem
 from snapmock.library.manager import LibraryManager
 from snapmock.library.render import export_file, export_target
 from snapmock.tools.arrow_tool import ArrowTool
@@ -209,6 +211,7 @@ class MainWindow(QMainWindow):
         # Help > Check for Updates (General UI PRD 3.8): one check at a time, on the
         # event loop; the result arrives as a signal (implementation notes Section 19).
         self._update_checker = UpdateChecker(self)
+        self._marker_editor: QWidget | None = None
         self._update_checker.finished.connect(self._on_update_check_finished)
         self._tray: QSystemTrayIcon | None = None
         self._tray_menu: QMenu | None = None
@@ -3480,6 +3483,82 @@ class MainWindow(QMainWindow):
             for item in items
         ]
         self._scene.command_stack.push(MacroCommand(cmds, "Flip Horizontal"))
+
+    # ---- marker editing (Numbered Steps, Stamps, and Emoji PRD 2.8; kickoff silence 9) ----
+
+    def open_marker_editor(self, item: SnapGraphicsItem) -> bool:
+        """Enter *item*'s edit: the inline editor for a numbered step. One editor at a
+        time; a double-click from the Select tool or the placing tool both land here.
+        Returns False for an item with no editor."""
+        from snapmock.items.numbered_step_item import NumberedStepItem
+
+        self.close_marker_editor()
+        if isinstance(item, NumberedStepItem):
+            from snapmock.ui.step_inline_editor import EDIT_HINT, StepInlineEditor
+
+            self._selection_manager.select(item)
+            self._marker_editor = StepInlineEditor(
+                item, self._view, self._scene, self._on_marker_editor_finished
+            )
+            self.show_status_hint(EDIT_HINT)
+            return True
+        return False
+
+    @property
+    def marker_editor(self) -> QWidget | None:
+        """The open inline editor, if any."""
+        return self._marker_editor
+
+    def close_marker_editor(self) -> None:
+        """Finish the open editor, applying its edit."""
+        editor = self._marker_editor
+        if editor is not None:
+            finish = getattr(editor, "finish", None)
+            if callable(finish):
+                finish()
+            self._marker_editor = None
+
+    def _on_marker_editor_finished(self) -> None:
+        self._marker_editor = None
+        self._on_tool_changed_for_hint(self._tool_manager.active_tool_id)
+
+    def _selected_step(self) -> NumberedStepItem | None:
+        """The one selected numbered step, or None."""
+        from snapmock.items.numbered_step_item import NumberedStepItem
+
+        items = self._selected_snap_items()
+        if len(items) == 1 and isinstance(items[0], NumberedStepItem):
+            return items[0]
+        return None
+
+    def _step_set_as_starting_number(self) -> None:
+        """Set as Starting Number (PRD 2.8): the Starting Number control takes this step's
+        number, so the next placed step follows it."""
+        step = self._selected_step()
+        if not self._require("Set as Starting Number", (step is not None, "one numbered step")):
+            return
+        assert step is not None
+        tool = self._tool_manager.tool("numbered_step")
+        if isinstance(tool, NumberedStepTool):
+            tool.creation_defaults["start_number"] = step.number_value
+            tool.on_option_changed("start_number", step.number_value)
+            self._tool_manager.tool_defaults_changed.emit("numbered_step")
+
+    def _step_toggle_text_mode(self) -> None:
+        """Convert to Text Mode / Convert to Number Mode (PRD 2.8), one undo entry."""
+        from snapmock.commands.modify_property import ModifyPropertyCommand
+        from snapmock.config.constants import DisplayMode
+
+        step = self._selected_step()
+        if not self._require("Convert Display Mode", (step is not None, "one numbered step")):
+            return
+        assert step is not None
+        new_mode = (
+            DisplayMode.NUMBER if step.display_mode is DisplayMode.TEXT else DisplayMode.TEXT
+        )
+        self._scene.command_stack.push(
+            ModifyPropertyCommand(step, "display_mode", step.display_mode, new_mode)
+        )
 
     def renumber_all_steps(self) -> None:
         """Renumber All Steps (Numbered Steps PRD 2.3, 6.1): every step top to bottom, then

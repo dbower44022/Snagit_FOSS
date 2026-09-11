@@ -233,11 +233,47 @@ class NumberedStepTool(BaseTool):
         view = self._view
         if view is None:
             return False
+        scene_pos = view.mapToScene(event.pos())
+        existing = self._step_at(scene_pos)
+        if existing is not None:
+            # A click on an existing step selects it; a double-click then edits it (2.8)
+            if self._selection_manager is not None:
+                self._selection_manager.select(existing)
+            return True
         if not self._layer_allows_placing():
             return True
-        self._drag_start = self._snap_pos(view.mapToScene(event.pos()))
+        self._drag_start = self._snap_pos(scene_pos)
         self._drag_size = None
         return True
+
+    def mouse_double_click(self, event: QMouseEvent) -> bool:
+        """A double-click on a step enters its inline edit (PRD 2.8; kickoff silence 9)."""
+        view = self._view
+        if view is None or self._scene is None or event.button() != Qt.MouseButton.LeftButton:
+            return False
+        step = self._step_at(view.mapToScene(event.pos()))
+        if step is None:
+            return False
+        self._cleanup_drag()
+        open_editor = getattr(self._window(), "open_marker_editor", None)
+        if callable(open_editor):
+            open_editor(step)
+        return True
+
+    def _step_at(self, scene_pos: QPointF) -> NumberedStepItem | None:
+        """The top-level numbered step under *scene_pos* on an unlocked, visible layer.
+
+        A group's member is not found: it is edited after Ungroup (kickoff silence 14).
+        """
+        if self._scene is None:
+            return None
+        for gitem in self._scene.items(scene_pos):
+            if isinstance(gitem, NumberedStepItem) and gitem.parentItem() is None:
+                layer = self._scene.layer_manager.layer_by_id(gitem.layer_id)
+                if layer is not None and (layer.locked or not layer.visible):
+                    continue
+                return gitem
+        return None
 
     def mouse_move(self, event: QMouseEvent) -> bool:
         view = self._view

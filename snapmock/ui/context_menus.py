@@ -178,6 +178,29 @@ def build_item_context_menu(parent: MainWindow) -> QMenu:
 
     menu.addSeparator()
 
+    # --- Numbered step rows (Numbered Steps, Stamps & Emoji PRD 2.8) ---
+    from snapmock.config.constants import DisplayMode
+    from snapmock.items.numbered_step_item import NumberedStepItem
+
+    selected = [i for i in parent.selection_manager.items if isinstance(i, SnapGraphicsItem)]
+    if len(selected) == 1 and isinstance(selected[0], NumberedStepItem):
+        step = selected[0]
+        renumber_action = menu.addAction("Renumber All Steps")
+        if renumber_action is not None:
+            renumber_action.triggered.connect(parent.renumber_all_steps)
+        start_action = menu.addAction("Set as Starting Number")
+        if start_action is not None:
+            start_action.triggered.connect(parent._step_set_as_starting_number)  # noqa: SLF001
+        convert_text = (
+            "Convert to Number Mode"
+            if step.display_mode is DisplayMode.TEXT
+            else "Convert to Text Mode"
+        )
+        convert_action = menu.addAction(convert_text)
+        if convert_action is not None:
+            convert_action.triggered.connect(parent._step_toggle_text_mode)  # noqa: SLF001
+        menu.addSeparator()
+
     # --- Properties ---
     props_action = menu.addAction("Properties...")
     if props_action is not None:
