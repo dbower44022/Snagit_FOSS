@@ -1,6 +1,6 @@
 # Numbered Steps, Stamps, and Emoji Implementation Notes
 
-Last Updated: 09-11-26 10:56 · Revision 1.4
+Last Updated: 09-11-26 13:05 · Revision 1.5
 
 Implements the SnapMock Numbered Steps, Stamps & Emoji product requirements document (version 1.3 at the start of the work, `PRDs/SnapMock-Numbered-Steps-Stamps-Emoji-PRD.html`) in the three phases defined by `docs/Numbered-Steps-Stamps-Emoji-Kickoff-Prompt.md` (revision 1.0). A session pasting that prompt starts at the first phase not marked done in Section 1. `docs/General-UI-Implementation-Kickoff-Prompt.md` (revision 1.1) governs the standards; the General UI implementation notes (`docs/General-UI-Implementation.md`) hold the walk table of Section 17.2 that this work extends.
 
@@ -70,7 +70,7 @@ Silences found while building, decided as the code says and recorded as PRD 1.7 
 
 Each has its PRD 1.4 row.
 
-- The shadow is painted for the three marker items only (decision 1); the Property Panel's Shadow section shows for them alone until the Basic Shape and Text item work adopts the helper.
+- The shadow is painted for the three marker items only (decision 1); the Property Panel's Shadow section shows for them alone until the Basic Shape and Text item work adopts the helper. Closed 09-11-26 by the Vector Item Properties work: every vector item and the two text items carry the helper.
 - The SVG export draws no shadow (decision 1).
 - The emoji font is not bundled (decision 4): Section 4.7's fallback and the Section 8.3 bullet on the bundled font are departed from on purpose.
 - A stamp has one opacity, not a fill and a stroke opacity (silence 5).
@@ -84,7 +84,7 @@ Each has its PRD 1.4 row.
 - Renumber All Steps leaves text-mode steps out and moves the tool's counter past the renumbered set (Phase 1, Sections 2.3 and 6.1).
 - Escape in the inline editor closes without applying; Enter and focus leaving apply (Phase 1, Section 2.8).
 - Border Width keeps the shared control's 0 to 20 px range and Font Weight is a dropdown rather than a toggle (Phase 1, Section 2.7).
-- The Property Panel shows the numbered step's Fill Opacity and Stroke Opacity in its Numbered Step section beside Appearance's Opacity, not in place of it (Phase 1; General UI PRD 8.3).
+- The Property Panel shows the numbered step's Fill Opacity and Stroke Opacity in its Numbered Step section beside Appearance's Opacity, not in place of it (Phase 1; General UI PRD 8.3). Closed 09-11-26 by the Vector Item Properties work: the two sliders are Appearance's for every vector item and the single Opacity is gone for them (General UI PRD 2.14).
 - The stamp library is one popover; the separate dialog and the palette double-click route of Section 3.4 are not built (Phase 2).
 - The import metadata dialog offers name, tags, and colorizable, not a category; every custom stamp lives in the Custom tab (Phase 2, Section 3.8).
 - The Secondary Color swatch is always shown and explains through the Section 1.3 message when the stamp cannot take it (Phase 2, Section 3.6).
@@ -113,6 +113,7 @@ The accessibility audit (`tests/test_accessibility.py`) passes over every new ba
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 09-11-26 13:05 | Claude (Claude Code) | Section 6: the shadow-for-three-items and the three-opacity-controls deviations closed by the Vector Item Properties work. |
 | 1.4 | 09-11-26 10:56 | Claude (Claude Code) | Next step points at `docs/Vector-Item-Properties-Kickoff-Prompt.md`. |
 | 1.3 | 09-11-26 01:48 | Claude (Claude Code) | Phase 3 done and the work complete (with the Phase 2 close-out in the same commit): the phase table, Section 5 (what Phase 3 built, the silences found while building), Section 6 (four deviations added), Section 7 (the tests and the suite at the last code commit), the next required step. PRD 1.7; General UI notes 1.32; Snagit notes 1.1. |
 | 1.2 | 09-11-26 01:48 | Claude (Claude Code) | Phase 2 done: the phase table (Phase 3 in progress at cb3655e), Section 4 (what Phase 2 built, the silences found while building), Section 6 (five deviations added), Section 7 (the tests and the suite at the step 3 commit), the next required step. PRD 1.6; Technical Architecture PRD 1.20 to 1.23. |

@@ -1,6 +1,6 @@
 # General UI Implementation Notes
 
-Last Updated: 09-11-26 01:48 · Revision 1.32
+Last Updated: 09-11-26 13:05 · Revision 1.33
 
 Implements the SnapMock General User Interface PRD (version 2.4, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
@@ -191,7 +191,7 @@ Taken at the start of Phase 6 (09-09-26), from `docs/General-UI-Phase-6-Kickoff-
 | Decision | Choice | Effect |
 |---|---|---|
 | 6.1 Layer blend mode | B, defer | The Layer has no blend mode or layer type in this phase. The action bar's blend-mode dropdown and the BG and raster badges of Section 7.4 and 7.5 go to the Navigation and Raster Operations follow-up that owns merging, since both need the per-layer compositing pass the display path lacks. General UI PRD 2.2 row. |
-| 6.2 Item properties without a home | B, keep the Phase 4 deferral | Stroke Style, Fill Opacity, Stroke Opacity, the Shadow section, Blend Mode, and Line Spacing arrive with the Basic Shape and Text PRDs' item work. Every other Property Panel control of Section 8 is built here. General UI PRD 2.2 row. |
+| 6.2 Item properties without a home | B, keep the Phase 4 deferral | Stroke Style, Fill Opacity, Stroke Opacity, the Shadow section, Blend Mode, and Line Spacing arrive with the Basic Shape and Text PRDs' item work. Every other Property Panel control of Section 8 is built here. General UI PRD 2.2 row. Closed 09-11-26 by the Vector Item Properties work (Section 21): all six are built, General UI PRD 2.13 to 2.16. |
 
 Taken at the start of Phase 7 (09-09-26), from `docs/General-UI-Phase-7-Kickoff-Prompt.md`:
 
@@ -252,8 +252,8 @@ Each has its change-log row in `PRDs/SnapMock-General-UI-PRD.html` version 1.7 (
 - **SVG and PDF preview** (Section 11.2). The preview is the flattened raster of the region; the size estimate encodes the real export in memory (PDF through a temporary file).
 - **Export Quick destination** (Section 3.1). Beside a saved non-Library document as `.png`, otherwise the last-used PNG directory under the display name; overwrites; the path is shown in the status bar. The PRD names the settings but not the destination.
 - **Momentary eyedropper** (Section 12.2). Closed in Phase 4: the Eyedropper's options bar has Apply to Stroke and Apply to Fill, and a colour picked while Alt is held becomes the stroke colour default of the tool returned to (the Eyedropper PRD's default apply target).
-- **Shared controls without an item property** (Sections 5.2, 8.3, 8.4). Stroke Style, Fill Opacity, Stroke Opacity, the Shadow section, Blend Mode, and Line Spacing are not built: no item exposes them, and a control with nothing behind it cannot be greyed out under Section 1.3. Vector tools and items show one Opacity control. Reaffirmed by Phase 6 decision 6.2: they arrive with the item work of the Basic Shape and Text and Callout PRDs. PRD 2.2 row.
-- **Per-tool options bar contents** (Section 5.3). Recorded per tool in the PRD 2.0 row. Tool-specific controls whose item property does not exist yet (arrow head styles, corner radius, blend mode, blur mode and intensity, badge colour and size, stamp library) are omitted until their tool PRDs' item work lands. The bar edits creation defaults only; changes to selected items go through the Property Panel. Font Size is a spinbox (General UI PRD), not the Text PRD's editable combo box.
+- **Shared controls without an item property** (Sections 5.2, 8.3, 8.4). Closed by the Vector Item Properties work (Section 21): Stroke Style, Fill Opacity, Stroke Opacity, the Shadow section, Blend Mode, and Line Spacing are built on every item that carries the property; vector items show the two opacity sliders and no single Opacity, a group keeps its own. Blend Mode sits in the Item Info section rather than Appearance, and a text item's opacities in the Text Box section. PRD 2.13 to 2.16 rows.
+- **Per-tool options bar contents** (Section 5.3). Recorded per tool in the PRD 2.0 row. Tool-specific controls whose item property does not exist yet (blur mode and intensity) are omitted until their tool PRDs' item work lands; the arrow head styles, corner radius, and blend mode arrived with the Vector Item Properties work (Section 21), the badge colour and size and the stamp library with the marker work (Section 20). The bar edits creation defaults only; changes to selected items go through the Property Panel. Font Size is a spinbox (General UI PRD), not the Text PRD's editable combo box.
 - **Zoom preset list** (Section 4.3). The dropdown and the status bar zoom menu use the PRD's eleven presets; Zoom In and Zoom Out step through the finer `ZOOM_STEPS` ladder of the Navigation PRD.
 - **Grid and snap toolbar toggles** (Section 4.3). Mentioned by the PRD, listed in no group; none built. Added to Section 4 of these notes.
 - **Memory zone units** (Section 9). A megabyte is 1,048,576 bytes; the zone stays in megabytes above 1 GB; a dash when the value cannot be read.
@@ -666,10 +666,15 @@ None from the wording of Section 3.8; the additions are recorded as one Section 
 
 Run from `docs/Numbered-Steps-Stamps-Emoji-Kickoff-Prompt.md` (revision 1.0) from 09-10-26, with its own notes in `docs/Numbered-Steps-Stamps-Emoji-Implementation.md`. Three things in these notes moved: the Section 17.2 walk table gained the Renumber All Steps walk (1.31); Section 18.1's silence 7, the RasterRegion layer type, stops there, since nothing in the marker PRD creates a raster layer (that work's kickoff silence 10); and Phase 6 decision 6.2 (Section 5.1) is partly closed by that work's decision 1 (option B): the Property Panel's Shadow section exists and shows for the three marker items, which carry the shadow through the helper `snapmock/items/shadow.py`, and the numbered step carries Fill Opacity and Stroke Opacity in its own section. Stroke Style, Fill Opacity, Stroke Opacity, the Shadow section, Blend Mode, and Line Spacing for the other items still arrive with the Basic Shape and Text item work, now by adopting the helper; General UI PRD 2.11 and 2.12 carry the rows. The tool count of Section 4 is nineteen since the Emoji tool (General UI PRD 2.12).
 
+## 21. Vector Item Properties
+
+Run from `docs/Vector-Item-Properties-Kickoff-Prompt.md` (revision 1.0) from 09-11-26, with its own notes in `docs/Vector-Item-Properties-Implementation.md`: the item work Phase 6 decision 6.2 named. Every `VectorItem` and the two text items carry the Basic Shape PRD's shared properties and the shadow helper; the four shared controls of Section 5.2 and the Appearance and Shadow sections of 8.3 are built, with Fill Opacity and Stroke Opacity replacing the single Opacity for vector items (a group keeps its own), Blend Mode on every item in the Item Info section, Line Spacing in the Text section, arrowheads on the Arrow tool, and Corner Radius on the Rectangle tool. Decision 6.2 (Section 5.1) and the Section 6 bullets on the shared controls and the per-tool bar contents are closed; no walk of Section 17.2 was added. General UI PRD 2.13 to 2.16 carry the rows.
+
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.33 | 09-11-26 13:05 | Claude (Claude Code) | Section 21: the pointer to the Vector Item Properties work; decision 6.2 closed, the Section 6 bullets on the shared controls and the per-tool bar contents closed. |
 | 1.32 | 09-11-26 01:48 | Claude (Claude Code) | Section 20: the pointer to the Numbered Steps, Stamps, and Emoji work; decision 6.2 partly closed (the Shadow section for the marker items), silence 7 of Section 18.1 closed, the tool count nineteen. |
 | 1.31 | 09-11-26 00:05 | Claude (Claude Code) | Section 17.2's walk table gains the Renumber All Steps walk (members included), built by the Numbered Steps, Stamps, and Emoji work, Phase 1 step 3. |
 | 1.30 | 09-10-26 22:01 | Claude (Claude Code) | Display check B17 answered: Section 16 row 36 and the 16.9 step carry Doug's quoted answer and the display pass; Section 5.1 and the Section 16 summary updated; Section 19.2 says row 20 is still owed. |
