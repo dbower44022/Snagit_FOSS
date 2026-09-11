@@ -225,6 +225,10 @@ class PropertyPanel(QDockWidget):
         self._abbreviated: list[QWidget] = [
             self._stroke_w_slider,
             self._opacity_slider,
+            self._fill_opacity_slider,
+            self._stroke_opacity_slider,
+            self._text_fill_opacity_slider,
+            self._text_stroke_opacity_slider,
             self._stroke_hex,
             self._fill_hex,
         ]
@@ -441,12 +445,48 @@ class PropertyPanel(QDockWidget):
             self._slider_spin_row(self._stroke_w_spin, self._stroke_w_slider, "Stroke width"),
         )
 
+        self._stroke_style_combo = QComboBox()
+        for style in BorderStyle:
+            self._stroke_style_combo.addItem(
+                style.value.replace("dashdot", "dash-dot").title(), style
+            )
+        self._stroke_style_combo.setAccessibleName("Stroke style")
+        self._appearance_section.add_row("Style:", self._stroke_style_combo)
+
         self._fill_color_picker = ColorPicker(QColor("transparent"))
         self._fill_hex = self._hex_edit("Fill color")
+        self._fill_row = self._color_row(self._fill_color_picker, self._fill_hex, "Fill color")
+        self._appearance_section.add_row("Fill:", self._fill_row)
+
+        # Fill Opacity and Stroke Opacity for vector items (PRD 8.3; Vector Item Properties
+        # decision 2, option A: they replace the single Opacity for vector items).
+        self._fill_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self._fill_opacity_slider.setRange(0, 100)
+        self._fill_opacity_spin = QSpinBox()
+        self._fill_opacity_spin.setRange(-1, 100)
+        self._fill_opacity_spin.setSuffix("%")
+        self._fill_opacity_spin.setSpecialValueText(MIXED_TEXT)
+        self._fill_opacity_spin.setKeyboardTracking(False)
+        self._fill_opacity_row = self._slider_spin_row(
+            self._fill_opacity_spin, self._fill_opacity_slider, "Fill opacity"
+        )
+        self._appearance_section.add_row("Fill opacity:", self._fill_opacity_row)
+        self._stroke_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self._stroke_opacity_slider.setRange(0, 100)
+        self._stroke_opacity_spin = QSpinBox()
+        self._stroke_opacity_spin.setRange(-1, 100)
+        self._stroke_opacity_spin.setSuffix("%")
+        self._stroke_opacity_spin.setSpecialValueText(MIXED_TEXT)
+        self._stroke_opacity_spin.setKeyboardTracking(False)
         self._appearance_section.add_row(
-            "Fill:", self._color_row(self._fill_color_picker, self._fill_hex, "Fill color")
+            "Stroke opacity:",
+            self._slider_spin_row(
+                self._stroke_opacity_spin, self._stroke_opacity_slider, "Stroke opacity"
+            ),
         )
 
+        # The single Opacity of a group (its own, beside its members' two; decision 2's
+        # follow-on detail); hidden for a selection of vector items alone.
         self._opacity_slider = QSlider(Qt.Orientation.Horizontal)
         self._opacity_slider.setRange(0, 100)
         self._opacity_spin = QSpinBox()
@@ -454,10 +494,19 @@ class PropertyPanel(QDockWidget):
         self._opacity_spin.setSuffix("%")
         self._opacity_spin.setSpecialValueText(MIXED_TEXT)
         self._opacity_spin.setKeyboardTracking(False)
-        self._appearance_section.add_row(
-            "Opacity:", self._slider_spin_row(self._opacity_spin, self._opacity_slider, "Opacity")
+        self._opacity_row = self._slider_spin_row(
+            self._opacity_spin, self._opacity_slider, "Opacity"
         )
+        self._appearance_section.add_row("Opacity:", self._opacity_row)
         self._main_layout.addWidget(self._appearance_section)
+
+    @staticmethod
+    def _set_row_visible(section: CollapsibleSection, field: QWidget, visible: bool) -> None:
+        """Show or hide one form row of *section*: the field and its label."""
+        field.setVisible(visible)
+        label = section.form_layout.labelForField(field)
+        if label is not None:
+            label.setVisible(visible)
 
     def _build_step_section(self) -> None:
         """The numbered step's own properties (Numbered Steps, Stamps & Emoji PRD 2.4):
@@ -515,33 +564,6 @@ class PropertyPanel(QDockWidget):
             )
         self._step_border_style_combo.setAccessibleName("Border style")
         self._step_section.add_row("Border style:", self._step_border_style_combo)
-
-        self._fill_opacity_slider = QSlider(Qt.Orientation.Horizontal)
-        self._fill_opacity_slider.setRange(0, 100)
-        self._fill_opacity_spin = QSpinBox()
-        self._fill_opacity_spin.setRange(-1, 100)
-        self._fill_opacity_spin.setSuffix("%")
-        self._fill_opacity_spin.setSpecialValueText(MIXED_TEXT)
-        self._fill_opacity_spin.setKeyboardTracking(False)
-        self._step_section.add_row(
-            "Fill opacity:",
-            self._slider_spin_row(
-                self._fill_opacity_spin, self._fill_opacity_slider, "Fill opacity"
-            ),
-        )
-        self._stroke_opacity_slider = QSlider(Qt.Orientation.Horizontal)
-        self._stroke_opacity_slider.setRange(0, 100)
-        self._stroke_opacity_spin = QSpinBox()
-        self._stroke_opacity_spin.setRange(-1, 100)
-        self._stroke_opacity_spin.setSuffix("%")
-        self._stroke_opacity_spin.setSpecialValueText(MIXED_TEXT)
-        self._stroke_opacity_spin.setKeyboardTracking(False)
-        self._step_section.add_row(
-            "Stroke opacity:",
-            self._slider_spin_row(
-                self._stroke_opacity_spin, self._stroke_opacity_slider, "Stroke opacity"
-            ),
-        )
 
         self._step_label_edit = QLineEdit()
         self._step_label_edit.setAccessibleName("Label text")
@@ -751,6 +773,37 @@ class PropertyPanel(QDockWidget):
         self._text_border_w_spin = self._make_double_spin(-0.1, 20.0, 1, " px", "Border width")
         self._text_box_section.add_row("Border width:", self._text_border_w_spin)
 
+        # Fill Opacity and Stroke Opacity for the text box and the callout (General UI PRD
+        # 8.3; Vector Item Properties decision 1, option B: here rather than in Appearance)
+        self._text_fill_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self._text_fill_opacity_slider.setRange(0, 100)
+        self._text_fill_opacity_spin = QSpinBox()
+        self._text_fill_opacity_spin.setRange(-1, 100)
+        self._text_fill_opacity_spin.setSuffix("%")
+        self._text_fill_opacity_spin.setSpecialValueText(MIXED_TEXT)
+        self._text_fill_opacity_spin.setKeyboardTracking(False)
+        self._text_box_section.add_row(
+            "Fill opacity:",
+            self._slider_spin_row(
+                self._text_fill_opacity_spin, self._text_fill_opacity_slider, "Text fill opacity"
+            ),
+        )
+        self._text_stroke_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self._text_stroke_opacity_slider.setRange(0, 100)
+        self._text_stroke_opacity_spin = QSpinBox()
+        self._text_stroke_opacity_spin.setRange(-1, 100)
+        self._text_stroke_opacity_spin.setSuffix("%")
+        self._text_stroke_opacity_spin.setSpecialValueText(MIXED_TEXT)
+        self._text_stroke_opacity_spin.setKeyboardTracking(False)
+        self._text_box_section.add_row(
+            "Stroke opacity:",
+            self._slider_spin_row(
+                self._text_stroke_opacity_spin,
+                self._text_stroke_opacity_slider,
+                "Text stroke opacity",
+            ),
+        )
+
         self._text_corner_radius_spin = self._make_double_spin(
             -0.1, 50.0, 1, " px", "Corner radius"
         )
@@ -832,10 +885,21 @@ class PropertyPanel(QDockWidget):
         self._stroke_hex.editingFinished.connect(self._on_stroke_hex_edited)
         self._stroke_w_slider.valueChanged.connect(self._on_stroke_w_slider_changed)
         self._stroke_w_spin.valueChanged.connect(self._on_stroke_w_spin_changed)
+        self._stroke_style_combo.currentIndexChanged.connect(self._on_stroke_style_changed)
         self._fill_color_picker.color_changed.connect(self._on_fill_color_changed)
         self._fill_hex.editingFinished.connect(self._on_fill_hex_edited)
         self._opacity_slider.valueChanged.connect(self._on_opacity_slider_changed)
         self._opacity_spin.valueChanged.connect(self._on_opacity_spin_changed)
+        self._text_fill_opacity_slider.valueChanged.connect(
+            self._on_text_fill_opacity_slider_changed
+        )
+        self._text_fill_opacity_spin.valueChanged.connect(self._on_text_fill_opacity_spin_changed)
+        self._text_stroke_opacity_slider.valueChanged.connect(
+            self._on_text_stroke_opacity_slider_changed
+        )
+        self._text_stroke_opacity_spin.valueChanged.connect(
+            self._on_text_stroke_opacity_spin_changed
+        )
         self._layer_combo.currentIndexChanged.connect(self._on_layer_changed)
         self._locked_check.toggled.connect(self._on_locked_changed)
         self._canvas_w_spin.valueChanged.connect(self._on_canvas_size_changed)
@@ -991,9 +1055,30 @@ class PropertyPanel(QDockWidget):
     def _selected_emoji(self) -> list[EmojiItem]:
         return [i for i in self._selected_items() if isinstance(i, EmojiItem)]
 
+    @staticmethod
+    def _shows_shadow(item: SnapGraphicsItem) -> bool:
+        """Whether *item* takes the Shadow section: an item carrying the shadow helper, or
+        a group with at least one such item below it (silence 12)."""
+        if isinstance(item, ShadowMixin):
+            return True
+        if isinstance(item, GroupItem):
+            return any(isinstance(m, ShadowMixin) for m in item.descendants())
+        return False
+
     def _selected_shadowed(self) -> list[Any]:
-        """The selected items that carry a shadow (the marker items, decision 1)."""
-        return [i for i in self._selected_items() if isinstance(i, ShadowMixin)]
+        """The items a Shadow edit reaches: every selected item carrying the shadow helper,
+        a group standing for its shadow-carrying members."""
+        found: list[Any] = []
+        for item in self._selected_items():
+            if isinstance(item, ShadowMixin):
+                found.append(item)
+            elif isinstance(item, GroupItem):
+                found.extend(m for m in item.descendants() if isinstance(m, ShadowMixin))
+        return found
+
+    def _selected_non_vectors(self) -> list[SnapGraphicsItem]:
+        """The selected items with one opacity of their own: groups and non-vector items."""
+        return [i for i in self._selected_items() if not isinstance(i, VectorItem)]
 
     def _selected_text_items(self) -> list[_TextLike]:
         return [i for i in self._selected_items() if isinstance(i, (TextItem, CalloutItem))]
@@ -1009,7 +1094,7 @@ class PropertyPanel(QDockWidget):
             all_text = has_selection and all(isinstance(i, (TextItem, CalloutItem)) for i in items)
             all_text_items = has_selection and all(isinstance(i, TextItem) for i in items)
             all_steps = has_selection and all(isinstance(i, NumberedStepItem) for i in items)
-            all_shadow = has_selection and all(isinstance(i, ShadowMixin) for i in items)
+            all_shadow = has_selection and all(self._shows_shadow(i) for i in items)
             all_stamps = has_selection and all(isinstance(i, StampItem) for i in items)
             all_emoji = has_selection and all(isinstance(i, EmojiItem) for i in items)
 
@@ -1029,6 +1114,16 @@ class PropertyPanel(QDockWidget):
             self._canvas_section.setVisible(
                 not has_selection and not in_tool_defaults and not in_vector_defaults
             )
+
+            # The single Opacity row is a group's own (decision 2); the fill rows are for
+            # the tools and items that have a fill.
+            self._set_row_visible(
+                self._appearance_section, self._opacity_row, bool(self._selected_non_vectors())
+            )
+            defaults = self._active_tool_defaults() if in_vector_defaults else None
+            has_fill = defaults is None or "fill_color" in defaults
+            self._set_row_visible(self._appearance_section, self._fill_row, has_fill)
+            self._set_row_visible(self._appearance_section, self._fill_opacity_row, has_fill)
 
             if in_vector_defaults:
                 self._populate_appearance_from_tool_defaults()
@@ -1072,12 +1167,22 @@ class PropertyPanel(QDockWidget):
         value, uniform = _uniform(widths)
         self._stroke_w_slider.setValue(int(value) if uniform else 0)
         self._set_spin(self._stroke_w_spin, widths)
+        self._set_combo_data(self._stroke_style_combo, [i.stroke_style for i in items])
         self._set_color(self._fill_color_picker, self._fill_hex, [i.fill_color for i in items])
-        # Opacity is the selected items' own: a group's, not its members'
-        opacities = [int(i.opacity_pct) for i in self._selected_items()]
-        value, uniform = _uniform(opacities)
-        self._opacity_slider.setValue(int(value) if uniform else 0)
-        self._set_spin(self._opacity_spin, opacities)
+        fills = [int(round(i.fill_opacity * 100)) for i in items]
+        value, uniform = _uniform(fills)
+        self._fill_opacity_slider.setValue(int(value) if uniform else 0)
+        self._set_spin(self._fill_opacity_spin, fills)
+        strokes = [int(round(i.stroke_opacity * 100)) for i in items]
+        value, uniform = _uniform(strokes)
+        self._stroke_opacity_slider.setValue(int(value) if uniform else 0)
+        self._set_spin(self._stroke_opacity_spin, strokes)
+        # The single Opacity is a group's own, not its members'
+        opacities = [int(i.opacity_pct) for i in self._selected_non_vectors()]
+        if opacities:
+            value, uniform = _uniform(opacities)
+            self._opacity_slider.setValue(int(value) if uniform else 0)
+            self._set_spin(self._opacity_spin, opacities)
 
     def _populate_text(self, items: list[_TextLike], all_text_items: bool) -> None:
         first = items[0]
@@ -1112,6 +1217,14 @@ class PropertyPanel(QDockWidget):
         self._set_color(self._text_bg_color_picker, None, [i.bg_color for i in items])
         self._set_color(self._text_border_color_picker, None, [i.border_color for i in items])
         self._set_spin(self._text_border_w_spin, [i.border_width for i in items])
+        fills = [int(round(i.fill_opacity * 100)) for i in items]
+        value, uniform = _uniform(fills)
+        self._text_fill_opacity_slider.setValue(int(value) if uniform else 0)
+        self._set_spin(self._text_fill_opacity_spin, fills)
+        strokes = [int(round(i.stroke_opacity * 100)) for i in items]
+        value, uniform = _uniform(strokes)
+        self._text_stroke_opacity_slider.setValue(int(value) if uniform else 0)
+        self._set_spin(self._text_stroke_opacity_spin, strokes)
         self._set_spin(self._text_corner_radius_spin, [i.border_radius for i in items])
         self._set_spin(self._text_padding_spin, [i.padding for i in items])
         self._set_combo_data(self._text_valign_combo, [i.vertical_align for i in items])
@@ -1131,14 +1244,6 @@ class PropertyPanel(QDockWidget):
         self._set_spin(self._step_size_spin, [i.badge_size for i in items])
         self._set_combo_data(self._step_weight_combo, [i.font_weight for i in items])
         self._set_combo_data(self._step_border_style_combo, [i.border_style for i in items])
-        fills = [int(round(i.fill_opacity * 100)) for i in items]
-        value, uniform = _uniform(fills)
-        self._fill_opacity_slider.setValue(int(value) if uniform else 0)
-        self._set_spin(self._fill_opacity_spin, fills)
-        strokes = [int(round(i.stroke_opacity * 100)) for i in items]
-        value, uniform = _uniform(strokes)
-        self._stroke_opacity_slider.setValue(int(value) if uniform else 0)
-        self._set_spin(self._stroke_opacity_spin, strokes)
         label, uniform = _uniform([i.label_text for i in items])
         self._step_label_edit.setText(str(label) if uniform else "")
         self._set_combo_data(self._step_label_pos_combo, [i.label_position for i in items])
@@ -1309,6 +1414,12 @@ class PropertyPanel(QDockWidget):
             QColor(bc) if isinstance(bc, QColor) else QColor("#00000000")
         )
         self._text_border_w_spin.setValue(float(d.get("border_width", 0.0)))
+        fill_pct = int(round(float(d.get("fill_opacity", 1.0)) * 100))
+        self._text_fill_opacity_slider.setValue(fill_pct)
+        self._text_fill_opacity_spin.setValue(fill_pct)
+        stroke_pct = int(round(float(d.get("stroke_opacity", 1.0)) * 100))
+        self._text_stroke_opacity_slider.setValue(stroke_pct)
+        self._text_stroke_opacity_spin.setValue(stroke_pct)
         self._text_corner_radius_spin.setValue(float(d.get("border_radius", 0.0)))
         self._text_padding_spin.setValue(float(d.get("padding", 8.0)))
         self._set_combo_data(self._text_valign_combo, [d.get("vertical_align", VerticalAlign.TOP)])
@@ -1332,9 +1443,13 @@ class PropertyPanel(QDockWidget):
         fc = d.get("fill_color")
         fill = QColor(fc) if isinstance(fc, QColor) else QColor("transparent")
         self._set_color(self._fill_color_picker, self._fill_hex, [fill])
-        op = int(d.get("opacity_pct", 100))
-        self._opacity_slider.setValue(op)
-        self._opacity_spin.setValue(op)
+        self._set_combo_data(self._stroke_style_combo, [d.get("stroke_style", BorderStyle.SOLID)])
+        fill_pct = int(round(float(d.get("fill_opacity", 1.0)) * 100))
+        self._fill_opacity_slider.setValue(fill_pct)
+        self._fill_opacity_spin.setValue(fill_pct)
+        stroke_pct = int(round(float(d.get("stroke_opacity", 1.0)) * 100))
+        self._stroke_opacity_slider.setValue(stroke_pct)
+        self._stroke_opacity_spin.setValue(stroke_pct)
 
     def _rebuild_layer_combo(self, *_args: object) -> None:
         was_updating = self._updating
@@ -1516,6 +1631,16 @@ class PropertyPanel(QDockWidget):
             return
         self._push_property(self._selected_vectors(), "fill_color", QColor(color))
 
+    def _on_stroke_style_changed(self, index: int) -> None:
+        if self._updating or index < 0:
+            return
+        style = self._stroke_style_combo.itemData(index)
+        if not isinstance(style, BorderStyle):
+            return
+        if self._set_default("stroke_style", style):
+            return
+        self._push_property(self._selected_vectors(), "stroke_style", style)
+
     def _on_opacity_slider_changed(self, value: int) -> None:
         if self._updating:
             return
@@ -1533,9 +1658,8 @@ class PropertyPanel(QDockWidget):
         self._apply_opacity(value)
 
     def _apply_opacity(self, value: int) -> None:
-        if self._set_default("opacity_pct", float(value)):
-            return
-        self._push_property(self._selected_items(), "opacity_pct", float(value))
+        """The single Opacity: a group's own (decision 2); vector items keep their two."""
+        self._push_property(self._selected_non_vectors(), "opacity_pct", float(value))
 
     # --- item info handlers ---
 
@@ -2011,7 +2135,7 @@ class PropertyPanel(QDockWidget):
         self._updating = True
         self._fill_opacity_spin.setValue(value)
         self._updating = False
-        self._push_property(self._selected_steps(), "fill_opacity", value / 100.0)
+        self._apply_vector_opacity("fill_opacity", value)
 
     def _on_fill_opacity_spin_changed(self, value: int) -> None:
         if self._updating or value < 0:
@@ -2019,7 +2143,7 @@ class PropertyPanel(QDockWidget):
         self._updating = True
         self._fill_opacity_slider.setValue(value)
         self._updating = False
-        self._push_property(self._selected_steps(), "fill_opacity", value / 100.0)
+        self._apply_vector_opacity("fill_opacity", value)
 
     def _on_stroke_opacity_slider_changed(self, value: int) -> None:
         if self._updating:
@@ -2027,7 +2151,7 @@ class PropertyPanel(QDockWidget):
         self._updating = True
         self._stroke_opacity_spin.setValue(value)
         self._updating = False
-        self._push_property(self._selected_steps(), "stroke_opacity", value / 100.0)
+        self._apply_vector_opacity("stroke_opacity", value)
 
     def _on_stroke_opacity_spin_changed(self, value: int) -> None:
         if self._updating or value < 0:
@@ -2035,7 +2159,51 @@ class PropertyPanel(QDockWidget):
         self._updating = True
         self._stroke_opacity_slider.setValue(value)
         self._updating = False
-        self._push_property(self._selected_steps(), "stroke_opacity", value / 100.0)
+        self._apply_vector_opacity("stroke_opacity", value)
+
+    def _apply_vector_opacity(self, prop: str, value: int) -> None:
+        """Fill Opacity or Stroke Opacity over the vector items, groups expanded."""
+        if self._set_default(prop, value / 100.0):
+            return
+        self._push_property(self._selected_vectors(), prop, value / 100.0)
+
+    def _on_text_fill_opacity_slider_changed(self, value: int) -> None:
+        if self._updating:
+            return
+        self._updating = True
+        self._text_fill_opacity_spin.setValue(value)
+        self._updating = False
+        self._apply_text_opacity("fill_opacity", value)
+
+    def _on_text_fill_opacity_spin_changed(self, value: int) -> None:
+        if self._updating or value < 0:
+            return
+        self._updating = True
+        self._text_fill_opacity_slider.setValue(value)
+        self._updating = False
+        self._apply_text_opacity("fill_opacity", value)
+
+    def _on_text_stroke_opacity_slider_changed(self, value: int) -> None:
+        if self._updating:
+            return
+        self._updating = True
+        self._text_stroke_opacity_spin.setValue(value)
+        self._updating = False
+        self._apply_text_opacity("stroke_opacity", value)
+
+    def _on_text_stroke_opacity_spin_changed(self, value: int) -> None:
+        if self._updating or value < 0:
+            return
+        self._updating = True
+        self._text_stroke_opacity_slider.setValue(value)
+        self._updating = False
+        self._apply_text_opacity("stroke_opacity", value)
+
+    def _apply_text_opacity(self, prop: str, value: int) -> None:
+        """Fill Opacity or Stroke Opacity of the Text Box section (decision 1)."""
+        if self._set_default(prop, value / 100.0):
+            return
+        self._push_property(self._selected_text_items(), prop, value / 100.0)
 
     def _on_step_label_edited(self) -> None:
         if self._updating:

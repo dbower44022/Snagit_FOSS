@@ -262,6 +262,8 @@ class TextTool(BaseTool):
             "border_color": QColor(DEFAULT_TEXT_BORDER_COLOR),
             "border_width": DEFAULT_TEXT_BORDER_WIDTH,
             "border_style": BorderStyle.SOLID,
+            "fill_opacity": 1.0,
+            "stroke_opacity": 1.0,
             "border_radius": DEFAULT_TEXT_BORDER_RADIUS,
             "padding": DEFAULT_TEXT_PADDING,
             "vertical_align": VerticalAlign.TOP,
@@ -451,6 +453,8 @@ class TextTool(BaseTool):
         style = d.get("border_style", BorderStyle.SOLID)
         item.border_style = style if isinstance(style, BorderStyle) else BorderStyle.SOLID
         item.border_radius = d.get("border_radius", DEFAULT_TEXT_BORDER_RADIUS)
+        item.fill_opacity = float(d.get("fill_opacity", 1.0))
+        item.stroke_opacity = float(d.get("stroke_opacity", 1.0))
         item.padding = d.get("padding", DEFAULT_TEXT_PADDING)
         item.vertical_align = d.get("vertical_align", VerticalAlign.TOP)
         ha = d.get("horizontal_align", Qt.AlignmentFlag.AlignLeft)

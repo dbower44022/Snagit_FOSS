@@ -126,9 +126,11 @@ def test_slider_drag_over_a_selection_is_one_undo_entry(qtbot: QtBot) -> None:
     b = _add_rect(scene, 50, 10)
     sm.select(a)
     sm.toggle(b)
-    panel._opacity_slider.setValue(80)
-    panel._opacity_slider.setValue(60)
-    assert a.opacity_pct == 60 and b.opacity_pct == 60
+    # Fill Opacity since the Vector Item Properties work (decision 2): vector items have
+    # two opacity sliders and no single Opacity.
+    panel._fill_opacity_slider.setValue(80)
+    panel._fill_opacity_slider.setValue(60)
+    assert a.fill_opacity == 0.6 and b.fill_opacity == 0.6
     assert scene.command_stack.count == 1
 
 

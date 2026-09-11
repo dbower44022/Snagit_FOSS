@@ -67,6 +67,8 @@ class CalloutTool(BaseTool):
             "border_color": QColor("#333333"),
             "border_width": 2.0,
             "border_style": BorderStyle.SOLID,
+            "fill_opacity": 1.0,
+            "stroke_opacity": 1.0,
             "border_radius": 12.0,
             "padding": 10.0,
             "vertical_align": VerticalAlign.TOP,
@@ -294,6 +296,8 @@ class CalloutTool(BaseTool):
         style = d.get("border_style", BorderStyle.SOLID)
         item.border_style = style if isinstance(style, BorderStyle) else BorderStyle.SOLID
         item.border_radius = d.get("border_radius", 12.0)
+        item.fill_opacity = float(d.get("fill_opacity", 1.0))
+        item.stroke_opacity = float(d.get("stroke_opacity", 1.0))
         item.padding = d.get("padding", 10.0)
         item.vertical_align = d.get("vertical_align", VerticalAlign.TOP)
         ha = d.get("horizontal_align", Qt.AlignmentFlag.AlignLeft)
