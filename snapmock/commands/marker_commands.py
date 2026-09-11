@@ -10,10 +10,12 @@ from typing import TYPE_CHECKING
 
 from snapmock.config.constants import DisplayMode
 from snapmock.core.command_stack import BaseCommand
+from snapmock.items.emoji_item import EmojiItem
 from snapmock.items.numbered_step_item import NumberedStepItem
 from snapmock.items.stamp_item import StampItem
 
 if TYPE_CHECKING:
+    from snapmock.core.emoji_data import SkinTone
     from snapmock.core.scene import SnapScene
     from snapmock.core.stamp_library import StampInfo
 
@@ -103,3 +105,32 @@ class ChangeStampCommand(BaseCommand):
     @property
     def description(self) -> str:
         return f"Change stamp to {self._new_info.name}"
+
+
+class ChangeEmojiCommand(BaseCommand):
+    """Replace an emoji item's emoji (PRD 6.3): character, name, and skin tone."""
+
+    def __init__(self, item: EmojiItem, new_char: str, new_name: str | None = None) -> None:
+        from snapmock.core.emoji_data import emoji_data, skin_tone_of
+
+        self._item = item
+        self.old_emoji_char = item.emoji_char
+        self.old_emoji_name = item.emoji_name
+        self.old_skin_tone: SkinTone = item.skin_tone
+        self.new_emoji_char = new_char
+        self.new_emoji_name = new_name if new_name is not None else emoji_data().name_of(new_char)
+        self.new_skin_tone: SkinTone = skin_tone_of(new_char)
+
+    @property
+    def item_id(self) -> str:
+        return self._item.item_id
+
+    def redo(self) -> None:
+        self._item.set_emoji(self.new_emoji_char, self.new_emoji_name)
+
+    def undo(self) -> None:
+        self._item.set_emoji(self.old_emoji_char, self.old_emoji_name)
+
+    @property
+    def description(self) -> str:
+        return f"Change emoji to {self.new_emoji_name}"

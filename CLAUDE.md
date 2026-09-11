@@ -33,8 +33,8 @@ snapmock/              # Main application package
     main_window.py     # MainWindow — owns all subsystems, menus, shortcuts
     config/            # Constants, settings (QSettings), keyboard shortcuts
     core/              # Scene, view, layers, command stack, selection, clipboard, rendering
-    items/             # SnapGraphicsItem subclasses (vector, text, raster, etc.)
-    tools/             # BaseTool subclasses and ToolManager (18 tools)
+    items/             # SnapGraphicsItem subclasses (vector, text, raster, the marker items, etc.)
+    tools/             # BaseTool subclasses and ToolManager (19 tools)
     commands/          # Command objects for undo/redo (all scene mutations)
     io/                # File I/O — .smk project save/load, PNG/JPG/SVG/PDF export, image import, Snagit .snagx read/write
     capture/           # Screen capture — CaptureManager, region overlay, X11/Wayland/Windows/macOS backends, hotkeys, tray
@@ -69,4 +69,4 @@ tests/                 # Test suite (pytest + pytest-qt)
 - **Layer z-values**: each layer gets z_base = index × 10,000; items offset within range
 - **Project format**: .smk files are ZIP archives containing manifest.json, layers.json, items.json
 - **Tool engine**: ToolManager registry with BaseTool ABC; single-key shortcuts activate tools
-- **Item hierarchy**: SnapGraphicsItem → VectorItem → concrete items (Rectangle, Ellipse, Line, Arrow, Freehand, Highlight, Callout, Blur, NumberedStep, Stamp, Text, RasterRegion)
+- **Item hierarchy**: SnapGraphicsItem → VectorItem → concrete items (Rectangle, Ellipse, Line, Arrow, Freehand, Highlight, Callout, Blur, NumberedStep, Stamp, Emoji, Text, RasterRegion)

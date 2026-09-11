@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.11</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.12</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.11</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 00:15</dd>
+    <dt>Document version</dt><dd>2.12</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 02:10</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,18 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.12</td>
+        <td class="nowrap">09-11-26 02:10</td>
+        <td>Doug Bower</td>
+        <td>Numbered Steps, Stamps, and Emoji implementation, Phase 3: the Emoji tool is the nineteenth tool. The
+        Tools menu table of 3.7 gains its row (Emoji, Shift+E, <code>emoji</code>), the per-tool options table of 5.3
+        gains its row (the tool PRD's Section 4.5), and 17.3 reads nineteen tools. The tool count inconsistency the
+        Phase 0 inventory recorded (3.7 listed twenty including Arc and Polygon; 17.3 said eighteen) is now: 3.7
+        lists twenty-one, of which nineteen are registered (Arc and Polygon are not built). Technical Architecture
+        PRD 1.24.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>2.11</td>
         <td class="nowrap">09-11-26 00:15</td>
@@ -229,6 +241,20 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 02:10</td>
+        <td>3.7, 5.3, 17.3</td>
+        <td>Built</td>
+        <td>The Emoji tool (Numbered Steps, Stamps &amp; Emoji PRD Section 4) is registered after the Stamp tool as
+        the nineteenth tool: a Tools menu row, a palette button with the Tabler <code>mood-smile</code> glyph, and
+        Shift+E, a key no other tool used. Its Tool Options Bar is the tool PRD's Section 4.5 list (the preview and
+        name, the six skin-tone swatches shown for a capable emoji only, size 16 to 256, opacity, the flips, shadow);
+        its picker is a popover on the colour picker's pattern; a double-click on an emoji from the Select tool or
+        the Emoji tool opens the picker to replace it, and the item context menu of 10.2 gains Change Emoji... and
+        Reset Size for one emoji beside the Flip rows. With no colour emoji font installed the tool explains through
+        the 1.3 message “Emoji needs a colour emoji font installed” (tool PRD 1.4, decision 4). The acceptance test
+        for 17.3 counts nineteen.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 00:15</td>
         <td>8.3</td>
@@ -1602,6 +1628,7 @@ currently active tool has a checkmark.</p>
     <tr><th>Highlighter</th><td>H</td><td>highlight</td></tr>
     <tr><th>Numbered Step</th><td>N</td><td><code>numbered_step</code></td></tr>
     <tr><th>Stamp / Sticker</th><td>S</td><td>stamp</td></tr>
+    <tr><th>Emoji</th><td>Shift+E</td><td>emoji</td></tr>
     <tr><th>Eyedropper</th><td>I</td><td>eyedropper</td></tr>
     <tr><th>Pan / Hand</th><td>Space (hold)</td><td>pan</td></tr>
     <tr><th>Zoom</th><td>Ctrl+Space (hold)</td><td><code>zoom_tool</code></td></tr>
@@ -1778,6 +1805,7 @@ tool category:</p>
     <tr><th>Highlighter</th><td>Highlight Color | Width slider | Blend Mode | Stroke Style</td></tr>
     <tr><th>Numbered Step</th><td>Badge Color | Badge Size | Font Size | Starting Number | Text Color | Stroke Color | Stroke Width | Stroke Style</td></tr>
     <tr><th>Stamp / Sticker</th><td>Stamp Library dropdown | Size slider | Opacity slider</td></tr>
+    <tr><th>Emoji</th><td>Active Emoji Preview | Emoji Name | Size | Skin Tone (capable emoji only) | Opacity | Flip Horizontal | Flip Vertical | Shadow Toggle (the Numbered Steps, Stamps &amp; Emoji PRD's Section 4.5)</td></tr>
     <tr><th>Raster Selection</th><td>Feather slider (0-20px) | Anti-alias checkbox</td></tr>
     <tr><th>Crop</th><td>Aspect Ratio lock toggle | Preset Ratios dropdown (Free, 16:9, 4:3, 1:1, Custom) | Rule of Thirds checkbox</td></tr>
     <tr><th>Eyedropper</th><td>Display: picked color swatch, hex value, RGB values. Button: "Apply to Stroke" / "Apply to Fill"</td></tr>
@@ -2600,7 +2628,7 @@ of the empty canvas:</p>
 <ol>
   <li>The Main Toolbar shows all button groups with correct icons and tooltips.</li>
   <li>The Tool Options Bar dynamically updates when the active tool changes.</li>
-  <li>The Left Tool Palette shows all 18 tools with correct icons.</li>
+  <li>The Left Tool Palette shows all 19 tools with correct icons (eighteen until the Emoji tool of 09-11-26).</li>
   <li>The active tool is visually highlighted in the tool palette.</li>
   <li>Toolbar buttons are never disabled. Clicking a toolbar button whose requirements are not
   met displays an informative message identifying the unmet requirements.</li>

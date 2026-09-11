@@ -48,10 +48,12 @@ from snapmock.config.constants import (
 )
 from snapmock.config.settings import AppSettings
 from snapmock.core.command_stack import BaseCommand
+from snapmock.core.emoji_data import EMOJI_SIZE_MAX, EMOJI_SIZE_MIN, SkinTone
 from snapmock.core.stamp_library import STAMP_SIZE_MAX, STAMP_SIZE_MIN
 from snapmock.core.theme_manager import current_theme, theme_manager
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.callout_item import CalloutItem
+from snapmock.items.emoji_item import EmojiItem
 from snapmock.items.group_item import GroupItem
 from snapmock.items.numbered_step_item import NumberedStepItem
 from snapmock.items.shadow import ShadowMixin
@@ -194,6 +196,7 @@ class PropertyPanel(QDockWidget):
         self._build_appearance_section()
         self._build_step_section()
         self._build_stamp_section()
+        self._build_emoji_section()
         self._build_shadow_section()
         self._build_text_section()
         self._build_text_box_section()
@@ -204,6 +207,7 @@ class PropertyPanel(QDockWidget):
             self._appearance_section,
             self._step_section,
             self._stamp_section,
+            self._emoji_section,
             self._shadow_section,
             self._text_section,
             self._text_box_section,
@@ -613,6 +617,49 @@ class PropertyPanel(QDockWidget):
         )
         self._main_layout.addWidget(self._stamp_section)
 
+    def _build_emoji_section(self) -> None:
+        """The emoji's own properties (Numbered Steps, Stamps & Emoji PRD 4.4): the emoji with
+        a Change Emoji button, size, skin tone, and the single opacity of General UI PRD 8.3."""
+        self._emoji_section = CollapsibleSection("Emoji")
+
+        emoji_row = QWidget()
+        emoji_layout = QHBoxLayout(emoji_row)
+        emoji_layout.setContentsMargins(0, 0, 0, 0)
+        self._emoji_name_label = QLabel("")
+        self._emoji_name_label.setAccessibleName("Emoji name")
+        emoji_layout.addWidget(self._emoji_name_label, 1)
+        self._emoji_change_button = QPushButton("Change...")
+        self._emoji_change_button.setAccessibleName("Change emoji")
+        self._emoji_change_button.setToolTip("Choose another emoji from the picker")
+        emoji_layout.addWidget(self._emoji_change_button)
+        self._emoji_section.add_row("Emoji:", emoji_row)
+
+        self._emoji_size_spin = self._make_double_spin(
+            EMOJI_SIZE_MIN - 1.0, EMOJI_SIZE_MAX, 1, " px", "Emoji size"
+        )
+        self._emoji_section.add_row("Size:", self._emoji_size_spin)
+
+        self._emoji_tone_combo = QComboBox()
+        for tone in SkinTone:
+            self._emoji_tone_combo.addItem(tone.value.replace("_", " ").title(), tone)
+        self._emoji_tone_combo.setAccessibleName("Skin tone")
+        self._emoji_section.add_row("Skin tone:", self._emoji_tone_combo)
+
+        self._emoji_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self._emoji_opacity_slider.setRange(0, 100)
+        self._emoji_opacity_spin = QSpinBox()
+        self._emoji_opacity_spin.setRange(-1, 100)
+        self._emoji_opacity_spin.setSuffix("%")
+        self._emoji_opacity_spin.setSpecialValueText(MIXED_TEXT)
+        self._emoji_opacity_spin.setKeyboardTracking(False)
+        self._emoji_section.add_row(
+            "Opacity:",
+            self._slider_spin_row(
+                self._emoji_opacity_spin, self._emoji_opacity_slider, "Emoji opacity"
+            ),
+        )
+        self._main_layout.addWidget(self._emoji_section)
+
     def _build_shadow_section(self) -> None:
         """The Shadow section of General UI PRD 8.3, for the items that carry a shadow
         (Numbered Steps, Stamps, and Emoji decision 1)."""
@@ -843,6 +890,11 @@ class PropertyPanel(QDockWidget):
         self._stamp_secondary_picker.color_changed.connect(self._on_stamp_secondary_changed)
         self._stamp_opacity_slider.valueChanged.connect(self._on_stamp_opacity_slider_changed)
         self._stamp_opacity_spin.valueChanged.connect(self._on_stamp_opacity_spin_changed)
+        self._emoji_change_button.clicked.connect(self._on_emoji_change_clicked)
+        self._emoji_size_spin.valueChanged.connect(self._on_emoji_size_changed)
+        self._emoji_tone_combo.currentIndexChanged.connect(self._on_emoji_tone_changed)
+        self._emoji_opacity_slider.valueChanged.connect(self._on_emoji_opacity_slider_changed)
+        self._emoji_opacity_spin.valueChanged.connect(self._on_emoji_opacity_spin_changed)
 
     # ------------------------------------------------------------ wiring
 
@@ -936,6 +988,9 @@ class PropertyPanel(QDockWidget):
     def _selected_stamps(self) -> list[StampItem]:
         return [i for i in self._selected_items() if isinstance(i, StampItem)]
 
+    def _selected_emoji(self) -> list[EmojiItem]:
+        return [i for i in self._selected_items() if isinstance(i, EmojiItem)]
+
     def _selected_shadowed(self) -> list[Any]:
         """The selected items that carry a shadow (the marker items, decision 1)."""
         return [i for i in self._selected_items() if isinstance(i, ShadowMixin)]
@@ -956,6 +1011,7 @@ class PropertyPanel(QDockWidget):
             all_steps = has_selection and all(isinstance(i, NumberedStepItem) for i in items)
             all_shadow = has_selection and all(isinstance(i, ShadowMixin) for i in items)
             all_stamps = has_selection and all(isinstance(i, StampItem) for i in items)
+            all_emoji = has_selection and all(isinstance(i, EmojiItem) for i in items)
 
             in_tool_defaults = not has_selection and self._active_tool_id in ("text", "callout")
             in_vector_defaults = not has_selection and self._active_tool_id in _VECTOR_TOOL_IDS
@@ -965,6 +1021,7 @@ class PropertyPanel(QDockWidget):
             self._appearance_section.setVisible(all_vector or in_vector_defaults)
             self._step_section.setVisible(all_steps)
             self._stamp_section.setVisible(all_stamps)
+            self._emoji_section.setVisible(all_emoji)
             self._shadow_section.setVisible(all_shadow)
             self._text_section.setVisible(all_text or in_tool_defaults)
             self._text_box_section.setVisible(all_text or in_tool_defaults)
@@ -987,6 +1044,8 @@ class PropertyPanel(QDockWidget):
                     self._populate_step(self._selected_steps())
                 if all_stamps:
                     self._populate_stamp(self._selected_stamps())
+                if all_emoji:
+                    self._populate_emoji(self._selected_emoji())
                 if all_shadow:
                     self._populate_shadow(self._selected_shadowed())
                 self._populate_info(items)
@@ -1101,6 +1160,16 @@ class PropertyPanel(QDockWidget):
         value, uniform = _uniform(opacities)
         self._stamp_opacity_slider.setValue(int(value) if uniform else 0)
         self._set_spin(self._stamp_opacity_spin, opacities)
+
+    def _populate_emoji(self, items: list[EmojiItem]) -> None:
+        name, uniform = _uniform([i.emoji_name for i in items])
+        self._emoji_name_label.setText(str(name) if uniform else f"{len(items)} emoji")
+        self._set_spin(self._emoji_size_spin, [i.emoji_size for i in items])
+        self._set_combo_data(self._emoji_tone_combo, [i.skin_tone for i in items])
+        opacities = [int(round(i.opacity_pct)) for i in items]
+        value, uniform = _uniform(opacities)
+        self._emoji_opacity_slider.setValue(int(value) if uniform else 0)
+        self._set_spin(self._emoji_opacity_spin, opacities)
 
     def _populate_shadow(self, items: list[Any]) -> None:
         self._set_check(self._shadow_check, [bool(i.shadow_enabled) for i in items])
@@ -2041,6 +2110,42 @@ class PropertyPanel(QDockWidget):
         self._stamp_opacity_slider.setValue(value)
         self._updating = False
         self._push_property(self._selected_stamps(), "opacity_pct", float(value))
+
+    # --- emoji handlers (Numbered Steps, Stamps & Emoji PRD 4.4, 4.6) ---
+
+    def _on_emoji_change_clicked(self) -> None:
+        items = self._selected_emoji()
+        open_editor = getattr(self.window(), "open_marker_editor", None)
+        if len(items) == 1 and callable(open_editor):
+            open_editor(items[0])
+
+    def _on_emoji_size_changed(self, value: float) -> None:
+        if self._updating or value < EMOJI_SIZE_MIN:
+            return
+        self._push_property(self._selected_emoji(), "emoji_size", float(value))
+
+    def _on_emoji_tone_changed(self, index: int) -> None:
+        if self._updating or index < 0:
+            return
+        tone = self._emoji_tone_combo.itemData(index)
+        if isinstance(tone, SkinTone):
+            self._push_property(self._selected_emoji(), "skin_tone", tone)
+
+    def _on_emoji_opacity_slider_changed(self, value: int) -> None:
+        if self._updating:
+            return
+        self._updating = True
+        self._emoji_opacity_spin.setValue(value)
+        self._updating = False
+        self._push_property(self._selected_emoji(), "opacity_pct", float(value))
+
+    def _on_emoji_opacity_spin_changed(self, value: int) -> None:
+        if self._updating or value < 0:
+            return
+        self._updating = True
+        self._emoji_opacity_slider.setValue(value)
+        self._updating = False
+        self._push_property(self._selected_emoji(), "opacity_pct", float(value))
 
     # --- shadow handlers (General UI PRD 8.3; decision 1) ---
 

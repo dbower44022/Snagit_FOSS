@@ -440,4 +440,7 @@ def test_animation_scales_the_item_from_120_percent_to_100(
     animation = tool_module.animate_placement(item, 1.2, 60, scene)
     assert animation is not None
     assert 1.0 < item.scale() <= 1.2 + 1e-6  # started at 120 percent, on its way down
-    qtbot.waitUntil(lambda: item.scale() == 1.0, timeout=2000)
+    animation.setCurrentTime(30)  # drive the clock by hand rather than wait on the timer
+    assert 1.0 < item.scale() < 1.2
+    animation.setCurrentTime(60)
+    assert item.scale() == 1.0

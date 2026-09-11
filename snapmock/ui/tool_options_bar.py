@@ -50,6 +50,7 @@ from snapmock.config.constants import (
     DisplayMode,
     FontWeight,
 )
+from snapmock.core.emoji_data import EMOJI_SIZE_MAX, EMOJI_SIZE_MIN
 from snapmock.core.stamp_library import STAMP_SIZE_MAX, STAMP_SIZE_MIN
 from snapmock.core.theme_manager import theme_manager
 from snapmock.items.base_item import SnapGraphicsItem
@@ -149,6 +150,9 @@ SHARED_CONTROLS: dict[str, ControlSpec] = {
         "flip_horizontal", "Flip Horizontal", "toggle", icon="flip-horizontal"
     ),
     "flip_vertical": ControlSpec("flip_vertical", "Flip Vertical", "toggle", icon="flip-vertical"),
+    "emoji_size": ControlSpec(
+        "emoji_size", "Size", "slider", EMOJI_SIZE_MIN, EMOJI_SIZE_MAX, 1, " px"
+    ),
 }
 
 _TEXT_STYLE_KEYS: tuple[tuple[str, str, str], ...] = (

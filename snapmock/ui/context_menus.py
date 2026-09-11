@@ -213,6 +213,18 @@ def build_item_context_menu(parent: MainWindow) -> QMenu:
             reset_action.triggered.connect(parent._stamp_reset_size)  # noqa: SLF001
         menu.addSeparator()
 
+    # --- Emoji rows (PRD 4.6): Flip Horizontal and Flip Vertical are above already ---
+    from snapmock.items.emoji_item import EmojiItem
+
+    if len(selected) == 1 and isinstance(selected[0], EmojiItem):
+        change_emoji_action = menu.addAction("Change Emoji...")
+        if change_emoji_action is not None:
+            change_emoji_action.triggered.connect(parent._emoji_change)  # noqa: SLF001
+        reset_emoji_action = menu.addAction("Reset Size")
+        if reset_emoji_action is not None:
+            reset_emoji_action.triggered.connect(parent._emoji_reset_size)  # noqa: SLF001
+        menu.addSeparator()
+
     # --- Properties ---
     props_action = menu.addAction("Properties...")
     if props_action is not None:

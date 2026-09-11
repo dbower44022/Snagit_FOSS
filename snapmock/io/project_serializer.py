@@ -24,6 +24,7 @@ from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.blur_item import BlurItem
 from snapmock.items.callout_item import CalloutItem
 from snapmock.items.ellipse_item import EllipseItem
+from snapmock.items.emoji_item import EmojiItem
 from snapmock.items.freehand_item import FreehandItem
 from snapmock.items.group_item import GroupItem
 from snapmock.items.highlight_item import HighlightItem
@@ -47,6 +48,7 @@ ITEM_REGISTRY: dict[str, type[SnapGraphicsItem]] = {
     "NumberedStepItem": NumberedStepItem,
     "RasterRegionItem": RasterRegionItem,
     "StampItem": StampItem,
+    "EmojiItem": EmojiItem,
     "GroupItem": GroupItem,
 }
 

@@ -534,12 +534,14 @@ def test_17_2_view_toggles_reflect_the_state(main_window: MainWindow) -> None:
 # ---- 17.3 Toolbars ----
 
 
-def test_17_3_palette_shows_eighteen_tools_with_icons(main_window: MainWindow) -> None:
-    """Row 12: one button per registered tool, eighteen in all, each with an icon and a
+def test_17_3_palette_shows_nineteen_tools_with_icons(main_window: MainWindow) -> None:
+    """Row 12: one button per registered tool, nineteen in all since the Emoji tool of the
+    Numbered Steps, Stamps, and Emoji work (General UI PRD 2.12), each with an icon and a
     "Name (Shortcut)" tooltip."""
     palette = main_window._toolbar  # noqa: SLF001
     buttons = palette._buttons  # noqa: SLF001
-    assert len(buttons) == 18
+    assert len(buttons) == 19
+    assert "emoji" in buttons
     assert list(buttons) == list(main_window.tool_manager.tool_ids)
     for tool_id, button in buttons.items():
         tool = main_window.tool_manager.tool(tool_id)

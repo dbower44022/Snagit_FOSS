@@ -99,6 +99,7 @@ from snapmock.io.project_serializer import (
 from snapmock.io.snagit_reader import load_snagx
 from snapmock.io.snagit_writer import save_snagx
 from snapmock.items.base_item import SnapGraphicsItem
+from snapmock.items.emoji_item import EmojiItem
 from snapmock.items.numbered_step_item import NumberedStepItem
 from snapmock.items.stamp_item import StampItem
 from snapmock.library.manager import LibraryManager
@@ -108,6 +109,7 @@ from snapmock.tools.blur_tool import BlurTool
 from snapmock.tools.callout_tool import CalloutTool
 from snapmock.tools.crop_tool import CropTool
 from snapmock.tools.ellipse_tool import EllipseTool
+from snapmock.tools.emoji_tool import EmojiTool
 from snapmock.tools.eyedropper_tool import EyedropperTool
 from snapmock.tools.freehand_tool import FreehandTool
 from snapmock.tools.highlight_tool import HighlightTool
@@ -608,6 +610,7 @@ class MainWindow(QMainWindow):
         self._tool_manager.register(CalloutTool())
         self._tool_manager.register(NumberedStepTool())
         self._tool_manager.register(StampTool())
+        self._tool_manager.register(EmojiTool())
         self._tool_manager.register(CropTool())
         self._tool_manager.register(RasterSelectTool())
         self._tool_manager.register(EyedropperTool())
@@ -1238,6 +1241,7 @@ class MainWindow(QMainWindow):
                 ("tool.callout", "callout"),
                 ("tool.numbered_step", "numbered_step"),
                 ("tool.stamp", "stamp"),
+                ("tool.emoji", "emoji"),
             ],
             # Effects
             [("tool.highlight", "highlight"), ("tool.blur", "blur")],
@@ -3494,6 +3498,24 @@ class MainWindow(QMainWindow):
         from snapmock.items.numbered_step_item import NumberedStepItem
 
         self.close_marker_editor()
+        if isinstance(item, EmojiItem):
+            emoji_tool = self._tool_manager.tool("emoji")
+            if not isinstance(emoji_tool, EmojiTool):
+                return False
+            self._selection_manager.select(item)
+            anchor = self._view.mapFromScene(item.sceneBoundingRect().bottomLeft())
+            emoji_target: EmojiItem = item
+
+            def _emoji_chosen(chars: str) -> None:
+                self._change_emoji(emoji_target, chars)
+
+            emoji_tool.choose_emoji(
+                None,
+                _emoji_chosen,
+                item.emoji_char,
+                self._view.viewport().mapToGlobal(anchor),  # type: ignore[union-attr]
+            )
+            return True
         if isinstance(item, StampItem):
             tool = self._tool_manager.tool("stamp")
             if not isinstance(tool, StampTool):
@@ -3552,6 +3574,36 @@ class MainWindow(QMainWindow):
         self._scene.command_stack.push(
             ChangeStampCommand(item, info, stamp_library().svg_data(info.id))
         )
+
+    def _change_emoji(self, item: EmojiItem, chars: str) -> None:
+        """Change Emoji (PRD 4.6, 6.3): one undoable command replacing the emoji."""
+        from snapmock.commands.marker_commands import ChangeEmojiCommand
+
+        if not chars or chars == item.emoji_char:
+            return
+        self._scene.command_stack.push(ChangeEmojiCommand(item, chars))
+
+    def _emoji_change(self) -> None:
+        """Change Emoji... (PRD 4.6): the picker for the one selected emoji."""
+        emoji = self._selected_marker(EmojiItem)
+        if not self._require("Change Emoji", (emoji is not None, "one emoji")):
+            return
+        assert emoji is not None
+        self.open_marker_editor(emoji)
+
+    def _emoji_reset_size(self) -> None:
+        """Reset Size (PRD 4.6; kickoff silence 13): back to 48 px."""
+        from snapmock.commands.modify_property import ModifyPropertyCommand
+        from snapmock.core.emoji_data import DEFAULT_EMOJI_SIZE
+
+        emoji = self._selected_marker(EmojiItem)
+        if not self._require("Reset Size", (emoji is not None, "one emoji")):
+            return
+        assert isinstance(emoji, EmojiItem)
+        if emoji.emoji_size != DEFAULT_EMOJI_SIZE:
+            self._scene.command_stack.push(
+                ModifyPropertyCommand(emoji, "emoji_size", emoji.emoji_size, DEFAULT_EMOJI_SIZE)
+            )
 
     def _selected_marker(self, kind: type[SnapGraphicsItem]) -> SnapGraphicsItem | None:
         items = self._selected_snap_items()

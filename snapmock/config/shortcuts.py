@@ -77,6 +77,7 @@ SHORTCUTS: dict[str, str] = {
     "tool.blur": "B",
     "tool.numbered_step": "N",
     "tool.stamp": "S",
+    "tool.emoji": "Shift+E",
     "tool.crop": "X",
     "tool.raster_select": "M",
     "tool.eyedropper": "I",

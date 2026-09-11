@@ -31,6 +31,7 @@ TOOL_ICONS: dict[str, str] = {
     "callout": "message-2",
     "numbered_step": "circle-number-1",
     "stamp": "rubber-stamp",
+    "emoji": "mood-smile",
     "crop": "crop",
     "raster_select": "marquee-2",
     "eyedropper": "color-picker",

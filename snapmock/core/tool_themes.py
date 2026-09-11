@@ -40,6 +40,7 @@ from snapmock.config.constants import (
     TailStyle,
     VerticalAlign,
 )
+from snapmock.core.emoji_data import SkinTone
 
 if TYPE_CHECKING:
     from snapmock.config.settings import AppSettings
@@ -71,6 +72,7 @@ _ENUM_TYPES: dict[str, type[Enum]] = {
     "DisplayMode": DisplayMode,
     "FontWeight": FontWeight,
     "LabelPosition": LabelPosition,
+    "SkinTone": SkinTone,
 }
 
 # The Preferences > Tools values and the creation-default key each one fills

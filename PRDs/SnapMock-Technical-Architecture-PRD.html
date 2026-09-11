@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Technical Architecture</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.23</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.24</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
-    <dt>Document version</dt><dd>1.23</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 02:05</dd>
+    <dt>Document version</dt><dd>1.24</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 02:10</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,18 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.24</td>
+        <td class="nowrap">09-11-26 02:10</td>
+        <td>Doug Bower</td>
+        <td>Numbered Steps, Stamps, and Emoji implementation, Phase 3 step 2: the nineteenth tool. Section 3.3's
+        registry gains <code>emoji</code> (Emoji, Annotation); Section 4.2's hierarchy gains <code>EmojiItem</code>
+        under <code>SnapGraphicsItem</code>; Section 6.1's <code>items.json</code> gains the <code>EmojiItem</code>
+        entry (the sequence stored whole, the skin tone beside it); Section 10 gains <code>items/emoji_item.py</code>,
+        <code>tools/emoji_tool.py</code>, and <code>ui/emoji_picker.py</code>, and <code>commands/marker_commands.py</code>
+        gains <code>ChangeEmojiCommand</code>. General UI PRD 2.12.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.23</td>
         <td class="nowrap">09-11-26 02:05</td>
@@ -282,6 +294,21 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 02:10</td>
+        <td>3.3, 4.2, 6.1, 10</td>
+        <td>Added</td>
+        <td>Numbered Steps, Stamps, and Emoji implementation, Phase 3 step 2: <code>EmojiItem</code> on
+        <code>SnapGraphicsItem</code> with the shadow helper (<code>emoji_char</code> stored whole,
+        <code>emoji_name</code>, <code>emoji_size</code> 16 to 256, <code>skin_tone</code> re-toning the sequence
+        where the data says, one <code>opacity</code>, the flips; <code>drawText</code> in the family
+        <code>emoji_font_family()</code> names at 90 percent of the square; a rounded-square shadow, since colour
+        glyphs have no outline), registered in <code>ITEM_REGISTRY</code> and listed as unsupported by the Snagit
+        writer; <code>EmojiTool</code> (<code>emoji</code>, Emoji, Shift+E, the <code>mood-smile</code> glyph
+        added to the vendored Tabler subset) registered after the Stamp tool as the nineteenth tool, with the picker
+        <code>EmojiPicker</code> and the skin-tone palette. <code>ChangeEmojiCommand</code> (marker PRD 6.3) joins
+        <code>commands/marker_commands.py</code>.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 02:05</td>
         <td>10, 9</td>
@@ -1163,6 +1190,7 @@ per-tool PRDs) includes:</p>
     <tr><th>highlight</th><td>Highlighter</td><td>Annotation</td></tr>
     <tr><th><code>numbered_step</code></th><td>Numbered Step</td><td>Annotation</td></tr>
     <tr><th>stamp</th><td>Stamp / Sticker</td><td>Annotation</td></tr>
+    <tr><th>emoji</th><td>Emoji</td><td>Annotation</td></tr>
     <tr><th>eyedropper</th><td>Eyedropper (Color Picker)</td><td>Utility</td></tr>
     <tr><th>pan</th><td>Pan / Hand</td><td>Navigation</td></tr>
     <tr><th><code>zoom_tool</code></th><td>Zoom In/Out</td><td>Navigation</td></tr>
@@ -1580,6 +1608,7 @@ is:</p>
     <li><code>BlurItem</code> - region that applies blur/pixelate effect to layers below</li>
     <li><code>NumberedStepItem</code> - circled number with optional label</li>
     <li><code>StampItem</code> - pre-defined or custom image stamp</li>
+    <li><code>EmojiItem</code> - a Unicode emoji drawn in the platform's colour emoji font (Numbered Steps, Stamps &amp; Emoji PRD 4.4)</li>
     <li><code>RasterRegionItem</code> - extracted pixel region from raster selection/cut/paste</li>
     <li><code>GroupItem</code> - a container whose members are its child items; moves, resizes, and transforms as one unit (General UI PRD 3.6)</li>
   </ul>
@@ -1930,6 +1959,7 @@ docstring.</p>
         blur_item.py              # region that applies blur/pixelate effect to layers below
         callout_item.py           # speech-bubble annotation with configurable shape and tail
         ellipse_item.py           # ellipse / circle annotation
+        emoji_item.py             # a Unicode emoji drawn in the platform's colour emoji font
         freehand_item.py          # freehand drawn path annotation
         group_item.py             # a container item whose members are its child items (General UI PRD 3.6)
         highlight_item.py         # semi-transparent wide stroke annotation
@@ -1968,6 +1998,7 @@ docstring.</p>
         callout_tool.py           # drag to place tail tip then position bubble, or click for…
         crop_tool.py              # interactive crop with overlay, handles, and state machine
         ellipse_tool.py           # click-and-drag to create ellipses
+        emoji_tool.py             # pick an emoji, click to place it, drag to size it
         eyedropper_tool.py        # pick a color from the canvas
         freehand_tool.py          # click-and-drag to draw freehand paths
         highlight_tool.py         # click-and-drag to draw highlight strokes
@@ -1991,6 +2022,7 @@ docstring.</p>
         crop_overlay.py           # visual overlay showing the crop region with handles and…
         cursors.py                # canvas cursors of General UI PRD 6.6 that Qt does not provide
         document_tabs.py          # tab bar plus stacked views for the open documents
+        emoji_picker.py           # the emoji picker popover of the marker PRD's Section 4.2 and the skin-tone palette
         export_dialog.py          # Export dialog: format options, region, output path, preview, size estimate
         find_replace_bar.py       # inline find/replace bar for rich text editing
         find_replace_color_dialog.py # find and replace a colour across all items (Edit menu)
