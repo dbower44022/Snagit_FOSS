@@ -205,3 +205,37 @@ def test_resize_image_scales_raster_item(scene: SnapScene) -> None:
 
     assert item._pixmap.width() == 200  # noqa: SLF001
     assert item._pixmap.height() == 200  # noqa: SLF001
+
+
+def test_resize_image_undo_restores_the_new_shapes(scene: SnapScene) -> None:
+    """Arcs, polygons, individual corner radii, and blur regions join Resize Image's walk
+    (Basic Shape remainder; General UI notes Section 17.2): undo restores their geometry."""
+    from PyQt6.QtCore import QPointF
+
+    from snapmock.config.constants import CornerRadiusMode
+    from snapmock.items.arc_item import ArcItem
+    from snapmock.items.blur_item import BlurItem
+    from snapmock.items.polygon_item import PolygonItem
+
+    layer = scene.layer_manager.active_layer
+    assert layer is not None
+    arc = ArcItem(start=QPointF(0, 0), end=QPointF(40, 0), control=QPointF(20, -30))
+    polygon = PolygonItem(vertices=[QPointF(0, 0), QPointF(30, 0), QPointF(15, 20)])
+    rect = RectangleItem(rect=QRectF(0, 0, 50, 50))
+    rect.corner_radius_mode = CornerRadiusMode.INDIVIDUAL
+    rect.corner_radius_tl = 10.0
+    blur = BlurItem(rect=QRectF(0, 0, 40, 40))
+    blur.feather = 4.0
+    for item in (arc, polygon, rect, blur):
+        item.layer_id = layer.layer_id
+        scene.addItem(item)
+    scene.command_stack.push(ResizeImageCommand(scene, QSizeF(800, 600)))
+    assert arc.control_point == QPointF(40, -60)
+    assert polygon.vertices[1] == QPointF(60, 0)
+    assert rect.corner_radius_tl == pytest.approx(20.0)
+    assert blur.feather == pytest.approx(8.0)
+    scene.command_stack.undo()
+    assert arc.control_point == QPointF(20, -30) and arc.end_point == QPointF(40, 0)
+    assert polygon.vertices == [QPointF(0, 0), QPointF(30, 0), QPointF(15, 20)]
+    assert rect.corner_radius_tl == pytest.approx(10.0)
+    assert blur.feather == pytest.approx(4.0) and blur.rect == QRectF(0, 0, 40, 40)

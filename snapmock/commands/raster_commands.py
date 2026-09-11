@@ -209,6 +209,7 @@ class ResizeImageCommand(BaseCommand):
     @staticmethod
     def _restore_geometry(target: SnapGraphicsItem, source: SnapGraphicsItem) -> None:
         """Copy internal geometry from source back to target."""
+        from snapmock.items.arc_item import ArcItem
         from snapmock.items.arrow_item import ArrowItem
         from snapmock.items.blur_item import BlurItem
         from snapmock.items.callout_item import CalloutItem
@@ -218,6 +219,7 @@ class ResizeImageCommand(BaseCommand):
         from snapmock.items.highlight_item import HighlightItem
         from snapmock.items.line_item import LineItem
         from snapmock.items.numbered_step_item import NumberedStepItem
+        from snapmock.items.polygon_item import PolygonItem
         from snapmock.items.raster_region_item import RasterRegionItem
         from snapmock.items.rectangle_item import RectangleItem
         from snapmock.items.stamp_item import StampItem
@@ -243,12 +245,21 @@ class ResizeImageCommand(BaseCommand):
         if isinstance(target, RectangleItem) and isinstance(source, RectangleItem):
             target._rect = source._rect  # noqa: SLF001
             target._corner_radius = source._corner_radius  # noqa: SLF001
+            target._corners = dict(source._corners)  # noqa: SLF001
         elif isinstance(target, EllipseItem) and isinstance(source, EllipseItem):
             target._rect = source._rect  # noqa: SLF001
         elif isinstance(target, (LineItem, ArrowItem)) and isinstance(
             source, (LineItem, ArrowItem)
         ):
             target._line = source._line  # noqa: SLF001
+        elif isinstance(target, ArcItem) and isinstance(source, ArcItem):
+            target._start = source._start  # noqa: SLF001
+            target._end = source._end  # noqa: SLF001
+            target._control = source._control  # noqa: SLF001
+        elif isinstance(target, PolygonItem) and isinstance(source, PolygonItem):
+            target._vertices = source._vertices  # noqa: SLF001
+            target._center = source._center  # noqa: SLF001
+            target._radius = source._radius  # noqa: SLF001
         elif isinstance(target, FreehandItem) and isinstance(source, FreehandItem):
             target._path_points = source._path_points  # noqa: SLF001
             target._segments = source._segments  # noqa: SLF001
@@ -267,6 +278,9 @@ class ResizeImageCommand(BaseCommand):
         elif isinstance(target, BlurItem) and isinstance(source, BlurItem):
             target._rect = source._rect  # noqa: SLF001
             target._blur_radius = source._blur_radius  # noqa: SLF001
+            target._corner_radius = source._corner_radius  # noqa: SLF001
+            target._feather = source._feather  # noqa: SLF001
+            target._cache_key = None  # noqa: SLF001
         elif isinstance(target, RasterRegionItem) and isinstance(source, RasterRegionItem):
             target._pixmap = source._pixmap  # noqa: SLF001
         elif isinstance(target, NumberedStepItem) and isinstance(source, NumberedStepItem):
