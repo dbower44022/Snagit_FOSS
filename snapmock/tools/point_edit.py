@@ -23,6 +23,7 @@ from snapmock.config.constants import LineStyle
 from snapmock.core.command_stack import BaseCommand
 from snapmock.core.path_utils import BezierSegment, constrain_angle
 from snapmock.core.theme_manager import current_theme
+from snapmock.items.arc_item import ArcItem
 from snapmock.items.arrow_item import ArrowItem
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.freehand_item import FreehandItem
@@ -405,8 +406,51 @@ class FreehandPointSession(PointEditSession):
         return ModifyGeometryCommand(self.item, "bezier_segments", segs, new, point="delete")
 
 
+class ArcPointSession(PointEditSession):
+    """An arc's three handles (Basic Shape PRD 7.5): the start and end points as blue
+    circles and the control point as the green one, with dashed guides from the control
+    point to both ends; Shift on an endpoint drag constrains the chord to 15-degree steps
+    from the other end."""
+
+    HINT = "Drag endpoints or control point to reshape. Escape: exit."
+
+    item: ArcItem
+
+    def handles(self) -> list[PointHandle]:
+        return [
+            PointHandle("start", self.to_scene(self.item.start_point)),
+            PointHandle("end", self.to_scene(self.item.end_point)),
+            PointHandle("control", self.to_scene(self.item.control_point), HandleKind.CONTROL),
+        ]
+
+    def guide_lines(self) -> list[QLineF]:
+        control = self.to_scene(self.item.control_point)
+        return [
+            QLineF(control, self.to_scene(self.item.start_point)),
+            QLineF(control, self.to_scene(self.item.end_point)),
+        ]
+
+    def property_for(self, key: str) -> str:
+        return {"start": "start_point", "end": "end_point"}.get(key, "control_point")
+
+    def drag_to(self, key: str, scene_pos: QPointF, modifiers: Qt.KeyboardModifier) -> None:
+        if key == "control":
+            self.item.control_point = self.to_local(scene_pos)
+            return
+        other = self.item.end_point if key == "start" else self.item.start_point
+        if modifiers & Qt.KeyboardModifier.ShiftModifier:
+            scene_pos = constrain_angle(self.to_scene(other), scene_pos)
+        local = self.to_local(scene_pos)
+        if key == "start":
+            self.item.start_point = local
+        else:
+            self.item.end_point = local
+
+
 def session_for(item: SnapGraphicsItem) -> PointEditSession | None:
     """The point-editing session for *item*, or None when the item has no points to edit."""
+    if isinstance(item, ArcItem):
+        return ArcPointSession(item)
     if isinstance(item, FreehandItem):
         return FreehandPointSession(item)
     if isinstance(item, ArrowItem):
