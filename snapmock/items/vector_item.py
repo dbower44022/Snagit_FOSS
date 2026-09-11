@@ -234,6 +234,34 @@ class VectorItem(ShadowMixin, SnapGraphicsItem):
             return outline.united(stroke)
         return stroke
 
+    # --- creation defaults ---
+
+    def apply_creation_defaults(self, defaults: dict[str, Any]) -> None:
+        """Take the shared keys a tool's ``creation_defaults`` carry (Basic Shape PRD 2.6);
+        a key the tool does not carry leaves the item's own default."""
+        if "stroke_color" in defaults:
+            self._stroke_color = QColor(defaults["stroke_color"])
+        if "fill_color" in defaults:
+            self._fill_color = QColor(defaults["fill_color"])
+        if "stroke_width" in defaults:
+            self._stroke_width = max(0.0, float(defaults["stroke_width"]))
+        style = defaults.get("stroke_style")
+        if isinstance(style, BorderStyle):
+            self._stroke_style = style
+        cap = defaults.get("stroke_cap")
+        if isinstance(cap, StrokeCap):
+            self._stroke_cap = cap
+        join = defaults.get("stroke_join")
+        if isinstance(join, StrokeJoin):
+            self._stroke_join = join
+        if "fill_opacity" in defaults:
+            self._fill_opacity = _clamp_unit(defaults["fill_opacity"])
+        if "stroke_opacity" in defaults:
+            self._stroke_opacity = _clamp_unit(defaults["stroke_opacity"])
+        if "shadow_enabled" in defaults:
+            self._shadow_enabled = bool(defaults["shadow_enabled"])
+        self._geometry_changed()
+
     # --- hit testing ---
 
     HIT_PADDING: float = 4.0

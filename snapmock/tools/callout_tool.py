@@ -20,6 +20,7 @@ from snapmock.commands.add_item import AddItemCommand
 from snapmock.config.constants import (
     DEFAULT_FONT_FAMILY,
     DEFAULT_FONT_SIZE,
+    BorderStyle,
     BubbleShape,
     TailStyle,
     VerticalAlign,
@@ -45,6 +46,7 @@ class CalloutTool(BaseTool):
         "bg_color",
         "border_color",
         "border_width",
+        "border_style",
     )
 
     def __init__(self) -> None:
@@ -64,6 +66,7 @@ class CalloutTool(BaseTool):
             "bg_color": QColor("#FFFFCC"),
             "border_color": QColor("#333333"),
             "border_width": 2.0,
+            "border_style": BorderStyle.SOLID,
             "border_radius": 12.0,
             "padding": 10.0,
             "vertical_align": VerticalAlign.TOP,
@@ -288,6 +291,8 @@ class CalloutTool(BaseTool):
         item.bg_color = QColor(d.get("bg_color", QColor("#FFFFCC")))
         item.border_color = QColor(d.get("border_color", QColor("#333333")))
         item.border_width = d.get("border_width", 2.0)
+        style = d.get("border_style", BorderStyle.SOLID)
+        item.border_style = style if isinstance(style, BorderStyle) else BorderStyle.SOLID
         item.border_radius = d.get("border_radius", 12.0)
         item.padding = d.get("padding", 10.0)
         item.vertical_align = d.get("vertical_align", VerticalAlign.TOP)

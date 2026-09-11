@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QCheckBox, QDoubleSpinBox, QFontComboBox, QSpinBox, QToolButton
@@ -50,13 +51,28 @@ def test_shape_tools_compose_the_shared_set_in_order(main_window: MainWindow) ->
     bar = _bar(main_window)
     main_window.tool_manager.activate("rectangle")
     keys = list(bar.shared_widgets)
-    assert keys == ["stroke_color", "fill_color", "stroke_width", "opacity_pct"]
+    # Basic Shape PRD 2.6's order (Vector Item Properties Phase 1 step 4)
+    assert keys == [
+        "stroke_color",
+        "fill_color",
+        "stroke_width",
+        "stroke_style",
+        "fill_opacity",
+        "stroke_opacity",
+        "shadow_enabled",
+    ]
     assert isinstance(bar.shared_widgets["stroke_color"], ColorPicker)
     width = bar.shared_widgets["stroke_width"]
     assert isinstance(width, QDoubleSpinBox)
     assert (width.minimum(), width.maximum(), width.singleStep()) == (0.5, 50.0, 0.5)
     main_window.tool_manager.activate("line")
-    assert list(bar.shared_widgets) == ["stroke_color", "stroke_width", "opacity_pct"]
+    assert list(bar.shared_widgets) == [
+        "stroke_color",
+        "stroke_width",
+        "stroke_style",
+        "stroke_opacity",
+        "shadow_enabled",
+    ]
     main_window.tool_manager.activate("freehand")
     assert list(bar.shared_widgets)[-1] == "smoothing"
 
@@ -74,10 +90,11 @@ def test_bar_edits_write_the_tool_defaults(main_window: MainWindow) -> None:
     assert isinstance(swatch, ColorPicker)
     swatch.color_changed.emit(QColor("#123456"))
     assert tool.creation_defaults["fill_color"] == QColor("#123456")
-    opacity = bar.shared_widgets["opacity_pct"]
+    opacity = bar.shared_widgets["fill_opacity"]
     assert isinstance(opacity, QSpinBox)
     opacity.setValue(40)
-    assert tool.creation_defaults["opacity_pct"] == 40
+    assert tool.creation_defaults["fill_opacity"] == pytest.approx(0.4)
+    assert "opacity_pct" not in tool.creation_defaults
 
 
 def test_bar_and_property_panel_stay_in_step(main_window: MainWindow) -> None:
@@ -125,6 +142,7 @@ def test_text_tool_controls_and_alignment_slot(main_window: MainWindow) -> None:
         "bg_color",
         "border_color",
         "border_width",
+        "border_style",  # Text PRD 3.5 (Vector Item Properties Phase 1 step 4)
     ]
     assert isinstance(bar.shared_widgets["font_family"], QFontComboBox)
     size = bar.shared_widgets["font_size"]

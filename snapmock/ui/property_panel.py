@@ -1387,7 +1387,7 @@ class PropertyPanel(QDockWidget):
         if not (self._in_tool_defaults_mode() or self._in_vector_defaults_mode()):
             return False
         d = self._active_tool_defaults()
-        if d is not None:
+        if d is not None and key in d:
             d[key] = value
             self._notify_defaults_changed()
         return True

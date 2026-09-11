@@ -7,9 +7,9 @@ from PyQt6.QtGui import QColor, QMouseEvent
 
 from snapmock.commands.add_item import AddItemCommand
 from snapmock.config.constants import (
-    DEFAULT_FILL_COLOR,
     DEFAULT_STROKE_COLOR,
     DEFAULT_STROKE_WIDTH,
+    BorderStyle,
 )
 from snapmock.core.path_utils import simplify_rdp
 from snapmock.items.freehand_item import FreehandItem
@@ -23,16 +23,24 @@ class FreehandTool(BaseTool):
     """Interactive tool for freehand drawing."""
 
     # Tool Options Bar shared controls (General UI PRD 5.3)
-    options_controls = ("stroke_color", "stroke_width", "opacity_pct", "smoothing")
+    options_controls = (
+        "stroke_color",
+        "stroke_width",
+        "stroke_style",
+        "stroke_opacity",
+        "shadow_enabled",
+        "smoothing",
+    )
 
     def __init__(self) -> None:
         super().__init__()
         self._item: FreehandItem | None = None
         self._creation_defaults = {
             "stroke_color": QColor(DEFAULT_STROKE_COLOR),
-            "fill_color": QColor(DEFAULT_FILL_COLOR),
             "stroke_width": DEFAULT_STROKE_WIDTH,
-            "opacity_pct": 100.0,
+            "stroke_style": BorderStyle.SOLID,
+            "stroke_opacity": 1.0,
+            "shadow_enabled": False,
             # Read by the Tool Options Bar's Smoothing slider (General UI PRD 5.2)
             "smoothing": 50,
         }
@@ -63,10 +71,7 @@ class FreehandTool(BaseTool):
             return False
         pos = self._scene_pos(event)
         self._item = FreehandItem()
-        self._item.stroke_color = self._creation_defaults["stroke_color"]
-        self._item.fill_color = self._creation_defaults["fill_color"]
-        self._item.stroke_width = self._creation_defaults["stroke_width"]
-        self._item.setOpacity(self._creation_defaults["opacity_pct"] / 100.0)
+        self._item.apply_creation_defaults(self._creation_defaults)
         self._item.setPos(pos)
         self._item.add_point(QPointF(0, 0))
         self._scene.addItem(self._item)
@@ -90,12 +95,8 @@ class FreehandTool(BaseTool):
         simplified = simplify_rdp(raw, epsilon)
         if len(simplified) == len(raw):
             return item
-        result = FreehandItem()
-        result.stroke_color = item.stroke_color
-        result.fill_color = item.fill_color
-        result.stroke_width = item.stroke_width
-        result.setOpacity(item.opacity())
-        result.setPos(item.pos())
+        result = FreehandItem.deserialize({**item.serialize(), "points": []})
+        result.renew_ids()
         for point in simplified:
             result.add_point(point)
         return result

@@ -36,6 +36,7 @@ from snapmock.config.constants import (
     DEFAULT_TEXT_PADDING,
     DEFAULT_TEXT_WIDTH,
     MIN_DRAG_TEXT_BOX,
+    BorderStyle,
     VerticalAlign,
 )
 from snapmock.core.theme_manager import current_theme
@@ -236,6 +237,7 @@ class TextTool(BaseTool):
         "bg_color",
         "border_color",
         "border_width",
+        "border_style",
     )
 
     def __init__(self) -> None:
@@ -259,6 +261,7 @@ class TextTool(BaseTool):
             "bg_color": QColor(DEFAULT_TEXT_BG_COLOR),
             "border_color": QColor(DEFAULT_TEXT_BORDER_COLOR),
             "border_width": DEFAULT_TEXT_BORDER_WIDTH,
+            "border_style": BorderStyle.SOLID,
             "border_radius": DEFAULT_TEXT_BORDER_RADIUS,
             "padding": DEFAULT_TEXT_PADDING,
             "vertical_align": VerticalAlign.TOP,
@@ -445,6 +448,8 @@ class TextTool(BaseTool):
         item.bg_color = QColor(d.get("bg_color", QColor(DEFAULT_TEXT_BG_COLOR)))
         item.border_color = QColor(d.get("border_color", QColor(DEFAULT_TEXT_BORDER_COLOR)))
         item.border_width = d.get("border_width", DEFAULT_TEXT_BORDER_WIDTH)
+        style = d.get("border_style", BorderStyle.SOLID)
+        item.border_style = style if isinstance(style, BorderStyle) else BorderStyle.SOLID
         item.border_radius = d.get("border_radius", DEFAULT_TEXT_BORDER_RADIUS)
         item.padding = d.get("padding", DEFAULT_TEXT_PADDING)
         item.vertical_align = d.get("vertical_align", VerticalAlign.TOP)

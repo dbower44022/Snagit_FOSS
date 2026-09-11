@@ -37,6 +37,8 @@ from snapmock.config.constants import (
     DisplayMode,
     FontWeight,
     LabelPosition,
+    StrokeCap,
+    StrokeJoin,
     TailStyle,
     VerticalAlign,
 )
@@ -73,7 +75,37 @@ _ENUM_TYPES: dict[str, type[Enum]] = {
     "FontWeight": FontWeight,
     "LabelPosition": LabelPosition,
     "SkinTone": SkinTone,
+    "StrokeCap": StrokeCap,
+    "StrokeJoin": StrokeJoin,
 }
+
+OPACITY_KEYS: tuple[str, str] = ("fill_opacity", "stroke_opacity")
+"""The two opacities that replaced ``opacity_pct`` for the vector tools (Vector Item
+Properties decision 2, option A)."""
+
+
+def migrate_opacity(values: ToolValues, defaults: ToolValues) -> ToolValues:
+    """*values* with a stored ``opacity_pct`` read once into the opacity keys *defaults*
+    has, when the tool no longer takes ``opacity_pct`` and neither new key is present.
+
+    A preset, theme, or session state written before the Vector Item Properties work
+    carried one opacity per shape tool; it becomes the same fraction for the fill and
+    the stroke and the old key is dropped on the next write.
+    """
+    if "opacity_pct" not in values or "opacity_pct" in defaults:
+        return values
+    targets = [key for key in OPACITY_KEYS if key in defaults]
+    if not targets or any(key in values for key in targets):
+        return values
+    out = dict(values)
+    try:
+        fraction = max(0.0, min(1.0, float(out.pop("opacity_pct")) / 100.0))
+    except (TypeError, ValueError):
+        return out
+    for key in targets:
+        out[key] = fraction
+    return out
+
 
 # The Preferences > Tools values and the creation-default key each one fills
 # (General UI PRD 11.3; decision 7.2: these are the Default theme's values).
@@ -488,13 +520,27 @@ class ToolThemeManager(QObject):
         """A copy of the tool's creation defaults as they stand."""
         return copy.deepcopy(self._values(tool_id))
 
+    def _migrated(self, tool_id: str, values: ToolValues) -> ToolValues:
+        """*values* with a stored ``opacity_pct`` migrated for the tool (decision 2)."""
+        return migrate_opacity(values, self._factory.get(tool_id, {}))
+
+    def _preset_values(self, tool_id: str, preset: ToolPreset) -> ToolValues:
+        """The values *preset* gives the tool: its own, migrated, over the active theme's
+        for any key the tool gained after the preset was saved, so an older preset still
+        applies whole and still reads as applied."""
+        out = self.theme_values(tool_id)
+        for key, value in self._migrated(tool_id, preset.values).items():
+            if key in out:
+                out[key] = copy.deepcopy(value)
+        return out
+
     def _set_values(self, tool_id: str, values: ToolValues) -> bool:
         """Write *values* into the tool's defaults; True when anything changed."""
         tool = self._tool(tool_id)
         if tool is None:
             return False
         changed = False
-        for key, value in values.items():
+        for key, value in self._migrated(tool_id, values).items():
             if key not in tool.creation_defaults:
                 continue
             if values_equal({key: tool.creation_defaults[key]}, {key: value}):
@@ -592,7 +638,7 @@ class ToolThemeManager(QObject):
         if theme is None:
             theme = self.active_theme()
         base = copy.deepcopy(self._default_cache.tools.get(tool_id, {}))
-        for key, value in theme.tools.get(tool_id, {}).items():
+        for key, value in self._migrated(tool_id, theme.tools.get(tool_id, {})).items():
             if key in base:
                 base[key] = copy.deepcopy(value)
         return base
@@ -681,7 +727,7 @@ class ToolThemeManager(QObject):
         if preset is None:
             return False
         self._applied[tool_id] = name
-        self._set_values(tool_id, preset.values)
+        self._set_values(tool_id, self._preset_values(tool_id, preset))
         self._announce(tool_id)
         self.state_changed.emit()
         self.save_session()
@@ -763,14 +809,16 @@ class ToolThemeManager(QObject):
         preset = self._presets.preset(tool_id, name)
         if preset is None:
             return False
-        return not values_equal(self._values(tool_id), preset.values)
+        return not values_equal(self._values(tool_id), self._preset_values(tool_id, preset))
 
     def current_label(self, tool_id: str) -> str:
         """The dropdown's text: the applied preset, the theme when unmodified, else Custom."""
         name = self._applied.get(tool_id)
         if name is not None:
             preset = self._presets.preset(tool_id, name)
-            if preset is not None and values_equal(self._values(tool_id), preset.values):
+            if preset is not None and values_equal(
+                self._values(tool_id), self._preset_values(tool_id, preset)
+            ):
                 return name
             return CUSTOM_LABEL
         if values_equal(self._values(tool_id), self.theme_values(tool_id)):

@@ -87,6 +87,8 @@ class ControlSpec:
     """The enum kind's rows as (label, value) pairs, in order."""
     icon: str = ""
     """The toggle kind's Tabler glyph."""
+    scale: float = 1.0
+    """The slider kind's widget units per stored unit: 100 for a 0.0 to 1.0 opacity."""
 
 
 SHARED_CONTROLS: dict[str, ControlSpec] = {
@@ -96,6 +98,19 @@ SHARED_CONTROLS: dict[str, ControlSpec] = {
         "stroke_width", "Width", "double", 0.5, 50.0, 0.5, " px", decimals=1
     ),
     "opacity_pct": ControlSpec("opacity_pct", "Opacity", "slider", 0, 100, 1, "%"),
+    # The vector items' shared set (Basic Shape PRD 2.6; General UI PRD 5.2)
+    "stroke_style": ControlSpec(
+        "stroke_style",
+        "Style",
+        "enum",
+        choices=tuple((s.value.replace("dashdot", "dash-dot").title(), s) for s in BorderStyle),
+    ),
+    "fill_opacity": ControlSpec(
+        "fill_opacity", "Fill Opacity", "slider", 0, 100, 1, "%", scale=100.0
+    ),
+    "stroke_opacity": ControlSpec(
+        "stroke_opacity", "Stroke Opacity", "slider", 0, 100, 1, "%", scale=100.0
+    ),
     "font_family": ControlSpec("font_family", "Font", "font"),
     "font_size": ControlSpec("font_size", "Size", "int", 6, 200, 1, " pt"),
     "text_style": ControlSpec("text_style", "", "text_style"),
@@ -350,7 +365,12 @@ class ToolOptionsBar(QToolBar):
             spin.setAccessibleName(spec.label)
             slider.valueChanged.connect(spin.setValue)
             spin.valueChanged.connect(slider.setValue)
-            spin.valueChanged.connect(lambda v, k=spec.key: self._write(k, v))
+            if spec.scale != 1.0:
+                spin.valueChanged.connect(
+                    lambda v, k=spec.key, s=spec.scale: self._write(k, float(v) / s)
+                )
+            else:
+                spin.valueChanged.connect(lambda v, k=spec.key: self._write(k, v))
             self._add_labelled(spec.label, slider)
             spin.setMaximumHeight(_CONTROL_HEIGHT)
             self.addWidget(spin)
@@ -589,7 +609,9 @@ class ToolOptionsBar(QToolBar):
                 elif isinstance(widget, QDoubleSpinBox):
                     widget.setValue(float(value))
                 elif isinstance(widget, QSpinBox):
-                    widget.setValue(int(value))
+                    spec = SHARED_CONTROLS.get(key)
+                    scale = spec.scale if spec is not None else 1.0
+                    widget.setValue(int(round(float(value) * scale)))
                 elif isinstance(widget, QFontComboBox):
                     widget.setCurrentFont(QFont(str(value)))
                 elif isinstance(widget, QComboBox):

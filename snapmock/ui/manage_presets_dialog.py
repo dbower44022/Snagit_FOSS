@@ -87,7 +87,8 @@ def _fragment(key: str, value: object) -> str | None:
     if isinstance(value, int | float):
         spec = SHARED_CONTROLS.get(key)
         suffix = spec.suffix.strip() if spec is not None else ""
-        number = f"{value:g}"
+        scale = spec.scale if spec is not None else 1.0
+        number = f"{round(value * scale, 6):g}"
         return f"{label} {number}{' ' + suffix if suffix else ''}"
     if isinstance(value, Qt.AlignmentFlag):
         return f"{label} {_ALIGN_NAMES.get(int(value.value), 'left')}"

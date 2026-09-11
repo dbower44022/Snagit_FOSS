@@ -7,9 +7,9 @@ from PyQt6.QtGui import QColor, QMouseEvent
 
 from snapmock.commands.add_item import AddItemCommand
 from snapmock.config.constants import (
-    DEFAULT_FILL_COLOR,
     DEFAULT_STROKE_COLOR,
     DEFAULT_STROKE_WIDTH,
+    BorderStyle,
 )
 from snapmock.items.highlight_item import HighlightItem
 from snapmock.tools.base_tool import BaseTool
@@ -19,16 +19,18 @@ class HighlightTool(BaseTool):
     """Interactive tool for drawing highlight strokes."""
 
     # Tool Options Bar shared controls (General UI PRD 5.3)
-    options_controls = ("stroke_color", "stroke_width", "opacity_pct")
+    # Phase 1 of the Vector Item Properties work: the colour's alpha is the opacity (Blur
+    # PRD 3.7, silence 6), so no opacity control; Phase 2 rebuilds the bar per 3.5.
+    options_controls = ("stroke_color", "stroke_width", "stroke_style", "shadow_enabled")
 
     def __init__(self) -> None:
         super().__init__()
         self._item: HighlightItem | None = None
         self._creation_defaults = {
             "stroke_color": QColor(DEFAULT_STROKE_COLOR),
-            "fill_color": QColor(DEFAULT_FILL_COLOR),
             "stroke_width": DEFAULT_STROKE_WIDTH,
-            "opacity_pct": 100.0,
+            "stroke_style": BorderStyle.SOLID,
+            "shadow_enabled": False,
         }
 
     @property
@@ -57,10 +59,7 @@ class HighlightTool(BaseTool):
             return False
         pos = self._scene_pos(event)
         self._item = HighlightItem()
-        self._item.stroke_color = self._creation_defaults["stroke_color"]
-        self._item.fill_color = self._creation_defaults["fill_color"]
-        self._item.stroke_width = self._creation_defaults["stroke_width"]
-        self._item.setOpacity(self._creation_defaults["opacity_pct"] / 100.0)
+        self._item.apply_creation_defaults(self._creation_defaults)
         self._item.setPos(pos)
         self._item.add_point(0, 0)
         self._scene.addItem(self._item)

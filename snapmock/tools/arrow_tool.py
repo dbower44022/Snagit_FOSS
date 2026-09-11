@@ -7,9 +7,9 @@ from PyQt6.QtGui import QColor, QMouseEvent
 
 from snapmock.commands.add_item import AddItemCommand
 from snapmock.config.constants import (
-    DEFAULT_FILL_COLOR,
     DEFAULT_STROKE_COLOR,
     DEFAULT_STROKE_WIDTH,
+    BorderStyle,
 )
 from snapmock.items.arrow_item import ArrowItem
 from snapmock.tools.base_tool import BaseTool
@@ -19,7 +19,13 @@ class ArrowTool(BaseTool):
     """Interactive tool for creating arrows by click-and-drag."""
 
     # Tool Options Bar shared controls (General UI PRD 5.3)
-    options_controls = ("stroke_color", "stroke_width", "opacity_pct")
+    options_controls = (
+        "stroke_color",
+        "stroke_width",
+        "stroke_style",
+        "stroke_opacity",
+        "shadow_enabled",
+    )
 
     def __init__(self) -> None:
         super().__init__()
@@ -27,9 +33,10 @@ class ArrowTool(BaseTool):
         self._item: ArrowItem | None = None
         self._creation_defaults = {
             "stroke_color": QColor(DEFAULT_STROKE_COLOR),
-            "fill_color": QColor(DEFAULT_FILL_COLOR),
             "stroke_width": DEFAULT_STROKE_WIDTH,
-            "opacity_pct": 100.0,
+            "stroke_style": BorderStyle.SOLID,
+            "stroke_opacity": 1.0,
+            "shadow_enabled": False,
         }
 
     @property
@@ -55,10 +62,7 @@ class ArrowTool(BaseTool):
             self._scene.views()[0].mapToScene(event.pos()) if self._scene.views() else QPointF()
         )
         self._item = ArrowItem(line=QLineF(QPointF(0, 0), QPointF(0, 0)))
-        self._item.stroke_color = self._creation_defaults["stroke_color"]
-        self._item.fill_color = self._creation_defaults["fill_color"]
-        self._item.stroke_width = self._creation_defaults["stroke_width"]
-        self._item.setOpacity(self._creation_defaults["opacity_pct"] / 100.0)
+        self._item.apply_creation_defaults(self._creation_defaults)
         self._item.setPos(self._start)
         self._scene.addItem(self._item)
         return True
