@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Technical Architecture</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.24</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.25</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
-    <dt>Document version</dt><dd>1.24</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 00:55</dd>
+    <dt>Document version</dt><dd>1.25</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 11:13</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.25</td>
+        <td class="nowrap">09-11-26 11:13</td>
+        <td>Doug Bower</td>
+        <td>Vector Item Properties implementation started: Section 4.3 adopted by every vector item, the 4.2 departure for the text items, the 3.1.4 <code>blend_mode</code> values and the 3.9 combination rule of decision 4.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.24</td>
         <td class="nowrap">09-11-26 00:55</td>
@@ -52,7 +59,7 @@
         Unicode licence), and the top-level <code>scripts/</code> directory with
         <code>build_emoji_data.py</code>, the generator (decision 2, option A). Section 9 is unchanged: no
         dependency is added; the emoji font is not bundled (decision 4, option B).</td>
-        <td><span class="status open">Pending</span></td>
+        <td><span class="status closed">Superseded</span></td>
       </tr>
       <tr>
         <td>1.22</td>
@@ -294,6 +301,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 11:13</td>
+        <td>3.1.4, 3.9, 4.2, 4.3</td>
+        <td>Decision</td>
+        <td>Vector Item Properties implementation started 09-11-26 (notes <code>docs/Vector-Item-Properties-Implementation.md</code>). Section 4.3's common vector properties are adopted by every <code>VectorItem</code> subclass in Phase 1, through the shadow helper of 1.17 and <code>stroke_style</code>, <code>stroke_cap</code>, <code>stroke_join</code>, <code>fill_opacity</code>, and <code>stroke_opacity</code> on the base; the shadow offset stays two floats. Departure from 4.2 (decision 1, option B): <code>TextItem</code> and <code>CalloutItem</code> are <code>RichTextMixin, SnapGraphicsItem</code>, beside <code>VectorItem</code> rather than under it, and carry the shadow and the two opacities by mixing in, with their own background and border properties; the hierarchy list is read that way. Decision 2 (option A): the 3.1.4 <code>opacity</code> row holds as written; vector items and their tools use the two opacities and expose no single opacity control, and a stored <code>opacity_pct</code> is migrated once on read. Decision 4 (option A): <code>blend_mode</code> of 3.1.4 is built on every item in Phase 2 with the values Normal, Multiply, Screen, Overlay, Soft Light, Darken, Lighten, Difference; the combination rule for 3.9 is that the item's mode is the painter composition mode when the layer's is Normal, and the layer's otherwise, one composition mode per paint (the follow-up's per-item application of the layer mode of 1.15 stands). The SVG export drops the item mode as it drops the layer's. No module is added.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 00:55</td>
         <td>3.3, 4.2, 6.1, 10</td>

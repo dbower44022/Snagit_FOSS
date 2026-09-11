@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.12</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.13</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.12</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 00:55</dd>
+    <dt>Document version</dt><dd>2.13</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 11:13</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.13</td>
+        <td class="nowrap">09-11-26 11:13</td>
+        <td>Doug Bower</td>
+        <td>Vector Item Properties implementation started: the four decisions recorded against 5.2, 5.3, 8.3, and 8.4 (the two opacity sliders replace Opacity for vector items; Blend Mode on every item; the text items' opacities in the Text Box section; the arrowhead, corner radius, and Line Spacing controls by phase).</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>2.12</td>
         <td class="nowrap">09-11-26 00:55</td>
@@ -52,7 +59,7 @@
         phases), the numbered step's Fill Opacity and Stroke Opacity sit in a Numbered Step section beside Opacity,
         and the item context menu of 10.2 gains three rows when one numbered step is selected. No other requirement
         changed.</td>
-        <td><span class="status open">Pending</span></td>
+        <td><span class="status closed">Superseded</span></td>
       </tr>
       <tr>
         <td>2.10</td>
@@ -241,6 +248,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 11:13</td>
+        <td>5.2, 5.3, 8.3, 8.4</td>
+        <td>Decision</td>
+        <td>Vector Item Properties implementation started 09-11-26 (<code>docs/Vector-Item-Properties-Kickoff-Prompt.md</code>; notes in <code>docs/Vector-Item-Properties-Implementation.md</code>), the item work Phase 6 decision 6.2 deferred. Decision 2 (option A): Fill Opacity and Stroke Opacity replace the single Opacity control for vector items and their tools, as 5.2 and 8.3 say; the vector tools' <code>opacity_pct</code> creation default is dropped, a stored preset, theme, or session value is read once into both new keys, and the base opacity stays for groups and non-vector items. A selection holding a group shows the group's own Opacity slider beside the two sliders acting on its vector members, which 8.3 does not cover. Decision 4 (option A): the Blend Mode dropdown of 8.3 acts on every item's own <code>blend_mode</code>, listing Normal, Multiply, Screen, Overlay, Soft Light, Darken, Lighten, and Difference (the layer's seven of 7.4 plus Soft Light for the Highlighter); the item's mode is applied when the layer's is Normal, the layer's otherwise (Technical Architecture PRD 3.9). Decision 1 (option B): the text box and the callout gain the Shadow section and the two opacities, but not the Appearance section; their opacity rows sit in the Text Box section (Text and Callout PRD 1.7). The shape tools' bars take the Basic Shape PRD's 2.6 order (Stroke Color, Fill Color where the shape has one, Stroke Width, Stroke Style, Fill Opacity, Stroke Opacity, Shadow, then the tool's own), the tool PRD winning over the 5.3 rows as the marker work's silence 1 already decided. Decision 3 (option B): the arrowhead and corner radius controls of 5.3 arrive in Phase 3 of the work; the Line Spacing row of 8.4 in Phase 2.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 00:55</td>
         <td>3.7, 5.3, 17.3</td>

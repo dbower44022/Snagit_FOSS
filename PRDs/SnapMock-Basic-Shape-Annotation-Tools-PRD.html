@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Basic Shape Annotation Tools</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.5</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.6</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Line · Arrow · Rectangle · Ellipse · Arc · Polygon · Freehand / Pen</dd>
-    <dt>Document version</dt><dd>1.5</dd>
-    <dt>Last Updated</dt>    <dd>09-08-26 13:21</dd>
+    <dt>Document version</dt><dd>1.6</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 11:13</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.6</td>
+        <td class="nowrap">09-11-26 11:13</td>
+        <td>Doug Bower</td>
+        <td>Vector Item Properties implementation started: the four decisions and the silences recorded against Sections 2.2, 2.6, and the per-tool sections this kickoff builds or defers.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.5</td>
         <td class="nowrap">09-08-26 13:21</td>
@@ -107,6 +114,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 11:13</td>
+        <td>2.2, 2.6, 3.6, 3.7, 4.3, 4.4, 4.7, 5.4, 6.5, 9.8</td>
+        <td>Decision</td>
+        <td>Vector Item Properties implementation started 09-11-26 (<code>docs/Vector-Item-Properties-Kickoff-Prompt.md</code> revision 1.0; notes in <code>docs/Vector-Item-Properties-Implementation.md</code>). Four decisions taken: the text items adopt the shared properties by mixing in beside <code>VectorItem</code> (decision 1, option B); Fill Opacity and Stroke Opacity replace the single Opacity control for every vector item and its tool, with a stored <code>opacity_pct</code> read once into both (decision 2, option A); this kickoff builds the Section 2.2 shared properties and 2.6 bar for every shape, then arrowheads on straight lines (4.3, 4.4, 4.7) and the uniform Corner Radius control (5.4), and leaves curved and elbow arrows (4.5, 4.6), <code>corner_radius_mode</code> and the individual radii (5.3), point editing, Arc, Polygon, and the Freehand tool's Bezier pipeline and Close Path to the following kickoff (decision 3, option B); the item blend mode is built on every item (decision 4, option A). Silences decided: <code>stroke_style</code> is the <code>BorderStyle</code> enum the text items already use; the shadow defaults of 2.2 apply to the shapes and the text items, the marker PRD's to the marker items; <code>stroke_cap</code> and <code>stroke_join</code> default Round (the Highlighter's cap Flat) with no bar or panel control except the Highlighter's and the Freehand's toggles; a fill at <code>fill_opacity</code> 0 is still a fill for hit testing; the shadow offset is two floats as the marker work built it, not one point.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-08-26 13:21</td>
         <td>7</td>
