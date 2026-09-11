@@ -20,6 +20,7 @@ from snapmock.items.numbered_step_item import NumberedStepItem
 from snapmock.items.stamp_item import StampItem
 from snapmock.items.text_item import TextItem
 from snapmock.tools.base_tool import BaseTool
+from snapmock.tools.point_edit import PointEditSession, PointHandlesItem, session_for
 from snapmock.ui.transform_handles import (
     CORNER_HANDLES,
     EDGE_HANDLES,
@@ -37,6 +38,7 @@ class _State(Enum):
     RUBBER_BAND = auto()
     DRAGGING = auto()
     HANDLE_DRAG = auto()
+    POINT_DRAG = auto()
 
 
 class SelectTool(BaseTool):
@@ -66,6 +68,9 @@ class SelectTool(BaseTool):
         self._text_originals: dict[int, dict[str, Any]] = {}
         # Set by a double-click on a group; shown in the status bar (kickoff silence 1)
         self._group_hint: bool = False
+        # Point-editing mode (Basic Shape PRD 3.5; Basic Shape remainder decision 1)
+        self._point_session: PointEditSession | None = None
+        self._point_handles: PointHandlesItem | None = None
 
     @property
     def tool_id(self) -> str:
@@ -81,7 +86,12 @@ class SelectTool(BaseTool):
 
     @property
     def is_active_operation(self) -> bool:
-        return self._state in (_State.DRAGGING, _State.RUBBER_BAND, _State.HANDLE_DRAG)
+        return self._state in (
+            _State.DRAGGING,
+            _State.RUBBER_BAND,
+            _State.HANDLE_DRAG,
+            _State.POINT_DRAG,
+        )
 
     def activate(self, scene: SnapScene, selection_manager: SelectionManager) -> None:
         super().activate(scene, selection_manager)
@@ -111,6 +121,7 @@ class SelectTool(BaseTool):
         super().deactivate()
 
     def cancel(self) -> None:
+        self.leave_point_edit()
         if self._rubber_band is not None and self._scene is not None:
             self._scene.removeItem(self._rubber_band)
             self._rubber_band = None
@@ -119,10 +130,103 @@ class SelectTool(BaseTool):
         self._constrain_axis = None
 
     def _on_selection_changed(self, _items: list[object]) -> None:
+        session = self._point_session
+        if (
+            session is not None
+            and self._selection_manager is not None
+            and self._selection_manager.items != [session.item]
+        ):
+            self.leave_point_edit()
         self._update_handles()
+
+    # --- point-editing mode (Basic Shape PRD 3.5, 4.5, 4.6, 7.5, 8.5, 9.7) ---
+
+    @property
+    def point_session(self) -> PointEditSession | None:
+        """The point-editing session in progress, or None outside point-editing mode."""
+        return self._point_session
+
+    @property
+    def point_handles(self) -> PointHandlesItem | None:
+        return self._point_handles
+
+    def enter_point_edit(self, item: SnapGraphicsItem) -> bool:
+        """Enter point-editing mode on *item*; False when *item* has no points to edit."""
+        if self._scene is None:
+            return False
+        session = session_for(item)
+        if session is None:
+            return False
+        self.leave_point_edit()
+        if self._selection_manager is not None and self._selection_manager.items != [item]:
+            self._selection_manager.select(item)
+        self._point_session = session
+        self._point_handles = PointHandlesItem()
+        self._scene.addItem(self._point_handles)
+        self._scene.command_stack.stack_changed.connect(self._refresh_point_handles)
+        self._refresh_point_handles()
+        self._update_handles()
+        self._show_status_hint()
+        return True
+
+    def leave_point_edit(self) -> bool:
+        """Leave point-editing mode, undoing a drag in progress; False when not in it."""
+        session = self._point_session
+        if session is None:
+            return False
+        session.cancel_drag()
+        self._point_session = None
+        if self._state == _State.POINT_DRAG:
+            self._state = _State.IDLE
+        if self._scene is not None:
+            try:
+                self._scene.command_stack.stack_changed.disconnect(self._refresh_point_handles)
+            except (TypeError, RuntimeError):
+                pass
+            if self._point_handles is not None and self._point_handles.scene() is not None:
+                self._scene.removeItem(self._point_handles)
+        self._point_handles = None
+        self._update_handles()
+        self._show_status_hint()
+        return True
+
+    def _refresh_point_handles(self) -> None:
+        """Redraw the handles where the item's points now are (after a drag, undo, redo)."""
+        session = self._point_session
+        if session is None or self._point_handles is None:
+            return
+        if session.item.scene() is not self._scene:
+            self.leave_point_edit()
+            return
+        self._point_handles.set_handles(session.handles(), session.guide_lines())
+
+    def _point_drag_move(self, scene_pos: QPointF, event: QMouseEvent) -> bool:
+        session = self._point_session
+        if session is None or session.dragging is None:
+            return True
+        modifiers = event.modifiers()
+        if not modifiers & Qt.KeyboardModifier.ShiftModifier:
+            scene_pos = self._snap_pos(scene_pos)
+        session.drag_to(session.dragging, scene_pos, modifiers)
+        self._refresh_point_handles()
+        return True
+
+    def _point_drag_release(self) -> bool:
+        session = self._point_session
+        self._state = _State.IDLE
+        if session is not None:
+            command = session.end_drag()
+            if command is not None and self._scene is not None:
+                self._scene.command_stack.push(command)
+            self._refresh_point_handles()
+        return True
 
     def _update_handles(self) -> None:
         if self._handles is None or self._selection_manager is None:
+            return
+        if self._point_session is not None:
+            # The item's own points replace the transform handles while the mode lasts
+            self._handles.remove_from_scene()
             return
         items = [i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)]
         if not items:
@@ -196,6 +300,9 @@ class SelectTool(BaseTool):
         view = self._view
         if view is None:
             return
+        if self._point_session is not None and self._point_session.handle_at(scene_pos):
+            view.set_hover_cursor(Qt.CursorShape.SizeAllCursor)
+            return
         if self._handles is not None and self._handles.scene() is not None:
             handle = self._handles.handle_at(scene_pos)
             if handle is not None:
@@ -230,6 +337,19 @@ class SelectTool(BaseTool):
         self._drag_total = QPointF(0, 0)
         self._constrain_axis = None
         self._group_hint = False
+
+        # Point-editing mode: a handle starts a point drag, a press on the item keeps the
+        # mode, and a press anywhere else leaves it and is handled as usual (PRD 3.5)
+        session = self._point_session
+        if session is not None:
+            key = session.handle_at(scene_pos)
+            if key is not None:
+                session.begin_drag(key)
+                self._state = _State.POINT_DRAG
+                return True
+            if self._item_at(scene_pos) is session.item:
+                return True
+            self.leave_point_edit()
 
         # Check if clicking on a transform handle (only while the handles are shown)
         if self._handles is not None and self._handles.scene() is not None:
@@ -325,6 +445,8 @@ class SelectTool(BaseTool):
             return self._handle_rubber_band_move(scene_pos)
         elif self._state == _State.HANDLE_DRAG:
             return self._handle_transform_move(scene_pos, event)
+        elif self._state == _State.POINT_DRAG:
+            return self._point_drag_move(scene_pos, event)
         self._update_hover_cursor(scene_pos)
         return False
 
@@ -344,6 +466,8 @@ class SelectTool(BaseTool):
             return self._handle_rubber_band_release(scene_pos, event)
         elif self._state == _State.HANDLE_DRAG:
             return self._handle_transform_release()
+        elif self._state == _State.POINT_DRAG:
+            return self._point_drag_release()
 
         self._state = _State.IDLE
         return True
@@ -356,6 +480,9 @@ class SelectTool(BaseTool):
             return False
 
         item = self._item_at(scene_pos)
+        if item is not None and self._point_session is not None:
+            if item is self._point_session.item:
+                return True
         if item is not None:
             self._selection_manager.select(item)
             if isinstance(item, GroupItem):
@@ -380,6 +507,10 @@ class SelectTool(BaseTool):
                 open_editor = getattr(window, "open_marker_editor", None)
                 if callable(open_editor):
                     open_editor(item)
+                return True
+            # A line, an arrow, an arc, a polygon, or a freehand item: point-editing mode
+            # (Basic Shape PRD 3.5; Basic Shape remainder decision 1, option A)
+            self.enter_point_edit(item)
             return True
 
         # Double-click on empty canvas: toggle fit/100%
@@ -969,6 +1100,10 @@ class SelectTool(BaseTool):
         key = event.key()
         shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
 
+        # Escape leaves point-editing mode and keeps the selection (PRD 3.5)
+        if key == Qt.Key.Key_Escape and self.leave_point_edit():
+            return True
+
         # Arrow key nudge
         nudge = 10 if shift else 1
         delta: QPointF | None = None
@@ -1052,6 +1187,8 @@ class SelectTool(BaseTool):
 
     @property
     def status_hint(self) -> str:
+        if self._point_session is not None:
+            return self._point_session.status_hint
         if self._state == _State.DRAGGING:
             return "Shift: constrain axis | Release to place"
         if self._state == _State.RUBBER_BAND:

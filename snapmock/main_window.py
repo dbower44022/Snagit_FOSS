@@ -2707,6 +2707,10 @@ class MainWindow(QMainWindow):
             stack.redo()
 
     def _edit_deselect(self) -> None:
+        # Escape leaves point-editing mode first and keeps the selection (Basic Shape PRD 3.5)
+        active = self._tool_manager.active_tool
+        if isinstance(active, SelectTool) and active.leave_point_edit():
+            return
         if self._require_selection("Deselect"):
             self._selection_manager.deselect_all()
 

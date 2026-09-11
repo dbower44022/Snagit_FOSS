@@ -11,6 +11,7 @@ from snapmock.config.constants import (
     DEFAULT_STROKE_WIDTH,
     BorderStyle,
 )
+from snapmock.core.path_utils import constrain_angle
 from snapmock.items.line_item import LineItem
 from snapmock.tools.base_tool import BaseTool
 
@@ -73,6 +74,9 @@ class LineTool(BaseTool):
         current = self._snap_pos(
             self._scene.views()[0].mapToScene(event.pos()) if self._scene.views() else QPointF()
         )
+        if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+            # Shift snaps the angle to 15-degree steps (Basic Shape PRD 3.2)
+            current = constrain_angle(self._start, current)
         local_end = current - self._start
         self._item.line = QLineF(QPointF(0, 0), local_end)
         return True

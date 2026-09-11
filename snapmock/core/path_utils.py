@@ -21,6 +21,21 @@ def _perpendicular_distance(point: QPointF, line_start: QPointF, line_end: QPoin
     return math.hypot(point.x() - proj_x, point.y() - proj_y)
 
 
+def constrain_angle(origin: QPointF, point: QPointF, step_degrees: float = 15.0) -> QPointF:
+    """*point* moved onto the nearest ray from *origin* at a multiple of *step_degrees*,
+    at its own distance from *origin* (Basic Shape PRD 3.2: Shift while drawing a line)."""
+    dx = point.x() - origin.x()
+    dy = point.y() - origin.y()
+    length = math.hypot(dx, dy)
+    if length == 0.0:
+        return QPointF(point)
+    angle = math.degrees(math.atan2(dy, dx))
+    snapped = math.radians(round(angle / step_degrees) * step_degrees)
+    return QPointF(
+        origin.x() + length * math.cos(snapped), origin.y() + length * math.sin(snapped)
+    )
+
+
 def simplify_rdp(points: list[QPointF], epsilon: float = 2.0) -> list[QPointF]:
     """Simplify a polyline using the Ramer-Douglas-Peucker algorithm.
 
