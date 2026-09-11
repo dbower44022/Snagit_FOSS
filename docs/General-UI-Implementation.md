@@ -1,6 +1,6 @@
 # General UI Implementation Notes
 
-Last Updated: 09-11-26 00:05 · Revision 1.31
+Last Updated: 09-11-26 01:48 · Revision 1.32
 
 Implements the SnapMock General User Interface PRD (version 2.4, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
@@ -662,10 +662,15 @@ None from the wording of Section 3.8; the additions are recorded as one Section 
 
 **Next required step:** the General UI PRD has no open row, so the next kickoff is chosen from the other PRDs. Two are ready: the Numbered Steps, Stamps, and Emoji work, which the RasterRegion layer type (Section 18.1, silence 7) and the StampItem registry gap are waiting on, and the Windows backend (`docs/Windows-Backend-Kickoff-Prompt.md`), which waits for a Windows machine. Recommended: the Numbered Steps, Stamps, and Emoji work, since it runs on this machine; its kickoff is `docs/Numbered-Steps-Stamps-Emoji-Kickoff-Prompt.md` (revision 1.0, starting state at commit ea5f36b), three phases with four decisions and fourteen silences, recorded in its own notes document. Before either, the two display answers of Section 19.2 are recorded in Section 16 rows 36 and 20 in a small commit when Doug gives them.
 
+## 20. Numbered Steps, Stamps, and Emoji
+
+Run from `docs/Numbered-Steps-Stamps-Emoji-Kickoff-Prompt.md` (revision 1.0) from 09-10-26, with its own notes in `docs/Numbered-Steps-Stamps-Emoji-Implementation.md`. Three things in these notes moved: the Section 17.2 walk table gained the Renumber All Steps walk (1.31); Section 18.1's silence 7, the RasterRegion layer type, stops there, since nothing in the marker PRD creates a raster layer (that work's kickoff silence 10); and Phase 6 decision 6.2 (Section 5.1) is partly closed by that work's decision 1 (option B): the Property Panel's Shadow section exists and shows for the three marker items, which carry the shadow through the helper `snapmock/items/shadow.py`, and the numbered step carries Fill Opacity and Stroke Opacity in its own section. Stroke Style, Fill Opacity, Stroke Opacity, the Shadow section, Blend Mode, and Line Spacing for the other items still arrive with the Basic Shape and Text item work, now by adopting the helper; General UI PRD 2.11 and 2.12 carry the rows. The tool count of Section 4 is nineteen since the Emoji tool (General UI PRD 2.12).
+
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.32 | 09-11-26 01:48 | Claude (Claude Code) | Section 20: the pointer to the Numbered Steps, Stamps, and Emoji work; decision 6.2 partly closed (the Shadow section for the marker items), silence 7 of Section 18.1 closed, the tool count nineteen. |
 | 1.31 | 09-11-26 00:05 | Claude (Claude Code) | Section 17.2's walk table gains the Renumber All Steps walk (members included), built by the Numbered Steps, Stamps, and Emoji work, Phase 1 step 3. |
 | 1.30 | 09-10-26 22:01 | Claude (Claude Code) | Display check B17 answered: Section 16 row 36 and the 16.9 step carry Doug's quoted answer and the display pass; Section 5.1 and the Section 16 summary updated; Section 19.2 says row 20 is still owed. |
 | 1.29 | 09-10-26 21:49 | Claude (Claude Code) | Next step points at `docs/Numbered-Steps-Stamps-Emoji-Kickoff-Prompt.md`. |

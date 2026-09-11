@@ -1,5 +1,7 @@
 # Snagit .snagx File Format — Read/Write Support
 
+Last Updated: 09-11-26 01:48 · Revision 1.1
+
 ## 1. Overview
 
 SnapMock now supports reading and writing TechSmith Snagit `.snagx` files, enabling users to open Snagit captures with their annotations intact, edit them in SnapMock, and save them back in a format Snagit can consume. This eliminates the need for lossy PNG/JPEG export when migrating between tools.
@@ -88,6 +90,7 @@ snapmock/io/
 | `BlurItem` | — | **Skipped** (no Snagit equivalent) |
 | `NumberedStepItem` | — | **Skipped** (would need stamp PDF generation) |
 | `StampItem` | — | **Skipped** (would need stamp PDF embedding) |
+| `EmojiItem` | — | **Skipped** (no Snagit equivalent; Numbered Steps, Stamps, and Emoji kickoff silence 11) |
 
 ### 3.3 Coordinate System
 
@@ -279,3 +282,10 @@ Internal converters: `_item_to_arrow`, `_item_to_line`, `_item_to_shape`, `_item
 - [ ] **Preserve metadata on re-save** — Currently `metadata.json` is preserved on round-trip but new saves get minimal metadata. Could populate `AppName`, `CaptureDate`, `WindowName` more accurately.
 
 - [ ] **Thumbnail generation with annotations** — Current thumbnail is just the background image. Could render the full scene (background + annotations) to the thumbnail for more accurate previews.
+
+## Change Log
+
+| Rev | Date (MM-DD-YY HH:MM) | Author | Change |
+|---|---|---|---|
+| 1.1 | 09-11-26 01:48 | Claude (Claude Code) | Section 3.2's table gains `EmojiItem`, skipped with the writer's warning like `NumberedStepItem` and `StampItem` (Numbered Steps, Stamps, and Emoji implementation, Phase 3; kickoff silence 11). Revision control and this change log added to meet the output standard. |
+| 1.0 | 03-01-26 02:16 | Claude (Claude Code) | Original notes, as committed. |

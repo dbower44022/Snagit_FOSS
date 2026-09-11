@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Numbered Steps, Stamps &amp; Emoji</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.5</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.7</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Numbered Step · Stamp / Sticker · Emoji</dd>
-    <dt>Document version</dt><dd>1.5</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 00:15</dd>
+    <dt>Document version</dt><dd>1.7</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 01:48</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,30 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.7</td>
+        <td class="nowrap">09-11-26 01:48</td>
+        <td>Doug Bower</td>
+        <td>Phase 3 of the implementation, the Emoji tool, and the close-out of the work (notes 1.3): Section 4 is
+        built with its data model (5.3), the Change Emoji command (6.3), the serialization notes (7.3), and every
+        Section 8.3 bullet but the bundled-font one (decision 4). Rows record the emoji font's size rule, the shadow's
+        shape, the picker's tone display, the Property Panel's Emoji section, the bar's control order, and the
+        Section 8.4 shared bullets. Every section of this document is built; the two open issues of Section 9 stay
+        open. Technical Architecture PRD 1.24; General UI PRD 2.12.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
+      <tr>
+        <td>1.6</td>
+        <td class="nowrap">09-11-26 01:48</td>
+        <td>Doug Bower</td>
+        <td>Phase 2 of the implementation, the Stamp / Sticker tool (notes 1.2): Section 3 is built with its data
+        model (5.2), the Change Stamp command (6.2), the serialization notes (7.2), and every Section 8.2 bullet.
+        Rows record where the build departs from the wording: the library is a popover only, the metadata dialog
+        has no category field, the secondary swatch is always shown, a click on an existing stamp selects it, the
+        <code>stamp_stretch</code> key, and the Property Panel's Stamp section. Technical Architecture PRD 1.20 to
+        1.22.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.5</td>
         <td class="nowrap">09-11-26 00:15</td>
@@ -105,6 +129,90 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 01:48</td>
+        <td>4, 5.3, 6.3, 7.3, 8.3</td>
+        <td>Built</td>
+        <td>Phase 3 (commits cb3655e and 12aad72, and the close-out): the bundled data of 4.2 (decision 2; <code>snapmock/core/emoji_data.py</code> and <code>resources/emoji/emoji.json</code>, 1906 emoji of the nine categories with names, keywords, and skin-tone capability); the picker of 4.2 with search, the recent row of 24, the category tabs, the skin-tone palette on right-click, and the session memories; <code>EmojiTool</code> with click-to-place, drag-to-fit, the no-emoji route, the 200 ms pop-in, and the hints of 4.9; <code>EmojiItem</code> per 4.4 and 5.3 rendered through <code>drawText</code> in the platform's colour emoji font (4.7) with the shadow of decision 1; the Tool Options Bar of 4.5; <code>ChangeEmojiCommand</code> on double-click and the context rows of 4.6; the serialization of 7.3 with the tone rebuilt from its property. Every Section 8.3 bullet has a test except the bundled font (1.4 row, decision 4); the shared bullets of 8.4 hold for the three tools (locked and hidden layers refused, every creation an AddItemCommand, every property change a ModifyPropertyCommand or the tool's own command, full serialization, the animations, selection and transform through the Select tool, copy, cut, paste, and duplicate through the base item's <code>clone</code>). The performance bullet (100 items at 60 frames per second) is not measured by a test.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 01:48</td>
+        <td>4.7</td>
+        <td>Decision</td>
+        <td>The emoji font's pixel size is 90 percent of <code>emoji_size</code>: a colour emoji glyph in Noto Color Emoji fills about its em box (measured 09-11-26: a 40 px font advances 42 px and is 40 px tall), so the glyph fills the square with a small margin. The shadow is a rounded square inset by 8 percent of the size, since colour glyphs have no outline to blur; the SVG export draws none (decision 1).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 01:48</td>
+        <td>4.2, 4.5</td>
+        <td>Departure</td>
+        <td>In the Tool Options Bar the tool-built controls (the 28 px preview, the name, and the six skin-tone swatches) sit together before Size, since a tool has one slot for its own widgets; Section 4.5's order puts Skin Tone after Size. The swatches show for a capable emoji only, as written. The picker shows capable emoji in the session's tone once one is chosen, so the grid previews what a click places.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 01:48</td>
+        <td>4.6</td>
+        <td>Added</td>
+        <td>The Property Panel shows an Emoji section for a selected emoji (the name with a Change... button, size, skin tone, and the single Opacity of General UI PRD 8.3) beside the Shadow section; this document names no panel controls for the emoji.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 01:48</td>
+        <td>4.3, 4.6</td>
+        <td>Departure</td>
+        <td>With the Emoji tool active, a click on an existing emoji selects it rather than placing another over it, so a double-click can open the picker from the placing tool (kickoff silence 9), as the other two marker tools do. Placement is refused with the 1.3 message when no colour emoji font is installed, rather than drawing a monochrome fallback glyph.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 01:48</td>
+        <td>General</td>
+        <td>Decision</td>
+        <td>Phase 3's steps 2 and 3 landed in one commit (12aad72): the tool's no-emoji route needs the picker, and one test module covers the item, the tool, the picker, the bar, and the editing rows; the kickoff's one-commit-per-step rule is departed from for those two steps and recorded in the notes.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 01:48</td>
+        <td>3, 5.2, 6.2, 7.2, 8.2</td>
+        <td>Built</td>
+        <td>Phase 2 (commits 1dd89ad, 6c87ed0, c17e8d2, and the close-out): the stamp library of 3.2 (<code>snapmock/core/stamp_library.py</code>: the index model, <code>stamp_index.json</code> loaded once, the custom directory under the application data directory merged in, colour substitution, the renderer cache, the missing-stamp placeholder, the SVG import) with the 56 built-in stamps of 3.3 (decision 3); <code>StampItem</code> per 3.5 and 5.2 with the shadow of decision 1 and one opacity; the library panel of 3.4 with category tabs, search, the 48 px grid, and the Custom tab's import routes; <code>StampTool</code> with click-to-place, drag-to-fit, the no-stamp route, the hints of 3.11, and the preview cursor; the Tool Options Bar of 3.6; <code>ChangeStampCommand</code> on double-click and the context rows of 3.7; embedding on save and the local-first load of 7.2. Every Section 8.2 bullet has a test.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 01:48</td>
+        <td>3.4</td>
+        <td>Departure</td>
+        <td>The stamp library is one popover panel opened from the preview, the Library button, a click with no stamp chosen, a double-click on a stamp, or Change Stamp...; the separate “Stamp Library dialog” and the “double-clicking the Stamp tool in the palette” route of this section are not built, since the popover serves every case and the palette's buttons activate tools.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 01:48</td>
+        <td>3.8</td>
+        <td>Departure</td>
+        <td>The import metadata dialog asks for the name, the tags, and the colorizable flag; the category field is not offered, since every imported stamp lives in the Custom tab (3.4) and a custom stamp in a built-in category would be a second kind of built-in. Custom stamps take the primary and secondary placeholders as the built-in set does.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 01:48</td>
+        <td>3.6</td>
+        <td>Departure</td>
+        <td>The Secondary Color swatch is always shown, as the Stamp Color swatch is (General UI PRD 1.3: no control is disabled or greyed); a change on a stamp that has no secondary region, or that is not colorizable, explains through the 1.3 message (“Secondary Color needs a stamp with a secondary colour region”; “Stamp Color needs a colorizable stamp”) and the value is kept for the next stamp that can take it.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 01:48</td>
+        <td>3.4, 3.7</td>
+        <td>Departure</td>
+        <td>With the Stamp tool active, a click on an existing stamp selects it rather than placing another over it, so a double-click can open the library from the placing tool (kickoff silence 9), as the Numbered Step tool treats a click on a step (1.5 row).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 01:48</td>
+        <td>5.2</td>
+        <td>Added</td>
+        <td>The <code>StampItem</code> entry carries <code>stamp_stretch</code> (width over height relative to the SVG's own aspect) only after a non-uniform resize through the Property Panel's width or height, so a stretched stamp survives the file; the transform handles hold the ratio and never write it. Colour values are Qt's <code>#AARRGGBB</code> (1.5 row).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 01:48</td>
+        <td>3.5</td>
+        <td>Added</td>
+        <td>The Property Panel shows a Stamp section for a selected stamp (the name with a Change... button, size, the two colours, and the single Opacity of General UI PRD 8.3) beside the Shadow section of decision 1; this document names no panel controls for the stamp, and the section mirrors the numbered step's.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 01:48</td>
+        <td>3.9, 7.2</td>
+        <td>Decision</td>
+        <td>A missing stamp (an id neither the library nor the file can resolve) renders the placeholder of <code>snapmock/core/stamp_library.py</code>, a dashed square with a question mark, keeps its id and size, and saves again unchanged, so the reference is not lost by opening the file on a machine without the stamp.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 00:15</td>
         <td>2, 5.1, 6.1, 7.1, 8.1</td>
