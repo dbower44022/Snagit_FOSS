@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Technical Architecture</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.15</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.16</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
-    <dt>Document version</dt><dd>1.15</dd>
-    <dt>Last Updated</dt>    <dd>09-10-26 13:06</dd>
+    <dt>Document version</dt><dd>1.16</dd>
+    <dt>Last Updated</dt>    <dd>09-10-26 21:12</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,16 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.16</td>
+        <td class="nowrap">09-10-26 21:12</td>
+        <td>Doug Bower</td>
+        <td>Section 10: module added under core by the Check for Updates work of the General UI implementation
+        (<code>core/update_check.py</code>, implementation notes Section 19). Section 9 is unchanged: the request uses
+        <code>PyQt6.QtNetwork</code>, which ships inside the PyQt6 wheel, so the Section 9.1 policy holds with no new
+        dependency (kickoff decision 1, option A).</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.15</td>
         <td class="nowrap">09-10-26 13:06</td>
@@ -195,6 +205,20 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-10-26 21:12</td>
+        <td>10, 9.1</td>
+        <td>Added</td>
+        <td>Check for Updates (General UI PRD 3.8; implementation notes Section 19): <code>core/update_check.py</code>,
+        the GitHub releases query. The endpoint (<code>releases/latest</code> for the repository named by
+        <code>REPOSITORY_URL</code>), the two request headers, the tag parsing and version comparison, and the six-outcome
+        result model are pure functions; <code>UpdateChecker</code> sends the request through
+        <code>QNetworkAccessManager</code> on the event loop with a 10 second transfer timeout and emits the result as a
+        signal. Decision 09-10-26 (kickoff decision 1, option A): Qt's network module rather than the standard library on
+        a thread, since it is the shape the code has (signals, no threads) and adds no dependency under Section 9.1; the
+        cost is a second Qt module in the import footprint and TLS through Qt's backend, whose absence is reported as the
+        network-unavailable outcome.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-10-26 12:51</td>
         <td>6.1, 3.2.1</td>
@@ -1704,6 +1728,7 @@ docstring.</p>
         process_memory.py         # process memory readout for the status bar (psutil, guarded import)
         theme_manager.py          # light and dark themes, the System option, live switching, icons
         tool_themes.py            # tool presets and themes: model, codec, JSON stores, session state, .smktheme
+        update_check.py           # Check for Updates: the GitHub releases query of General UI PRD 3.8 (Help menu)
         view.py                   # QGraphicsView with zoom, pan, and tool event routing
     io/                           # File I/O — project save/load, import/export, Snagit…
         exporter.py               # export scene to PNG, JPG, SVG, PDF
