@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Technical Architecture</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.16</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.17</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
-    <dt>Document version</dt><dd>1.16</dd>
-    <dt>Last Updated</dt>    <dd>09-10-26 21:12</dd>
+    <dt>Document version</dt><dd>1.17</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 00:05</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,19 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.17</td>
+        <td class="nowrap">09-11-26 00:05</td>
+        <td>Doug Bower</td>
+        <td>Numbered Steps, Stamps, and Emoji implementation, Phase 1 (notes
+        <code>docs/Numbered-Steps-Stamps-Emoji-Implementation.md</code>): Section 10 gains
+        <code>items/shadow.py</code>, the shadow helper of decision 1 (option B); Section 4.3 notes that the
+        <code>fill_opacity</code>, <code>stroke_opacity</code>, and shadow rows of the common vector properties
+        are built for <code>NumberedStepItem</code> first, with the shadow shared by the stamp and emoji items
+        through the helper, and that the other vector items adopt them with the Basic Shape and Text item work.
+        <code>NumberedStepItem</code> is rebuilt under <code>VectorItem</code> as Section 4.2 already places it.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.16</td>
         <td class="nowrap">09-10-26 21:12</td>
@@ -205,6 +218,27 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 00:05</td>
+        <td>10</td>
+        <td>Added</td>
+        <td>Numbered Steps, Stamps, and Emoji implementation, Phase 1 step 2: <code>items/shadow.py</code>, the
+        five shadow properties, their serialization keys, and the painting (an offset, blurred copy of the item's
+        shape rendered into a cached image at the painter's scale and blurred with three NumPy box passes), mixed into
+        the marker items (decision 1, option B).</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 00:05</td>
+        <td>4.2, 4.3</td>
+        <td>Decision</td>
+        <td>Decision 1 (09-10-26, option B): the common vector properties <code>fill_opacity</code>,
+        <code>stroke_opacity</code>, and the shadow are built for <code>NumberedStepItem</code> first; the shadow is
+        shared with <code>StampItem</code> and <code>EmojiItem</code> through the helper, with the offset as two floats
+        and the marker PRD's defaults for those items. The other vector items keep one <code>opacity</code> and no
+        shadow until the Basic Shape and Text item work adopts the helper (General UI implementation decision 6.2).
+        <code>NumberedStepItem</code> now sits under <code>VectorItem</code> in the code as Section 4.2 places it;
+        its badge colour is the fill and its border the stroke.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-10-26 21:12</td>
         <td>10, 9.1</td>
@@ -1435,6 +1469,18 @@ is:</p>
     <tr><th><code>shadow_blur</code></th><td>float</td><td>5.0</td><td>Shadow blur radius.</td></tr>
   </tbody>
 </table>
+<div class="note">
+  <span class="note-label">Implementation, 09-11-26 (Numbered Steps, Stamps, and Emoji decision 1, option B)</span>
+  <p>The
+<code>fill_opacity</code>, <code>stroke_opacity</code>, and four shadow rows above are built for
+<code>NumberedStepItem</code> first. The shadow lives in <code>items/shadow.py</code> as a helper the numbered
+step, the stamp, and the emoji items mix in, with the offset as two floats (<code>shadow_offset_x</code>,
+<code>shadow_offset_y</code>) and the marker PRD's defaults (<code>#00000066</code>, offset 2 and 2, blur 4) for
+those items; the shadow is painted inside each item's <code>paint</code> as an offset, blurred copy of its
+shape, never through a Qt graphics effect, so every render path agrees, and the SVG export draws none. The
+other <code>VectorItem</code> subclasses keep one <code>opacity</code> and no shadow until the Basic Shape and
+Text item work adopts the helper.</p>
+</div>
 
 <h3 id="s4-4">Tool Preset and Tool Theme Models</h3>
 
@@ -1750,6 +1796,7 @@ docstring.</p>
         numbered_step_item.py     # circled number with optional label
         raster_region_item.py     # extracted pixel region from raster selection/cut/paste
         rectangle_item.py         # rectangle / square annotation with optional corner radius
+        shadow.py                 # the five shadow properties and their painting, shared by the marker items
         stamp_item.py             # pre-defined or custom image stamp
         text_item.py              # editable rich text annotation with optional frame
         vector_item.py            # abstract base for items defined by vector paths

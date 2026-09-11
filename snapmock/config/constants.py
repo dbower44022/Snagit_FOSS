@@ -186,3 +186,53 @@ EMPTY_CANVAS_TEXT = (
     "Drag an image here, paste from clipboard (Ctrl+V), or go to File > Import Image"
 )
 EMPTY_CANVAS_FONT_SIZE = 18
+
+
+# --- Numbered Step (Numbered Steps, Stamps & Emoji PRD Sections 2.4 and 2.5) ---
+DEFAULT_BADGE_COLOR = "#CC0000"
+DEFAULT_BADGE_SIZE = 32.0
+BADGE_SIZE_MIN = 16.0
+BADGE_SIZE_MAX = 128.0
+DEFAULT_BADGE_TEXT_COLOR = "#FFFFFF"
+DEFAULT_BADGE_FONT_FAMILY = "Arial"
+DEFAULT_BADGE_BORDER_COLOR = "#FFFFFF"
+DEFAULT_BADGE_BORDER_WIDTH = 2.0
+DEFAULT_LABEL_FONT_SIZE = 12.0
+DEFAULT_LABEL_COLOR = "#000000"
+DEFAULT_LABEL_BACKGROUND = "#CCFFFFFF"  # the PRD's #FFFFFFCC in Qt's #AARRGGBB form
+MARKER_MIN_HIT_SIZE = 24.0  # the minimum hit area of Sections 2.10, 3.10, and 4.8
+
+# --- Shadow (PRD Sections 2.4, 3.5, 4.4; decision 1 of the implementation) ---
+DEFAULT_SHADOW_COLOR = "#66000000"  # the PRD's #00000066 in Qt's #AARRGGBB form
+DEFAULT_SHADOW_OFFSET = 2.0
+DEFAULT_SHADOW_BLUR = 4.0
+
+
+class BadgeShape(Enum):
+    CIRCLE = "circle"
+    ROUNDED_SQUARE = "rounded_square"
+    SQUARE = "square"
+    DIAMOND = "diamond"
+    HEXAGON = "hexagon"
+    STAR = "star"
+    OVAL = "oval"
+    PIN = "pin"
+
+
+class DisplayMode(Enum):
+    NUMBER = "number"
+    LETTER = "letter"
+    ROMAN = "roman"
+    TEXT = "text"
+
+
+class FontWeight(Enum):
+    NORMAL = "normal"
+    BOLD = "bold"
+
+
+class LabelPosition(Enum):
+    RIGHT = "right"
+    LEFT = "left"
+    TOP = "top"
+    BOTTOM = "bottom"

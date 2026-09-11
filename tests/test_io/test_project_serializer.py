@@ -78,7 +78,7 @@ def test_every_item_type_keeps_its_transform_through_save_and_load(
         TextItem(text="t"),
         CalloutItem(text="c"),
         BlurItem(rect=QRectF(0, 0, 30, 30)),
-        NumberedStepItem(number=3),
+        NumberedStepItem(number_value=3),
         RasterRegionItem(pixmap=QPixmap(10, 10)),
     ]
     for n, item in enumerate(items):

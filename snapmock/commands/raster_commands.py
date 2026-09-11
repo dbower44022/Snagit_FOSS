@@ -268,8 +268,9 @@ class ResizeImageCommand(BaseCommand):
         elif isinstance(target, RasterRegionItem) and isinstance(source, RasterRegionItem):
             target._pixmap = source._pixmap  # noqa: SLF001
         elif isinstance(target, NumberedStepItem) and isinstance(source, NumberedStepItem):
-            target._radius = source._radius  # noqa: SLF001
-            target._font = source._font  # noqa: SLF001
+            target._badge_size = source._badge_size  # noqa: SLF001
+            target._font_size = source._font_size  # noqa: SLF001
+            target._label_font_size = source._label_font_size  # noqa: SLF001
         elif isinstance(target, StampItem) and isinstance(source, StampItem):
             target._pixmap = source._pixmap  # noqa: SLF001
 

@@ -134,10 +134,10 @@ def test_raster_region_scale_geometry(qapp: QApplication) -> None:
 
 
 def test_numbered_step_scale_geometry() -> None:
-    item = NumberedStepItem(number=1)
-    original_radius = item._radius  # noqa: SLF001
+    item = NumberedStepItem(number_value=1, badge_size=32.0)
     item.scale_geometry(3.0, 3.0)
-    assert item._radius == pytest.approx(original_radius * 3.0)  # noqa: SLF001
+    assert item.badge_size == pytest.approx(96.0)
+    assert item.label_font_size == pytest.approx(36.0)
 
 
 def test_stamp_scale_geometry(qapp: QApplication) -> None:

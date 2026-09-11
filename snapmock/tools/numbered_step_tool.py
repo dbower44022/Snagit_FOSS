@@ -56,7 +56,7 @@ class NumberedStepTool(BaseTool):
         scene_pos = (
             self._scene.views()[0].mapToScene(event.pos()) if self._scene.views() else QPointF()
         )
-        item = NumberedStepItem(number=self._next_number)
+        item = NumberedStepItem(number_value=self._next_number)
         item.setPos(scene_pos)
         layer = self._scene.layer_manager.active_layer
         if layer is not None:
