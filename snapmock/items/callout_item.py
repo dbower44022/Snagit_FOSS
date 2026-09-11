@@ -1,4 +1,11 @@
-"""CalloutItem — speech-bubble annotation with configurable shape and tail."""
+"""CalloutItem — speech-bubble annotation with configurable shape and tail.
+
+Text & Callout Annotation Tools PRD Section 4. The item sits beside ``VectorItem`` rather
+than under it (Vector Item Properties decision 1, option B) and carries the shadow helper
+and the two opacities directly: the background is the fill for ``fill_opacity``, the
+border the stroke for ``stroke_opacity``, and the shadow of 4.8 is drawn first under the
+combined bubble and tail shape with the Basic Shape PRD's defaults.
+"""
 
 from __future__ import annotations
 
@@ -6,11 +13,14 @@ import math
 from typing import Any
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
-from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen
+from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPainterPathStroker, QPen
 
 from snapmock.config.constants import (
     DEFAULT_FONT_FAMILY,
     DEFAULT_FONT_SIZE,
+    DEFAULT_VECTOR_SHADOW_BLUR,
+    DEFAULT_VECTOR_SHADOW_COLOR,
+    DEFAULT_VECTOR_SHADOW_OFFSET,
     BorderStyle,
     BubbleShape,
     TailBaseEdge,
@@ -19,17 +29,18 @@ from snapmock.config.constants import (
 )
 from snapmock.core.rich_text_mixin import RichTextMixin
 from snapmock.items.base_item import SnapGraphicsItem
-
-_BORDER_STYLE_MAP = {
-    BorderStyle.SOLID: Qt.PenStyle.SolidLine,
-    BorderStyle.DASHED: Qt.PenStyle.DashLine,
-    BorderStyle.DOTTED: Qt.PenStyle.DotLine,
-    BorderStyle.DASHDOT: Qt.PenStyle.DashDotLine,
-    BorderStyle.DASHDOTDOT: Qt.PenStyle.DashDotDotLine,
-}
+from snapmock.items.shadow import ShadowMixin
+from snapmock.items.vector_item import STROKE_STYLE_MAP, with_alpha
 
 
-class CalloutItem(RichTextMixin, SnapGraphicsItem):
+def _clamp_unit(value: object) -> float:
+    try:
+        return max(0.0, min(1.0, float(value)))  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return 1.0
+
+
+class CalloutItem(ShadowMixin, RichTextMixin, SnapGraphicsItem):
     """A text callout with a pointer tail, backed by QTextDocument."""
 
     def __init__(
@@ -40,6 +51,14 @@ class CalloutItem(RichTextMixin, SnapGraphicsItem):
         parent: SnapGraphicsItem | None = None,
     ) -> None:
         super().__init__(parent)
+        self._init_shadow(
+            enabled=False,
+            color=DEFAULT_VECTOR_SHADOW_COLOR,
+            offset=DEFAULT_VECTOR_SHADOW_OFFSET,
+            blur=DEFAULT_VECTOR_SHADOW_BLUR,
+        )
+        self._fill_opacity: float = 1.0
+        self._stroke_opacity: float = 1.0
         self._rect = rect if rect is not None else QRectF(0, 0, 200, 80)
         self._tail_tip = tail_tip if tail_tip is not None else QPointF(100, 160)
         self._bg_color = QColor("#FFFFCC")
@@ -172,6 +191,26 @@ class CalloutItem(RichTextMixin, SnapGraphicsItem):
     @border_style.setter
     def border_style(self, value: BorderStyle) -> None:
         self._border_style = value
+        self.update()
+
+    @property
+    def fill_opacity(self) -> float:
+        """Opacity of the bubble fill, 0.0 to 1.0 (General UI PRD 8.3)."""
+        return self._fill_opacity
+
+    @fill_opacity.setter
+    def fill_opacity(self, value: float) -> None:
+        self._fill_opacity = _clamp_unit(value)
+        self.update()
+
+    @property
+    def stroke_opacity(self) -> float:
+        """Opacity of the bubble border, 0.0 to 1.0 (General UI PRD 8.3)."""
+        return self._stroke_opacity
+
+    @stroke_opacity.setter
+    def stroke_opacity(self, value: float) -> None:
+        self._stroke_opacity = _clamp_unit(value)
         self.update()
 
     @property
@@ -438,7 +477,21 @@ class CalloutItem(RichTextMixin, SnapGraphicsItem):
         tail = self._tail_path()
         return bubble.united(tail)
 
+    def shadow_path(self) -> QPainterPath:
+        """What the shadow duplicates (Text PRD 4.8): the combined bubble and tail shape,
+        the bubble and its tail circles for the cloud, plus the border's area."""
+        path = QPainterPath(self._combined_path())
+        if self._bubble_shape == BubbleShape.CLOUD:
+            for center, radius in self._cloud_tail_circles():
+                path.addEllipse(center, radius, radius)
+        if self._border_width > 0 and self._border_color.alpha() > 0:
+            stroker = QPainterPathStroker()
+            stroker.setWidth(self._border_width)
+            path = path.united(stroker.createStroke(path))
+        return path
+
     def scale_geometry(self, sx: float, sy: float) -> None:
+        self._shadow_cache_key = None
         self._rect = QRectF(
             self._rect.x() * sx,
             self._rect.y() * sy,
@@ -458,13 +511,22 @@ class CalloutItem(RichTextMixin, SnapGraphicsItem):
         self._tail_width = max(4.0, self._tail_width * avg)
 
     def boundingRect(self) -> QRectF:
-        r = self._effective_rect().united(QRectF(self._tail_tip, self._tail_tip))
-        # Include cloud tail circles if needed
+        # The tail's own rectangle, not a null rectangle at the tip (a null rectangle
+        # drops out of a union, so the tail was outside the bounding rect before the
+        # Vector Item Properties work).
+        r = self._effective_rect()
         if self._bubble_shape == BubbleShape.CLOUD:
             r = r.adjusted(-20, -20, 20, 20)
+            for center, radius in self._cloud_tail_circles():
+                r = r.united(
+                    QRectF(center.x() - radius, center.y() - radius, 2 * radius, 2 * radius)
+                )
+        else:
+            r = r.united(self._tail_path().boundingRect())
         half = self._border_width / 2
         margin = max(half, 1.0)
-        return r.adjusted(-margin, -margin, margin, margin)
+        body = r.adjusted(-margin, -margin, margin, margin)
+        return body.united(self.shadow_rect(body))
 
     def shape(self) -> QPainterPath:
         path = self._combined_path()
@@ -509,10 +571,13 @@ class CalloutItem(RichTextMixin, SnapGraphicsItem):
             return
         self._apply_flip(painter)
 
-        pen = QPen(self._border_color, self._border_width)
-        pen.setStyle(_BORDER_STYLE_MAP.get(self._border_style, Qt.PenStyle.SolidLine))
+        # The shadow first, under the combined bubble and tail shape (Text PRD 4.8)
+        self.paint_shadow(painter, self.shadow_path())
+
+        pen = QPen(with_alpha(self._border_color, self._stroke_opacity), self._border_width)
+        pen.setStyle(STROKE_STYLE_MAP.get(self._border_style, Qt.PenStyle.SolidLine))
         pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-        brush = QBrush(self._bg_color)
+        brush = QBrush(with_alpha(self._bg_color, self._fill_opacity))
 
         if self._bubble_shape == BubbleShape.CLOUD:
             # Cloud: draw bubble, then circle-chain tail
@@ -588,8 +653,11 @@ class CalloutItem(RichTextMixin, SnapGraphicsItem):
             "font_family": font.family(),
             "font_size": font.pointSize(),
             "text_color": self._get_text_color().name(QColor.NameFormat.HexArgb),
+            "fill_opacity": self._fill_opacity,
+            "stroke_opacity": self._stroke_opacity,
             "flip_horizontal": self._flip_horizontal,
             "flip_vertical": self._flip_vertical,
+            **self._shadow_data(),
         }
         if self._tail_control_point is not None:
             data["tail_control_point"] = [
@@ -661,6 +729,9 @@ class CalloutItem(RichTextMixin, SnapGraphicsItem):
             item._tail_control_point = QPointF(tcp[0], tcp[1])
         item._flip_horizontal = data.get("flip_horizontal", False)
         item._flip_vertical = data.get("flip_vertical", False)
+        item._fill_opacity = _clamp_unit(data.get("fill_opacity", 1.0))
+        item._stroke_opacity = _clamp_unit(data.get("stroke_opacity", 1.0))
+        item._apply_shadow_data(data)
 
         # Rich text
         if "html" in data:

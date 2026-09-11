@@ -1,11 +1,18 @@
-"""TextItem — editable rich text annotation with optional frame."""
+"""TextItem — editable rich text annotation with optional frame.
+
+Text & Callout Annotation Tools PRD Section 3. The item sits beside ``VectorItem`` rather
+than under it (Vector Item Properties decision 1, option B) and carries the shadow helper
+and the two opacities directly: the background is the fill for ``fill_opacity``, the
+border the stroke for ``stroke_opacity``, and the shadow of 3.7 is drawn first under the
+box shape with the Basic Shape PRD's defaults.
+"""
 
 from __future__ import annotations
 
 from typing import Any
 
 from PyQt6.QtCore import QRectF, Qt
-from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen
+from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPainterPathStroker, QPen
 
 from snapmock.config.constants import (
     DEFAULT_FONT_FAMILY,
@@ -16,6 +23,9 @@ from snapmock.config.constants import (
     DEFAULT_TEXT_BORDER_WIDTH,
     DEFAULT_TEXT_PADDING,
     DEFAULT_TEXT_WIDTH,
+    DEFAULT_VECTOR_SHADOW_BLUR,
+    DEFAULT_VECTOR_SHADOW_COLOR,
+    DEFAULT_VECTOR_SHADOW_OFFSET,
     MIN_TEXT_BOX_HEIGHT,
     MIN_TEXT_BOX_WIDTH,
     BorderStyle,
@@ -23,17 +33,18 @@ from snapmock.config.constants import (
 )
 from snapmock.core.rich_text_mixin import RichTextMixin
 from snapmock.items.base_item import SnapGraphicsItem
-
-_BORDER_STYLE_MAP = {
-    BorderStyle.SOLID: Qt.PenStyle.SolidLine,
-    BorderStyle.DASHED: Qt.PenStyle.DashLine,
-    BorderStyle.DOTTED: Qt.PenStyle.DotLine,
-    BorderStyle.DASHDOT: Qt.PenStyle.DashDotLine,
-    BorderStyle.DASHDOTDOT: Qt.PenStyle.DashDotDotLine,
-}
+from snapmock.items.shadow import ShadowMixin
+from snapmock.items.vector_item import STROKE_STYLE_MAP, with_alpha
 
 
-class TextItem(RichTextMixin, SnapGraphicsItem):
+def _clamp_unit(value: object) -> float:
+    try:
+        return max(0.0, min(1.0, float(value)))  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return 1.0
+
+
+class TextItem(ShadowMixin, RichTextMixin, SnapGraphicsItem):
     """An editable text annotation item backed by QTextDocument."""
 
     def __init__(
@@ -44,6 +55,14 @@ class TextItem(RichTextMixin, SnapGraphicsItem):
         parent: SnapGraphicsItem | None = None,
     ) -> None:
         super().__init__(parent)
+        self._init_shadow(
+            enabled=False,
+            color=DEFAULT_VECTOR_SHADOW_COLOR,
+            offset=DEFAULT_VECTOR_SHADOW_OFFSET,
+            blur=DEFAULT_VECTOR_SHADOW_BLUR,
+        )
+        self._fill_opacity: float = 1.0
+        self._stroke_opacity: float = 1.0
         font = QFont(DEFAULT_FONT_FAMILY, DEFAULT_FONT_SIZE)
         color = QColor(Qt.GlobalColor.black)
         self._init_document(text, font, color)
@@ -162,6 +181,26 @@ class TextItem(RichTextMixin, SnapGraphicsItem):
         self.update()
 
     @property
+    def fill_opacity(self) -> float:
+        """Opacity of the background fill, 0.0 to 1.0 (Text PRD 7.2; General UI PRD 8.3)."""
+        return self._fill_opacity
+
+    @fill_opacity.setter
+    def fill_opacity(self, value: float) -> None:
+        self._fill_opacity = _clamp_unit(value)
+        self.update()
+
+    @property
+    def stroke_opacity(self) -> float:
+        """Opacity of the border, 0.0 to 1.0 (Text PRD 7.2; General UI PRD 8.3)."""
+        return self._stroke_opacity
+
+    @stroke_opacity.setter
+    def stroke_opacity(self, value: float) -> None:
+        self._stroke_opacity = _clamp_unit(value)
+        self.update()
+
+    @property
     def padding(self) -> float:
         return self._padding
 
@@ -273,6 +312,7 @@ class TextItem(RichTextMixin, SnapGraphicsItem):
 
     def scale_geometry(self, sx: float, sy: float) -> None:
         self.prepareGeometryChange()
+        self._shadow_cache_key = None
         avg = (sx + sy) / 2.0
         self._width = max(MIN_TEXT_BOX_WIDTH, self._width * sx)
         if self._height is not None:
@@ -290,11 +330,32 @@ class TextItem(RichTextMixin, SnapGraphicsItem):
             return self._effective_width()
         return max(self._width, self._min_width, MIN_TEXT_BOX_WIDTH)
 
+    def frame_path(self) -> QPainterPath:
+        """The box shape of Text PRD 3.7 step 1: the frame, rounded by ``border_radius``."""
+        frame = QRectF(0, 0, self._item_width(), self._frame_height())
+        path = QPainterPath()
+        if self._border_radius > 0:
+            path.addRoundedRect(frame, self._border_radius, self._border_radius)
+        else:
+            path.addRect(frame)
+        return path
+
+    def shadow_path(self) -> QPainterPath:
+        """What the shadow duplicates: the box shape, plus the border's area when the
+        border is drawn (the frame is the PRD's shape whether or not it is painted)."""
+        path = self.frame_path()
+        if self._border_width > 0 and self._border_color.alpha() > 0:
+            stroker = QPainterPathStroker()
+            stroker.setWidth(self._border_width)
+            path = path.united(stroker.createStroke(path))
+        return path
+
     def boundingRect(self) -> QRectF:
         w = self._item_width()
         frame = QRectF(0, 0, w, self._frame_height())
         half = self._border_width / 2
-        return frame.adjusted(-half, -half, half, half)
+        body = frame.adjusted(-half, -half, half, half)
+        return body.united(self.shadow_rect(body))
 
     def shape(self) -> QPainterPath:
         """Return the clickable shape for hit testing.
@@ -339,11 +400,14 @@ class TextItem(RichTextMixin, SnapGraphicsItem):
         w = self._item_width()
         frame_rect = QRectF(0, 0, w, self._frame_height())
 
+        # The shadow first (Text PRD 3.7 step 2)
+        self.paint_shadow(painter, self.shadow_path())
+
         # Draw background fill (if alpha > 0)
         if self._bg_color.alpha() > 0:
             painter.save()
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.setBrush(QBrush(self._bg_color))
+            painter.setBrush(QBrush(with_alpha(self._bg_color, self._fill_opacity)))
             if self._border_radius > 0:
                 painter.drawRoundedRect(frame_rect, self._border_radius, self._border_radius)
             else:
@@ -353,8 +417,8 @@ class TextItem(RichTextMixin, SnapGraphicsItem):
         # Draw border (if width > 0 and alpha > 0)
         if self._border_width > 0 and self._border_color.alpha() > 0:
             painter.save()
-            pen = QPen(self._border_color, self._border_width)
-            pen.setStyle(_BORDER_STYLE_MAP.get(self._border_style, Qt.PenStyle.SolidLine))
+            pen = QPen(with_alpha(self._border_color, self._stroke_opacity), self._border_width)
+            pen.setStyle(STROKE_STYLE_MAP.get(self._border_style, Qt.PenStyle.SolidLine))
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
             painter.setPen(pen)
             painter.setBrush(Qt.BrushStyle.NoBrush)
@@ -432,8 +496,11 @@ class TextItem(RichTextMixin, SnapGraphicsItem):
             "text_scale_factor": self._text_scale_factor,
             "min_width": self._min_width,
             "min_height": self._min_height,
+            "fill_opacity": self._fill_opacity,
+            "stroke_opacity": self._stroke_opacity,
             "flip_horizontal": self._flip_horizontal,
             "flip_vertical": self._flip_vertical,
+            **self._shadow_data(),
         }
 
     @classmethod
@@ -470,6 +537,9 @@ class TextItem(RichTextMixin, SnapGraphicsItem):
         item._min_height = data.get("min_height", None)
         item._flip_horizontal = data.get("flip_horizontal", False)
         item._flip_vertical = data.get("flip_vertical", False)
+        item._fill_opacity = _clamp_unit(data.get("fill_opacity", 1.0))
+        item._stroke_opacity = _clamp_unit(data.get("stroke_opacity", 1.0))
+        item._apply_shadow_data(data)
 
         if "html" in data:
             # Rich text: restore from HTML
