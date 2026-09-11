@@ -1,6 +1,6 @@
 # General UI Implementation Notes
 
-Last Updated: 09-10-26 14:40 · Revision 1.26
+Last Updated: 09-10-26 21:12 · Revision 1.27
 
 Implements the SnapMock General User Interface PRD (version 2.4, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
@@ -20,6 +20,7 @@ Implements the SnapMock General User Interface PRD (version 2.4, `PRDs/SnapMock-
 | Acceptance pass | Section 17 verdicts, four small fixes | Done | 132fc18 to efaa830, then this close-out commit |
 | Group and Ungroup | The group item, its two commands, the Select tool, every item walk (Section 17) | Done | a4c3dd3 to c07a352, then this close-out commit |
 | Navigation and Raster Operations follow-up | Merge Down, Merge Visible, Flatten All; the layer blend mode and the BG and raster badges; the background layer on drop and paste; the Zoom tool's Alt+click (Section 18) | Done | b3c591d to 47ef98d, then this close-out commit |
+| Check for Updates | Help > Check for Updates: the GitHub releases query, the version comparison, the messages (Section 19) | In progress | this decisions commit |
 
 Phase 0 was verified against the repository at commit `a198744` on 09-07-26. The working tree also carried uncommitted Basic Shape Annotation Tools work in `snapmock/items/` and `tests/test_items.py`; it was left untouched and is not part of this inventory.
 
@@ -618,12 +619,42 @@ In commit order. Step 1, b3c591d: the decisions above. Step 2, 0c2542a: `Layer.b
 
 Each has its General UI PRD 2.8 row and its Section 6 bullet: a merge rasterizes both layers and Merge Down requires the merged layers visible; the Background layer is pinned and the Layer Properties dialog shows a Type row; the blend mode is applied per item, the SVG and PDF exports draw every layer as Normal, and both now paint the canvas colour (a finding fixed in step 3); right-click zooms out. The Technical Architecture PRD is at 1.15 (Sections 6.1, 3.2.2, 3.7.3, 3.9, and 10) and the Navigation and Raster Operations PRD at 1.3 (Sections 4.3.2 and 4.6). Section 6 closes three deviations: Merge Down, Merge Visible, Flatten All; Layer blend mode and badges; Drag-and-drop as a background layer. Section 16 rows 6 and 16 are fixed since; row 20 carries the verified cause. The suites of the step 3 to step 6 commits each carried one failure, `tests/test_group.py::test_svg_export_carries_the_group_transform_into_each_member`, which read the first rectangle of the SVG and met the canvas colour's rectangle that step 3 added; the close-out commit points the test at the member's own rectangle. Several document timestamps written ahead of the clock during the steps are corrected to the commit times in the close-out.
 
-**Next required step:** Check for Updates (Section 16.10), the last open row of the General UI PRD, in a new session pasting `docs/Check-for-Updates-Kickoff-Prompt.md` (revision 1.0, starting state at commit d8c5de8): the two owed display checks first (step B17 of Section 16.9 for the canvas focus frame, and the Zoom tool's Alt+click and right-click for row 20), then two decisions (how the request is made; whether the check runs at startup), the module, the Help row, and the close-out, recorded as Section 19 of these notes; after it the General UI PRD has no open row.
+**Next required step:** Check for Updates (Section 16.10), the last open row of the General UI PRD, in a new session pasting `docs/Check-for-Updates-Kickoff-Prompt.md` (revision 1.0, starting state at commit d8c5de8): the two owed display checks first (step B17 of Section 16.9 for the canvas focus frame, and the Zoom tool's Alt+click and right-click for row 20), then two decisions (how the request is made; whether the check runs at startup), the module, the Help row, and the close-out, recorded as Section 19 of these notes; after it the General UI PRD has no open row. Started 09-10-26; Section 19.
+
+## 19. Check for Updates
+
+Run from `docs/Check-for-Updates-Kickoff-Prompt.md` (revision 1.0) against General UI PRD 2.8 and Technical Architecture PRD 1.15, starting at commit 0ad7752 on 09-10-26 (the kickoff's stated starting state is d8c5de8; 0ad7752 adds only the kickoff prompt and the notes 1.26 pointer). Builds the last open row of the General UI PRD, Help > Check for Updates of Section 3.8, which the acceptance pass put on the Section 16.10 follow-up list. Four steps, one commit each: the display checks and decisions, the module, the Help row, the close-out.
+
+### 19.1 Decisions, taken 09-10-26
+
+| Decision | Choice | Effect |
+|---|---|---|
+| 1 How the request is made | A, Qt's network module | The request runs on the Qt event loop through `QNetworkAccessManager` from `PyQt6.QtNetwork`, which ships inside the PyQt6 wheel already installed (Technical Architecture PRD 9.1 holds; no new dependency). The reply arrives as a signal, the shape the rest of the code has; the timeout is `setTransferTimeout`. Verified 09-10-26 on this machine: the module imports and `QSslSocket.supportsSsl()` is true through OpenSSL 3.0.13. The cost: a second Qt module in the import footprint, and transport layer security (TLS) through Qt's own backend, which some Linux installs lack; a request that fails for that reason is reported as the network-unavailable outcome. The alternative, `urllib.request` on a worker `QThread`, would have introduced the first thread in the code and a request that cannot be cancelled once started. |
+| 2 Whether the check runs at startup | A, manual only | The Help row is the only trigger, as Section 3.8 lists it and as Section 11.3 lists no preference. Nothing leaves the machine unless the user clicks the row; no settings key, no Preferences row, no message over the user's work. The cost: a user never learns of a release unless they click the row. A startup check can be added by a later PRD row when a release exists to find. |
+
+The kickoff's seven silences, each decided as the kickoff recommended:
+
+| Silence | Decision |
+|---|---|
+| Which endpoint | `https://api.github.com/repos/dbower44022/Snagit_FOSS/releases/latest`, which excludes drafts and pre-releases; the repository path is derived from `REPOSITORY_URL`, not written twice. Headers `Accept: application/vnd.github+json` and `User-Agent: SnapMock/<version>`; a 10 second timeout. |
+| What "newer" means | The release's `tag_name`, with an optional leading v, parsed into a tuple of integers and compared with `snapmock.__version__` parsed the same way. A tag that does not parse is "the release could not be read"; a release older than or equal to the running version is "up to date". |
+| What a 404 means | "No release has been published yet." with an Open Repository Page button, since the repository has no release today. |
+| What a 403 or 429 means | Rate limited: "GitHub declined the request; try again later." |
+| What the newer-release message offers | The tag, the running version, and an Open Release Page button that opens the release's `html_url` through `QDesktopServices`, as Report a Bug opens the issues page; no download inside the application. |
+| Whether the outcome is remembered | No; nothing is written to settings. |
+| Where the message is shown | A `QMessageBox` from the main window with the information icon and `apply_default_names`; the status hint returns to the active tool's hint when the message closes. The network-unavailable and running-check cases use the Section 1.3 message through `check_requirements`, as every other row does. |
+
+### 19.2 Display checks
+
+The two checks the kickoff opens with (step B17 of Section 16.9 for row 36; Z, Alt+click, and right-click for row 20) were asked for at the start of the session. Doug's answers are recorded in Section 16 rows 36 and 20 when they arrive; until then both rows stand as the acceptance pass and the follow-up left them.
+
+**Next required step:** step 2, `snapmock/core/update_check.py` with a Technical Architecture PRD 1.16 Section 10 row and its tests without the network.
 
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.27 | 09-10-26 21:12 | Claude (Claude Code) | Check for Updates in progress: Section 19 with the two decisions (A, Qt's network module; A, manual only) and the seven silences, the phase-table row; the two display checks asked for. |
 | 1.26 | 09-10-26 14:40 | Claude (Claude Code) | Next step points at `docs/Check-for-Updates-Kickoff-Prompt.md`. |
 | 1.25 | 09-10-26 13:17 | Claude (Claude Code) | Navigation and Raster Operations follow-up done: the phase-table row, Section 6 (three deviations closed, four added, the Welcome paste bullet updated), Section 7 tests, Section 16 rows 6 and 16 fixed since and row 20's verified cause, Section 17.2's three new walks, Section 18.2 build summary and 18.3 deviations, the next required step. General UI PRD 2.8, Technical Architecture PRD 1.15, Navigation and Raster Operations PRD 1.3. The suite passes 1000 with 13 skipped and the one environmental deselection at the close-out (970, 977, 987, 995 as the steps landed, each step 3 to 6 suite with the one group SVG test failure fixed here). |
 | 1.24 | 09-10-26 12:36 | Claude (Claude Code) | Navigation and Raster Operations follow-up in progress: Section 18 with the three decisions (A, rasterize; A, a stored type; B, per item) and the eight silences, the phase-table row. |
