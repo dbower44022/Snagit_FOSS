@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QRectF, Qt
 from PyQt6.QtGui import QColor, QImage, QPainter
+from PyQt6.QtWidgets import QGraphicsItem
 
 if TYPE_CHECKING:
     from snapmock.core.scene import SnapScene
@@ -133,6 +135,54 @@ class RenderEngine:
         for gitem, opacity, mode in plain_items:
             gitem.layer_opacity = opacity
             gitem.layer_blend_mode = mode
+        return image
+
+    def render_below(self, target: QGraphicsItem, rect: QRectF, scale: float = 1.0) -> QImage:
+        """What lies under *target* within *rect* (in *target*'s own coordinates, so a
+        rotated region captures what it covers), *scale* times its size: the canvas colour,
+        then every visible annotation item stacked below *target*, which is every item of
+        the lower layers and the lower items of its own layer (Blur PRD 2.7; Basic Shape
+        remainder silence 3).
+
+        Each item is painted directly with its scene transform and effective opacity,
+        nothing hidden or shown, so a paint can call this without painting *target* itself
+        or scheduling another paint. A lower blur region paints its own result, so an
+        upper region sees the lower one already blurred (the Performance section).
+        """
+        from PyQt6.QtWidgets import QStyleOptionGraphicsItem
+
+        from snapmock.items.base_item import SnapGraphicsItem
+
+        w = max(1, math.ceil(rect.width() * scale))
+        h = max(1, math.ceil(rect.height() * scale))
+        image = QImage(w, h, QImage.Format.Format_ARGB32_Premultiplied)
+        image.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.scale(w / max(rect.width(), 1e-9), h / max(rect.height(), 1e-9))
+        painter.translate(-rect.topLeft())
+        to_local, invertible = target.sceneTransform().inverted()
+        if invertible:
+            painter.setTransform(to_local, True)
+        scene_rect = target.mapRectToScene(rect)
+        canvas = self._scene.canvas_rect.intersected(scene_rect)
+        background = self._scene.background_color
+        if background.alpha() > 0 and not canvas.isEmpty():
+            painter.fillRect(canvas, background)
+        option = QStyleOptionGraphicsItem()
+        for gitem in self._scene.items(Qt.SortOrder.AscendingOrder):
+            if gitem is target:
+                break
+            if not isinstance(gitem, SnapGraphicsItem) or not gitem.isVisible():
+                continue
+            if target.isAncestorOf(gitem) or not gitem.sceneBoundingRect().intersects(scene_rect):
+                continue
+            painter.save()
+            painter.setTransform(gitem.sceneTransform(), True)
+            painter.setOpacity(gitem.effectiveOpacity())
+            gitem.paint(painter, option, None)
+            painter.restore()
+        painter.end()
         return image
 
     def render_layer_region(

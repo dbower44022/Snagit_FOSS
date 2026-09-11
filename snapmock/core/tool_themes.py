@@ -33,6 +33,8 @@ from snapmock import __version__
 from snapmock.config.constants import (
     ArcType,
     BadgeShape,
+    BlurMode,
+    BlurRegionShape,
     BorderStyle,
     BubbleShape,
     CornerRadiusMode,
@@ -89,6 +91,8 @@ _ENUM_TYPES: dict[str, type[Enum]] = {
     "CornerRadiusMode": CornerRadiusMode,
     "ArcType": ArcType,
     "PolygonMode": PolygonMode,
+    "BlurMode": BlurMode,
+    "BlurRegionShape": BlurRegionShape,
 }
 
 OPACITY_KEYS: tuple[str, str] = ("fill_opacity", "stroke_opacity")

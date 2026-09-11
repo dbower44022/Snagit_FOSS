@@ -39,6 +39,11 @@ from snapmock.commands.scale_geometry_command import ScaleGeometryCommand
 from snapmock.config.constants import (
     BADGE_SIZE_MAX,
     BADGE_SIZE_MIN,
+    BLUR_FEATHER_MAX,
+    BLUR_PIXEL_SIZE_MAX,
+    BLUR_PIXEL_SIZE_MIN,
+    BLUR_RADIUS_MAX,
+    BLUR_RADIUS_MIN,
     CORNER_KEYS,
     CORNER_RADIUS_MAX,
     DEFAULT_LINE_SPACING,
@@ -47,6 +52,8 @@ from snapmock.config.constants import (
     LINE_SPACING_MIN,
     ArcType,
     BadgeShape,
+    BlurMode,
+    BlurRegionShape,
     BorderStyle,
     CornerRadiusMode,
     DisplayMode,
@@ -67,6 +74,7 @@ from snapmock.core.theme_manager import current_theme, theme_manager
 from snapmock.items.arc_item import ArcItem
 from snapmock.items.arrow_item import ArrowItem
 from snapmock.items.base_item import SnapGraphicsItem
+from snapmock.items.blur_item import BlurItem
 from snapmock.items.callout_item import CalloutItem
 from snapmock.items.emoji_item import EmojiItem
 from snapmock.items.freehand_item import FreehandItem
@@ -231,6 +239,7 @@ class PropertyPanel(QDockWidget):
         self._build_arrow_section()
         self._build_arc_section()
         self._build_polygon_section()
+        self._build_blur_section()
         self._build_rectangle_section()
         self._build_freehand_section()
         self._build_step_section()
@@ -247,6 +256,7 @@ class PropertyPanel(QDockWidget):
             self._arrow_section,
             self._arc_section,
             self._polygon_section,
+            self._blur_section,
             self._rectangle_section,
             self._freehand_section,
             self._step_section,
@@ -655,6 +665,66 @@ class PropertyPanel(QDockWidget):
         self._polygon_closed_check.setAccessibleName("Closed polygon")
         self._polygon_section.add_row("Path:", self._polygon_closed_check)
         self._main_layout.addWidget(self._polygon_section)
+
+    def _build_blur_section(self) -> None:
+        """A placed blur region's properties (Blur PRD 2.5, 2.8), each change one command and
+        shown on the canvas at once; the rows follow the mode and the shape."""
+        self._blur_section = CollapsibleSection("Blur")
+        self._blur_mode_combo = QComboBox()
+        for mode, label in (
+            (BlurMode.GAUSSIAN, "Gaussian Blur"),
+            (BlurMode.PIXELATE, "Pixelate"),
+            (BlurMode.SOLID, "Solid Fill"),
+        ):
+            self._blur_mode_combo.addItem(label, mode)
+        self._blur_mode_combo.setAccessibleName("Blur mode")
+        self._blur_section.add_row("Mode:", self._blur_mode_combo)
+        self._blur_radius_spin = self._make_double_spin(
+            BLUR_RADIUS_MIN - 1.0, BLUR_RADIUS_MAX, 1, " px", "Blur radius"
+        )
+        self._blur_section.add_row("Radius:", self._blur_radius_spin)
+        self._blur_pixel_spin = QSpinBox()
+        self._blur_pixel_spin.setRange(BLUR_PIXEL_SIZE_MIN - 1, BLUR_PIXEL_SIZE_MAX)
+        self._blur_pixel_spin.setSuffix(" px")
+        self._blur_pixel_spin.setSpecialValueText(MIXED_TEXT)
+        self._blur_pixel_spin.setKeyboardTracking(False)
+        self._blur_pixel_spin.setAccessibleName("Pixel size")
+        self._blur_section.add_row("Pixel size:", self._blur_pixel_spin)
+        self._blur_fill_picker = ColorPicker(QColor("black"))
+        self._blur_fill_picker.setAccessibleName("Blur fill color")
+        self._blur_section.add_row("Fill:", self._blur_fill_picker)
+        self._blur_shape_combo = QComboBox()
+        for shape, label in (
+            (BlurRegionShape.RECTANGLE, "Rectangle"),
+            (BlurRegionShape.ELLIPSE, "Ellipse"),
+        ):
+            self._blur_shape_combo.addItem(label, shape)
+        self._blur_shape_combo.setAccessibleName("Region shape")
+        self._blur_section.add_row("Shape:", self._blur_shape_combo)
+        self._blur_corner_spin = self._make_double_spin(
+            -1.0, CORNER_RADIUS_MAX, 0, " px", "Blur corner radius"
+        )
+        self._blur_section.add_row("Corner radius:", self._blur_corner_spin)
+        self._blur_feather_spin = self._make_double_spin(
+            -1.0, BLUR_FEATHER_MAX, 0, " px", "Feather"
+        )
+        self._blur_section.add_row("Feather:", self._blur_feather_spin)
+        self._blur_invert_check = QCheckBox("Invert mask")
+        self._blur_invert_check.setAccessibleName("Invert mask")
+        self._blur_section.add_row("Mask:", self._blur_invert_check)
+        self._blur_opacity_spin = QSpinBox()
+        self._blur_opacity_spin.setRange(-1, 100)
+        self._blur_opacity_spin.setSuffix("%")
+        self._blur_opacity_spin.setSpecialValueText(MIXED_TEXT)
+        self._blur_opacity_spin.setKeyboardTracking(False)
+        self._blur_opacity_spin.setAccessibleName("Blur opacity")
+        self._blur_section.add_row("Opacity:", self._blur_opacity_spin)
+        self._blur_border_picker = ColorPicker(QColor(0, 0, 0, 0))
+        self._blur_border_picker.setAccessibleName("Blur border color")
+        self._blur_section.add_row("Border:", self._blur_border_picker)
+        self._blur_border_spin = self._make_double_spin(-1.0, 50.0, 1, " px", "Border width")
+        self._blur_section.add_row("Border width:", self._blur_border_spin)
+        self._main_layout.addWidget(self._blur_section)
 
     def _build_rectangle_section(self) -> None:
         """The rectangle's corner radius (Basic Shape PRD 5.3, 5.4), for a placed rectangle."""
@@ -1159,6 +1229,34 @@ class PropertyPanel(QDockWidget):
         )
         self._freehand_closed_check.toggled.connect(self._on_freehand_closed_changed)
         self._polygon_sides_spin.valueChanged.connect(self._on_polygon_sides_changed)
+        for combo, prop in (
+            (self._blur_mode_combo, "blur_mode"),
+            (self._blur_shape_combo, "region_shape"),
+        ):
+            combo.currentIndexChanged.connect(
+                lambda index, c=combo, p=prop: self._on_blur_combo_changed(c, p, index)
+            )
+        blur_spins: list[tuple[QSpinBox | QDoubleSpinBox, str, float]] = [
+            (self._blur_radius_spin, "blur_radius", BLUR_RADIUS_MIN),
+            (self._blur_pixel_spin, "pixel_size", float(BLUR_PIXEL_SIZE_MIN)),
+            (self._blur_corner_spin, "corner_radius", 0.0),
+            (self._blur_feather_spin, "feather", 0.0),
+            (self._blur_opacity_spin, "opacity_pct", 0.0),
+            (self._blur_border_spin, "border_width", 0.0),
+        ]
+        for blur_spin, prop, low in blur_spins:
+            blur_spin.valueChanged.connect(
+                lambda value, p=prop, lo=low: self._on_blur_value_changed(p, value, lo)
+            )
+        self._blur_fill_picker.color_changed.connect(
+            lambda color: self._on_blur_value_changed("fill_color", QColor(color), None)
+        )
+        self._blur_border_picker.color_changed.connect(
+            lambda color: self._on_blur_value_changed("border_color", QColor(color), None)
+        )
+        self._blur_invert_check.toggled.connect(
+            lambda checked: self._on_blur_value_changed("invert_mask", bool(checked), None)
+        )
         self._polygon_star_check.toggled.connect(
             lambda checked: self._on_polygon_flag_changed("star_enabled", checked)
         )
@@ -1304,6 +1402,9 @@ class PropertyPanel(QDockWidget):
     def _selected_freehand(self) -> list[FreehandItem]:
         return [i for i in self._selected_items() if isinstance(i, FreehandItem)]
 
+    def _selected_blurs(self) -> list[BlurItem]:
+        return [i for i in self._selected_items() if isinstance(i, BlurItem)]
+
     def _selected_polygons(self) -> list[PolygonItem]:
         return [i for i in self._selected_items() if isinstance(i, PolygonItem)]
 
@@ -1363,6 +1464,7 @@ class PropertyPanel(QDockWidget):
             all_arrows = has_selection and all(isinstance(i, ArrowItem) for i in items)
             all_arcs = has_selection and all(isinstance(i, ArcItem) for i in items)
             all_polygons = has_selection and all(isinstance(i, PolygonItem) for i in items)
+            all_blurs = has_selection and all(isinstance(i, BlurItem) for i in items)
             all_rectangles = has_selection and all(isinstance(i, RectangleItem) for i in items)
             all_freehand = has_selection and all(isinstance(i, FreehandItem) for i in items)
             all_steps = has_selection and all(isinstance(i, NumberedStepItem) for i in items)
@@ -1379,6 +1481,7 @@ class PropertyPanel(QDockWidget):
             self._arrow_section.setVisible(all_arrows)
             self._arc_section.setVisible(all_arcs)
             self._polygon_section.setVisible(all_polygons)
+            self._blur_section.setVisible(all_blurs)
             self._rectangle_section.setVisible(all_rectangles)
             self._freehand_section.setVisible(all_freehand)
             self._step_section.setVisible(all_steps)
@@ -1418,6 +1521,8 @@ class PropertyPanel(QDockWidget):
                     self._populate_arc(self._selected_arcs())
                 if all_polygons:
                     self._populate_polygon(self._selected_polygons())
+                if all_blurs:
+                    self._populate_blur(self._selected_blurs())
                 if all_rectangles:
                     self._populate_rectangle(self._selected_rectangles())
                 if all_freehand:
@@ -1544,6 +1649,27 @@ class PropertyPanel(QDockWidget):
         self._freehand_smoothing_slider.setValue(int(value) if uniform else 0)
         self._set_spin(self._freehand_smoothing_spin, percents)
         self._set_check(self._freehand_closed_check, [i.is_closed for i in items])
+
+    def _populate_blur(self, items: list[BlurItem]) -> None:
+        section = self._blur_section
+        modes = [i.blur_mode for i in items]
+        self._set_combo_data(self._blur_mode_combo, modes)
+        self._set_row_visible(section, self._blur_radius_spin, set(modes) == {BlurMode.GAUSSIAN})
+        self._set_row_visible(section, self._blur_pixel_spin, set(modes) == {BlurMode.PIXELATE})
+        self._set_row_visible(section, self._blur_fill_picker, set(modes) == {BlurMode.SOLID})
+        shapes = [i.region_shape for i in items]
+        self._set_combo_data(self._blur_shape_combo, shapes)
+        rectangles = set(shapes) == {BlurRegionShape.RECTANGLE}
+        self._set_row_visible(section, self._blur_corner_spin, rectangles)
+        self._set_spin(self._blur_radius_spin, [i.blur_radius for i in items])
+        self._set_spin(self._blur_pixel_spin, [i.pixel_size for i in items])
+        self._set_color(self._blur_fill_picker, None, [i.fill_color for i in items])
+        self._set_spin(self._blur_corner_spin, [i.corner_radius for i in items])
+        self._set_spin(self._blur_feather_spin, [i.feather for i in items])
+        self._set_check(self._blur_invert_check, [i.invert_mask for i in items])
+        self._set_spin(self._blur_opacity_spin, [int(round(i.opacity_pct)) for i in items])
+        self._set_color(self._blur_border_picker, None, [i.border_color for i in items])
+        self._set_spin(self._blur_border_spin, [i.border_width for i in items])
 
     def _populate_polygon(self, items: list[PolygonItem]) -> None:
         regular = all(i.polygon_mode is PolygonMode.REGULAR for i in items)
@@ -2522,6 +2648,18 @@ class PropertyPanel(QDockWidget):
         if self._updating:
             return
         self._push_property(self._selected_freehand(), "is_closed", bool(checked))
+
+    def _on_blur_combo_changed(self, combo: QComboBox, prop: str, index: int) -> None:
+        if self._updating or index < 0:
+            return
+        self._push_property(self._selected_blurs(), prop, combo.itemData(index))
+
+    def _on_blur_value_changed(self, prop: str, value: Any, low: float | None) -> None:
+        if self._updating:
+            return
+        if low is not None and float(value) < low:
+            return  # the mixed indicator, not a value
+        self._push_property(self._selected_blurs(), prop, value)
 
     def _on_polygon_sides_changed(self, value: int) -> None:
         if self._updating or value < SIDES_MIN:

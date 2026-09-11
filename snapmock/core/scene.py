@@ -56,6 +56,20 @@ class SnapScene(QGraphicsScene):
         self._layer_manager.layer_visibility_changed.connect(self._on_layer_visibility_changed)
         self._layer_manager.layer_opacity_changed.connect(self._on_layer_opacity_changed)
         self._layer_manager.layer_blend_mode_changed.connect(self._on_layer_blend_mode_changed)
+        # The content revision a blur region's cache keys on (Blur PRD 2.7; Basic Shape
+        # remainder silence 3): every mutation is a command, and every layer change counts
+        self._content_revision = 0
+        self._command_stack.stack_changed.connect(self.bump_content_revision)
+        for signal in (
+            self._layer_manager.layer_added,
+            self._layer_manager.layer_removed,
+            self._layer_manager.layers_reordered,
+            self._layer_manager.layer_visibility_changed,
+            self._layer_manager.layer_opacity_changed,
+            self._layer_manager.layer_blend_mode_changed,
+        ):
+            signal.connect(self.bump_content_revision)
+        self.background_changed.connect(self.bump_content_revision)
 
         # Create default layer
         self._layer_manager.add_layer("Layer 1")
@@ -109,6 +123,17 @@ class SnapScene(QGraphicsScene):
         if dpi != self._canvas_dpi:
             self._canvas_dpi = dpi
             self.canvas_dpi_changed.emit(dpi)
+
+    # --- the content revision (Blur PRD 2.7) ---
+
+    @property
+    def content_revision(self) -> int:
+        """A counter that rises on every command, undo, redo, and layer or canvas colour
+        change: a cache of what lies on the canvas is stale when it differs."""
+        return self._content_revision
+
+    def bump_content_revision(self, *_args: object) -> None:
+        self._content_revision += 1
 
     # --- layer state on items (Technical Architecture PRD 3.9.1) ---
 
