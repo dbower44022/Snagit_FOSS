@@ -109,6 +109,37 @@ def raster_select_cursor() -> QCursor:
     return cursor
 
 
+def numbered_step_cursor() -> QCursor:
+    """Crosshair with a small badge at the lower right (Numbered Step tool, PRD 2.1)."""
+    cached = _cache.get("numbered-step")
+    if cached is not None:
+        return cached
+    size = CURSOR_SIZE
+    mid = size // 2
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+    for pen in (_halo_pen(3), QPen(_GLYPH, 1)):
+        painter.setPen(pen)
+        painter.drawLine(mid, 1, mid, mid - 3)
+        painter.drawLine(mid, mid + 3, mid, size - 2)
+        painter.drawLine(1, mid, mid - 3, mid)
+        painter.drawLine(mid + 3, mid, size - 2, mid)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    badge = QRect(mid + 3, mid + 3, 9, 9)
+    painter.setPen(_halo_pen(2))
+    painter.setBrush(QColor(204, 0, 0))
+    painter.drawEllipse(badge)
+    painter.setPen(QPen(_HALO, 1))
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+    painter.drawLine(mid + 7, mid + 5, mid + 7, mid + 10)
+    painter.end()
+    cursor = QCursor(pixmap, mid, mid)
+    _cache["numbered-step"] = cursor
+    return cursor
+
+
 def text_hover_cursor() -> QCursor:
     """I-beam with an accent highlight bar, shown over an existing text item."""
     cached = _cache.get("text-hover")

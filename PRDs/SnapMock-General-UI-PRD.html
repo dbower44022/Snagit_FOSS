@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.9</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.10</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.9</dd>
-    <dt>Last Updated</dt>    <dd>09-10-26 21:31</dd>
+    <dt>Document version</dt><dd>2.10</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 00:05</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,17 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.10</td>
+        <td class="nowrap">09-11-26 00:05</td>
+        <td>Doug Bower</td>
+        <td>Numbered Steps, Stamps, and Emoji implementation, Phase 1 (notes
+        <code>docs/Numbered-Steps-Stamps-Emoji-Implementation.md</code>): the Section 5.3 rows for Numbered Step and
+        Stamp / Sticker yield to the tool PRD's Sections 2.7, 3.6, and 4.5 (kickoff silence 1); the Numbered Step tool's
+        bar is built from that list. The Section 5.2 shared set gains two control kinds the bar composes (an enum
+        dropdown and a checkbox) for the tool PRDs' plain-value options. No other requirement changed.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>2.9</td>
         <td class="nowrap">09-10-26 21:31</td>
@@ -207,6 +218,19 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 00:05</td>
+        <td>5.2, 5.3</td>
+        <td>Decision</td>
+        <td>Numbered Steps, Stamps, and Emoji kickoff silence 1 (09-10-26): each marker tool's Tool Options Bar is the
+        list in its own PRD (Numbered Step, Section 2.7; Stamp / Sticker, Section 3.6; Emoji, Section 4.5), as the
+        Phase 4 kickoff treated the tool PRDs as the owners of each tool's options. The two rows of the table below
+        are read that way. The Numbered Step bar, built 09-11-26, is: Badge Color, Text Color, Badge Shape (a dropdown
+        with a glyph per shape), Badge Size (16 to 128 px), Starting Number, Display Mode, Font Weight, Border Width,
+        Border Color, Border Style, Shadow, and a Renumber All button; the shadow checkbox is the first Shadow Toggle of
+        the shared set to act, since the numbered step is the first item to carry the property. Presets and themes
+        capture every one of those values.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-10-26 21:31</td>
         <td>3.8, 17.2</td>

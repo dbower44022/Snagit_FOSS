@@ -1,6 +1,6 @@
 # General UI Implementation Notes
 
-Last Updated: 09-10-26 22:01 · Revision 1.30
+Last Updated: 09-11-26 00:05 · Revision 1.31
 
 Implements the SnapMock General User Interface PRD (version 2.4, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
@@ -580,6 +580,7 @@ Every walk over the scene's items, and the walk it now means:
 | `RenderEngine.render_layers_composite` (merging) | top-level | a group's members ride with the group, hidden and shown with it |
 | `MergeLayersCommand`'s item collection | top-level | a group leaves the scene and returns with its members |
 | `importer.takes_background` | top-level | any item at all means the project has content; a group counts once |
+| `steps_in_reading_order` (Renumber All Steps, `RenumberStepsCommand`) | members included | a numbered step inside a group renumbers with the rest (Numbered Steps, Stamps, and Emoji kickoff, silence 14) |
 
 ### 17.3 Deviations
 
@@ -665,6 +666,7 @@ None from the wording of Section 3.8; the additions are recorded as one Section 
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.31 | 09-11-26 00:05 | Claude (Claude Code) | Section 17.2's walk table gains the Renumber All Steps walk (members included), built by the Numbered Steps, Stamps, and Emoji work, Phase 1 step 3. |
 | 1.30 | 09-10-26 22:01 | Claude (Claude Code) | Display check B17 answered: Section 16 row 36 and the 16.9 step carry Doug's quoted answer and the display pass; Section 5.1 and the Section 16 summary updated; Section 19.2 says row 20 is still owed. |
 | 1.29 | 09-10-26 21:49 | Claude (Claude Code) | Next step points at `docs/Numbered-Steps-Stamps-Emoji-Kickoff-Prompt.md`. |
 | 1.28 | 09-10-26 21:31 | Claude (Claude Code) | Check for Updates done: the phase-table row, Section 5.1's row 6 entry, Section 6 (the Check for Updates deviation closed, one bullet added), Section 7 tests, Section 16 row 6 fixed since, Section 16.10's first bullet closed, Section 19.2 display checks still owed, 19.3 build summary, 19.4 deviations, the next required step. General UI PRD 2.9, Technical Architecture PRD 1.16. The suite passes 1043 passed with 13 skipped and the one environmental deselection at the step 3 commit. |

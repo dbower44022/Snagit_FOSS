@@ -22,8 +22,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction, QColor, QFont, QPainter, QPixmap
+from PyQt6.QtGui import QAction, QColor, QFont, QIcon, QPainter, QPixmap
 from PyQt6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
     QDoubleSpinBox,
     QFontComboBox,
     QInputDialog,
@@ -40,6 +42,14 @@ from PyQt6.QtWidgets import (
 
 from snapmock.commands.macro_command import MacroCommand
 from snapmock.commands.modify_property import ModifyPropertyCommand
+from snapmock.config.constants import (
+    BADGE_SIZE_MAX,
+    BADGE_SIZE_MIN,
+    BadgeShape,
+    BorderStyle,
+    DisplayMode,
+    FontWeight,
+)
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.tools.eyedropper_tool import EyedropperTool
 from snapmock.ui.accessibility import apply_default_names
@@ -64,12 +74,14 @@ class ControlSpec:
 
     key: str
     label: str
-    kind: str  # color | double | int | slider | font | text_style
+    kind: str  # color | double | int | slider | font | text_style | enum | check
     minimum: float = 0.0
     maximum: float = 100.0
     step: float = 1.0
     suffix: str = ""
     decimals: int = 0
+    choices: tuple[tuple[str, Any], ...] = ()
+    """The enum kind's rows as (label, value) pairs, in order."""
 
 
 SHARED_CONTROLS: dict[str, ControlSpec] = {
@@ -88,6 +100,41 @@ SHARED_CONTROLS: dict[str, ControlSpec] = {
     "border_width": ControlSpec("border_width", "Border", "double", 0.0, 20.0, 0.5, " px", 1),
     "smoothing": ControlSpec("smoothing", "Smoothing", "slider", 0, 100, 1, "%"),
     "start_number": ControlSpec("start_number", "Start at", "int", 1, 999, 1),
+    # The Numbered Step tool (Numbered Steps, Stamps & Emoji PRD 2.7)
+    "badge_color": ControlSpec("badge_color", "Badge", "color"),
+    "badge_shape": ControlSpec(
+        "badge_shape",
+        "Shape",
+        "enum",
+        choices=tuple((s.value.replace("_", " ").title(), s) for s in BadgeShape),
+    ),
+    "badge_size": ControlSpec(
+        "badge_size", "Size", "slider", BADGE_SIZE_MIN, BADGE_SIZE_MAX, 1, " px"
+    ),
+    "display_mode": ControlSpec(
+        "display_mode",
+        "Mode",
+        "enum",
+        choices=(
+            ("Number", DisplayMode.NUMBER),
+            ("Letter", DisplayMode.LETTER),
+            ("Roman", DisplayMode.ROMAN),
+            ("Custom Text", DisplayMode.TEXT),
+        ),
+    ),
+    "font_weight": ControlSpec(
+        "font_weight",
+        "Weight",
+        "enum",
+        choices=(("Normal", FontWeight.NORMAL), ("Bold", FontWeight.BOLD)),
+    ),
+    "border_style": ControlSpec(
+        "border_style",
+        "Style",
+        "enum",
+        choices=tuple((s.value.replace("dashdot", "dash-dot").title(), s) for s in BorderStyle),
+    ),
+    "shadow_enabled": ControlSpec("shadow_enabled", "Shadow", "check"),
 }
 
 _TEXT_STYLE_KEYS: tuple[tuple[str, str, str], ...] = (
@@ -95,6 +142,27 @@ _TEXT_STYLE_KEYS: tuple[tuple[str, str, str], ...] = (
     ("italic", "I", "Italic"),
     ("underline", "U", "Underline"),
 )
+
+
+def badge_shape_icon(shape: BadgeShape, size: int = 16) -> QIcon:
+    """The badge shape drawn as a small filled glyph (PRD 2.7, "visual icons")."""
+    from snapmock.items.numbered_step_item import NumberedStepItem
+
+    item = NumberedStepItem(badge_size=float(size) - 2.0)
+    item.badge_shape = shape
+    item.shadow_enabled = False
+    path = item.badge_path()
+    bounds = path.boundingRect()
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    painter.translate(size / 2 - bounds.center().x(), size / 2 - bounds.center().y())
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(QColor(90, 90, 90))
+    painter.drawPath(path)
+    painter.end()
+    return QIcon(pixmap)
 
 
 class ToolOptionsBar(QToolBar):
@@ -278,6 +346,27 @@ class ToolOptionsBar(QToolBar):
             )
             self._add_labelled(spec.label, font_combo)
             self._shared[spec.key] = font_combo
+        elif spec.kind == "enum":
+            combo = QComboBox()
+            combo.setMaximumWidth(130)
+            combo.setAccessibleName(spec.label)
+            for text, value in spec.choices:
+                if spec.key == "badge_shape" and isinstance(value, BadgeShape):
+                    combo.addItem(badge_shape_icon(value), text, value)
+                else:
+                    combo.addItem(text, value)
+            combo.currentIndexChanged.connect(
+                lambda index, k=spec.key, c=combo: self._write(k, c.itemData(index))
+            )
+            self._add_labelled(spec.label, combo)
+            self._shared[spec.key] = combo
+        elif spec.kind == "check":
+            check = QCheckBox(spec.label)
+            check.setAccessibleName(spec.label)
+            check.toggled.connect(lambda checked, k=spec.key: self._write(k, bool(checked)))
+            check.setMaximumHeight(_CONTROL_HEIGHT)
+            self.addWidget(check)
+            self._shared[spec.key] = check
         elif spec.kind == "text_style":
             for key, text, tip in _TEXT_STYLE_KEYS:
                 button = QToolButton()
@@ -471,7 +560,11 @@ class ToolOptionsBar(QToolBar):
                     widget.setValue(int(value))
                 elif isinstance(widget, QFontComboBox):
                     widget.setCurrentFont(QFont(str(value)))
-                elif isinstance(widget, QToolButton):
+                elif isinstance(widget, QComboBox):
+                    index = widget.findData(value)
+                    if index >= 0:
+                        widget.setCurrentIndex(index)
+                elif isinstance(widget, QCheckBox | QToolButton):
                     widget.setChecked(bool(value))
         finally:
             self._updating = False

@@ -30,7 +30,16 @@ from PyQt6.QtCore import QObject, QStandardPaths, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor
 
 from snapmock import __version__
-from snapmock.config.constants import BubbleShape, TailStyle, VerticalAlign
+from snapmock.config.constants import (
+    BadgeShape,
+    BorderStyle,
+    BubbleShape,
+    DisplayMode,
+    FontWeight,
+    LabelPosition,
+    TailStyle,
+    VerticalAlign,
+)
 
 if TYPE_CHECKING:
     from snapmock.config.settings import AppSettings
@@ -57,6 +66,11 @@ _ENUM_TYPES: dict[str, type[Enum]] = {
     "VerticalAlign": VerticalAlign,
     "BubbleShape": BubbleShape,
     "TailStyle": TailStyle,
+    "BadgeShape": BadgeShape,
+    "BorderStyle": BorderStyle,
+    "DisplayMode": DisplayMode,
+    "FontWeight": FontWeight,
+    "LabelPosition": LabelPosition,
 }
 
 # The Preferences > Tools values and the creation-default key each one fills

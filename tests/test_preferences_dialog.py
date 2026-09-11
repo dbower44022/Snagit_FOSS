@@ -232,7 +232,7 @@ class TestApply:
         assert freehand.creation_defaults["smoothing"] == 80
         assert steps.creation_defaults["start_number"] == 7
         tm.activate("numbered_step")
-        assert steps._next_number == 7
+        assert steps.next_number == 7
 
     def test_tool_defaults_are_read_at_startup(self, qtbot: QtBot) -> None:
         settings = AppSettings()

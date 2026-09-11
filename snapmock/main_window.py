@@ -3481,6 +3481,22 @@ class MainWindow(QMainWindow):
         ]
         self._scene.command_stack.push(MacroCommand(cmds, "Flip Horizontal"))
 
+    def renumber_all_steps(self) -> None:
+        """Renumber All Steps (Numbered Steps PRD 2.3, 6.1): every step top to bottom, then
+        left to right, from the Numbered Step tool's Starting Number; one undo entry."""
+        from snapmock.commands.marker_commands import RenumberStepsCommand
+
+        tool = self._tool_manager.tool("numbered_step")
+        start = int(tool.creation_defaults.get("start_number", 1)) if tool is not None else 1
+        command = RenumberStepsCommand(self._scene, start)
+        if not self._require(
+            "Renumber All Steps", (command.count > 0, "at least one numbered step")
+        ):
+            return
+        self._scene.command_stack.push(command)
+        if isinstance(tool, NumberedStepTool) and self._tool_manager.active_tool is tool:
+            tool.set_next_number(start + command.count)
+
     def _arrange_flip_vertical(self) -> None:
         items = self._require_selection("Flip Vertical")
         if not items:
