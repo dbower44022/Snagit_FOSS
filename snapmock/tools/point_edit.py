@@ -10,6 +10,7 @@ scene item above every annotation item, as the transform handles are drawn.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
@@ -18,8 +19,13 @@ from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
 from PyQt6.QtGui import QColor, QPainter, QPen
 from PyQt6.QtWidgets import QGraphicsItem
 
-from snapmock.commands.geometry_commands import ModifyGeometryCommand, copy_geometry
-from snapmock.config.constants import LineStyle
+from snapmock.commands.geometry_commands import (
+    InsertVertexCommand,
+    ModifyGeometryCommand,
+    RemoveVertexCommand,
+    copy_geometry,
+)
+from snapmock.config.constants import LineStyle, PolygonMode
 from snapmock.core.command_stack import BaseCommand
 from snapmock.core.path_utils import BezierSegment, constrain_angle
 from snapmock.core.theme_manager import current_theme
@@ -28,6 +34,7 @@ from snapmock.items.arrow_item import ArrowItem
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.freehand_item import FreehandItem
 from snapmock.items.line_item import LineItem
+from snapmock.items.polygon_item import MIN_VERTICES, PolygonItem
 
 CONTROL_COLOR = QColor("#2E9E44")
 """The green of a control point, a bend point, and an off-curve handle (4.5, 9.7)."""
@@ -447,8 +454,122 @@ class ArcPointSession(PointEditSession):
             self.item.end_point = local
 
 
+def _nearest_on_segment(p: QPointF, a: QPointF, b: QPointF) -> tuple[QPointF, float]:
+    """The point of segment *a*-*b* nearest *p*, and its distance from *p*."""
+    dx, dy = b.x() - a.x(), b.y() - a.y()
+    length_sq = dx * dx + dy * dy
+    t = 0.0 if length_sq == 0 else ((p.x() - a.x()) * dx + (p.y() - a.y()) * dy) / length_sq
+    t = max(0.0, min(1.0, t))
+    nearest = QPointF(a.x() + t * dx, a.y() + t * dy)
+    return nearest, QLineF(nearest, p).length()
+
+
+class PolygonPointSession(PointEditSession):
+    """A polygon's points (Basic Shape PRD 8.5).
+
+    Freeform: every vertex as an 8 px handle; a drag moves it, Shift constraining it to
+    15-degree steps from the previous vertex; a double-click on an edge inserts a vertex
+    there (``InsertVertexCommand``, 11.4); a right-click on a vertex deletes it while more
+    than three remain (``RemoveVertexCommand``, 11.5). Regular: the centre, which moves the
+    whole polygon, and one radius handle on the first vertex, which sizes and turns it,
+    Shift snapping the turn to 15-degree steps; single vertices cannot be edited, since
+    the shape is defined by its sides, centre, radius, and rotation.
+    """
+
+    HINT = (
+        "Drag vertices to reshape. Double-click segment: insert vertex. "
+        "Right-click vertex: delete. Escape: exit."
+    )
+
+    item: PolygonItem
+
+    def _regular(self) -> bool:
+        return self.item.polygon_mode is PolygonMode.REGULAR and self.item.center is not None
+
+    @property
+    def status_hint(self) -> str:
+        if self._regular():
+            return (
+                "Drag the centre to move. Drag the radius point to resize and turn. "
+                "Shift: constrain rotation. Escape: exit."
+            )
+        return self.HINT
+
+    def handles(self) -> list[PointHandle]:
+        if self._regular():
+            center = self.item.center
+            assert center is not None
+            radius_point = self.item.vertices[0]
+            return [
+                PointHandle("center", self.to_scene(center)),
+                PointHandle("radius", self.to_scene(radius_point), HandleKind.CONTROL),
+            ]
+        return [PointHandle(f"v{i}", self.to_scene(v)) for i, v in enumerate(self.item.vertices)]
+
+    def guide_lines(self) -> list[QLineF]:
+        if not self._regular():
+            return []
+        center = self.item.center
+        assert center is not None
+        return [QLineF(self.to_scene(center), self.to_scene(self.item.vertices[0]))]
+
+    def property_for(self, key: str) -> str:
+        return "regular_geometry" if self._regular() else "vertices"
+
+    def drag_to(self, key: str, scene_pos: QPointF, modifiers: Qt.KeyboardModifier) -> None:
+        shift = bool(modifiers & Qt.KeyboardModifier.ShiftModifier)
+        if self._regular():
+            center, radius, rotation = self.item.regular_geometry
+            assert center is not None
+            local = self.to_local(scene_pos)
+            if key == "center":
+                self.item.regular_geometry = (local, radius, rotation)
+                return
+            dx, dy = local.x() - center.x(), local.y() - center.y()
+            angle = math.degrees(math.atan2(dy, dx))
+            if shift:
+                angle = round(angle / 15.0) * 15.0
+            self.item.regular_geometry = (center, math.hypot(dx, dy), angle)
+            return
+        vertices = self.item.vertices
+        index = int(key[1:])
+        if shift and len(vertices) > 1:
+            previous = vertices[index - 1] if index > 0 or self.item.closed else vertices[1]
+            scene_pos = constrain_angle(self.to_scene(previous), scene_pos)
+        vertices[index] = self.to_local(scene_pos)
+        self.item.vertices = vertices
+
+    def double_click(self, scene_pos: QPointF) -> BaseCommand | None:
+        if self._regular():
+            return None
+        vertices = self.item.vertices
+        local = self.to_local(scene_pos)
+        count = len(vertices)
+        edges = count if self.item.closed else count - 1
+        best: tuple[int, QPointF, float] | None = None
+        for i in range(edges):
+            nearest, distance = _nearest_on_segment(local, vertices[i], vertices[(i + 1) % count])
+            if best is None or distance < best[2]:
+                best = (i, nearest, distance)
+        if best is None or best[2] > max(self.item.stroke_width / 2.0 + 4.0, 6.0):
+            return None
+        return InsertVertexCommand(self.item, best[0] + 1, best[1])
+
+    def right_click(self, scene_pos: QPointF) -> BaseCommand | None:
+        key = self.handle_at(scene_pos)
+        vertices = self.item.vertices
+        if self._regular() or key is None or not key.startswith("v"):
+            return None
+        if len(vertices) <= MIN_VERTICES:
+            return None  # a polygon keeps three vertices (8.5)
+        index = int(key[1:])
+        return RemoveVertexCommand(self.item, index, vertices[index])
+
+
 def session_for(item: SnapGraphicsItem) -> PointEditSession | None:
     """The point-editing session for *item*, or None when the item has no points to edit."""
+    if isinstance(item, PolygonItem):
+        return PolygonPointSession(item)
     if isinstance(item, ArcItem):
         return ArcPointSession(item)
     if isinstance(item, FreehandItem):

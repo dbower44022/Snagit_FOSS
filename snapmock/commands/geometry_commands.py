@@ -8,7 +8,7 @@ point-editing drag and merges consecutive drags of the same point on the same it
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, Protocol, cast
 
 from PyQt6.QtCore import QLineF, QPointF
 
@@ -92,3 +92,47 @@ class ModifyGeometryCommand(BaseCommand):
         self._new = copy_geometry(other._new)
         self._timestamp = other._timestamp
         return True
+
+
+class _VertexItem(Protocol):
+    def insert_vertex(self, index: int, position: QPointF) -> None: ...
+    def remove_vertex(self, index: int) -> QPointF: ...
+
+
+class InsertVertexCommand(BaseCommand):
+    """Insert a polygon vertex at *index* (Basic Shape PRD 11.4)."""
+
+    def __init__(self, item: SnapGraphicsItem, index: int, position: QPointF) -> None:
+        self._item = item
+        self._index = index
+        self._position = QPointF(position)
+
+    def redo(self) -> None:
+        cast(_VertexItem, self._item).insert_vertex(self._index, QPointF(self._position))
+
+    def undo(self) -> None:
+        cast(_VertexItem, self._item).remove_vertex(self._index)
+
+    @property
+    def description(self) -> str:
+        return "Insert polygon vertex"
+
+
+class RemoveVertexCommand(BaseCommand):
+    """Remove the polygon vertex at *index* (Basic Shape PRD 11.5); the caller checks that
+    more than three remain."""
+
+    def __init__(self, item: SnapGraphicsItem, index: int, position: QPointF) -> None:
+        self._item = item
+        self._index = index
+        self._position = QPointF(position)
+
+    def redo(self) -> None:
+        cast(_VertexItem, self._item).remove_vertex(self._index)
+
+    def undo(self) -> None:
+        cast(_VertexItem, self._item).insert_vertex(self._index, QPointF(self._position))
+
+    @property
+    def description(self) -> str:
+        return "Remove polygon vertex"
