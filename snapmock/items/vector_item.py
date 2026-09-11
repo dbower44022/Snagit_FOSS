@@ -27,6 +27,7 @@ from snapmock.config.constants import (
     StrokeCap,
     StrokeJoin,
 )
+from snapmock.core.layer import normalize_item_blend_mode
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.shadow import ShadowMixin
 
@@ -260,6 +261,8 @@ class VectorItem(ShadowMixin, SnapGraphicsItem):
             self._stroke_opacity = _clamp_unit(defaults["stroke_opacity"])
         if "shadow_enabled" in defaults:
             self._shadow_enabled = bool(defaults["shadow_enabled"])
+        if "blend_mode" in defaults:
+            self._blend_mode = normalize_item_blend_mode(defaults["blend_mode"])
         self._geometry_changed()
 
     # --- hit testing ---
@@ -302,6 +305,7 @@ class VectorItem(ShadowMixin, SnapGraphicsItem):
             "flip_horizontal": self._flip_horizontal,
             "flip_vertical": self._flip_vertical,
         }
+        data.update(self._blend_entry())
         data.update(self._shadow_data())
         return data
 
@@ -325,6 +329,7 @@ class VectorItem(ShadowMixin, SnapGraphicsItem):
         self._stroke_opacity = _clamp_unit(data.get("stroke_opacity", 1.0))
         self._flip_horizontal = data.get("flip_horizontal", False)
         self._flip_vertical = data.get("flip_vertical", False)
+        self._apply_blend_entry(data)
         self._apply_shadow_data(data)
 
     def scale_geometry(self, sx: float, sy: float) -> None:

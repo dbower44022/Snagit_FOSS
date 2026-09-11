@@ -10,7 +10,7 @@ from PyQt6.QtCore import QRectF
 from PyQt6.QtGui import QPainter, QPainterPath, QTransform
 from PyQt6.QtWidgets import QGraphicsObject
 
-from snapmock.core.layer import DEFAULT_BLEND_MODE, composition_mode
+from snapmock.core.layer import DEFAULT_BLEND_MODE, composition_mode, normalize_item_blend_mode
 
 
 def transform_to_list(transform: QTransform) -> list[float]:
@@ -55,6 +55,8 @@ class SnapGraphicsItem(QGraphicsObject):
         self._flip_vertical: bool = False
         self._layer_opacity: float = 1.0
         self._layer_blend_mode: str = DEFAULT_BLEND_MODE
+        self._blend_mode: str = DEFAULT_BLEND_MODE
+        self._item_blend_active: bool = False
         self._paint_saved: bool = False
         self.setFlag(QGraphicsObject.GraphicsItemFlag.ItemIsSelectable, True)
         self.setFlag(QGraphicsObject.GraphicsItemFlag.ItemIsMovable, False)
@@ -110,6 +112,18 @@ class SnapGraphicsItem(QGraphicsObject):
         self.update()
 
     @property
+    def blend_mode(self) -> str:
+        """The item's own blend mode (Technical Architecture PRD 3.1.4), one of
+        ``ITEM_BLEND_MODES``; applied as the painter composition mode when the layer's
+        mode is Normal, the layer's otherwise (3.9; Vector Item Properties decision 4)."""
+        return self._blend_mode
+
+    @blend_mode.setter
+    def blend_mode(self, value: str) -> None:
+        self._blend_mode = normalize_item_blend_mode(value)
+        self.update()
+
+    @property
     def locked(self) -> bool:
         return self._locked
 
@@ -144,7 +158,9 @@ class SnapGraphicsItem(QGraphicsObject):
         (Technical Architecture PRD 3.9 departure, follow-up decision 3): two overlapping
         items on one non-Normal layer blend twice.
         """
-        blended = self._layer_blend_mode != DEFAULT_BLEND_MODE
+        layer_blended = self._layer_blend_mode != DEFAULT_BLEND_MODE
+        self._item_blend_active = not layer_blended and self._blend_mode != DEFAULT_BLEND_MODE
+        blended = layer_blended or self._item_blend_active
         self._paint_saved = (
             self._flip_horizontal or self._flip_vertical or self._layer_opacity < 1.0 or blended
         )
@@ -153,8 +169,10 @@ class SnapGraphicsItem(QGraphicsObject):
         painter.save()
         if self._layer_opacity < 1.0:
             painter.setOpacity(painter.opacity() * self._layer_opacity)
-        if blended:
+        if layer_blended:
             painter.setCompositionMode(composition_mode(self._layer_blend_mode))
+        elif self._item_blend_active:
+            painter.setCompositionMode(composition_mode(self._blend_mode))
         if self._flip_horizontal or self._flip_vertical:
             br = self.boundingRect()
             cx = br.center().x()
@@ -171,6 +189,14 @@ class SnapGraphicsItem(QGraphicsObject):
         if self._paint_saved:
             painter.restore()
             self._paint_saved = False
+        self._item_blend_active = False
+
+    def _blend_entry(self) -> dict[str, Any]:
+        """The ``blend_mode`` key of a serialized item; absent reads as Normal."""
+        return {"blend_mode": self._blend_mode}
+
+    def _apply_blend_entry(self, data: dict[str, Any]) -> None:
+        self._blend_mode = normalize_item_blend_mode(data.get("blend_mode", DEFAULT_BLEND_MODE))
 
     # --- position / transform property shims ---
 

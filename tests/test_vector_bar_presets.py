@@ -66,7 +66,14 @@ def test_every_shape_tool_composes_the_basic_shape_prd_order(main_window: MainWi
         "line": OPEN,
         "arrow": OPEN,
         "freehand": [*OPEN, "smoothing"],
-        "highlight": ["stroke_color", "stroke_width", "stroke_style", "shadow_enabled"],
+        # Phase 2 rebuilt the Highlighter's bar per Blur PRD 3.5
+        "highlight": [
+            "highlight_color",
+            "highlight_width",
+            "blend_mode",
+            "stroke_style",
+            "shadow_enabled",
+        ],
     }
     for tool_id, keys in expected.items():
         main_window.tool_manager.activate(tool_id)

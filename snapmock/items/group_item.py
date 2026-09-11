@@ -199,6 +199,7 @@ class GroupItem(SnapGraphicsItem):
             "transform": transform_to_list(self.transform()),
             "flip_horizontal": self._flip_horizontal,
             "flip_vertical": self._flip_vertical,
+            **self._blend_entry(),
             "members": [member.serialize() for member in self.members],
         }
 
@@ -218,6 +219,7 @@ class GroupItem(SnapGraphicsItem):
         # The mirror is already inside the stored transform; only the flags are restored.
         group._flip_horizontal = bool(data.get("flip_horizontal", False))
         group._flip_vertical = bool(data.get("flip_vertical", False))
+        group._apply_blend_entry(data)
         entries = data.get("members", [])
         if isinstance(entries, list):
             for index, entry in enumerate(entries):

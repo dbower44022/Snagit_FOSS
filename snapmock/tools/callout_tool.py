@@ -20,6 +20,7 @@ from snapmock.commands.add_item import AddItemCommand
 from snapmock.config.constants import (
     DEFAULT_FONT_FAMILY,
     DEFAULT_FONT_SIZE,
+    DEFAULT_LINE_SPACING,
     BorderStyle,
     BubbleShape,
     TailStyle,
@@ -69,6 +70,7 @@ class CalloutTool(BaseTool):
             "border_style": BorderStyle.SOLID,
             "fill_opacity": 1.0,
             "stroke_opacity": 1.0,
+            "line_spacing": DEFAULT_LINE_SPACING,
             "border_radius": 12.0,
             "padding": 10.0,
             "vertical_align": VerticalAlign.TOP,
@@ -298,6 +300,7 @@ class CalloutTool(BaseTool):
         item.border_radius = d.get("border_radius", 12.0)
         item.fill_opacity = float(d.get("fill_opacity", 1.0))
         item.stroke_opacity = float(d.get("stroke_opacity", 1.0))
+        item.line_spacing = float(d.get("line_spacing", DEFAULT_LINE_SPACING))
         item.padding = d.get("padding", 10.0)
         item.vertical_align = d.get("vertical_align", VerticalAlign.TOP)
         ha = d.get("horizontal_align", Qt.AlignmentFlag.AlignLeft)

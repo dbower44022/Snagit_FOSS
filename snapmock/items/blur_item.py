@@ -77,6 +77,7 @@ class BlurItem(SnapGraphicsItem):
             "blur_radius": self._blur_radius,
             "flip_horizontal": self._flip_horizontal,
             "flip_vertical": self._flip_vertical,
+            **self._blend_entry(),
         }
 
     @classmethod
@@ -93,4 +94,5 @@ class BlurItem(SnapGraphicsItem):
         item.layer_id = data.get("layer_id", "")
         item._flip_horizontal = data.get("flip_horizontal", False)
         item._flip_vertical = data.get("flip_vertical", False)
+        item._apply_blend_entry(data)
         return item

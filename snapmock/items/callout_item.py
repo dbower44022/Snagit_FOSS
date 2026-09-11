@@ -126,6 +126,30 @@ class CalloutItem(ShadowMixin, RichTextMixin, SnapGraphicsItem):
         self.update()
 
     @property
+    def line_spacing(self) -> float:
+        """Line spacing as a multiplier for every paragraph (Text PRD 2.2; General UI PRD
+        8.4): the first paragraph's value when read; every paragraph's when set."""
+        return self._get_line_spacing()
+
+    @line_spacing.setter
+    def line_spacing(self, value: float) -> None:
+        self.prepareGeometryChange()
+        self._set_line_spacing(value)
+        self.update()
+
+    @property
+    def line_spacings(self) -> list[float]:
+        """Every paragraph's line spacing, the form the Property Panel's command carries so
+        an undo restores paragraphs that differed."""
+        return self.paragraph_line_spacings()
+
+    @line_spacings.setter
+    def line_spacings(self, values: list[float]) -> None:
+        self.prepareGeometryChange()
+        self._set_line_spacings(list(values))
+        self.update()
+
+    @property
     def tail_tip(self) -> QPointF:
         return QPointF(self._tail_tip)
 
@@ -657,6 +681,7 @@ class CalloutItem(ShadowMixin, RichTextMixin, SnapGraphicsItem):
             "stroke_opacity": self._stroke_opacity,
             "flip_horizontal": self._flip_horizontal,
             "flip_vertical": self._flip_vertical,
+            **self._blend_entry(),
             **self._shadow_data(),
         }
         if self._tail_control_point is not None:
@@ -729,6 +754,7 @@ class CalloutItem(ShadowMixin, RichTextMixin, SnapGraphicsItem):
             item._tail_control_point = QPointF(tcp[0], tcp[1])
         item._flip_horizontal = data.get("flip_horizontal", False)
         item._flip_vertical = data.get("flip_vertical", False)
+        item._apply_blend_entry(data)
         item._fill_opacity = _clamp_unit(data.get("fill_opacity", 1.0))
         item._stroke_opacity = _clamp_unit(data.get("stroke_opacity", 1.0))
         item._apply_shadow_data(data)

@@ -85,6 +85,11 @@ DEFAULT_STROKE_COLOR = "#FF0000"
 DEFAULT_FILL_COLOR = "#00000000"
 DEFAULT_FONT_FAMILY = "Sans Serif"
 DEFAULT_FONT_SIZE = 14
+# Line spacing multiplier of new text items (Text & Callout PRD 2.2); the range of the
+# Property Panel's row (General UI PRD 8.4)
+DEFAULT_LINE_SPACING = 1.2
+LINE_SPACING_MIN = 0.5
+LINE_SPACING_MAX = 5.0
 
 # Text box frame defaults
 DEFAULT_TEXT_BG_COLOR = "#00000000"  # transparent
@@ -226,6 +231,22 @@ MARKER_MIN_HIT_SIZE = 24.0  # the minimum hit area of Sections 2.10, 3.10, and 4
 DEFAULT_SHADOW_COLOR = "#66000000"  # the PRD's #00000066 in Qt's #AARRGGBB form
 DEFAULT_SHADOW_OFFSET = 2.0
 DEFAULT_SHADOW_BLUR = 4.0
+
+# --- Highlighter (Blur, Highlighter & Eyedropper PRD Section 3.4) ---
+DEFAULT_HIGHLIGHT_COLOR = "#CCFFFF00"  # the PRD's #FFFF00CC in Qt's #AARRGGBB form
+DEFAULT_HIGHLIGHT_WIDTH = 24.0
+HIGHLIGHT_WIDTH_MIN = 10.0
+HIGHLIGHT_WIDTH_MAX = 80.0
+DEFAULT_HIGHLIGHT_BLEND_MODE = "Multiply"
+HIGHLIGHT_PRESET_COLORS: tuple[tuple[str, str], ...] = (
+    ("Yellow", "#CCFFFF00"),
+    ("Green", "#CC00FF00"),
+    ("Cyan", "#CC00FFFF"),
+    ("Pink", "#CCFF69B4"),
+    ("Orange", "#CCFF8C00"),
+    ("Purple", "#CC9B30FF"),
+)
+"""The six preset highlight colours of Blur PRD 3.5, at the PRD's 80 percent alpha."""
 
 # --- Shadow of the vector items and the text items (Basic Shape PRD 2.2; Vector Item
 # Properties silence 2: each PRD's own defaults) ---

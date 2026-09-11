@@ -29,6 +29,7 @@ from snapmock.commands.text_edit_command import TextEditCommand
 from snapmock.config.constants import (
     DEFAULT_FONT_FAMILY,
     DEFAULT_FONT_SIZE,
+    DEFAULT_LINE_SPACING,
     DEFAULT_TEXT_BG_COLOR,
     DEFAULT_TEXT_BORDER_COLOR,
     DEFAULT_TEXT_BORDER_RADIUS,
@@ -264,6 +265,7 @@ class TextTool(BaseTool):
             "border_style": BorderStyle.SOLID,
             "fill_opacity": 1.0,
             "stroke_opacity": 1.0,
+            "line_spacing": DEFAULT_LINE_SPACING,
             "border_radius": DEFAULT_TEXT_BORDER_RADIUS,
             "padding": DEFAULT_TEXT_PADDING,
             "vertical_align": VerticalAlign.TOP,
@@ -455,6 +457,7 @@ class TextTool(BaseTool):
         item.border_radius = d.get("border_radius", DEFAULT_TEXT_BORDER_RADIUS)
         item.fill_opacity = float(d.get("fill_opacity", 1.0))
         item.stroke_opacity = float(d.get("stroke_opacity", 1.0))
+        item.line_spacing = float(d.get("line_spacing", DEFAULT_LINE_SPACING))
         item.padding = d.get("padding", DEFAULT_TEXT_PADDING)
         item.vertical_align = d.get("vertical_align", VerticalAlign.TOP)
         ha = d.get("horizontal_align", Qt.AlignmentFlag.AlignLeft)

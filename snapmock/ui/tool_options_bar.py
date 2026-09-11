@@ -45,6 +45,8 @@ from snapmock.commands.modify_property import ModifyPropertyCommand
 from snapmock.config.constants import (
     BADGE_SIZE_MAX,
     BADGE_SIZE_MIN,
+    HIGHLIGHT_WIDTH_MAX,
+    HIGHLIGHT_WIDTH_MIN,
     BadgeShape,
     BorderStyle,
     DisplayMode,
@@ -110,6 +112,23 @@ SHARED_CONTROLS: dict[str, ControlSpec] = {
     ),
     "stroke_opacity": ControlSpec(
         "stroke_opacity", "Stroke Opacity", "slider", 0, 100, 1, "%", scale=100.0
+    ),
+    # The Highlighter (Blur PRD 3.5): its colour and width under their own names and
+    # range, the four blend modes of 3.4 (the item takes every mode of ITEM_BLEND_MODES)
+    "highlight_color": ControlSpec("highlight_color", "Highlight", "color"),
+    "highlight_width": ControlSpec(
+        "highlight_width", "Width", "slider", HIGHLIGHT_WIDTH_MIN, HIGHLIGHT_WIDTH_MAX, 1, " px"
+    ),
+    "blend_mode": ControlSpec(
+        "blend_mode",
+        "Blend",
+        "enum",
+        choices=(
+            ("Multiply", "Multiply"),
+            ("Overlay", "Overlay"),
+            ("Soft Light", "Soft Light"),
+            ("Normal", "Normal"),
+        ),
     ),
     "font_family": ControlSpec("font_family", "Font", "font"),
     "font_size": ControlSpec("font_size", "Size", "int", 6, 200, 1, " pt"),

@@ -8,10 +8,10 @@ differ across the selection shows a mixed indicator until it is changed.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from PyQt6.QtCore import QPoint, QSizeF, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QTextCharFormat, QTextCursor
+from PyQt6.QtGui import QColor, QFont, QTextBlockFormat, QTextCharFormat, QTextCursor
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -39,6 +39,9 @@ from snapmock.commands.scale_geometry_command import ScaleGeometryCommand
 from snapmock.config.constants import (
     BADGE_SIZE_MAX,
     BADGE_SIZE_MIN,
+    DEFAULT_LINE_SPACING,
+    LINE_SPACING_MAX,
+    LINE_SPACING_MIN,
     BadgeShape,
     BorderStyle,
     DisplayMode,
@@ -49,6 +52,7 @@ from snapmock.config.constants import (
 from snapmock.config.settings import AppSettings
 from snapmock.core.command_stack import BaseCommand
 from snapmock.core.emoji_data import EMOJI_SIZE_MAX, EMOJI_SIZE_MIN, SkinTone
+from snapmock.core.layer import ITEM_BLEND_MODES
 from snapmock.core.stamp_library import STAMP_SIZE_MAX, STAMP_SIZE_MIN
 from snapmock.core.theme_manager import current_theme, theme_manager
 from snapmock.items.base_item import SnapGraphicsItem
@@ -100,6 +104,14 @@ def _uniform(values: list[Any], key: Callable[[Any], Any] = lambda v: v) -> tupl
     first = values[0]
     first_key = key(first)
     return first, all(key(v) == first_key for v in values[1:])
+
+
+def _block_line_spacing(fmt: QTextBlockFormat) -> float:
+    """A paragraph's line spacing multiplier; 1.0 when none is set (Qt's single)."""
+    proportional = cast(int, QTextBlockFormat.LineHeightTypes.ProportionalHeight.value)
+    if fmt.lineHeightType() == proportional and fmt.lineHeight() > 0:
+        return round(fmt.lineHeight() / 100.0, 3)
+    return 1.0
 
 
 def _hex_text(color: QColor) -> str:
@@ -757,6 +769,14 @@ class PropertyPanel(QDockWidget):
         self._text_align_combo.setAccessibleName("Text alignment")
         self._text_section.add_row("Align:", self._text_align_combo)
 
+        # Line Spacing (PRD 8.4; Text PRD 2.2): a multiplier, 0.5 to 5.0 by 0.1
+        self._line_spacing_spin = self._make_double_spin(
+            LINE_SPACING_MIN - 0.1, LINE_SPACING_MAX, 1, "", "Line spacing"
+        )
+        self._line_spacing_spin.setSingleStep(0.1)
+        self._line_spacing_spin.setSuffix(" ×")
+        self._text_section.add_row("Line spacing:", self._line_spacing_spin)
+
         # Background Fill belongs to the Text section (PRD 8.4)
         self._text_bg_color_picker = ColorPicker(QColor("transparent"))
         self._text_bg_color_picker.setAccessibleName("Background fill")
@@ -831,8 +851,15 @@ class PropertyPanel(QDockWidget):
         self._layer_combo.setAccessibleName("Layer")
         self._locked_check = QCheckBox("Locked")
         self._locked_check.setAccessibleName("Item lock")
+        # Blend Mode (PRD 8.3) sits here rather than in Appearance because every item
+        # carries it (Vector Item Properties decision 4) and every selection shows Item Info.
+        self._blend_combo = QComboBox()
+        for mode in ITEM_BLEND_MODES:
+            self._blend_combo.addItem(mode, mode)
+        self._blend_combo.setAccessibleName("Blend mode")
         self._info_section.add_row("Type:", self._type_label)
         self._info_section.add_row("Layer:", self._layer_combo)
+        self._info_section.add_row("Blend mode:", self._blend_combo)
         self._info_section.add_row("", self._locked_check)
         self._main_layout.addWidget(self._info_section)
 
@@ -902,6 +929,7 @@ class PropertyPanel(QDockWidget):
         )
         self._layer_combo.currentIndexChanged.connect(self._on_layer_changed)
         self._locked_check.toggled.connect(self._on_locked_changed)
+        self._blend_combo.currentIndexChanged.connect(self._on_blend_mode_changed)
         self._canvas_w_spin.valueChanged.connect(self._on_canvas_size_changed)
         self._canvas_h_spin.valueChanged.connect(self._on_canvas_size_changed)
         self._bg_color_picker.color_changed.connect(self._on_bg_color_changed)
@@ -916,6 +944,7 @@ class PropertyPanel(QDockWidget):
         self._underline_check.toggled.connect(self._on_underline_changed)
         self._text_color_picker.color_changed.connect(self._on_text_color_changed)
         self._text_align_combo.currentIndexChanged.connect(self._on_text_align_changed)
+        self._line_spacing_spin.valueChanged.connect(self._on_line_spacing_changed)
         self._text_bg_color_picker.color_changed.connect(self._on_text_bg_color_changed)
         self._text_border_color_picker.color_changed.connect(self._on_text_border_color_changed)
         self._text_border_w_spin.valueChanged.connect(self._on_text_border_w_changed)
@@ -1214,6 +1243,8 @@ class PropertyPanel(QDockWidget):
                 self._set_align_combo(Qt.AlignmentFlag(value))
             else:
                 self._text_align_combo.setCurrentIndex(-1)
+            spacings = [s for i in items for s in i.paragraph_line_spacings()]
+            self._set_spin(self._line_spacing_spin, spacings)
         self._set_color(self._text_bg_color_picker, None, [i.bg_color for i in items])
         self._set_color(self._text_border_color_picker, None, [i.border_color for i in items])
         self._set_spin(self._text_border_w_spin, [i.border_width for i in items])
@@ -1287,6 +1318,7 @@ class PropertyPanel(QDockWidget):
         self._set_spin(self._shadow_blur_spin, blurs)
 
     def _populate_info(self, items: list[SnapGraphicsItem]) -> None:
+        self._set_combo_data(self._blend_combo, [i.blend_mode for i in items])
         value, uniform = _uniform([i.type_name for i in items])
         text = str(value) if uniform else f"{len(items)} items"
         if len(items) == 1 and isinstance(items[0], GroupItem):
@@ -1404,6 +1436,7 @@ class PropertyPanel(QDockWidget):
         ha = d.get("horizontal_align", Qt.AlignmentFlag.AlignLeft)
         if isinstance(ha, Qt.AlignmentFlag):
             self._set_align_combo(ha)
+        self._line_spacing_spin.setValue(float(d.get("line_spacing", DEFAULT_LINE_SPACING)))
 
         bg = d.get("bg_color")
         self._text_bg_color_picker.color = (
@@ -1674,6 +1707,13 @@ class PropertyPanel(QDockWidget):
         if moving:
             self._push(MoveItemToLayerCommand(self._scene, moving, target_layer_id))
 
+    def _on_blend_mode_changed(self, index: int) -> None:
+        if self._updating or index < 0:
+            return
+        mode = self._blend_combo.itemData(index)
+        if isinstance(mode, str):
+            self._push_property(self._selected_items(), "blend_mode", mode)
+
     def _on_locked_changed(self, checked: bool) -> None:
         if self._updating:
             return
@@ -1806,6 +1846,7 @@ class PropertyPanel(QDockWidget):
             if fg.style() != Qt.BrushStyle.NoBrush:
                 self._text_color_picker.color = QColor(fg.color())
             self._set_align_combo(cursor.blockFormat().alignment())
+            self._set_spin(self._line_spacing_spin, [_block_line_spacing(cursor.blockFormat())])
             return
 
         # Selection: analyse fragments for mixed state (Text PRD 3.6)
@@ -1816,6 +1857,7 @@ class PropertyPanel(QDockWidget):
         underlines: list[bool] = []
         colors: list[QColor] = []
         alignments: list[int] = []
+        spacings: list[float] = []
 
         sel_start = cursor.selectionStart()
         sel_end = cursor.selectionEnd()
@@ -1830,6 +1872,7 @@ class PropertyPanel(QDockWidget):
             if block_end > sel_start and block_start < sel_end:
                 align = block.blockFormat().alignment()
                 alignments.append(int(align & Qt.AlignmentFlag.AlignHorizontal_Mask))
+                spacings.append(_block_line_spacing(block.blockFormat()))
             it = block.begin()
             while not it.atEnd():
                 fragment = it.fragment()
@@ -1874,6 +1917,8 @@ class PropertyPanel(QDockWidget):
                 self._set_align_combo(Qt.AlignmentFlag(value))
             else:
                 self._text_align_combo.setCurrentIndex(-1)
+        if spacings:
+            self._set_spin(self._line_spacing_spin, spacings)
 
     def _editing_editor(self) -> QWidget | None:
         """The rich text editor when exactly one text item is being edited."""
@@ -1993,6 +2038,33 @@ class PropertyPanel(QDockWidget):
             editor.setAlignment(alignment)
             return
         self._push_property(self._selected_text_items(), "horizontal_alignment", alignment)
+
+    def _on_line_spacing_changed(self, value: float) -> None:
+        """Line Spacing (PRD 8.4): the paragraph at the cursor or the selection's
+        paragraphs while editing, as the alignment row does; every paragraph of the
+        selected items otherwise, as one command (kickoff silence 8)."""
+        if self._updating or value < LINE_SPACING_MIN:
+            return
+        value = round(value, 1)
+        if self._set_default("line_spacing", value):
+            return
+        editor = self._editing_editor()
+        if editor is not None:
+            fmt = QTextBlockFormat()
+            fmt.setLineHeight(
+                value * 100.0,
+                cast(int, QTextBlockFormat.LineHeightTypes.ProportionalHeight.value),
+            )
+            editor.textCursor().mergeBlockFormat(fmt)  # type: ignore[attr-defined]
+            return
+        commands: list[BaseCommand] = []
+        for item in self._selected_text_items():
+            old = item.line_spacings
+            commands.append(ModifyPropertyCommand(item, "line_spacings", old, [value] * len(old)))
+        if len(commands) == 1:
+            self._push(commands[0])
+        elif commands:
+            self._push(MacroCommand(commands, "Change line spacing"))
 
     def _on_text_bg_color_changed(self, color: QColor) -> None:
         if self._updating:

@@ -220,6 +220,14 @@ class ShadowMixin:
         target = self._shadow_cache_rect.translated(
             QPointF(self._shadow_offset_x, self._shadow_offset_y)
         )
+        if getattr(self, "_item_blend_active", False):
+            # The shadow does not take the item's blend mode (Blur PRD 3.7): normal
+            # composition for the shadow, the item's mode restored for the content.
+            mode = painter.compositionMode()
+            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
+            painter.drawImage(target, self._shadow_cache_image)
+            painter.setCompositionMode(mode)
+            return
         painter.drawImage(target, self._shadow_cache_image)
 
     # --- serialization ---

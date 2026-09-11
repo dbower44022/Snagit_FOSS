@@ -1,8 +1,11 @@
 """HighlightItem — semi-transparent wide stroke annotation.
 
-Blur, Highlighter & Eyedropper PRD Section 3: the stroke colour is the highlight colour,
-whose alpha is the primary opacity (3.7); the cap is Flat by default (3.4) so the band
-has a clean marker edge; the shadow, when enabled, is drawn first (3.7).
+Blur, Highlighter & Eyedropper PRD Section 3: the stroke colour is the highlight colour
+(``#FFFF00CC`` by default), whose alpha is the primary opacity (3.7); the width is 24 px
+in the 10 to 80 range; the cap is Flat by default (3.4) so the band has a clean marker
+edge; the blend mode is Multiply by default, applied as the painter composition mode for
+the stroke through the base class, and the shadow, when enabled, is drawn first with
+normal composition (3.7).
 """
 
 from __future__ import annotations
@@ -12,7 +15,12 @@ from typing import Any
 from PyQt6.QtCore import QRectF
 from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPainterPathStroker
 
-from snapmock.config.constants import StrokeCap
+from snapmock.config.constants import (
+    DEFAULT_HIGHLIGHT_BLEND_MODE,
+    DEFAULT_HIGHLIGHT_COLOR,
+    DEFAULT_HIGHLIGHT_WIDTH,
+    StrokeCap,
+)
 from snapmock.items.vector_item import VectorItem
 
 
@@ -21,11 +29,21 @@ class HighlightItem(VectorItem):
 
     def __init__(self, parent: VectorItem | None = None) -> None:
         super().__init__(parent)
-        self._stroke_color = QColor(255, 255, 0, 128)  # semi-transparent yellow
-        self._stroke_width = 20.0
+        self._stroke_color = QColor(DEFAULT_HIGHLIGHT_COLOR)
+        self._stroke_width = DEFAULT_HIGHLIGHT_WIDTH
         self._stroke_cap = StrokeCap.FLAT
+        self._blend_mode = DEFAULT_HIGHLIGHT_BLEND_MODE
         self._path = QPainterPath()
         self._points: list[tuple[float, float]] = []
+
+    @property
+    def highlight_color(self) -> QColor:
+        """The Blur PRD's name for the stroke colour (3.4); the same value."""
+        return QColor(self._stroke_color)
+
+    @highlight_color.setter
+    def highlight_color(self, value: QColor) -> None:
+        self.stroke_color = value
 
     @property
     def points(self) -> list[tuple[float, float]]:

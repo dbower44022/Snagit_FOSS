@@ -181,6 +181,49 @@ class RichTextMixin:
         fmt.setLineHeight(height, cast(int, height_type.value))
         self.set_block_format(fmt, cursor)
 
+    def paragraph_line_spacings(self) -> list[float]:
+        """Each paragraph's line spacing as a multiplier (Text PRD 2.2): the proportional
+        line height over 100, or 1.0 for a paragraph that has none set (Qt's single)."""
+        out: list[float] = []
+        block = self._document.begin()
+        while block.isValid():
+            fmt = block.blockFormat()
+            proportional = cast(int, QTextBlockFormat.LineHeightTypes.ProportionalHeight.value)
+            if fmt.lineHeightType() == proportional and fmt.lineHeight() > 0:
+                out.append(round(fmt.lineHeight() / 100.0, 3))
+            else:
+                out.append(1.0)
+            block = block.next()
+        return out or [1.0]
+
+    def _get_line_spacing(self) -> float:
+        """The first paragraph's line spacing (the value the Property Panel shows)."""
+        return self.paragraph_line_spacings()[0]
+
+    def _set_line_spacing(self, value: float) -> None:
+        """Every paragraph's line spacing to *value* (0.5 to 5.0)."""
+        clamped = max(0.5, min(5.0, float(value)))
+        self.set_line_height(round(clamped * 100.0, 3))
+
+    def _set_line_spacings(self, values: list[float]) -> None:
+        """Each paragraph's line spacing from *values* in order, the last value repeating;
+        the form an undo restores, since paragraphs may differ."""
+        if not values:
+            return
+        block = self._document.begin()
+        index = 0
+        while block.isValid():
+            value = max(0.5, min(5.0, float(values[min(index, len(values) - 1)])))
+            cursor = QTextCursor(block)
+            fmt = QTextBlockFormat()
+            fmt.setLineHeight(
+                round(value * 100.0, 3),
+                cast(int, QTextBlockFormat.LineHeightTypes.ProportionalHeight.value),
+            )
+            cursor.mergeBlockFormat(fmt)
+            block = block.next()
+            index += 1
+
     def set_text_indent(self, indent: float, cursor: QTextCursor | None = None) -> None:
         """Set first-line text indent (in pixels) for blocks touched by *cursor*."""
         fmt = QTextBlockFormat()
