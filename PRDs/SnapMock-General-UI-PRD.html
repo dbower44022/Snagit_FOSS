@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.14</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.15</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.14</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 12:09</dd>
+    <dt>Document version</dt><dd>2.15</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 12:53</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -32,6 +32,13 @@
     </thead>
     <tbody>
       <tr>
+        <td>2.15</td>
+        <td class="nowrap">09-11-26 12:53</td>
+        <td>Doug Bower</td>
+        <td>Vector Item Properties Phase 2 built: the Blend Mode dropdown on every item, in the Item Info section; the Line Spacing row of 8.4.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
+      <tr>
         <td>2.14</td>
         <td class="nowrap">09-11-26 12:09</td>
         <td>Doug Bower</td>
@@ -43,7 +50,7 @@
         <td class="nowrap">09-11-26 11:13</td>
         <td>Doug Bower</td>
         <td>Vector Item Properties implementation started: the four decisions recorded against 5.2, 5.3, 8.3, and 8.4 (the two opacity sliders replace Opacity for vector items; Blend Mode on every item; the text items' opacities in the Text Box section; the arrowhead, corner radius, and Line Spacing controls by phase).</td>
-        <td><span class="status open">Pending</span></td>
+        <td><span class="status closed">Superseded</span></td>
       </tr>
       <tr>
         <td>2.12</td>
@@ -255,6 +262,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 12:53</td>
+        <td>8.3, 8.4</td>
+        <td>Built</td>
+        <td>Vector Item Properties Phase 2 (09-11-26; decision 4, option A): every item carries <code>blend_mode</code>, and the Blend Mode dropdown lists Normal, Multiply, Screen, Overlay, Soft Light, Darken, Lighten, and Difference. Departure from 8.3's placement: the dropdown is a row of the Item Info section, which every selection shows, rather than of Appearance, which only vector items and groups show; every item takes the property, the text box, the callout, a stamp, an emoji, a raster region, and a blur region included, so the row sits beside Layer and Item Lock. The Line Spacing row of 8.4 is built (Text and Callout PRD 1.9).</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 12:09</td>
         <td>5.2, 5.3, 8.3, 8.4, 8.6</td>

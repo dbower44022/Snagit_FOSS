@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Technical Architecture</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.26</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.27</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
-    <dt>Document version</dt><dd>1.26</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 12:09</dd>
+    <dt>Document version</dt><dd>1.27</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 12:53</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -32,6 +32,13 @@
     </thead>
     <tbody>
       <tr>
+        <td>1.27</td>
+        <td class="nowrap">09-11-26 12:53</td>
+        <td>Doug Bower</td>
+        <td>Vector Item Properties Phase 2 built: <code>blend_mode</code> of 3.1.4 on every item with the 3.9 combination rule and the 6.1 key.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
+      <tr>
         <td>1.26</td>
         <td class="nowrap">09-11-26 12:09</td>
         <td>Doug Bower</td>
@@ -43,7 +50,7 @@
         <td class="nowrap">09-11-26 11:13</td>
         <td>Doug Bower</td>
         <td>Vector Item Properties implementation started: Section 4.3 adopted by every vector item, the 4.2 departure for the text items, the 3.1.4 <code>blend_mode</code> values and the 3.9 combination rule of decision 4.</td>
-        <td><span class="status open">Pending</span></td>
+        <td><span class="status closed">Superseded</span></td>
       </tr>
       <tr>
         <td>1.24</td>
@@ -308,6 +315,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 12:53</td>
+        <td>3.1.4, 3.9, 6.1</td>
+        <td>Built</td>
+        <td>Vector Item Properties Phase 2 (09-11-26; decision 4, option A): <code>blend_mode</code> of 3.1.4 is a property of <code>SnapGraphicsItem</code> with the values Normal, Multiply, Screen, Overlay, Soft Light, Darken, Lighten, Difference (<code>ITEM_BLEND_MODES</code> in <code>core/layer.py</code>, the layer's seven of the Layer Panel plus Soft Light), Normal by default and Multiply for the Highlighter. The 3.9 rule as built: an item paints with its own mode as the painter composition mode when its layer's mode is Normal, and with the layer's mode otherwise, one composition mode per paint; an item's shadow keeps normal composition under the item's mode. Section 6.1's <code>items.json</code> entries of every item type gain <code>blend_mode</code>, absent reading as Normal; the SVG and PDF exports drop the item mode as they drop the layer's (1.15). The 3.9 wording on rendering a non-Normal layer to an offscreen image stays departed from as 1.15 recorded.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 12:09</td>
         <td>4.3, 6.1</td>

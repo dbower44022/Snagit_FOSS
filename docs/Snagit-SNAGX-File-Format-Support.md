@@ -1,6 +1,6 @@
 # Snagit .snagx File Format — Read/Write Support
 
-Last Updated: 09-11-26 01:48 · Revision 1.1
+Last Updated: 09-11-26 12:53 · Revision 1.2
 
 ## 1. Overview
 
@@ -224,6 +224,8 @@ Internal converters: `_item_to_arrow`, `_item_to_line`, `_item_to_shape`, `_item
 
 5. **Some Snagit-only properties are pass-through only.** BorderStyle, DashType, ControlPoints, TailStyle, TextOutlineColor, ToolPadding, etc. are preserved in round-trip but not mapped to SnapMock visual properties.
 
+6. **The shared vector properties are not written.** `stroke_style`, `stroke_cap`, `stroke_join`, `fill_opacity`, `stroke_opacity`, the shadow, and the item `blend_mode` of the Vector Item Properties work (09-11-26) are not mapped to Snagit fields; the writer maps what it mapped before (kickoff silence 10). The `Opacity` it writes is the item's base opacity, which is 100 for a vector item since that work.
+
 ---
 
 ## 8. Future Work — TODO
@@ -287,5 +289,6 @@ Internal converters: `_item_to_arrow`, `_item_to_line`, `_item_to_shape`, `_item
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 09-11-26 12:53 | Claude (Claude Code) | Section 7 gains the shared vector properties the writer does not map (Vector Item Properties work, kickoff silence 10). |
 | 1.1 | 09-11-26 01:48 | Claude (Claude Code) | Section 3.2's table gains `EmojiItem`, skipped with the writer's warning like `NumberedStepItem` and `StampItem` (Numbered Steps, Stamps, and Emoji implementation, Phase 3; kickoff silence 11). Revision control and this change log added to meet the output standard. |
 | 1.0 | 03-01-26 02:16 | Claude (Claude Code) | Original notes, as committed. |

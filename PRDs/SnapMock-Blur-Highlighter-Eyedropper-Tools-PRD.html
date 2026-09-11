@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Blur, Highlighter &amp; Eyedropper Tools</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.3</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.4</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Blur / Pixelate · Highlighter · Eyedropper</dd>
-    <dt>Document version</dt><dd>1.3</dd>
-    <dt>Last Updated</dt>    <dd>09-08-26 11:22</dd>
+    <dt>Document version</dt><dd>1.4</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 12:53</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.4</td>
+        <td class="nowrap">09-11-26 12:53</td>
+        <td>Doug Bower</td>
+        <td>Vector Item Properties Phase 2 built: the Highlighter's blend mode, cap, style, and bar of Sections 3.4 to 3.7; the departures and the unbuilt straightening recorded.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.3</td>
         <td class="nowrap">09-08-26 11:22</td>
@@ -80,6 +87,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 12:53</td>
+        <td>3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 5.2, 7.2, 8.2</td>
+        <td>Built</td>
+        <td>Vector Item Properties Phase 2 (09-11-26; notes Section 4; decision 4, option A): <code>HighlightItem</code> carries <code>blend_mode</code> (Multiply by default) as every item now does, applied as the painter composition mode for the stroke through the item base class and reset before the shadow, which keeps normal composition (3.7); <code>stroke_cap</code> Flat by default and <code>stroke_style</code> from Phase 1; the colour <code>#FFFF00CC</code> and width 24 of 3.4 are the item's and the tool's defaults, where the tool's colour default had been the shared red stroke colour at full opacity (a fix, found while reading). The Tool Options Bar of 3.5 is Highlight Color, Stroke Width (10 to 80), Blend Mode (Multiply, Overlay, Soft Light, Normal), Stroke Style, then the Cap Style toggles with preview icons and the six preset colour swatches as the tool's own controls, then the shared Shadow toggle; departures: Cap Style follows Stroke Style rather than preceding it, since a tool's own controls sit in one slot of the bar, and Auto-Straighten and Snap to Axis are not shown, because the tool does not straighten strokes (3.3 is not built; kickoff silence 7) and a control with nothing behind it cannot be greyed out (General UI PRD 1.3); 3.3, the moving-average smoothing and the 2 px simplification of 3.2, the marker-tip cursor, the point editing of 3.6, and the 3.8 hints that name auto-straighten belong to a Highlighter kickoff. The serialization key of 7.2 is <code>blend_mode</code> with the value in the item list's spelling (<code>Soft Light</code>); the PRD's lower-case forms (<code>soft_light</code>) are read. The 8.2 rows on the four blend modes, the default width and flat cap, and the preset colours are met by tests; the opacity control is the colour's alpha alone (kickoff silence 6). The Property Panel's Blend Mode row sits in the Item Info section (General UI PRD 2.15).</td>
+      </tr>
       <tr>
         <td class="nowrap">09-08-26 11:22</td>
         <td>3</td>
