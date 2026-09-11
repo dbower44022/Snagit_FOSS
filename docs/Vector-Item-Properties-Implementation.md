@@ -1,6 +1,6 @@
 # Vector Item Properties Implementation Notes
 
-Last Updated: 09-11-26 14:21 · Revision 1.3
+Last Updated: 09-11-26 18:44 · Revision 1.4
 
 Implements the shared vector item properties that General UI Phase 6 decision 6.2 named and deferred (Stroke Style, Fill Opacity, Stroke Opacity, the Shadow section, Blend Mode, and Line Spacing), from the Basic Shape Annotation Tools PRD (`PRDs/SnapMock-Basic-Shape-Annotation-Tools-PRD.html`, version 1.5 at the start), the Text and Callout Annotation Tools PRD (version 1.6), the Blur, Highlighter, and Eyedropper Tools PRD (version 1.3), the General UI PRD (version 2.12), and the Technical Architecture PRD (version 1.24), in the three phases and the close-out defined by `docs/Vector-Item-Properties-Kickoff-Prompt.md` (revision 1.0). A session pasting that prompt starts at the first phase not marked done in Section 1. `docs/General-UI-Implementation-Kickoff-Prompt.md` (revision 1.1) governs the standards; the General UI implementation notes (`docs/General-UI-Implementation.md`) hold the walk table of Section 17.2, which this work does not expect to extend.
 
@@ -105,12 +105,15 @@ Every phase is done. The General UI notes' Section 5.1 decision 6.2 row and Sect
 
 Owed from before this work and still owed: the Zoom tool display check of the General UI notes' Section 19.2 (row 20), and a look at the three marker tools on the real display (marker notes Section 7). Owed from this work: a look on the real display at a rectangle with a shadow and a dashed stroke at 50 percent fill opacity, an arrow with a diamond head and an open tail, a highlight in Multiply over dark text, and a text box at 2.0 line spacing, since every render check here is a pixel test on the offscreen platform.
 
-**Next required step:** the work is complete. Two candidates are known: the Basic Shape remainder and Blur modes kickoff (`docs/Basic-Shape-Remainder-Kickoff-Prompt.md`, revision 1.0, starting state at commit ab71e15), which runs on this machine and is recommended next; and the Windows backend kickoff (`docs/Windows-Backend-Kickoff-Prompt.md`), which waits for a Windows machine. Before either, the display checks above.
+The following kickoff ran on 09-11-26 and is complete: `docs/Basic-Shape-Remainder-Implementation.md` (revision 1.3) holds its record, including the display checks it adds.
+
+**Next required step (as written at this close-out):** the work is complete. Two candidates are known: the Basic Shape remainder and Blur modes kickoff (`docs/Basic-Shape-Remainder-Kickoff-Prompt.md`, revision 1.0, starting state at commit ab71e15), which runs on this machine and is recommended next; and the Windows backend kickoff (`docs/Windows-Backend-Kickoff-Prompt.md`), which waits for a Windows machine. Before either, the display checks above.
 
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 09-11-26 18:44 | Claude (Claude Code) | Section 8 points to the completed Basic Shape remainder work. |
 | 1.3 | 09-11-26 14:21 | Claude (Claude Code) | Phase 3 done and the work complete: the phase table, Section 5 (what Phase 3 built in one commit, the silences found while building), Section 6 (three deviations added), Section 7 (the tests and the suite run), Section 8 (the close-out of the work, the display checks owed, the next required step). Basic Shape PRD 1.8, General UI PRD 2.16, Technical Architecture PRD 1.28; General UI notes 1.33, marker notes 1.5, Snagit notes 1.3; `docs/Basic-Shape-Remainder-Kickoff-Prompt.md` 1.0. |
 | 1.2 | 09-11-26 13:33 | Claude (Claude Code) | Phase 2 done: the phase table, Section 4 (what Phase 2 built in one commit, the silences found while building), Section 5 (three deviations added, the SVG one widened), Section 6 (the tests and the suite run), the next required step. Blur PRD 1.4, Text and Callout PRD 1.9, General UI PRD 2.15, Technical Architecture PRD 1.27, Snagit notes 1.2. |
 | 1.1 | 09-11-26 12:52 | Claude (Claude Code) | Phase 1 done: the phase table, Section 3 (what Phase 1 built, the silences found while building, the two bugs fixed), Section 4 (four deviations added), Section 5 (the tests and the suite runs), the next required step. Basic Shape PRD 1.7, Text and Callout PRD 1.8, General UI PRD 2.14, Technical Architecture PRD 1.26. |

@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Basic Shape Annotation Tools</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.11</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.12</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Line · Arrow · Rectangle · Ellipse · Arc · Polygon · Freehand / Pen</dd>
-    <dt>Document version</dt><dd>1.11</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 17:41</dd>
+    <dt>Document version</dt><dd>1.12</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 18:44</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.12</td>
+        <td class="nowrap">09-11-26 18:44</td>
+        <td>Doug Bower</td>
+        <td>Basic Shape remainder Phases 3 and 4 built: the Arc tool and the Polygon tool with their point editing; the remainder of this document built except the rows named open.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.11</td>
         <td class="nowrap">09-11-26 17:41</td>
@@ -149,6 +156,24 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 18:44</td>
+        <td>7, 10.5, 12</td>
+        <td>Built</td>
+        <td>Basic Shape remainder Phase 3 (09-11-26; notes Section 7): the Arc tool is the twentieth tool, on Shift+A as 7.1 says (General UI PRD 2.20 corrects its 3.7 row). The three steps of 7.2: drag the chord, Shift constraining its angle to 15-degree steps; move with no button held, the peak following the cursor's distance from the chord on either side; a click, a double-click, or Enter confirms, and Escape cancels at any step. The hints of 7.7 carry the dimension tooltip's values (the chord's length and angle, the arc's length and bulge). ArcItem draws the quadratic of 7.6 Open, Chord, or Pie, the closed types filled; the heads are the Arrow's, along the tangent at each end, the shaft ending at a filled head's base; the 10.5 keys are written in the {"x", "y"} form. The bar of 7.4 is the shared set, Head Style, Tail Style, Head Size, and the Arc Type toggles; the Property Panel gains an Arc section for placed arcs. Point editing (7.5): the start and end points as blue circles, the control point as the green one, dashed guides, Shift constraining an endpoint's chord. Silences: 7.6's pie meets at the virtual centre of the ellipse the arc belongs to, which a quadratic lacks, so the pie's lines meet at the centre of the circle through both ends and the curve's peak, and a straight arc's pie closes as a chord; a chord under 2 px is an accidental click; the hit shape is the outline's band, stroke width plus 4 px, and the inside of a filled Chord or Pie, the Rectangle's rule; head_size_custom is not an arc key, as 10.5 lists head_size alone; the Snagit writer skips an arc with its warning. The Section 12 Arc rows are met by tests.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 18:44</td>
+        <td>8, 10.6, 11.4, 11.5, 12</td>
+        <td>Built</td>
+        <td>Basic Shape remainder Phase 4 (notes Section 8): the Polygon tool is the twenty-first tool, on G. Freeform (8.2): clicks place vertices, Shift constraining the new edge to 15-degree steps from the last vertex, a dashed faint line shows the closing edge, and a double-click, a click within 10 px of the first vertex, or Enter closes; a right-click removes the last vertex and opens no menu while vertices are placed; Escape cancels; fewer than three vertices cancel. Regular: a press for the centre and a drag for the radius and the first vertex's angle, Shift snapping the angle; release confirms. The star's inner radius is the outer radius times 1 minus star_indent, 8.3's reading (0 is no indent, near 1 the points touch the centre), where 8.6's formula reads the other way; a departure recorded here. Open polylines draw without the closing edge and take no fill. The 10.6 keys are written, the regular polygon's rotation under polygon_rotation, since the item's own rotation key is taken (a departure); the regular polygon's vertices are written too. The bar of 8.4 shows Sides and Star in Regular mode, Star Indent when Star is checked, and Closed in Freeform mode; the Property Panel gains a Polygon section. Point editing (8.5, 11.4, 11.5): a freeform polygon's vertices drag, Shift constraining one to 15-degree steps from the previous vertex; a double-click on an edge inserts a vertex (InsertVertexCommand); a right-click on a vertex deletes it while more than three remain (RemoveVertexCommand); a regular polygon shows its centre, which moves it, and a radius handle on the first vertex, which sizes and turns it, with a hint 8.7 does not give. Silences: the 10 px closing distance is measured in scene pixels; an open polyline needs two vertices; a regular polygon from a click without a drag makes nothing; the Snagit writer skips a polygon with its warning. The Section 12 Polygon rows are met by tests.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 18:44</td>
+        <td>2, 12, 14</td>
+        <td>Changed</td>
+        <td>With the Basic Shape remainder work (09-11-26) every tool of this document is built. The rows that stay open: the Freehand tool's Shift straight segments (9.5), its brush-tip cursor (9.2), pressure (9.2, reserved), and the performance rows of 9.10 and Section 12 (measured in the 1.11 row); the Section 2.4 dimension tooltip and constrain icon near the cursor for the drag-drawn shapes, whose hints carry no dimensions; the not-auto-selected rule of 2.5, since every shape tool selects its new item and returns to the Select tool, as it did before this work.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 17:41</td>
         <td>5.3, 5.4, 5.5, 10.3, 12</td>

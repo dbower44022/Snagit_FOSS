@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.19</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.20</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.19</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 17:41</dd>
+    <dt>Document version</dt><dd>2.20</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 18:44</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.20</td>
+        <td class="nowrap">09-11-26 18:44</td>
+        <td>Doug Bower</td>
+        <td>Basic Shape remainder Phases 3 to 5 built: Arc and Polygon registered (twenty-one tools), their 5.3 rows and the Blur row, the Arc, Polygon, and Blur sections of the Property Panel.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>2.19</td>
         <td class="nowrap">09-11-26 17:41</td>
@@ -290,6 +297,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 18:44</td>
+        <td>3.7, 5.3, 8, 17.3</td>
+        <td>Built</td>
+        <td>Basic Shape remainder Phases 3 to 5 (09-11-26; notes in docs/Basic-Shape-Remainder-Implementation.md): the Arc tool (Shift+A) and the Polygon tool (G) of the 3.7 table are registered as the twentieth and twenty-first tools after the Line tool, in the palette and in the Tools menu's shape group, with the Tabler vector-bezier-arc and polygon glyphs; the table's Arc row is corrected from O to Shift+A, the Basic Shape PRD's key (decision 3; the 2.17 row). 17.3 reads twenty-one tools. The 5.3 rows follow the tool PRDs' own lists: Arc is the shared set of the Basic Shape PRD's 2.6, Head Style, Tail Style, Head Size, and the Arc Type toggles (7.4); Polygon is the shared set, then the Mode toggles, Sides and Star in Regular mode, Star Indent when Star is checked, and Closed in Freeform mode (8.4); Blur is the Blur PRD's 2.6 list without the Freeform toggle and Brush Size (the mode toggles, the intensity slider whose label and range follow the mode, Fill Color for Solid Fill, the Rectangle and Ellipse toggles, Corner Radius for a rectangle, Feather, Invert Mask, Opacity), where this table named two modes and an intensity from 1 to 50. The Property Panel gains Arc, Polygon, and Blur sections for placed items, since the bar edits creation defaults only (the 2.0 row), each with the 8.6 mixed indicators and one command over the selection. Edit &gt; Deselect's Escape asks the active tool first, so it cancels an arc or a polygon being drawn.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 17:41</td>
         <td>5.3, 8, 12.2</td>
@@ -1710,7 +1723,7 @@ currently active tool has a checkmark.</p>
     <tr><th>Line</th><td>U</td><td>line</td></tr>
     <tr><th>Rectangle</th><td>R</td><td>rectangle</td></tr>
     <tr><th>Ellipse</th><td>E</td><td>ellipse</td></tr>
-    <tr><th>Arc</th><td>O</td><td>arc</td></tr>
+    <tr><th>Arc</th><td>Shift+A</td><td>arc</td></tr>
     <tr><th>Polygon</th><td>G</td><td>polygon</td></tr>
     <tr><th>Freehand / Pen</th><td>P</td><td>freehand</td></tr>
     <tr><th>Text Box</th><td>T</td><td>text</td></tr>
@@ -2719,7 +2732,7 @@ of the empty canvas:</p>
 <ol>
   <li>The Main Toolbar shows all button groups with correct icons and tooltips.</li>
   <li>The Tool Options Bar dynamically updates when the active tool changes.</li>
-  <li>The Left Tool Palette shows all 19 tools with correct icons (eighteen until the Emoji tool of 09-11-26).</li>
+  <li>The Left Tool Palette shows all 21 tools with correct icons (nineteen until the Arc and Polygon tools of 09-11-26).</li>
   <li>The active tool is visually highlighted in the tool palette.</li>
   <li>Toolbar buttons are never disabled. Clicking a toolbar button whose requirements are not
   met displays an informative message identifying the unmet requirements.</li>

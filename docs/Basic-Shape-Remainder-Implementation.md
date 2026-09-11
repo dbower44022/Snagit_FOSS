@@ -1,6 +1,6 @@
 # Basic Shape Remainder and Blur Modes Implementation Notes
 
-Last Updated: 09-11-26 17:41 · Revision 1.2
+Last Updated: 09-11-26 18:44 · Revision 1.3
 
 Implements the remainder of the Basic Shape Annotation Tools PRD (`PRDs/SnapMock-Basic-Shape-Annotation-Tools-PRD.html`, version 1.8 at the start) and the Blur / Pixelate tool of the Blur, Highlighter, and Eyedropper Tools PRD (version 1.4), with the General UI PRD (version 2.16) and Technical Architecture PRD (version 1.28) rows they own, in the five phases and the close-out defined by `docs/Basic-Shape-Remainder-Kickoff-Prompt.md` (revision 1.0). A session pasting that prompt starts at the first phase not marked done in Section 1. `docs/General-UI-Implementation-Kickoff-Prompt.md` (revision 1.1) governs the standards; the General UI implementation notes (`docs/General-UI-Implementation.md`) hold the walk table of Section 17.2.
 
@@ -12,10 +12,10 @@ Starting state, verified at commit 8a9ce6b on 09-11-26 (the kickoff names ab71e1
 |---|---|---|---|
 | 1 | Point editing and the arrow's lines (Basic Shape PRD 3.5, 4.5, 4.6, 4.7, 11.3): the decisions, the point-editing mode, curved and elbow arrows, close-out | Done | 177f69b, 1f23a37, ba4320e, then this close-out commit |
 | 2 | The Rectangle's corners and the Freehand pipeline (5.3, 5.4, 9.3, 9.6 to 9.9): individual corner radii, the Freehand pipeline, Freehand point editing, close-out | Done | 405f637, ad1f6b6, 661371e, then this close-out commit |
-| 3 | The Arc tool (Section 7): `ArcItem` and the tool, Arc point editing, close-out | Not started | |
-| 4 | The Polygon tool (Section 8): `PolygonItem` and the tool, Polygon point editing, close-out | Not started | |
-| 5 | The Blur tool's modes (Blur PRD Section 2): the capture and the three modes, the freeform region and Whole Layer deferral, close-out | Not started | |
-| Close-out | PRD rows, the General UI notes' pointer, the Vector Item Properties notes' pointer | Not started | |
+| 3 | The Arc tool (Section 7): `ArcItem` and the tool, Arc point editing, close-out | Done | 867a763, 58d40a0, then the shared close-out commit |
+| 4 | The Polygon tool (Section 8): `PolygonItem` and the tool, Polygon point editing, close-out | Done | 4c99d0f, c20cf5e, then the shared close-out commit |
+| 5 | The Blur tool's modes (Blur PRD Section 2): the capture and the three modes, the freeform region and Whole Layer deferral, close-out | Done | c47bf7e, 437416d, then the shared close-out commit |
+| Close-out | PRD rows, the General UI notes' pointer, the Vector Item Properties notes' pointer | Done | the shared close-out commit |
 
 ## 2. Decisions
 
@@ -91,7 +91,47 @@ Silences found while building, decided as the code says and recorded as PRD rows
 
 Measured for 5000 raw points on this machine: about 65 to 70 ms at 50 and 100 percent smoothing, and up to 630 ms at 0 percent on a stroke with a pixel of jitter, against the 50 ms of 9.10.
 
-## 5. Deviations from the PRDs
+## 5. What Phase 3 built
+
+Built while the Phase 2 suite ran. Step 1, 867a763: `items/arc_item.py` and `tools/arc_tool.py` (Section 10 rows); `head_geometry` and `quad_shaft` as module functions of `items/arrow_item.py`, shared by the arrow and the arc; the Arc tool registered as the twentieth tool on Shift+A with the Tabler `vector-bezier-arc` glyph (vendored with `polygon` from the npm package of the same release, as the icons README records); `ArcType` and the enums Phases 4 and 5 use in `config/constants.py`; `BaseTool.handle_escape`, through which Edit > Deselect's Escape reaches the active tool first; `ITEM_REGISTRY`, the Snagit writer's skip, the Property Panel's Arc section; the three palette-count tests and the 17.2 Tools rows. Step 2, 58d40a0: `ArcPointSession`. Step 3, the close-out commit shared with Phases 4 and 5 (Section 1).
+
+Silences found while building, decided as the code says and recorded as PRD rows:
+
+- The pie's lines meet at the centre of the circle through both ends and the curve's peak, since a quadratic Bezier belongs to no ellipse (7.6); a straight arc's pie closes as a chord.
+- In step 2 the peak follows the cursor's perpendicular distance from the chord, on either side.
+- A chord under 2 px is an accidental click.
+- The hit shape is the outline's band of stroke width plus 4 px and the inside of a filled Chord or Pie.
+- `head_size_custom` is not an arc key, as 10.5 lists `head_size` alone.
+- Escape reaches the tool through Edit > Deselect's shortcut, which now asks the active tool first.
+
+## 6. What Phase 4 built
+
+Step 1, 4c99d0f: `items/polygon_item.py` and `tools/polygon_tool.py` (Section 10 rows); the Polygon tool registered as the twenty-first tool on G with the Tabler `polygon` glyph; `ITEM_REGISTRY`, the codec's `PolygonMode`, the Snagit writer's skip, the Property Panel's Polygon section; the palette count at twenty-one and the 17.2 Tools rows. Step 2, c20cf5e: `InsertVertexCommand` and `RemoveVertexCommand` in `commands/geometry_commands.py` and `PolygonPointSession`. Step 3, the shared close-out commit.
+
+Silences found while building:
+
+- The star's inner radius is the outer radius times 1 minus `star_indent`, 8.3's reading, where 8.6's formula reads the other way (a departure).
+- The regular polygon's rotation is written as `polygon_rotation`, since the item's own `rotation` key is taken (a departure).
+- The 10 px closing distance is in scene pixels; an open polyline needs two vertices; a click without a drag makes no regular polygon.
+- A right-click while vertices are placed removes one and opens no menu.
+- A regular polygon's point-editing hint is this work's own, since 8.7 gives none.
+
+## 7. What Phase 5 built
+
+Step 1, c47bf7e: `RenderEngine.render_below`, `SnapScene.content_revision`, `BlurItem` rebuilt with the three modes, the two shapes, feather, invert, opacity, border, and the cache, `pixelate_image`, `BlurTool` with the drag of 2.3 and the bar of 2.6, the codec's `BlurMode` and `BlurRegionShape`, and the Property Panel's Blur section. Step 2, the freeform region and Whole Layer: recorded as not built by decision 4 in the Blur PRD's 1.6 Departure row, with no code. Then 437416d: the arc, the polygon, the individual radii, and the blur region's corner radius and feather join Resize Image's geometry walk, the one walk of the General UI notes' Section 17.2 kind that names item types one by one; every other walk reads every item alike. Step 3, the shared close-out commit.
+
+Silences found while building:
+
+- The capture paints the items below directly with their scene transforms, in the region's own coordinates, so a rotated region obscures what it covers and nothing is hidden or shown during a paint.
+- The Gaussian blur reads a margin of twice its radius and crops it away; the feather blurs the mask over its width.
+- The cache's zoom is rounded to a power of two, the factor of two of 2.7.
+- The region repaints whole on every command, since the content beneath may change anywhere under it.
+- A flip does not mirror what lies beneath.
+- The colours are written `#AARRGGBB`, as every other item writes them.
+
+Measured while another test run shared the machine: a 1000 by 1000 px region in about 200 ms for Gaussian Blur (2.10's 100 ms unmet), 50 ms for Pixelate, 3 ms for Solid Fill, and about 0.5 s for an inverted Gaussian over the whole 1920 by 1080 canvas.
+
+## 8. Deviations from the PRDs
 
 Each has its PRD row.
 
@@ -102,19 +142,33 @@ Each has its PRD row.
 - Basic Shape PRD 9.3 and 9.10: both stages of the Freehand pipeline floor at 0.5 px; a jittery 5000-point stroke fits in up to 630 ms at 0 percent smoothing.
 - Basic Shape PRD 9.7: re-smoothing a placed stroke is done from the Property Panel's Freehand section, not the Tool Options Bar.
 - Basic Shape PRD 9.1: a stroke is an accidental click when its points span under 2 px both across and down, not when its bounding box is under 4 square pixels.
+- Basic Shape PRD 7.6: the pie's lines meet at the centre of the circle through both ends and the peak.
+- Basic Shape PRD 8.6 and 10.6: the star indent reads as 8.3 describes it, and the regular polygon's rotation is written as `polygon_rotation`.
+- Blur PRD 2.10: the 100 ms Gaussian target is unmet, there is no background thread or progress indicator, and the drag preview renders at full resolution.
+- Blur PRD 5.1: the colours are written `#AARRGGBB`.
+- Basic Shape PRD 2.4 and 2.5, open before this work and still open: no dimension tooltip or constrain icon near the cursor for the drag-drawn shapes, and every shape tool selects its new item and returns to the Select tool.
 
-## 6. Tests
+## 9. Tests
 
 Phase 1: `tests/test_point_edit.py` (13: entering by double-click with the handles, the transform handles hidden, and the hint; an item without points not entering; a drag as one undoable geometry edit with the handles following undo; the Shift constraint; the 300 ms merge by point; Escape, a click away, and a new selection leaving; deleting the item leaving; the window's Escape keeping the selection; the arrow's endpoints; a flipped line's handles; `constrain_angle`; both drawing tools under Shift) and `tests/test_arrow_lines.py` (9: the curve through its control point by pixels and hit shape; the heads along the tangent with the shaft ending at the filled base; the elbow's right angles and its two-segment case; the keys' round trip, old files, the list form, and scaling; the control point and bend point drags with undo and hints; the bar's toggles reaching the next arrow; the panel row with undo). The two shaft assertions of `tests/test_arrow_heads.py` read the path. The full suite at the Phase 1 code commit (ba4320e), run from a scratch worktree while the Phase 2 work's targeted runs shared the machine, ran 1293 tests with 13 skipped and the one environmental deselection: 1279 passed and one failed, the pre-existing timing-sensitive Zoom tool test (`tests/test_tools/test_zoom_tool.py::test_left_click_zooms_in_and_alt_at_the_release_zooms_out`), which passes alone at that commit; the run took 48 minutes. Ruff and mypy are clean at every commit; the accessibility audit passes over the Arrow bar's toggles and the new panel row.
 
 Phase 2: `tests/test_corner_radii.py` (8), `tests/test_freehand_pipeline.py` (10), `tests/test_freehand_point_edit.py` (7); the Freehand smoothing test of `tests/test_tool_options_bar.py`, the scale test of `tests/test_transform_resize.py`, and the Freehand bar order of `tests/test_vector_bar_presets.py` moved with the work. The full suite at the Phase 2 code commit (661371e), run from a scratch worktree while the Phase 3 to 5 work's targeted runs shared the machine, ran 1318 tests with 13 skipped and the one environmental deselection: 1304 passed and one failed, the pre-existing timing-sensitive Zoom tool test, which passes alone at that commit; the run took 50 minutes. Ruff and mypy are clean at every commit; the accessibility audit passes over the Rectangle and Freehand bars' new controls and the two new panel sections.
 
-**Next required step:** Phase 3, the Arc tool: built with Phases 4 and 5 while the Phase 2 suite ran, committed at 867a763 and 58d40a0; its close-out follows one full-suite run at the last code commit.
+Phases 3 to 5: `tests/test_arc_tool.py` (10), `tests/test_arc_point_edit.py` (4), `tests/test_polygon_tool.py` (11), `tests/test_polygon_point_edit.py` (4), `tests/test_blur_modes.py` (10), and the Resize Image walk test of `tests/test_raster_commands.py`; the three palette-count tests read twenty-one, the 17.2 Tools rows include Arc and Polygon, and the bar test for tools without options no longer lists the Blur tool. The full suite at the last code commit (437416d), run alone from a scratch worktree, ran 1358 tests with 13 skipped and the one environmental deselection: 1344 passed and one failed, the pre-existing timing-sensitive Zoom tool test, which passes alone at that commit; the run took 62 minutes. Ruff and mypy are clean at every commit; the accessibility audit passes over the Arc, Polygon, and Blur bars and the three new panel sections.
+
+## 10. Close-out of the work
+
+Every phase is done. The PRDs stand at Basic Shape PRD 1.12, Blur PRD 1.6, General UI PRD 2.20, and Technical Architecture PRD 1.32, with the Snagit notes at 1.5. The General UI notes' Section 6 bullet on the per-tool bar contents is closed with a Section 22 pointer (General UI notes 1.34); the Vector Item Properties notes' Section 8 points here (1.4). The close-outs of Phases 3, 4, and 5 were written together in one commit after one full-suite run at the last code commit, since Phases 3 to 5 were built while the Phase 2 suite ran; each phase's steps are its own commits.
+
+Owed: a look on the real display at a curved arrow and an elbow arrow with their point editing, a rectangle with individual radii, a freehand stroke's handles, an arc of each type, a star polygon, and a blur region in each mode over a screenshot, since every render check here is a pixel test on the offscreen platform; and the older checks the Vector Item Properties notes list.
+
+**Next required step:** the work is complete. Two candidates are known: the freeform blur brush with the Highlighter's straightening (Blur PRD 2.3, 2.8, 3.3), which has no kickoff prompt yet and runs on this machine; and the Windows backend kickoff (`docs/Windows-Backend-Kickoff-Prompt.md`), which waits for a Windows machine. Recommended: write the freeform blur kickoff prompt next. Before either, the display checks above.
 
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 09-11-26 18:44 | Claude (Claude Code) | Phases 3 to 5 done and the work complete: the phase table, the Phase 3, 4, and 5 sections (what each built, the silences found while building, the blur timings), five deviations added, the tests and the suite run, the close-out of the work with the display checks owed and the next required step. Basic Shape PRD 1.12, Blur PRD 1.6, General UI PRD 2.20, Technical Architecture PRD 1.32, Snagit notes 1.5, General UI notes 1.34, Vector Item Properties notes 1.4. |
 | 1.2 | 09-11-26 17:41 | Claude (Claude Code) | Phase 2 done: the phase table, the Phase 2 section (what it built, the silences found while building, the Freehand timings), three deviations added, the Phase 2 tests and the suite run, the next required step. Basic Shape PRD 1.11, General UI PRD 2.19, Technical Architecture PRD 1.31. |
 | 1.1 | 09-11-26 16:45 | Claude (Claude Code) | Phase 1 done: the phase table, Section 3 (what Phase 1 built, the silences found while building), Sections 4 and 5 renumbered, Section 5 with the Phase 1 tests and the suite run, the next required step. Basic Shape PRD 1.10, General UI PRD 2.18, Technical Architecture PRD 1.30, Snagit notes 1.4. |
 | 1.0 | 09-11-26 15:38 | Claude (Claude Code) | Initial notes: the starting state, the phase table, the four decisions (1 A, 2 A, 3 A with Arc on Shift+A, 4 A) and the kickoff's six silences as chosen 09-11-26, four corrections to the kickoff, five findings decided with the decisions, the deviations they imply, the next required step. Basic Shape PRD 1.9, Blur PRD 1.5, General UI PRD 2.17, Technical Architecture PRD 1.29. |

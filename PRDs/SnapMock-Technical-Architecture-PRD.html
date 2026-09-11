@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Technical Architecture</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.31</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.32</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
-    <dt>Document version</dt><dd>1.31</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 17:41</dd>
+    <dt>Document version</dt><dd>1.32</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 18:44</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.32</td>
+        <td class="nowrap">09-11-26 18:44</td>
+        <td>Doug Bower</td>
+        <td>Basic Shape remainder Phases 3 to 5 built: arc and polygon in the 3.3 registry, ArcItem and PolygonItem in 4.2, their 6.1 entries and BlurItem's, RenderEngine.render_below and the scene's content revision.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.31</td>
         <td class="nowrap">09-11-26 17:41</td>
@@ -343,6 +350,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 18:44</td>
+        <td>3.3, 3.4.1, 3.9, 4.2, 6.1, 10</td>
+        <td>Built</td>
+        <td>Basic Shape remainder Phases 3 to 5 (09-11-26): the 3.3 registry gains arc (Arc, Annotation) and polygon (Polygon, Annotation), and the 4.2 hierarchy ArcItem and PolygonItem under VectorItem (both in the body). BaseTool gains handle_escape, which the window's Escape asks before it deselects. 6.1's items.json gains the ArcItem entry (start_point, end_point, control_point in the {"x", "y"} form, arc_type, head_style, tail_style, head_size), the PolygonItem entry (vertices, polygon_mode, sides, center, radius, polygon_rotation, star_enabled, star_indent, closed; the regular polygon's rotation under polygon_rotation because the item's own rotation key is taken), and the BlurItem entry's built keys of the Blur PRD's 5.1 (blur_mode, region_shape, blur_radius, pixel_size, fill_color, corner_radius, feather, invert_mask, opacity, border_color, border_width), an older entry reading as a Gaussian rectangle. The render pipeline (3.9): RenderEngine.render_below paints what lies under an item, in the item's coordinates, by painting each visible item stacked below it directly with its scene transform and effective opacity, so a blur region can capture from inside its own paint; SnapScene.content_revision rises on every command, undo, and redo and on every layer or canvas colour change, and a blur region's cache keys on it. The codec of 4.4 knows ArcType, PolygonMode, BlurMode, and BlurRegionShape. Section 10 lists items/arc_item.py, items/polygon_item.py, tools/arc_tool.py, and tools/polygon_tool.py (added in the commits that created them). format_version stays 1.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 17:41</td>
         <td>6.1, 4.4, 10</td>
@@ -1274,6 +1287,8 @@ per-tool PRDs) includes:</p>
     <tr><th>line</th><td>Line</td><td>Annotation</td></tr>
     <tr><th>rectangle</th><td>Rectangle</td><td>Annotation</td></tr>
     <tr><th>ellipse</th><td>Ellipse</td><td>Annotation</td></tr>
+    <tr><th>arc</th><td>Arc</td><td>Annotation</td></tr>
+    <tr><th>polygon</th><td>Polygon</td><td>Annotation</td></tr>
     <tr><th>freehand</th><td>Freehand / Pen</td><td>Annotation</td></tr>
     <tr><th>text</th><td>Text Box</td><td>Annotation</td></tr>
     <tr><th>callout</th><td>Callout Bubble</td><td>Annotation</td></tr>
@@ -1689,6 +1704,8 @@ is:</p>
     <ul>
       <li><code>ArrowItem</code> - line with arrowhead(s)</li>
       <li><code>LineItem</code> - straight line</li>
+      <li><code>ArcItem</code> - a curved arc through a control point, open, chord, or pie (Basic Shape PRD 7)</li>
+      <li><code>PolygonItem</code> - a freeform or regular polygon, a star, or an open polyline (Basic Shape PRD 8)</li>
       <li><code>RectangleItem</code> - rectangle/square with optional rounded corners</li>
       <li><code>EllipseItem</code> - ellipse/circle</li>
       <li><code>FreehandItem</code> - freehand drawn path</li>

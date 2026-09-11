@@ -1,6 +1,6 @@
 # Snagit .snagx File Format — Read/Write Support
 
-Last Updated: 09-11-26 16:16 · Revision 1.4
+Last Updated: 09-11-26 18:44 · Revision 1.5
 
 ## 1. Overview
 
@@ -87,7 +87,9 @@ snapmock/io/
 | `RasterRegionItem` | `Image` | QPixmap → base64 PNG in Image field |
 | `EllipseItem` | — | **Skipped** (no Snagit equivalent) |
 | `FreehandItem` | — | **Skipped** (no Snagit equivalent) |
-| `BlurItem` | — | **Skipped** (no Snagit equivalent) |
+| `BlurItem` | — | **Skipped** (no Snagit equivalent; none of the 239 samples carries a blur object) |
+| `ArcItem` | — | **Skipped** with the writer's warning (Basic Shape remainder Phase 3) |
+| `PolygonItem` | — | **Skipped** with the writer's warning (Basic Shape remainder Phase 4) |
 | `NumberedStepItem` | — | **Skipped** (would need stamp PDF generation) |
 | `StampItem` | — | **Skipped** (would need stamp PDF embedding) |
 | `EmojiItem` | — | **Skipped** (no Snagit equivalent; Numbered Steps, Stamps, and Emoji kickoff silence 11) |
@@ -289,6 +291,7 @@ Internal converters: `_item_to_arrow`, `_item_to_line`, `_item_to_shape`, `_item
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 09-11-26 18:44 | Claude (Claude Code) | Section 3.2's table gains `ArcItem` and `PolygonItem`, skipped with the writer's warning, and the blur row notes that no sample carries a blur object (Basic Shape remainder Phases 3 to 5). |
 | 1.4 | 09-11-26 16:16 | Claude (Claude Code) | Section 7's item 6: a curved or elbow arrow is written as its straight line (Basic Shape remainder Phase 1). |
 | 1.3 | 09-11-26 13:34 | Claude (Claude Code) | Section 7's item 6 gains the reader's Filled head for imported arrows (Vector Item Properties Phase 3). |
 | 1.2 | 09-11-26 12:53 | Claude (Claude Code) | Section 7 gains the shared vector properties the writer does not map (Vector Item Properties work, kickoff silence 10). |

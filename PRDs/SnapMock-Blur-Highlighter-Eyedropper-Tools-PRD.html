@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Blur, Highlighter &amp; Eyedropper Tools</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.5</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.6</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Blur / Pixelate · Highlighter · Eyedropper</dd>
-    <dt>Document version</dt><dd>1.5</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 15:38</dd>
+    <dt>Document version</dt><dd>1.6</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 18:44</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.6</td>
+        <td class="nowrap">09-11-26 18:44</td>
+        <td>Doug Bower</td>
+        <td>Blur tool modes built (Basic Shape remainder Phase 5): the three modes over the rectangle and ellipse regions with feather, invert, opacity, border, the cache, the 2.6 bar, and the Property Panel; the brush, Whole Layer, the source modes, and the thread recorded as not built.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.5</td>
         <td class="nowrap">09-11-26 15:38</td>
@@ -94,6 +101,18 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 18:44</td>
+        <td>2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.9, 2.10, 5.1, 7.1, 8.1</td>
+        <td>Built</td>
+        <td>Basic Shape remainder Phase 5 (09-11-26; notes Section 9; decision 4, option A): the Blur / Pixelate tool's Gaussian Blur, Pixelate, and Solid Fill (2.2) over the Rectangle, with its corner radius, and the Ellipse region (2.4). A drag draws the region with Shift for a square or a circle and Alt from the centre, the effect shown live beneath it, and a region under 16 square pixels is dropped (2.3). The render of 2.7 captures what lies beneath through RenderEngine.render_below: the canvas colour, then every visible item stacked below the region, the lower layers' and the lower items of its own layer, painted directly so a paint can capture without drawing itself; the capture is in the region's own coordinates, so a rotated region obscures what it covers. The Gaussian blur is the shadow helper's three box passes at the region's radius, read over a margin that is cropped away; Pixelate averages square tiles aligned to the region; the mask is the region's shape, feathered by blurring the mask over the feather's width, and with Invert Mask the whole canvas outside the region; opacity is the item's own opacity, so 50 percent shows the obscured and the original half and half; the border is drawn over the region. The cache holds until the region, a property, the scene transform, the zoom (rounded to a power of two, the factor of two of 2.7), or the scene's content revision changes; the revision rises on every command, undo, and redo and on every layer change, so an item below that moves in an uncommitted drag updates the blur when the drag lands. The bar of 2.6 is built without the Freeform toggle and the Brush Size control; the Property Panel's Blur section edits every built property of 2.5 (2.8), each change one command. The hit shape is the region's shape (2.9). The 5.1 keys are written for the built properties, the colours in the #AARRGGBB form every other item writes, where 5.1 shows #RRGGBB and #RRGGBBAA; an older file's blur reads as a Gaussian rectangle. Measured on this machine while another test run shared it: a 1000 by 1000 px region in about 200 ms for Gaussian Blur (2.10's 100 ms unmet), 50 ms for Pixelate (met), 3 ms for Solid Fill, and about 0.5 s for an inverted Gaussian over a 1920 by 1080 canvas; the render runs on the main thread and the preview during a drag at full resolution. The item class keeps the name BlurItem, the type every saved file carries. The Section 8.1 rows on the three modes, the proportional intensities, the shapes with the modifiers and the rounded corners, feathering, inversion, moving and resizing, non-destruction, opacity, and the locked-layer rule are met by tests or by the tool as before; the performance rows stay open.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 18:44</td>
+        <td>2.3, 2.4, 2.5, 2.8, 2.10, 5.1, 6.1, 7.1, 8.1</td>
+        <td>Departure</td>
+        <td>Not built (Basic Shape remainder decision 4, option A): the brush-painted Freeform region of 2.3 and its editing of 2.8, the Freeform and Whole Layer shapes of 2.4, brush_size, alpha_mask, source_mode, and source_layer_id of 2.5, ModifyBlurMaskCommand of 6.1, the alpha_mask_data serialization of 5.1 and 7.1, the background-thread re-render and progress indicator of 2.10, and the half-resolution drag preview of 2.10. A file naming the Freeform or Whole Layer shape reads as a rectangle. The 8.1 rows on Freeform painting and editing stay open. The freeform brush, with the Highlighter's straightening of 3.3, is named as the next candidate kickoff. The Snagit writer keeps skipping a blur region with its warning: none of the 239 sample files carries a blur object.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 15:38</td>
         <td>2, 5.1, 7.1, 8.1</td>
