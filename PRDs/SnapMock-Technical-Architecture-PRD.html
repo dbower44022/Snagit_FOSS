@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Technical Architecture</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.30</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.31</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
-    <dt>Document version</dt><dd>1.30</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 16:45</dd>
+    <dt>Document version</dt><dd>1.31</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 17:41</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.31</td>
+        <td class="nowrap">09-11-26 17:41</td>
+        <td>Doug Bower</td>
+        <td>Basic Shape remainder Phase 2 built: the RectangleItem and FreehandItem keys of 6.1, the codec's CornerRadiusMode, the fitting in core/path_utils.py.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.30</td>
         <td class="nowrap">09-11-26 16:45</td>
@@ -336,6 +343,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 17:41</td>
+        <td>6.1, 4.4, 10</td>
+        <td>Built</td>
+        <td>Basic Shape remainder Phase 2 (09-11-26): the RectangleItem entry of 6.1 gains corner_radius_mode and corner_radius_tl, _tr, _bl, and _br, absent reading as Uniform with zero radii; the FreehandItem entry is now path_points, bezier_segments, smoothing, is_closed, and pressure_data (Basic Shape PRD 10.7; decision 2, option A), and the loader reads an earlier entry's points as path_points and fits them. core/path_utils.py (its Section 10 row unchanged) gains fit_cubic_beziers and BezierSegment, and simplify_rdp becomes iterative. The theme codec of 4.4 knows CornerRadiusMode. format_version stays 1.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 16:45</td>
         <td>3.4.2, 3.7, 6.1, 10</td>

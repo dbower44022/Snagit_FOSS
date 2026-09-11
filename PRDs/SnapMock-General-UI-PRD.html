@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.18</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.19</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.18</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 16:45</dd>
+    <dt>Document version</dt><dd>2.19</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 17:41</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.19</td>
+        <td class="nowrap">09-11-26 17:41</td>
+        <td>Doug Bower</td>
+        <td>Basic Shape remainder Phase 2 built: the Rectangle and Freehand rows of 5.3, the Property Panel's Rectangle and Freehand sections, Alt during point editing.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>2.18</td>
         <td class="nowrap">09-11-26 16:45</td>
@@ -283,6 +290,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 17:41</td>
+        <td>5.3, 8, 12.2</td>
+        <td>Built</td>
+        <td>Basic Shape remainder Phase 2 (09-11-26): the Rectangle row of 5.3 gains the Individual toggle beside Corner Radius, and in Individual mode four small spin boxes (TL, TR, BL, BR) replace the Corner Radius slider, which hides with its label (Basic Shape PRD 5.4). The Freehand row reads Stroke Color, Fill Color, Stroke Width, Stroke Style, Fill Opacity, Stroke Opacity, Shadow, Smoothing, then the Stroke Cap toggles and the Close Path toggle (Basic Shape PRD 9.6); the fill controls join because a closed stroke fills. The Property Panel's Rectangle section gains an Individual corners check box and the Top-left, Top-right, Bottom-left, and Bottom-right rows, shown in place of the Corner radius row when every selected rectangle is in Individual mode; a new Freehand section (Smoothing, which re-smooths the selected strokes from their raw points as one undoable change, and Close path) shows when every selected item is a freehand stroke, since the bar edits creation defaults only. While point-editing mode lasts, Alt does not start the momentary eyedropper of 12.2, so Alt+drag reaches a freehand stroke's handles.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 16:45</td>
         <td>3.2, 5.3, 8, 12.2</td>

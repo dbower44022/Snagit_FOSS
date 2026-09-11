@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Basic Shape Annotation Tools</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.10</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.11</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Line · Arrow · Rectangle · Ellipse · Arc · Polygon · Freehand / Pen</dd>
-    <dt>Document version</dt><dd>1.10</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 16:45</dd>
+    <dt>Document version</dt><dd>1.11</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 17:41</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.11</td>
+        <td class="nowrap">09-11-26 17:41</td>
+        <td>Doug Bower</td>
+        <td>Basic Shape remainder Phase 2 built: the Rectangle's individual corner radii, the Freehand pipeline with Bezier storage, Stroke Cap and Close Path, Freehand point editing.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.10</td>
         <td class="nowrap">09-11-26 16:45</td>
@@ -142,6 +149,24 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 17:41</td>
+        <td>5.3, 5.4, 5.5, 10.3, 12</td>
+        <td>Built</td>
+        <td>Basic Shape remainder Phase 2 step 1 (09-11-26; notes Section 6): RectangleItem carries corner_radius_mode (Uniform, Individual) and corner_radius_tl, _tr, _bl, and _br (0 to 200 each), stored as set and drawn clamped to half the smaller side, so two adjacent corners never overlap and a resize restores the rounding; Individual mode builds the edge with one arcTo per corner (5.5), a zero radius leaving a sharp corner. The Rectangle bar of 5.4 gains the Individual toggle beside the Corner Radius slider; in Individual mode four small spin boxes (TL, TR, BL, BR) replace the slider. Silence: switching to Individual while all four radii are zero starts them from the uniform radius, so the rectangle keeps its look; radii already set are never overwritten. The Property Panel's Rectangle section gains an Individual corners check box and the four rows, shown in Individual mode in place of the Corner radius row. The 10.3 keys are written; a file without them reads as Uniform with four zero radii. The Section 12 Rectangle row on individual radii is met by pixel tests.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 17:41</td>
+        <td>9.3, 9.4, 9.6, 9.8, 9.9, 10.7, 12</td>
+        <td>Built</td>
+        <td>Basic Shape remainder Phase 2 step 2 (decision 2, option A): FreehandItem stores path_points (the raw points), bezier_segments ({"start", "cp1", "cp2", "end"} each), smoothing (0.0 to 1.0), is_closed, and pressure_data (always null) under the 10.7 keys, and paints the segments with moveTo and cubicTo, closing the path when is_closed. While a stroke is drawn it paints the raw points joined by quadratic curves through their midpoints (9.4). On release the two stages of 9.3 run: Ramer-Douglas-Peucker simplification at smoothing times 5 px, then least-squares cubic fitting (Schneider's method, with Newton reparameterization, split at the worst point) at smoothing times 3 px. Departures: both stages have a floor of 0.5 px, so 0 percent drops points within half a pixel where 9.3 drops none, and a jittery stroke still fits in a bounded time; the fit and the simplification are iterative, so no stroke exhausts the recursion limit. Measured on this machine for 5000 raw points: about 65 to 70 ms at 50 and 100 percent, and up to 630 ms at 0 percent on a stroke with a pixel of jitter, against the 50 ms of 9.10 (the performance row stays open). A file saved before this work stores the simplified polyline under points, which loads as path_points and is fitted on load at 0.5. The Freehand bar of 9.6 is the shared set of 2.6 with Fill Color and Fill Opacity, since a closed stroke fills (9.8), then Smoothing, the Stroke Cap toggles (Flat, Round, Square, with previews), and the Close Path toggle, which joins the last point to the first on release. The Smoothing creation default stays a whole percent, as presets store it. The hit shape (9.9) is the stroke's band, stroke width plus 4 px and never under 8 px, and the inside of a closed stroke whose fill is not transparent. Silence: a stroke is an accidental click when its points span less than 2 px both across and down, not when its bounding box is under 4 square pixels, so a straight horizontal underline is kept. Shift's straight segments (9.5) and the brush-tip cursor (9.2) are not built.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 17:41</td>
+        <td>9.7, 11.3, 12</td>
+        <td>Built</td>
+        <td>Basic Shape remainder Phase 2 steps 2 and 3: re-smoothing (9.7) is non-destructive, starting again from path_points; it is done from the Property Panel's Freehand section (Smoothing and Close path rows) for a selected stroke, since the Tool Options Bar edits creation defaults only (General UI PRD 2.0 row), a departure from 9.7's Tool Options Bar; one undo step restores both the smoothing and the segments, a hand edit included, and a re-smooth replaces a hand edit. Freehand point editing (9.7) shows the on-curve points as blue 6 px circles and each segment's control handles as green 5 px hollow circles on dashed lines to their point. Dragging an on-curve point carries its two handles along, so the curve stays smooth through it; dragging a handle turns the opposite handle to stay in line, keeping its length; Alt breaks that continuity, moving the point or the handle alone to make a corner. A double-click on the stroke inserts an on-curve point, splitting the segment without changing the curve; a right-click on an on-curve point deletes it and merges its two segments while at least two points remain (a right-click on a handle never opens the item menu in point-editing mode). Each edit is one ModifyGeometryCommand on bezier_segments. While point-editing mode lasts, Alt does not start the momentary eyedropper (General UI PRD 12.2), so Alt+drag reaches the handles.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 16:45</td>
         <td>3.2, 3.5, 3.8, 4.2, 4.5, 4.6, 4.7, 4.8, 10.2, 11.3, 12</td>
