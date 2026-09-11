@@ -63,6 +63,7 @@ from snapmock.config.constants import (
     MIN_WINDOW_HEIGHT,
     MIN_WINDOW_WIDTH,
     PROJECT_EXTENSION,
+    REPOSITORY_URL,
     SNAGIT_EXTENSION,
     ZOOM_MAX,
     ZOOM_MIN,
@@ -77,6 +78,7 @@ from snapmock.core.scene import SnapScene
 from snapmock.core.selection_manager import SelectionManager
 from snapmock.core.theme_manager import ThemeMode, theme_manager
 from snapmock.core.tool_themes import ToolThemeManager
+from snapmock.core.update_check import Outcome, UpdateChecker, UpdateCheckResult
 from snapmock.core.view import SnapView
 from snapmock.io.exporter import (
     ExportFormat,
@@ -117,7 +119,7 @@ from snapmock.tools.stamp_tool import StampTool
 from snapmock.tools.text_tool import TextTool
 from snapmock.tools.tool_manager import ToolManager
 from snapmock.tools.zoom_tool import ZoomTool
-from snapmock.ui.accessibility import set_tab_order
+from snapmock.ui.accessibility import apply_default_names, set_tab_order
 from snapmock.ui.color_picker import ColorPicker
 from snapmock.ui.document_tabs import DocumentTabs
 from snapmock.ui.export_dialog import ExportDialog
@@ -130,7 +132,7 @@ from snapmock.ui.status_bar import SnapStatusBar
 from snapmock.ui.toast import Toast
 from snapmock.ui.tool_options_bar import ToolOptionsBar
 from snapmock.ui.toolbar import MainToolBar, SnapToolBar
-from snapmock.ui.unmet_requirements import check_requirements, show_not_available
+from snapmock.ui.unmet_requirements import check_requirements, show_unmet_requirements
 from snapmock.ui.unsaved_changes_dialog import UnsavedChangesDialog
 from snapmock.ui.welcome_panel import WelcomePanel
 
@@ -204,6 +206,10 @@ class MainWindow(QMainWindow):
         # primary window connects its results, owns the tray icon, and quits.
         self._capture = capture_manager or create_capture_manager(self._settings)
         self._primary_capture = primary_capture
+        # Help > Check for Updates (General UI PRD 3.8): one check at a time, on the
+        # event loop; the result arrives as a signal (implementation notes Section 19).
+        self._update_checker = UpdateChecker(self)
+        self._update_checker.finished.connect(self._on_update_check_finished)
         self._tray: QSystemTrayIcon | None = None
         self._tray_menu: QMenu | None = None
         self._hidden_in_tray = False
@@ -3570,10 +3576,70 @@ class MainWindow(QMainWindow):
     def _help_report_bug(self) -> None:
         QDesktopServices.openUrl(QUrl(ISSUES_URL))
 
+    # ---- Help > Check for Updates (PRD 3.8; implementation notes Section 19) ----
+
+    UPDATE_CHECK_TITLE = "Check for Updates"
+    UPDATE_CHECK_HINT = "Checking for updates…"
+
     def _help_check_updates(self) -> None:
-        show_not_available(
-            self, "Check for Updates", "Update checking is scheduled for a later phase."
-        )
+        """Query the GitHub releases API; the result comes back through the checker's signal."""
+        if not self._require(
+            self.UPDATE_CHECK_TITLE,
+            (not self._update_checker.running, "the running check to finish"),
+        ):
+            return
+        self.show_status_hint(self.UPDATE_CHECK_HINT)
+        self._update_checker.start()
+
+    def _on_update_check_finished(self, result: UpdateCheckResult) -> None:
+        """Show one message for the outcome, then return the hint to the active tool's."""
+        if result.outcome is Outcome.NETWORK_UNAVAILABLE:
+            show_unmet_requirements(self, self.UPDATE_CHECK_TITLE, ["a network connection"])
+        else:
+            box = self._build_update_message(result)
+            box.exec()
+            box.deleteLater()
+        self._on_tool_changed_for_hint("")
+
+    def update_message_text(self, result: UpdateCheckResult) -> str:
+        """The message body for every outcome but network unavailable."""
+        running = f"{APP_NAME} {result.running_version}"
+        if result.outcome is Outcome.NEWER:
+            return f"{APP_NAME} {result.tag} is available. You are running {running}."
+        if result.outcome is Outcome.UP_TO_DATE:
+            return f"{running} is up to date. The latest release is {result.tag}."
+        if result.outcome is Outcome.NO_RELEASE:
+            return f"No release has been published yet. You are running {running}."
+        if result.outcome is Outcome.RATE_LIMITED:
+            return "GitHub declined the request; try again later."
+        return "The latest release could not be read. Try again later."
+
+    def update_message_link(self, result: UpdateCheckResult) -> tuple[str, str] | None:
+        """The button label and URL the message offers beside Close, if any."""
+        if result.outcome is Outcome.NEWER and result.release_url:
+            return "Open Release Page", result.release_url
+        if result.outcome is Outcome.NO_RELEASE:
+            return "Open Repository Page", REPOSITORY_URL
+        return None
+
+    def _build_update_message(self, result: UpdateCheckResult) -> QMessageBox:
+        """An information box with Close and, for a release or none, a page button."""
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setWindowTitle(self.UPDATE_CHECK_TITLE)
+        box.setText(self.update_message_text(result))
+        link = self.update_message_link(result)
+        if link is not None:
+            label, url = link
+            button = box.addButton(label, QMessageBox.ButtonRole.ActionRole)
+            if button is not None:
+                button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(url)))
+        close = box.addButton(QMessageBox.StandardButton.Close)
+        if close is not None:
+            box.setDefaultButton(close)
+            box.setEscapeButton(close)
+        apply_default_names(box)
+        return box
 
     def _help_about(self) -> None:
         from snapmock.ui.about_dialog import AboutDialog

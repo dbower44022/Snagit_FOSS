@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from PyQt6.QtCore import QEvent, QMimeData, QPoint, QPointF, QRectF, QSize, Qt, QUrl
 from PyQt6.QtGui import QColor, QDropEvent, QKeySequence, QMouseEvent, QPixmap
 from PyQt6.QtTest import QTest
@@ -27,7 +28,7 @@ from pytestqt.qtbot import QtBot
 
 from snapmock.commands.add_item import AddItemCommand
 from snapmock.commands.move_items import MoveItemsCommand
-from snapmock.config.constants import MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH
+from snapmock.config.constants import APP_VERSION, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH
 from snapmock.config.settings import AppSettings
 from snapmock.core import theme_manager as tm
 from snapmock.items.raster_region_item import RasterRegionItem
@@ -306,10 +307,13 @@ SECTION_3_ROWS: dict[str, list[str]] = {
 
 
 def test_17_2_every_section_3_row_is_present_and_the_deferred_rows_say_so(
-    main_window: MainWindow, unmet_messages: list[tuple[str, str]]
+    main_window: MainWindow,
+    unmet_messages: list[tuple[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Row 6: every table row found by label; the deferred rows show a message;
-    Group and Ungroup act (fixed since the pass by the Group and Ungroup kickoff)."""
+    """Row 6: every table row found by label; every row acts (the six deferred rows
+    were fixed since the pass by the Group and Ungroup kickoff, the Navigation and
+    Raster Operations follow-up, and the Check for Updates work)."""
     for title, labels in SECTION_3_ROWS.items():
         rows = _rows(_menu(main_window, title))
         missing = [label for label in labels if label not in rows]
@@ -337,7 +341,7 @@ def test_17_2_every_section_3_row_is_present_and_the_deferred_rows_say_so(
     assert unmet_messages == []
 
     # Merge Down, Merge Visible, and Flatten All act since the Navigation and Raster
-    # Operations follow-up (fixed since); Check for Updates still explains its deferral.
+    # Operations follow-up (fixed since).
     manager = main_window.scene.layer_manager
     manager.set_active(manager.add_layer("Layer 2").layer_id)
     main_window._merge_dont_ask = True  # noqa: SLF001
@@ -351,10 +355,26 @@ def test_17_2_every_section_3_row_is_present_and_the_deferred_rows_say_so(
     layer["Flatten All"].trigger()  # type: ignore[attr-defined]
     assert manager.count == 1 and manager.layers[0].is_background
     assert unmet_messages == []
+
+    # Check for Updates acts since the Check for Updates work (fixed since): the row
+    # queries the releases API and reports the outcome; the check is fed a canned 404
+    # (no release published) and never reaches the network.
+    from PyQt6.QtWidgets import QMessageBox
+
+    from snapmock.core.update_check import UpdateChecker
+
+    sent: list[object] = []
+    monkeypatch.setattr(UpdateChecker, "send", lambda _self, request: sent.append(request))
+    boxes: list[QMessageBox] = []
+    monkeypatch.setattr(QMessageBox, "exec", lambda self: boxes.append(self) or 0)
     help_menu = _rows(_menu(main_window, "Help"))
     help_menu["Check for Updates"].trigger()  # type: ignore[attr-defined]
-    assert [title for title, _ in unmet_messages] == ["Check for Updates"]
-    assert "later phase" in unmet_messages[0][1]
+    assert len(sent) == 1
+    main_window._update_checker.receive(404, b"{}")  # noqa: SLF001
+    assert [box.text() for box in boxes] == [
+        f"No release has been published yet. You are running SnapMock {APP_VERSION}."
+    ]
+    assert unmet_messages == []
 
 
 # Section 3 shortcuts by code label; the six tool letters are the PRD 1.7 decision's.
