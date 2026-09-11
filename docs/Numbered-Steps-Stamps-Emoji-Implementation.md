@@ -1,6 +1,6 @@
 # Numbered Steps, Stamps, and Emoji Implementation Notes
 
-Last Updated: 09-10-26 23:45 · Revision 1.0
+Last Updated: 09-11-26 00:15 · Revision 1.1
 
 Implements the SnapMock Numbered Steps, Stamps & Emoji product requirements document (version 1.3 at the start of the work, `PRDs/SnapMock-Numbered-Steps-Stamps-Emoji-PRD.html`) in the three phases defined by `docs/Numbered-Steps-Stamps-Emoji-Kickoff-Prompt.md` (revision 1.0). A session pasting that prompt starts at the first phase not marked done in Section 1. `docs/General-UI-Implementation-Kickoff-Prompt.md` (revision 1.1) governs the standards; the General UI implementation notes (`docs/General-UI-Implementation.md`) hold the walk table of Section 17.2 that this work extends.
 
@@ -10,8 +10,8 @@ Starting state, verified at commit 565c587 on 09-10-26 (the kickoff names ea5f36
 
 | Phase | Scope | Status | Commits |
 |---|---|---|---|
-| 1 | Numbered Step (PRD Section 2): the decisions, the item, the tool and the bar, editing, close-out | In progress | this commit |
-| 2 | Stamp / Sticker (PRD Section 3): the library, the item, the tool, the bar, and the library panel, close-out | Not started | |
+| 1 | Numbered Step (PRD Section 2): the decisions, the item, the tool and the bar, editing, close-out | Done | 78314f7 to 35a3a39, then this close-out commit |
+| 2 | Stamp / Sticker (PRD Section 3): the library, the item, the tool, the bar, and the library panel, close-out | Next | |
 | 3 | Emoji (PRD Section 4): the data and the font, the item and the tool, the picker and the bar, close-out of the work | Not started | |
 
 ## 2. Decisions
@@ -50,7 +50,9 @@ Each decided as the kickoff recommended, on 09-10-26.
 
 ## 3. What Phase 1 built
 
-In progress. Step 1, this commit: the decisions above; the PRD at 1.4.
+In commit order. Step 1, 78314f7: the decisions of Section 2; PRD 1.4. Step 2, 1be23f0: `snapmock/items/shadow.py` (Technical Architecture PRD 1.17, Section 10 row) with `ShadowMixin` (the five properties, `shadow_rect`, `paint_shadow`, the serialization pair) and `blur_image` (three NumPy box passes over a premultiplied image); `NumberedStepItem` rebuilt on `VectorItem`: `number_value`, `display_mode` with `letter_for` and `roman_for`, `custom_text`, `badge_shape` and `badge_path` for the eight shapes with `badge_center` and `badge_rect` (the pin's head above its point), `badge_color`, `border_color`, and `border_width` as the vector fill and stroke, `badge_size` clamped 16 to 128, `text_color`, `font_family`, `font_size` with `auto_font_pixel_size`, `font_weight`, `border_style`, `fill_opacity` and `stroke_opacity` as alpha at paint time, the label (`label_rect`, the connector, the pill), `shape` with the 24 px minimum, `boundingRect` including the shadow, `scale_geometry`, `serialize` with the Section 5 keys and `deserialize` with the stub's `number` and `bg_color` as fallbacks, `type_name` "Numbered Step"; the constants and the enums `BadgeShape`, `DisplayMode`, `FontWeight`, `LabelPosition` in `config/constants.py`; `ResizeImageCommand`'s snapshot follows. Step 3, 1605c89: `NumberedStepTool` (click, drag with a dashed preview, the per-project counter in a `WeakKeyDictionary` by scene with `next_number`, `set_next_number`, and the first-activation rule, `place`, the hints with the two-second "Placed Step N", `animate_placement` with `ANIMATIONS_ENABLED`, the Section 1.3 messages for a locked or hidden layer, `numbered_step_cursor`); the Tool Options Bar's `enum` and `check` control kinds, `badge_shape_icon`, and the seven new `SHARED_CONTROLS` entries; `MainWindow.renumber_all_steps`; `snapmock/commands/marker_commands.py` (Technical Architecture PRD 1.18) with `steps_in_reading_order` and `RenumberStepsCommand`; the theme codec's five new enum types; General UI notes 1.31 (the Section 17.2 walk row); General UI PRD 2.10 (silence 1). Step 4, 35a3a39: `snapmock/ui/step_inline_editor.py` (Technical Architecture PRD 1.19) with `StepInlineEditor`; `MainWindow.open_marker_editor`, `close_marker_editor`, `marker_editor`, `_step_set_as_starting_number`, `_step_toggle_text_mode`; the Select tool's and the step tool's double-click routes and the step tool's selecting click; the three context menu rows in `build_item_context_menu`; the Property Panel's Numbered Step and Shadow sections with their populate and handlers. Step 5, this commit: PRD 1.5, General UI PRD 2.11, these notes.
+
+Silences found while building, decided as the code says and recorded as PRD 1.5 rows: Shift during a drag changes nothing (one size per badge); a click on an existing step with the step tool selects it; Renumber leaves text-mode steps out and moves the counter past the renumbered set; Escape in the inline editor closes without applying and focus leaving applies; colour strings are Qt's `#AARRGGBB`; Border Width keeps the shared 0 to 20 px range and Font Weight is a dropdown; the two opacities sit in the Numbered Step section beside Appearance's Opacity; auto font sizing uses a per-shape interior; the shadow pulse of Section 2.2 is deferred.
 
 ## 4. What Phase 2 built
 
@@ -71,15 +73,24 @@ Each has its PRD 1.4 row.
 - Custom stamps are imported through the library panel's Custom tab only; File > Import and Preferences > Stamps of Section 3.8 are not built (silence 6).
 - Preferences > Emoji of Section 4.2 is not built; the skin tone is a session memory (silence 7).
 - The serialization `type` key is the class name, not the `"numbered_step"` of Section 7.4 (silence 2).
+- Colour values are written in Qt's `#AARRGGBB` form, as every other item writes them, not the Section 5 table's `#RRGGBB` (Phase 1).
+- Shift during a drag-to-size changes nothing; the badge has one size (Phase 1, Section 2.2).
+- The placement animation has no drop shadow pulse (Phase 1, Section 2.2; deferred).
+- A click on an existing step with the Numbered Step tool selects it rather than placing over it (Phase 1, Sections 2.2 and 2.8).
+- Renumber All Steps leaves text-mode steps out and moves the tool's counter past the renumbered set (Phase 1, Sections 2.3 and 6.1).
+- Escape in the inline editor closes without applying; Enter and focus leaving apply (Phase 1, Section 2.8).
+- Border Width keeps the shared control's 0 to 20 px range and Font Weight is a dropdown rather than a toggle (Phase 1, Section 2.7).
+- The Property Panel shows the numbered step's Fill Opacity and Stroke Opacity in its Numbered Step section beside Appearance's Opacity, not in place of it (Phase 1; General UI PRD 8.3).
 
 ## 7. Tests
 
-Recorded per phase as each closes.
+Phase 1: `tests/test_numbered_step_item.py` (33: the defaults, the fill and stroke aliases, the size clamp, every shape's rects, the pin anchor, the 24 px hit area, letters to AA and beyond, roman 1 to 3999, the modes, auto font size at 16 and 128 px, the explicit size, the label at four positions, the pill padding, the centre and edge pixel checks, the shadow's pixels and bounding rect, the two opacities, `blur_image`, `scale_geometry`, `clone`, the round trip of every key, the stub-key fallback, unknown enum values); `tests/test_tools/test_numbered_step_tool.py` (21: identity, cursor, and hints, click placement and undo, drag-to-size, the ten-pixel threshold, the clamp, the creation defaults, text mode and the counter, the locked and hidden layer messages, the counter across a tool switch, across projects, and from a loaded file, the Starting Number, the bar's controls in order with the shape glyphs, edits reaching the defaults and a placed item, a theme change read back, Renumber All with undo and its message, the codec round trip, a saved and applied preset, `RenumberStepsCommand`'s assignments, the animation); `tests/test_numbered_step_editing.py` (16: the editor's fields and hint, Enter with Tab as one undo entry, Escape, text mode, the double-click from both tools and the selecting click, a second editor finishing the first, a non-marker refused, the context rows for one step only and their labels, Set as Starting Number reaching the tool and the bar, Convert with undo and redo, the two messages, Renumber across layers and into a group with undo, the panel's sections for a step and a rectangle, the panel's edits as commands, mixed values across two steps). Two existing tests moved to the new constructor and one to `next_number`. The accessibility audit (`tests/test_accessibility.py`) passes over the new bar, the panel sections, and the editor. The full suite at the step 4 commit ran 1113 tests with 13 skipped and the one environmental deselection (`test_font_combo_reflects_text_item_font`): 1112 passed and one, the animation test, failed on timing under a loaded machine (it read the scale before the first frame); the close-out commit relaxes that assertion to the range the animation runs through. Ruff and mypy are clean at every commit.
 
-**Next required step:** Phase 1 step 2, the item: `NumberedStepItem` rebuilt on `VectorItem` with the twenty-two properties, the eight badge shapes, the display modes, the label line, the shadow helper of decision 1, `shape` with the 24 px minimum, `scale_geometry`, `clone`, and `serialize` and `deserialize` reading the stub's keys as fallbacks; tests in a new `tests/test_numbered_step_item.py`.
+**Next required step:** Phase 2 step 1, the library: `snapmock/core/stamp_library.py` (Technical Architecture PRD Section 10 row) with the index model, `stamp_index.json` loaded once and cached, the custom directory under the application data directory merged in, the `#FF0000` and `#0000FF` substitution, the `QSvgRenderer` cache, the missing-stamp placeholder, and the SVG import; the built-in set per decision 3 under `snapmock/resources/stamps/<category>/` with the index, a README naming the Tabler release and the hand-authored files, and the licence files. Then the item (step 2), the tool, the bar, and the library panel (step 3), and the phase close-out (step 4).
 
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 09-11-26 00:15 | Claude (Claude Code) | Phase 1 done: the phase table, Section 3 (what Phase 1 built, the silences found while building), Section 6 (eight deviations added), Section 7 (the tests and the suite count), the next required step. PRD 1.5, General UI PRD 2.11, Technical Architecture PRD 1.19 (1.17 to 1.19 across the phase). |
 | 1.0 | 09-10-26 23:45 | Claude (Claude Code) | Initial notes: the starting state, the phase table, the four decisions (1 B, 2 A, 3 B, 4 B) and the fourteen silences as chosen 09-10-26, the deviations they imply, the next required step. PRD 1.4. |

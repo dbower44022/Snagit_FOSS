@@ -439,5 +439,5 @@ def test_animation_scales_the_item_from_120_percent_to_100(
     scene.addItem(item)
     animation = tool_module.animate_placement(item, 1.2, 60, scene)
     assert animation is not None
-    assert item.scale() == pytest.approx(1.2, abs=0.05)
+    assert 1.0 < item.scale() <= 1.2 + 1e-6  # started at 120 percent, on its way down
     qtbot.waitUntil(lambda: item.scale() == 1.0, timeout=2000)

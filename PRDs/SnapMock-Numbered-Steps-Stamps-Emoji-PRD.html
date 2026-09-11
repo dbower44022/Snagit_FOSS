@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Numbered Steps, Stamps &amp; Emoji</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.4</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.5</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Numbered Step · Stamp / Sticker · Emoji</dd>
-    <dt>Document version</dt><dd>1.4</dd>
-    <dt>Last Updated</dt>    <dd>09-10-26 23:45</dd>
+    <dt>Document version</dt><dd>1.5</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 00:15</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,19 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.5</td>
+        <td class="nowrap">09-11-26 00:15</td>
+        <td>Doug Bower</td>
+        <td>Phase 1 of the implementation, the Numbered Step tool (notes
+        <code>docs/Numbered-Steps-Stamps-Emoji-Implementation.md</code> 1.1): Section 2 is built, with its data model
+        (Section 5.1), the Renumber command (6.1), the serialization notes (7.1), and every Section 8.1 bullet. Rows
+        record where the build departs from the wording: colour strings in Qt's #AARRGGBB form, Shift during a drag,
+        the renumber and text-mode steps, Escape in the inline editor, the border width range and the font weight
+        control, the two opacities beside the Property Panel's Opacity, a click on an existing step, and the absent
+        shadow pulse. Technical Architecture PRD 1.19; General UI PRD 2.11.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.4</td>
         <td class="nowrap">09-10-26 23:45</td>
@@ -92,6 +105,66 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 00:15</td>
+        <td>2, 5.1, 6.1, 7.1, 8.1</td>
+        <td>Built</td>
+        <td>Phase 1 (commits 78314f7 to 35a3a39 and the close-out): <code>NumberedStepItem</code> on <code>VectorItem</code> with every property of Section 2.4, the eight shapes of 2.5 (the pin anchored at its point), the label line of 2.6, the shadow through the helper of decision 1, the hit area of 2.10; <code>NumberedStepTool</code> with click-to-place, drag-to-size, the per-project counter of 2.3 (kept across tool switches, dropped with the project, the highest step plus one on load per 7.1), the Starting Number, the hints of 2.11, the 150 ms scale-up, and the layer lock and visibility checks; the Tool Options Bar of 2.7 with its Renumber All button; inline editing on double-click, the three context menu rows, and <code>RenumberStepsCommand</code> of 2.8 and 6.1; the Property Panel's Numbered Step and Shadow sections. Every Section 8.1 bullet has a test.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 00:15</td>
+        <td>5</td>
+        <td>Departure</td>
+        <td>Colour values are written in Qt's <code>#AARRGGBB</code> form (<code>QColor.name(HexArgb)</code>), as every other item in the file format writes them, rather than the <code>#RRGGBB</code> and <code>#RRGGBBAA</code> of the Section 5 table; the loader reads any form QColor parses. The keys are the table's.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 00:15</td>
+        <td>2.2</td>
+        <td>Departure</td>
+        <td>Shift during a drag changes nothing: the badge has one size in every shape (<code>badge_size</code>), so a drag is already a circle's diameter and there is nothing further to constrain. A drag shorter than 10 px is a click, as written.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 00:15</td>
+        <td>2.2</td>
+        <td>Deferred</td>
+        <td>The “subtle drop shadow pulse” beside the placement animation is not built; the badge scales from 120 to 100 percent over 150 ms and its shadow scales with it. A later row may add the pulse if the display asks for it.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 00:15</td>
+        <td>2.2, 2.8</td>
+        <td>Departure</td>
+        <td>With the Numbered Step tool active, a click on an existing step selects it instead of placing a new step over it, so a double-click can enter the step's inline edit from the placing tool (kickoff silence 9), as the Text tool treats a click on existing text.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 00:15</td>
+        <td>2.3, 6.1</td>
+        <td>Departure</td>
+        <td>Renumber All Steps leaves steps in text mode out of the sequence, since they show no number and the counter never advanced for them; after a renumber the tool's counter moves past the renumbered set (the Starting Number plus the count), so the next placed step continues the sequence.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 00:15</td>
+        <td>2.8</td>
+        <td>Departure</td>
+        <td>In the inline editor Enter applies the edit and Escape closes without applying; Section 2.8 lists both as exits without saying what Escape keeps. Focus leaving both fields applies, as the Text tool's editor does. One undo entry covers the value and the label together.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 00:15</td>
+        <td>2.7</td>
+        <td>Departure</td>
+        <td>Border Width uses the shared Border control's 0 to 20 px range rather than 0 to 8; Font Weight is a two-entry dropdown (Normal, Bold) rather than a toggle button, so it reads back a theme or preset like every other enum control. Badge Shape's dropdown carries a glyph per shape as written.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 00:15</td>
+        <td>2.4, 2.8</td>
+        <td>Departure</td>
+        <td>The Property Panel shows the numbered step's Fill Opacity and Stroke Opacity in a Numbered Step section beside the Appearance section, whose Opacity control stays the item's own opacity as for every vector item (General UI PRD 8.3 has the two replace the one; General UI PRD 2.11 row). The Appearance section's Stroke and Fill are the step's border and badge colour.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 00:15</td>
+        <td>2.9</td>
+        <td>Decision</td>
+        <td>Auto font sizing measures the display string with the font's metrics at a reference size and scales it to fit a per-shape interior (a share of the badge size: 0.72 for the circle, 0.5 for the diamond, 0.42 for the star, 0.8 by 0.52 for the oval), capped at <code>badge_size × 0.55</code>; the label uses the badge's font family at <code>label_font_size</code> points.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-10-26 23:45</td>
         <td>2.4, 3.5, 4.4</td>
