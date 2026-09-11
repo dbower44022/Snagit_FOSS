@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Technical Architecture</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.20</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.21</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
-    <dt>Document version</dt><dd>1.20</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 00:50</dd>
+    <dt>Document version</dt><dd>1.21</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 01:20</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,18 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.21</td>
+        <td class="nowrap">09-11-26 01:20</td>
+        <td>Doug Bower</td>
+        <td>Numbered Steps, Stamps, and Emoji implementation, Phase 2 step 2: Section 6.1's <code>items.json</code>
+        gains the <code>StampItem</code> entry's rules (a built-in stamp by <code>stamp_id</code> alone; a custom
+        stamp embedded with <code>svg_data</code> and <code>stamp_source</code> <code>embedded</code>; an optional
+        <code>stamp_stretch</code> after a non-uniform resize); <code>StampItem</code> joins the registry and stays
+        under <code>SnapGraphicsItem</code> as Section 4.2 places it, with one <code>opacity</code> per Section 4.3.
+        <code>format_version</code> stays 1.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.20</td>
         <td class="nowrap">09-11-26 00:50</td>
@@ -248,6 +260,20 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 01:20</td>
+        <td>6.1, 4.2, 4.3</td>
+        <td>Changed</td>
+        <td>Numbered Steps, Stamps, and Emoji implementation, Phase 2 step 2: <code>StampItem</code> rebuilt on
+        <code>SnapGraphicsItem</code> with the shadow helper (<code>stamp_id</code>, <code>stamp_source</code>,
+        <code>svg_data</code>, <code>stamp_size</code> as the larger side with the SVG's aspect, the two recolour
+        values, <code>colorizable</code>, one <code>opacity</code>, the flips, the shadow) and registered in
+        <code>ITEM_REGISTRY</code>, so a stamp survives a save for the first time. Its <code>items.json</code> entry
+        writes a built-in stamp by id only and embeds a custom stamp's SVG with <code>stamp_source</code> set to
+        <code>embedded</code> (marker PRD 7.2); the loader prefers the local library, then the embedded data, then the
+        placeholder. <code>stamp_stretch</code> (width over height relative to the SVG's aspect) is written only
+        after a non-uniform resize through the Property Panel. <code>ResizeImageCommand</code>'s snapshot follows.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 00:50</td>
         <td>10, 4.3</td>

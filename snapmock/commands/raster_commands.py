@@ -272,7 +272,8 @@ class ResizeImageCommand(BaseCommand):
             target._font_size = source._font_size  # noqa: SLF001
             target._label_font_size = source._label_font_size  # noqa: SLF001
         elif isinstance(target, StampItem) and isinstance(source, StampItem):
-            target._pixmap = source._pixmap  # noqa: SLF001
+            target._stamp_size = source._stamp_size  # noqa: SLF001
+            target._stretch = source._stretch  # noqa: SLF001
 
         target.update()
 

@@ -141,11 +141,13 @@ def test_numbered_step_scale_geometry() -> None:
 
 
 def test_stamp_scale_geometry(qapp: QApplication) -> None:
-    pm = QPixmap(64, 64)
-    item = StampItem(pixmap=pm)
+    item = StampItem("status/approved", stamp_size=64.0)
     item.scale_geometry(2.0, 2.0)
-    assert item._pixmap.width() == 128  # noqa: SLF001
-    assert item._pixmap.height() == 128  # noqa: SLF001
+    assert item.stamp_size == 128.0
+    assert item.stamp_rect().width() == pytest.approx(128.0)
+    item.scale_geometry(1.0, 0.5)  # a non-uniform resize stretches the stamp
+    assert item.stamp_rect().height() == pytest.approx(64.0)
+    assert item.stamp_rect().width() == pytest.approx(128.0)
 
 
 # --- TransformHandles ---
