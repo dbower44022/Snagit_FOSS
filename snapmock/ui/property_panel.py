@@ -66,6 +66,7 @@ from snapmock.items.arrow_item import ArrowItem
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.callout_item import CalloutItem
 from snapmock.items.emoji_item import EmojiItem
+from snapmock.items.freehand_item import FreehandItem
 from snapmock.items.group_item import GroupItem
 from snapmock.items.numbered_step_item import NumberedStepItem
 from snapmock.items.rectangle_item import RectangleItem
@@ -219,6 +220,7 @@ class PropertyPanel(QDockWidget):
         self._build_appearance_section()
         self._build_arrow_section()
         self._build_rectangle_section()
+        self._build_freehand_section()
         self._build_step_section()
         self._build_stamp_section()
         self._build_emoji_section()
@@ -232,6 +234,7 @@ class PropertyPanel(QDockWidget):
             self._appearance_section,
             self._arrow_section,
             self._rectangle_section,
+            self._freehand_section,
             self._step_section,
             self._stamp_section,
             self._emoji_section,
@@ -609,6 +612,29 @@ class PropertyPanel(QDockWidget):
             self._rectangle_section.add_row(label, spin)
             self._corner_spins[key] = spin
         self._main_layout.addWidget(self._rectangle_section)
+
+    def _build_freehand_section(self) -> None:
+        """A placed freehand stroke's Smoothing and Close Path (Basic Shape PRD 9.6, 9.7):
+        re-smoothing starts again from the raw points, as one undoable change, since the
+        bar edits creation defaults only."""
+        self._freehand_section = CollapsibleSection("Freehand")
+        self._freehand_smoothing_slider = QSlider(Qt.Orientation.Horizontal)
+        self._freehand_smoothing_slider.setRange(0, 100)
+        self._freehand_smoothing_spin = QSpinBox()
+        self._freehand_smoothing_spin.setRange(-1, 100)
+        self._freehand_smoothing_spin.setSuffix("%")
+        self._freehand_smoothing_spin.setSpecialValueText(MIXED_TEXT)
+        self._freehand_smoothing_spin.setKeyboardTracking(False)
+        self._freehand_section.add_row(
+            "Smoothing:",
+            self._slider_spin_row(
+                self._freehand_smoothing_spin, self._freehand_smoothing_slider, "Smoothing"
+            ),
+        )
+        self._freehand_closed_check = QCheckBox("Close path")
+        self._freehand_closed_check.setAccessibleName("Close path")
+        self._freehand_section.add_row("Path:", self._freehand_closed_check)
+        self._main_layout.addWidget(self._freehand_section)
 
     def _build_step_section(self) -> None:
         """The numbered step's own properties (Numbered Steps, Stamps & Emoji PRD 2.4):
@@ -1052,6 +1078,13 @@ class PropertyPanel(QDockWidget):
         self._corner_mode_check.toggled.connect(self._on_corner_mode_changed)
         for key, spin in self._corner_spins.items():
             spin.valueChanged.connect(lambda v, k=key: self._on_corner_spin_changed(k, v))
+        self._freehand_smoothing_slider.valueChanged.connect(
+            self._on_freehand_smoothing_slider_changed
+        )
+        self._freehand_smoothing_spin.valueChanged.connect(
+            self._on_freehand_smoothing_spin_changed
+        )
+        self._freehand_closed_check.toggled.connect(self._on_freehand_closed_changed)
         self._step_value_spin.valueChanged.connect(self._on_step_value_changed)
         self._step_mode_combo.currentIndexChanged.connect(self._on_step_mode_changed)
         self._step_text_edit.editingFinished.connect(self._on_step_text_edited)
@@ -1178,6 +1211,9 @@ class PropertyPanel(QDockWidget):
     def _selected_rectangles(self) -> list[RectangleItem]:
         return [i for i in self._selected_items() if isinstance(i, RectangleItem)]
 
+    def _selected_freehand(self) -> list[FreehandItem]:
+        return [i for i in self._selected_items() if isinstance(i, FreehandItem)]
+
     def _selected_arrows(self) -> list[ArrowItem]:
         return [i for i in self._selected_items() if isinstance(i, ArrowItem)]
 
@@ -1230,6 +1266,7 @@ class PropertyPanel(QDockWidget):
             all_text_items = has_selection and all(isinstance(i, TextItem) for i in items)
             all_arrows = has_selection and all(isinstance(i, ArrowItem) for i in items)
             all_rectangles = has_selection and all(isinstance(i, RectangleItem) for i in items)
+            all_freehand = has_selection and all(isinstance(i, FreehandItem) for i in items)
             all_steps = has_selection and all(isinstance(i, NumberedStepItem) for i in items)
             all_shadow = has_selection and all(self._shows_shadow(i) for i in items)
             all_stamps = has_selection and all(isinstance(i, StampItem) for i in items)
@@ -1243,6 +1280,7 @@ class PropertyPanel(QDockWidget):
             self._appearance_section.setVisible(all_vector or in_vector_defaults)
             self._arrow_section.setVisible(all_arrows)
             self._rectangle_section.setVisible(all_rectangles)
+            self._freehand_section.setVisible(all_freehand)
             self._step_section.setVisible(all_steps)
             self._stamp_section.setVisible(all_stamps)
             self._emoji_section.setVisible(all_emoji)
@@ -1278,6 +1316,8 @@ class PropertyPanel(QDockWidget):
                     self._populate_arrow(self._selected_arrows())
                 if all_rectangles:
                     self._populate_rectangle(self._selected_rectangles())
+                if all_freehand:
+                    self._populate_freehand(self._selected_freehand())
                 if all_steps:
                     self._populate_step(self._selected_steps())
                 if all_stamps:
@@ -1393,6 +1433,13 @@ class PropertyPanel(QDockWidget):
         for key, spin in self._corner_spins.items():
             self._set_row_visible(section, spin, individual)
             self._set_spin(spin, [getattr(i, key) for i in items])
+
+    def _populate_freehand(self, items: list[FreehandItem]) -> None:
+        percents = [int(round(i.smoothing * 100)) for i in items]
+        value, uniform = _uniform(percents)
+        self._freehand_smoothing_slider.setValue(int(value) if uniform else 0)
+        self._set_spin(self._freehand_smoothing_spin, percents)
+        self._set_check(self._freehand_closed_check, [i.is_closed for i in items])
 
     def _populate_arrow(self, items: list[ArrowItem]) -> None:
         self._set_combo_data(self._arrow_head_combo, [i.head_style for i in items])
@@ -2317,6 +2364,39 @@ class PropertyPanel(QDockWidget):
         if self._updating or value < 0:
             return
         self._push_property(self._selected_rectangles(), key, float(value))
+
+    def _on_freehand_smoothing_slider_changed(self, value: int) -> None:
+        if self._updating:
+            return
+        self._updating = True
+        self._freehand_smoothing_spin.setValue(value)
+        self._updating = False
+        self._apply_freehand_smoothing(value)
+
+    def _on_freehand_smoothing_spin_changed(self, value: int) -> None:
+        if self._updating or value < 0:
+            return
+        self._updating = True
+        self._freehand_smoothing_slider.setValue(value)
+        self._updating = False
+        self._apply_freehand_smoothing(value)
+
+    def _apply_freehand_smoothing(self, percent: int) -> None:
+        """Re-smooth each selected stroke from its raw points (Basic Shape PRD 9.7): one
+        command per stroke that restores the smoothing and the segments together."""
+        fraction = percent / 100.0
+        commands: list[BaseCommand] = [
+            ModifyPropertyCommand(
+                item, "smoothing_fit", item.smoothing_fit, (fraction, item.fit_segments(fraction))
+            )
+            for item in self._selected_freehand()
+        ]
+        self._push_commands(commands, "Re-smooth freehand strokes")
+
+    def _on_freehand_closed_changed(self, checked: bool) -> None:
+        if self._updating:
+            return
+        self._push_property(self._selected_freehand(), "is_closed", bool(checked))
 
     def _on_arrow_head_changed(self, index: int) -> None:
         if self._updating or index < 0:

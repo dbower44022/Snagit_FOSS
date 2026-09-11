@@ -286,17 +286,18 @@ def test_numbered_step_start_number_sets_the_next_number(main_window: MainWindow
 
 
 def test_freehand_smoothing_simplifies_the_path() -> None:
-    tool = FreehandTool()
+    # The two stages of Basic Shape PRD 9.3 (Basic Shape remainder decision 2): more
+    # smoothing, fewer segments, the same ends, and the raw points untouched
+    assert FreehandTool().creation_defaults["smoothing"] == 50
     raw = FreehandItem()
     for i in range(0, 200):
-        raw.add_point(QPointF(i, (i % 2) * 0.5))
-    tool.creation_defaults["smoothing"] = 0
-    assert tool._smoothed(raw) is raw  # noqa: SLF001
-    tool.creation_defaults["smoothing"] = 100
-    smoothed = tool._smoothed(raw)  # noqa: SLF001
-    assert len(smoothed.points) < len(raw.points)
-    assert smoothed.points[0] == raw.points[0]
-    assert smoothed.points[-1] == raw.points[-1]
+        raw.add_point(QPointF(i, (i % 2) * 2.0))
+    many = raw.fit_segments(0.0)
+    few = raw.fit_segments(1.0)
+    assert len(few) < len(many)
+    assert few[0][0] == raw.path_points[0]
+    assert few[-1][3] == raw.path_points[-1]
+    assert len(raw.path_points) == 200
 
 
 def test_crop_checkbox_is_named_rule_of_thirds(main_window: MainWindow) -> None:

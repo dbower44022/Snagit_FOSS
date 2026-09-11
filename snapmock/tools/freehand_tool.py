@@ -1,32 +1,52 @@
-"""FreehandTool — click-and-drag to draw freehand paths."""
+"""FreehandTool — click-and-drag to draw freehand paths.
+
+Basic Shape PRD Section 9. The Tool Options Bar of 9.6: the shared set of 2.6, with Fill
+Color and Fill Opacity since a closed stroke fills (9.8), the Smoothing slider, then the
+tool's own Stroke Cap toggles and Close Path toggle. On release the two-stage pipeline of
+9.3 runs on the raw points (Basic Shape remainder decision 2, option A), and Close Path
+joins the last point to the first.
+"""
 
 from __future__ import annotations
 
+from typing import Any
+
 from PyQt6.QtCore import QPointF, Qt
-from PyQt6.QtGui import QColor, QMouseEvent
+from PyQt6.QtGui import QColor, QIcon, QMouseEvent
+from PyQt6.QtWidgets import QButtonGroup, QLabel, QToolBar, QToolButton
 
 from snapmock.commands.add_item import AddItemCommand
 from snapmock.config.constants import (
+    DEFAULT_FILL_COLOR,
     DEFAULT_STROKE_COLOR,
     DEFAULT_STROKE_WIDTH,
     BorderStyle,
+    StrokeCap,
 )
-from snapmock.core.path_utils import simplify_rdp
 from snapmock.items.freehand_item import FreehandItem
 from snapmock.tools.base_tool import BaseTool
+from snapmock.tools.highlight_tool import cap_icon
 
-# The Smoothing slider (0 to 100 percent) maps to this many pixels of tolerance at 100.
-MAX_SMOOTHING_EPSILON = 6.0
+_CAP_STYLES: tuple[tuple[StrokeCap, str, str], ...] = (
+    (StrokeCap.FLAT, "Flat", "Flat cap: the stroke ends at its endpoints"),
+    (StrokeCap.ROUND, "Round", "Round cap: a half-circle beyond each endpoint"),
+    (StrokeCap.SQUARE, "Square", "Square cap: a half-square beyond each endpoint"),
+)
+_CONTROL_HEIGHT = 26
+MIN_STROKE_EXTENT = 2.0
+"""A stroke whose points span less than this in both directions is an accidental click."""
 
 
 class FreehandTool(BaseTool):
     """Interactive tool for freehand drawing."""
 
-    # Tool Options Bar shared controls (General UI PRD 5.3)
+    # Tool Options Bar shared controls (Basic Shape PRD 2.6, 9.6; General UI PRD 5.3)
     options_controls = (
         "stroke_color",
+        "fill_color",
         "stroke_width",
         "stroke_style",
+        "fill_opacity",
         "stroke_opacity",
         "shadow_enabled",
         "smoothing",
@@ -35,14 +55,21 @@ class FreehandTool(BaseTool):
     def __init__(self) -> None:
         super().__init__()
         self._item: FreehandItem | None = None
+        self._cap_buttons: dict[StrokeCap, QToolButton] = {}
+        self._close_button: QToolButton | None = None
         self._creation_defaults = {
             "stroke_color": QColor(DEFAULT_STROKE_COLOR),
+            "fill_color": QColor(DEFAULT_FILL_COLOR),
             "stroke_width": DEFAULT_STROKE_WIDTH,
             "stroke_style": BorderStyle.SOLID,
+            "fill_opacity": 1.0,
             "stroke_opacity": 1.0,
             "shadow_enabled": False,
-            # Read by the Tool Options Bar's Smoothing slider (General UI PRD 5.2)
+            # Read by the Tool Options Bar's Smoothing slider (General UI PRD 5.2): a whole
+            # percent, as presets store it; the item takes the fraction (notes Section 2.4)
             "smoothing": 50,
+            "stroke_cap": StrokeCap.ROUND,
+            "close_path": False,
         }
 
     @property
@@ -61,6 +88,78 @@ class FreehandTool(BaseTool):
     def status_hint(self) -> str:
         return "Click and draw freehand path"
 
+    # ------------------------------------------------------------ the options bar
+
+    def build_options_widgets(self, toolbar: QToolBar) -> None:
+        """The Stroke Cap toggles and the Close Path toggle (PRD 9.6)."""
+        toolbar.addWidget(QLabel(" Cap:"))
+        group = QButtonGroup(toolbar)
+        group.setExclusive(True)
+        self._cap_buttons = {}
+        for cap, name, tip in _CAP_STYLES:
+            button = QToolButton()
+            button.setCheckable(True)
+            button.setIcon(QIcon(cap_icon(cap)))
+            button.setToolTip(tip)
+            button.setAccessibleName(f"{name} cap")
+            button.setFixedSize(_CONTROL_HEIGHT, _CONTROL_HEIGHT)
+            button.toggled.connect(lambda checked, c=cap: self._on_cap_toggled(c, checked))
+            group.addButton(button)
+            toolbar.addWidget(button)
+            self._cap_buttons[cap] = button
+        close = QToolButton()
+        close.setCheckable(True)
+        close.setText("Close Path")
+        close.setToolTip("Close Path: the stroke's last point joins its first on release")
+        close.setAccessibleName("Close path")
+        close.setMaximumHeight(_CONTROL_HEIGHT)
+        close.toggled.connect(self._on_close_toggled)
+        toolbar.addWidget(close)
+        self._close_button = close
+        self._sync_buttons()
+
+    @property
+    def cap_buttons(self) -> dict[StrokeCap, QToolButton]:
+        return dict(self._cap_buttons)
+
+    @property
+    def close_path_button(self) -> QToolButton | None:
+        return self._close_button
+
+    def _sync_buttons(self) -> None:
+        current = self._creation_defaults.get("stroke_cap", StrokeCap.ROUND)
+        for cap, button in self._cap_buttons.items():
+            button.blockSignals(True)
+            button.setChecked(cap is current)
+            button.blockSignals(False)
+        if self._close_button is not None:
+            self._close_button.blockSignals(True)
+            self._close_button.setChecked(bool(self._creation_defaults.get("close_path")))
+            self._close_button.blockSignals(False)
+
+    def _announce(self) -> None:
+        view = self._view
+        window: Any = view.window() if view is not None else None
+        manager = getattr(window, "tool_manager", None)
+        if manager is not None:
+            manager.tool_defaults_changed.emit(self.tool_id)
+
+    def _on_cap_toggled(self, cap: StrokeCap, checked: bool) -> None:
+        if not checked:
+            return
+        self._creation_defaults["stroke_cap"] = cap
+        self._announce()
+
+    def _on_close_toggled(self, checked: bool) -> None:
+        self._creation_defaults["close_path"] = bool(checked)
+        self._announce()
+
+    def on_option_changed(self, key: str, value: Any) -> None:
+        if key in ("stroke_cap", "close_path"):
+            self._sync_buttons()
+
+    # ------------------------------------------------------------ drawing
+
     def _scene_pos(self, event: QMouseEvent) -> QPointF:
         if self._scene is not None and self._scene.views():
             return self._scene.views()[0].mapToScene(event.pos())
@@ -72,6 +171,7 @@ class FreehandTool(BaseTool):
         pos = self._scene_pos(event)
         self._item = FreehandItem()
         self._item.apply_creation_defaults(self._creation_defaults)
+        self._item.is_closed = False  # Close Path joins the ends on release (9.6)
         self._item.setPos(pos)
         self._item.add_point(QPointF(0, 0))
         self._scene.addItem(self._item)
@@ -85,34 +185,27 @@ class FreehandTool(BaseTool):
         self._item.add_point(local)
         return True
 
-    def _smoothed(self, item: FreehandItem) -> FreehandItem:
-        """Apply the Smoothing default (PRD 5.3): simplify the raw path on release."""
-        smoothing = int(self._creation_defaults.get("smoothing", 0))
-        if smoothing <= 0 or len(item.points) <= 2:
-            return item
-        epsilon = MAX_SMOOTHING_EPSILON * smoothing / 100.0
-        raw = [QPointF(x, y) for x, y in item.points]
-        simplified = simplify_rdp(raw, epsilon)
-        if len(simplified) == len(raw):
-            return item
-        result = FreehandItem.deserialize({**item.serialize(), "points": []})
-        result.renew_ids()
-        for point in simplified:
-            result.add_point(point)
-        return result
-
     def mouse_release(self, event: QMouseEvent) -> bool:
         if self._item is None or self._scene is None:
             return False
         self._scene.removeItem(self._item)
-        created_item = self._smoothed(self._item)
+        created_item = self._item
         self._item = None
-        if len(created_item.points) > 2:
-            layer = self._scene.layer_manager.active_layer
-            if layer is not None:
-                cmd = AddItemCommand(self._scene, created_item, layer.layer_id)
-                self._scene.command_stack.push(cmd)
-                if self._selection_manager is not None:
-                    self._selection_manager.select(created_item)
-                self._switch_to_select()
+        points = created_item.path_points
+        xs = [p.x() for p in points]
+        ys = [p.y() for p in points]
+        big_enough = len(points) >= 2 and (
+            max(xs) - min(xs) >= MIN_STROKE_EXTENT or max(ys) - min(ys) >= MIN_STROKE_EXTENT
+        )
+        if not big_enough:
+            return True
+        created_item.is_closed = bool(self._creation_defaults.get("close_path", False))
+        created_item.smooth(float(self._creation_defaults.get("smoothing", 50)) / 100.0)
+        layer = self._scene.layer_manager.active_layer
+        if layer is not None:
+            cmd = AddItemCommand(self._scene, created_item, layer.layer_id)
+            self._scene.command_stack.push(cmd)
+            if self._selection_manager is not None:
+                self._selection_manager.select(created_item)
+            self._switch_to_select()
         return True

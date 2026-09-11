@@ -66,7 +66,8 @@ def test_every_shape_tool_composes_the_basic_shape_prd_order(main_window: MainWi
         "line": OPEN,
         # Phase 3 added the arrowhead controls (Basic Shape PRD 4.7)
         "arrow": [*OPEN, "head_style", "tail_style", "head_size", "head_size_custom"],
-        "freehand": [*OPEN, "smoothing"],
+        # The Freehand fills when closed (Basic Shape PRD 9.6, 9.8; remainder Phase 2)
+        "freehand": [*CLOSED, "smoothing"],
         # Phase 2 rebuilt the Highlighter's bar per Blur PRD 3.5
         "highlight": [
             "highlight_color",

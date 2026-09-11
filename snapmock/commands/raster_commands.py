@@ -250,7 +250,9 @@ class ResizeImageCommand(BaseCommand):
         ):
             target._line = source._line  # noqa: SLF001
         elif isinstance(target, FreehandItem) and isinstance(source, FreehandItem):
-            target._points = source._points  # noqa: SLF001
+            target._path_points = source._path_points  # noqa: SLF001
+            target._segments = source._segments  # noqa: SLF001
+            target._preview = source._preview  # noqa: SLF001
             target._path = source._path  # noqa: SLF001
         elif isinstance(target, HighlightItem) and isinstance(source, HighlightItem):
             target._points = source._points  # noqa: SLF001

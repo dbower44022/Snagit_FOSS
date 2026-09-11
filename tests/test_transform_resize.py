@@ -66,7 +66,7 @@ def test_freehand_scale_geometry() -> None:
     item.add_point(QPointF(0, 0))
     item.add_point(QPointF(50, 100))
     item.scale_geometry(2.0, 0.5)
-    assert item._points[1] == (100.0, 50.0)  # noqa: SLF001
+    assert item.path_points[1] == QPointF(100.0, 50.0)
 
 
 def test_highlight_scale_geometry() -> None:
