@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Technical Architecture</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.28</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.29</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
-    <dt>Document version</dt><dd>1.28</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 13:34</dd>
+    <dt>Document version</dt><dd>1.29</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 15:38</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.29</td>
+        <td class="nowrap">09-11-26 15:38</td>
+        <td>Doug Bower</td>
+        <td>Basic Shape remainder implementation started: the registry, hierarchy, items.json, and Section 10 changes the four decisions imply.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.28</td>
         <td class="nowrap">09-11-26 13:34</td>
@@ -322,6 +329,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 15:38</td>
+        <td>3.3, 4.2, 6.1, 10</td>
+        <td>Decision</td>
+        <td>Basic Shape remainder implementation started 09-11-26 (notes in <code>docs/Basic-Shape-Remainder-Implementation.md</code>). Decision 3 (option A): the 3.3 registry gains <code>arc</code> (Arc, Annotation) and <code>polygon</code> (Polygon, Annotation), and the 4.2 hierarchy gains <code>ArcItem</code> and <code>PolygonItem</code> under <code>VectorItem</code>, each as its phase lands. Decision 1 (option A): point editing is a mode of the Select tool with one session per item type in the new module <code>tools/point_edit.py</code>; its handles are scene items above the annotation items, as <code>TransformHandles</code> are (3.4.2). Decision 2 (option A): the <code>FreehandItem</code> entry of 6.1 gains the 10.7 keys of the Basic Shape PRD and keeps reading the earlier <code>points</code> key. Decision 4 (option A): the <code>BlurItem</code> entry gains the Blur PRD's 5.1 keys for the rectangle and ellipse regions; the capture of the content below is a new <code>RenderEngine</code> method that paints the items stacked below the blur item directly, and the scene carries a content revision counter the blur cache keys on. Section 10 gains, in the commits that create them, <code>tools/point_edit.py</code>, <code>commands/geometry_commands.py</code>, <code>items/arc_item.py</code>, <code>items/polygon_item.py</code>, <code>tools/arc_tool.py</code>, and <code>tools/polygon_tool.py</code>. <code>format_version</code> stays 1.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 13:34</td>
         <td>6.1</td>

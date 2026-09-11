@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.16</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.17</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.16</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 13:34</dd>
+    <dt>Document version</dt><dd>2.17</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 15:38</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.17</td>
+        <td class="nowrap">09-11-26 15:38</td>
+        <td>Doug Bower</td>
+        <td>Basic Shape remainder implementation started: the Arc and Polygon tools to be registered, Arc on Shift+A; the 5.3 rows and 17.3's count that follow.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>2.16</td>
         <td class="nowrap">09-11-26 13:34</td>
@@ -269,6 +276,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 15:38</td>
+        <td>3.7, 5.3, 17.3</td>
+        <td>Decision</td>
+        <td>Basic Shape remainder implementation started 09-11-26 (notes in <code>docs/Basic-Shape-Remainder-Implementation.md</code>), decision 3, option A: the Arc and Polygon tools of the 3.7 table are registered as the twentieth and twenty-first tools after the Line tool, in the palette and in the Tools menu's shape group. Departure from 3.7: Arc takes Shift+A, the Basic Shape PRD's key (7.1), and not this table's O, since each tool's own PRD owns its details as the Numbered Steps, Stamps, and Emoji work's silence 1 read the tables; Polygon takes G as both documents say. 17.3 will read twenty-one tools when Phase 4 lands. The 5.3 rows for Arc, Polygon, the Rectangle's Uniform / Individual toggle, Freehand, and Blur follow the tool PRDs' own lists as their phases build them; the Blur row follows the Blur PRD's 2.6 list, not this table's two modes (Basic Shape remainder decision 4).</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 13:34</td>
         <td>5.3, 8</td>
