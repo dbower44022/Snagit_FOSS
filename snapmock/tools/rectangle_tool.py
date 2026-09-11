@@ -28,6 +28,7 @@ class RectangleTool(BaseTool):
         "fill_opacity",
         "stroke_opacity",
         "shadow_enabled",
+        "corner_radius",
     )
 
     def __init__(self) -> None:
@@ -42,6 +43,7 @@ class RectangleTool(BaseTool):
             "fill_opacity": 1.0,
             "stroke_opacity": 1.0,
             "shadow_enabled": False,
+            "corner_radius": 0.0,
         }
 
     @property

@@ -160,6 +160,49 @@ class StrokeJoin(Enum):
     ROUND = "round"
 
 
+class HeadStyle(Enum):
+    """An arrowhead's style at either end (Basic Shape PRD 4.3)."""
+
+    NONE = "none"
+    OPEN = "open"
+    FILLED = "filled"
+    DIAMOND = "diamond"
+    CIRCLE = "circle"
+    SQUARE = "square"
+
+
+class HeadSize(Enum):
+    """The four named arrowhead sizes (Basic Shape PRD 4.3)."""
+
+    SMALL = "small"
+    MEDIUM = "medium"
+    LARGE = "large"
+    XLARGE = "xlarge"
+
+
+HEAD_SIZE_PX: dict[HeadSize, float] = {
+    HeadSize.SMALL: 8.0,
+    HeadSize.MEDIUM: 12.0,
+    HeadSize.LARGE: 18.0,
+    HeadSize.XLARGE: 24.0,
+}
+HEAD_SIZE_CUSTOM_MIN = 4.0
+HEAD_SIZE_CUSTOM_MAX = 60.0
+
+
+CORNER_RADIUS_MAX = 200.0
+"""The Corner Radius control's range (Basic Shape PRD 5.4); the item clamps to half the
+smaller side (5.3)."""
+
+
+class LineStyle(Enum):
+    """An arrow's path type (Basic Shape PRD 4.3); only Straight is drawn."""
+
+    STRAIGHT = "straight"
+    CURVED = "curved"
+    ELBOW = "elbow"
+
+
 # Zoom step ladder (percentage values)
 ZOOM_STEPS = [
     10,

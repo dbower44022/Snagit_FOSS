@@ -12,7 +12,7 @@ from typing import Any
 from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
 from PyQt6.QtGui import QColor, QFont, QImage, QPixmap
 
-from snapmock.config.constants import VerticalAlign
+from snapmock.config.constants import HeadStyle, VerticalAlign
 from snapmock.core.layer import LAYER_TYPE_BACKGROUND
 from snapmock.core.scene import SnapScene
 from snapmock.io.rtf_utils import extract_font_from_rtf, extract_text_from_rtf
@@ -152,6 +152,8 @@ def _convert_arrow(obj: dict[str, Any]) -> ArrowItem:
     item = ArrowItem(line=QLineF(QPointF(p1[0], p1[1]), QPointF(p2[0], p2[1])))
     item._stroke_color = QColor(obj.get("ForegroundColor", "#FFFF0000"))
     item._stroke_width = float(obj.get("StrokeWidth", 2))
+    # Snagit's EquilateralArrow is a filled head; the item's own default is Open.
+    item.head_style = HeadStyle.FILLED
     return item
 
 

@@ -45,12 +45,16 @@ from snapmock.commands.modify_property import ModifyPropertyCommand
 from snapmock.config.constants import (
     BADGE_SIZE_MAX,
     BADGE_SIZE_MIN,
+    CORNER_RADIUS_MAX,
+    HEAD_SIZE_CUSTOM_MAX,
     HIGHLIGHT_WIDTH_MAX,
     HIGHLIGHT_WIDTH_MIN,
     BadgeShape,
     BorderStyle,
     DisplayMode,
     FontWeight,
+    HeadSize,
+    HeadStyle,
 )
 from snapmock.core.emoji_data import EMOJI_SIZE_MAX, EMOJI_SIZE_MIN
 from snapmock.core.stamp_library import STAMP_SIZE_MAX, STAMP_SIZE_MIN
@@ -130,6 +134,44 @@ SHARED_CONTROLS: dict[str, ControlSpec] = {
             ("Normal", "Normal"),
         ),
     ),
+    # The Rectangle tool (Basic Shape PRD 5.4): the uniform corner radius
+    "corner_radius": ControlSpec(
+        "corner_radius", "Corner Radius", "slider", 0, CORNER_RADIUS_MAX, 1, " px"
+    ),
+    # The Arrow tool (Basic Shape PRD 4.7): the head and tail styles with glyphs, the size
+    "head_style": ControlSpec(
+        "head_style",
+        "Head",
+        "enum",
+        choices=tuple((s.value.title(), s) for s in HeadStyle),
+    ),
+    "tail_style": ControlSpec(
+        "tail_style",
+        "Tail",
+        "enum",
+        choices=tuple((s.value.title(), s) for s in HeadStyle),
+    ),
+    "head_size": ControlSpec(
+        "head_size",
+        "Head Size",
+        "enum",
+        choices=(
+            ("Small", HeadSize.SMALL),
+            ("Medium", HeadSize.MEDIUM),
+            ("Large", HeadSize.LARGE),
+            ("XLarge", HeadSize.XLARGE),
+        ),
+    ),
+    "head_size_custom": ControlSpec(
+        "head_size_custom",
+        "Custom",
+        "double",
+        0.0,
+        HEAD_SIZE_CUSTOM_MAX,
+        1.0,
+        " px",
+        decimals=0,
+    ),
     "font_family": ControlSpec("font_family", "Font", "font"),
     "font_size": ControlSpec("font_size", "Size", "int", 6, 200, 1, " pt"),
     "text_style": ControlSpec("text_style", "", "text_style"),
@@ -194,6 +236,33 @@ _TEXT_STYLE_KEYS: tuple[tuple[str, str, str], ...] = (
     ("italic", "I", "Italic"),
     ("underline", "U", "Underline"),
 )
+
+
+def arrow_head_icon(style: HeadStyle, size: int = 20, *, tail: bool = False) -> QIcon:
+    """A short arrow drawn with *style* at its head (or its tail), the dropdown's glyph
+    (Basic Shape PRD 4.7, "visual icons")."""
+    from PyQt6.QtCore import QLineF
+
+    from snapmock.items.arrow_item import ArrowItem
+    from snapmock.items.vector_item import with_alpha  # noqa: F401  (keeps the import graph)
+
+    item = ArrowItem(line=QLineF(3.0, size / 2, size - 3.0, size / 2))
+    item.stroke_width = 1.5
+    item.stroke_color = QColor(90, 90, 90)
+    item.head_size = HeadSize.SMALL
+    item.head_size_custom = 6.0
+    if tail:
+        item.tail_style = style
+        item.head_style = HeadStyle.NONE
+    else:
+        item.head_style = style
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    item.paint(painter, None)
+    painter.end()
+    return QIcon(pixmap)
 
 
 def badge_shape_icon(shape: BadgeShape, size: int = 16) -> QIcon:
@@ -410,6 +479,10 @@ class ToolOptionsBar(QToolBar):
             for text, value in spec.choices:
                 if spec.key == "badge_shape" and isinstance(value, BadgeShape):
                     combo.addItem(badge_shape_icon(value), text, value)
+                elif spec.key in ("head_style", "tail_style") and isinstance(value, HeadStyle):
+                    combo.addItem(
+                        arrow_head_icon(value, tail=spec.key == "tail_style"), text, value
+                    )
                 else:
                     combo.addItem(text, value)
             combo.currentIndexChanged.connect(

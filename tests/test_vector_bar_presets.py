@@ -61,10 +61,11 @@ def _drag(window: MainWindow, start: QPointF, end: QPointF) -> None:
 def test_every_shape_tool_composes_the_basic_shape_prd_order(main_window: MainWindow) -> None:
     bar = _bar(main_window)
     expected = {
-        "rectangle": CLOSED,
+        "rectangle": [*CLOSED, "corner_radius"],  # Phase 3's Corner Radius (5.4)
         "ellipse": CLOSED,
         "line": OPEN,
-        "arrow": OPEN,
+        # Phase 3 added the arrowhead controls (Basic Shape PRD 4.7)
+        "arrow": [*OPEN, "head_style", "tail_style", "head_size", "head_size_custom"],
         "freehand": [*OPEN, "smoothing"],
         # Phase 2 rebuilt the Highlighter's bar per Blur PRD 3.5
         "highlight": [

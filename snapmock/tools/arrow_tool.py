@@ -10,6 +10,8 @@ from snapmock.config.constants import (
     DEFAULT_STROKE_COLOR,
     DEFAULT_STROKE_WIDTH,
     BorderStyle,
+    HeadSize,
+    HeadStyle,
 )
 from snapmock.items.arrow_item import ArrowItem
 from snapmock.tools.base_tool import BaseTool
@@ -19,12 +21,18 @@ class ArrowTool(BaseTool):
     """Interactive tool for creating arrows by click-and-drag."""
 
     # Tool Options Bar shared controls (General UI PRD 5.3)
+    # The shared set, then the head controls of Basic Shape PRD 4.7 (Line Style is not
+    # shown: only Straight is drawn, Vector Item Properties decision 3)
     options_controls = (
         "stroke_color",
         "stroke_width",
         "stroke_style",
         "stroke_opacity",
         "shadow_enabled",
+        "head_style",
+        "tail_style",
+        "head_size",
+        "head_size_custom",
     )
 
     def __init__(self) -> None:
@@ -37,6 +45,10 @@ class ArrowTool(BaseTool):
             "stroke_style": BorderStyle.SOLID,
             "stroke_opacity": 1.0,
             "shadow_enabled": False,
+            "head_style": HeadStyle.OPEN,
+            "tail_style": HeadStyle.NONE,
+            "head_size": HeadSize.MEDIUM,
+            "head_size_custom": 0.0,
         }
 
     @property

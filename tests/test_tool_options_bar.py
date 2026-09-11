@@ -60,6 +60,7 @@ def test_shape_tools_compose_the_shared_set_in_order(main_window: MainWindow) ->
         "fill_opacity",
         "stroke_opacity",
         "shadow_enabled",
+        "corner_radius",  # Basic Shape PRD 5.4 (Vector Item Properties Phase 3)
     ]
     assert isinstance(bar.shared_widgets["stroke_color"], ColorPicker)
     width = bar.shared_widgets["stroke_width"]

@@ -39,13 +39,17 @@ from snapmock.commands.scale_geometry_command import ScaleGeometryCommand
 from snapmock.config.constants import (
     BADGE_SIZE_MAX,
     BADGE_SIZE_MIN,
+    CORNER_RADIUS_MAX,
     DEFAULT_LINE_SPACING,
+    HEAD_SIZE_CUSTOM_MAX,
     LINE_SPACING_MAX,
     LINE_SPACING_MIN,
     BadgeShape,
     BorderStyle,
     DisplayMode,
     FontWeight,
+    HeadSize,
+    HeadStyle,
     LabelPosition,
     VerticalAlign,
 )
@@ -55,11 +59,13 @@ from snapmock.core.emoji_data import EMOJI_SIZE_MAX, EMOJI_SIZE_MIN, SkinTone
 from snapmock.core.layer import ITEM_BLEND_MODES
 from snapmock.core.stamp_library import STAMP_SIZE_MAX, STAMP_SIZE_MIN
 from snapmock.core.theme_manager import current_theme, theme_manager
+from snapmock.items.arrow_item import ArrowItem
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.callout_item import CalloutItem
 from snapmock.items.emoji_item import EmojiItem
 from snapmock.items.group_item import GroupItem
 from snapmock.items.numbered_step_item import NumberedStepItem
+from snapmock.items.rectangle_item import RectangleItem
 from snapmock.items.shadow import ShadowMixin
 from snapmock.items.stamp_item import StampItem
 from snapmock.items.text_item import TextItem
@@ -123,6 +129,8 @@ def _hex_text(color: QColor) -> str:
 SECTION_ICONS: dict[str, str] = {
     "Transform": "resize",
     "Appearance": "palette",
+    "Arrow": "arrow-up-right",
+    "Rectangle": "border-inner",
     "Text": "typography",
     "Text Box": "app-window",
     "Item Info": "info-circle",
@@ -206,6 +214,8 @@ class PropertyPanel(QDockWidget):
 
         self._build_transform_section()
         self._build_appearance_section()
+        self._build_arrow_section()
+        self._build_rectangle_section()
         self._build_step_section()
         self._build_stamp_section()
         self._build_emoji_section()
@@ -217,6 +227,8 @@ class PropertyPanel(QDockWidget):
         self._sections = (
             self._transform_section,
             self._appearance_section,
+            self._arrow_section,
+            self._rectangle_section,
             self._step_section,
             self._stamp_section,
             self._emoji_section,
@@ -241,6 +253,7 @@ class PropertyPanel(QDockWidget):
             self._stroke_opacity_slider,
             self._text_fill_opacity_slider,
             self._text_stroke_opacity_slider,
+            self._corner_radius_slider,
             self._stroke_hex,
             self._fill_hex,
         ]
@@ -519,6 +532,59 @@ class PropertyPanel(QDockWidget):
         label = section.form_layout.labelForField(field)
         if label is not None:
             label.setVisible(visible)
+
+    def _build_arrow_section(self) -> None:
+        """The arrow's heads (Basic Shape PRD 4.3): where a placed arrow's head and tail
+        styles and size are changed, since the bar edits creation defaults only."""
+        from snapmock.ui.tool_options_bar import arrow_head_icon
+
+        self._arrow_section = CollapsibleSection("Arrow")
+        self._arrow_head_combo = QComboBox()
+        self._arrow_tail_combo = QComboBox()
+        for style in HeadStyle:
+            self._arrow_head_combo.addItem(arrow_head_icon(style), style.value.title(), style)
+            self._arrow_tail_combo.addItem(
+                arrow_head_icon(style, tail=True), style.value.title(), style
+            )
+        self._arrow_head_combo.setAccessibleName("Head style")
+        self._arrow_tail_combo.setAccessibleName("Tail style")
+        self._arrow_section.add_row("Head:", self._arrow_head_combo)
+        self._arrow_section.add_row("Tail:", self._arrow_tail_combo)
+        self._arrow_size_combo = QComboBox()
+        for label, size in (
+            ("Small", HeadSize.SMALL),
+            ("Medium", HeadSize.MEDIUM),
+            ("Large", HeadSize.LARGE),
+            ("XLarge", HeadSize.XLARGE),
+        ):
+            self._arrow_size_combo.addItem(label, size)
+        self._arrow_size_combo.setAccessibleName("Head size")
+        self._arrow_section.add_row("Head size:", self._arrow_size_combo)
+        self._arrow_custom_spin = self._make_double_spin(
+            -1.0, HEAD_SIZE_CUSTOM_MAX, 0, " px", "Custom head size"
+        )
+        self._arrow_custom_spin.setToolTip("0 uses the named size")
+        self._arrow_section.add_row("Custom size:", self._arrow_custom_spin)
+        self._main_layout.addWidget(self._arrow_section)
+
+    def _build_rectangle_section(self) -> None:
+        """The rectangle's corner radius (Basic Shape PRD 5.3, 5.4), for a placed rectangle."""
+        self._rectangle_section = CollapsibleSection("Rectangle")
+        self._corner_radius_slider = QSlider(Qt.Orientation.Horizontal)
+        self._corner_radius_slider.setRange(0, int(CORNER_RADIUS_MAX))
+        self._corner_radius_spin = QDoubleSpinBox()
+        self._corner_radius_spin.setRange(-1.0, CORNER_RADIUS_MAX)
+        self._corner_radius_spin.setDecimals(0)
+        self._corner_radius_spin.setSuffix(" px")
+        self._corner_radius_spin.setSpecialValueText(MIXED_TEXT)
+        self._corner_radius_spin.setKeyboardTracking(False)
+        self._rectangle_section.add_row(
+            "Corner radius:",
+            self._slider_spin_row(
+                self._corner_radius_spin, self._corner_radius_slider, "Corner radius"
+            ),
+        )
+        self._main_layout.addWidget(self._rectangle_section)
 
     def _build_step_section(self) -> None:
         """The numbered step's own properties (Numbered Steps, Stamps & Emoji PRD 2.4):
@@ -952,6 +1018,12 @@ class PropertyPanel(QDockWidget):
         self._text_padding_spin.valueChanged.connect(self._on_text_padding_changed)
         self._text_valign_combo.currentIndexChanged.connect(self._on_text_valign_changed)
         self._text_auto_size_check.toggled.connect(self._on_text_auto_size_changed)
+        self._arrow_head_combo.currentIndexChanged.connect(self._on_arrow_head_changed)
+        self._arrow_tail_combo.currentIndexChanged.connect(self._on_arrow_tail_changed)
+        self._arrow_size_combo.currentIndexChanged.connect(self._on_arrow_size_changed)
+        self._arrow_custom_spin.valueChanged.connect(self._on_arrow_custom_changed)
+        self._corner_radius_slider.valueChanged.connect(self._on_corner_radius_slider_changed)
+        self._corner_radius_spin.valueChanged.connect(self._on_corner_radius_spin_changed)
         self._step_value_spin.valueChanged.connect(self._on_step_value_changed)
         self._step_mode_combo.currentIndexChanged.connect(self._on_step_mode_changed)
         self._step_text_edit.editingFinished.connect(self._on_step_text_edited)
@@ -1075,6 +1147,12 @@ class PropertyPanel(QDockWidget):
             return any(isinstance(m, VectorItem) for m in item.descendants())
         return False
 
+    def _selected_rectangles(self) -> list[RectangleItem]:
+        return [i for i in self._selected_items() if isinstance(i, RectangleItem)]
+
+    def _selected_arrows(self) -> list[ArrowItem]:
+        return [i for i in self._selected_items() if isinstance(i, ArrowItem)]
+
     def _selected_steps(self) -> list[NumberedStepItem]:
         return [i for i in self._selected_items() if isinstance(i, NumberedStepItem)]
 
@@ -1122,6 +1200,8 @@ class PropertyPanel(QDockWidget):
             all_vector = has_selection and all(self._shows_appearance(i) for i in items)
             all_text = has_selection and all(isinstance(i, (TextItem, CalloutItem)) for i in items)
             all_text_items = has_selection and all(isinstance(i, TextItem) for i in items)
+            all_arrows = has_selection and all(isinstance(i, ArrowItem) for i in items)
+            all_rectangles = has_selection and all(isinstance(i, RectangleItem) for i in items)
             all_steps = has_selection and all(isinstance(i, NumberedStepItem) for i in items)
             all_shadow = has_selection and all(self._shows_shadow(i) for i in items)
             all_stamps = has_selection and all(isinstance(i, StampItem) for i in items)
@@ -1133,6 +1213,8 @@ class PropertyPanel(QDockWidget):
             # Section visibility (PRD 8.3 to 8.6)
             self._transform_section.setVisible(has_selection)
             self._appearance_section.setVisible(all_vector or in_vector_defaults)
+            self._arrow_section.setVisible(all_arrows)
+            self._rectangle_section.setVisible(all_rectangles)
             self._step_section.setVisible(all_steps)
             self._stamp_section.setVisible(all_stamps)
             self._emoji_section.setVisible(all_emoji)
@@ -1164,6 +1246,13 @@ class PropertyPanel(QDockWidget):
                     self._populate_appearance(self._selected_vectors())
                 if all_text:
                     self._populate_text(self._selected_text_items(), all_text_items)
+                if all_arrows:
+                    self._populate_arrow(self._selected_arrows())
+                if all_rectangles:
+                    radii = [i.corner_radius for i in self._selected_rectangles()]
+                    value, uniform = _uniform(radii)
+                    self._corner_radius_slider.setValue(int(value) if uniform else 0)
+                    self._set_spin(self._corner_radius_spin, radii)
                 if all_steps:
                     self._populate_step(self._selected_steps())
                 if all_stamps:
@@ -1265,6 +1354,12 @@ class PropertyPanel(QDockWidget):
                 self._text_auto_size_check,
                 [i.auto_size for i in items if isinstance(i, TextItem)],
             )
+
+    def _populate_arrow(self, items: list[ArrowItem]) -> None:
+        self._set_combo_data(self._arrow_head_combo, [i.head_style for i in items])
+        self._set_combo_data(self._arrow_tail_combo, [i.tail_style for i in items])
+        self._set_combo_data(self._arrow_size_combo, [i.head_size for i in items])
+        self._set_spin(self._arrow_custom_spin, [i.head_size_custom for i in items])
 
     def _populate_step(self, items: list[NumberedStepItem]) -> None:
         self._set_spin(self._step_value_spin, [i.number_value for i in items])
@@ -2155,6 +2250,48 @@ class PropertyPanel(QDockWidget):
             self._refresh_from_selection()
 
     # --- numbered step handlers (Numbered Steps, Stamps & Emoji PRD 2.4) ---
+
+    def _on_corner_radius_slider_changed(self, value: int) -> None:
+        if self._updating:
+            return
+        self._updating = True
+        self._corner_radius_spin.setValue(float(value))
+        self._updating = False
+        self._push_property(self._selected_rectangles(), "corner_radius", float(value))
+
+    def _on_corner_radius_spin_changed(self, value: float) -> None:
+        if self._updating or value < 0:
+            return
+        self._updating = True
+        self._corner_radius_slider.setValue(int(value))
+        self._updating = False
+        self._push_property(self._selected_rectangles(), "corner_radius", float(value))
+
+    def _on_arrow_head_changed(self, index: int) -> None:
+        if self._updating or index < 0:
+            return
+        style = self._arrow_head_combo.itemData(index)
+        if isinstance(style, HeadStyle):
+            self._push_property(self._selected_arrows(), "head_style", style)
+
+    def _on_arrow_tail_changed(self, index: int) -> None:
+        if self._updating or index < 0:
+            return
+        style = self._arrow_tail_combo.itemData(index)
+        if isinstance(style, HeadStyle):
+            self._push_property(self._selected_arrows(), "tail_style", style)
+
+    def _on_arrow_size_changed(self, index: int) -> None:
+        if self._updating or index < 0:
+            return
+        size = self._arrow_size_combo.itemData(index)
+        if isinstance(size, HeadSize):
+            self._push_property(self._selected_arrows(), "head_size", size)
+
+    def _on_arrow_custom_changed(self, value: float) -> None:
+        if self._updating or value < 0:
+            return
+        self._push_property(self._selected_arrows(), "head_size_custom", float(value))
 
     def _on_step_value_changed(self, value: int) -> None:
         if self._updating or value < 0:
