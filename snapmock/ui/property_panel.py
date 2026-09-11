@@ -45,6 +45,7 @@ from snapmock.config.constants import (
     HEAD_SIZE_CUSTOM_MAX,
     LINE_SPACING_MAX,
     LINE_SPACING_MIN,
+    ArcType,
     BadgeShape,
     BorderStyle,
     CornerRadiusMode,
@@ -62,6 +63,7 @@ from snapmock.core.emoji_data import EMOJI_SIZE_MAX, EMOJI_SIZE_MIN, SkinTone
 from snapmock.core.layer import ITEM_BLEND_MODES
 from snapmock.core.stamp_library import STAMP_SIZE_MAX, STAMP_SIZE_MIN
 from snapmock.core.theme_manager import current_theme, theme_manager
+from snapmock.items.arc_item import ArcItem
 from snapmock.items.arrow_item import ArrowItem
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.callout_item import CalloutItem
@@ -219,6 +221,7 @@ class PropertyPanel(QDockWidget):
         self._build_transform_section()
         self._build_appearance_section()
         self._build_arrow_section()
+        self._build_arc_section()
         self._build_rectangle_section()
         self._build_freehand_section()
         self._build_step_section()
@@ -233,6 +236,7 @@ class PropertyPanel(QDockWidget):
             self._transform_section,
             self._appearance_section,
             self._arrow_section,
+            self._arc_section,
             self._rectangle_section,
             self._freehand_section,
             self._step_section,
@@ -582,6 +586,41 @@ class PropertyPanel(QDockWidget):
         self._arrow_line_style_combo.setAccessibleName("Line style")
         self._arrow_section.add_row("Line style:", self._arrow_line_style_combo)
         self._main_layout.addWidget(self._arrow_section)
+
+    def _build_arc_section(self) -> None:
+        """A placed arc's type and heads (Basic Shape PRD 7.3, 7.4), since the bar edits
+        creation defaults only."""
+        from snapmock.tools.arc_tool import arc_type_icon
+        from snapmock.ui.tool_options_bar import arrow_head_icon
+
+        self._arc_section = CollapsibleSection("Arc")
+        self._arc_type_combo = QComboBox()
+        for arc_type in ArcType:
+            self._arc_type_combo.addItem(arc_type_icon(arc_type), arc_type.value.title(), arc_type)
+        self._arc_type_combo.setAccessibleName("Arc type")
+        self._arc_section.add_row("Type:", self._arc_type_combo)
+        self._arc_head_combo = QComboBox()
+        self._arc_tail_combo = QComboBox()
+        for style in HeadStyle:
+            self._arc_head_combo.addItem(arrow_head_icon(style), style.value.title(), style)
+            self._arc_tail_combo.addItem(
+                arrow_head_icon(style, tail=True), style.value.title(), style
+            )
+        self._arc_head_combo.setAccessibleName("Arc head style")
+        self._arc_tail_combo.setAccessibleName("Arc tail style")
+        self._arc_section.add_row("Head:", self._arc_head_combo)
+        self._arc_section.add_row("Tail:", self._arc_tail_combo)
+        self._arc_size_combo = QComboBox()
+        for label, size in (
+            ("Small", HeadSize.SMALL),
+            ("Medium", HeadSize.MEDIUM),
+            ("Large", HeadSize.LARGE),
+            ("XLarge", HeadSize.XLARGE),
+        ):
+            self._arc_size_combo.addItem(label, size)
+        self._arc_size_combo.setAccessibleName("Arc head size")
+        self._arc_section.add_row("Head size:", self._arc_size_combo)
+        self._main_layout.addWidget(self._arc_section)
 
     def _build_rectangle_section(self) -> None:
         """The rectangle's corner radius (Basic Shape PRD 5.3, 5.4), for a placed rectangle."""
@@ -1085,6 +1124,15 @@ class PropertyPanel(QDockWidget):
             self._on_freehand_smoothing_spin_changed
         )
         self._freehand_closed_check.toggled.connect(self._on_freehand_closed_changed)
+        for combo, prop in (
+            (self._arc_type_combo, "arc_type"),
+            (self._arc_head_combo, "head_style"),
+            (self._arc_tail_combo, "tail_style"),
+            (self._arc_size_combo, "head_size"),
+        ):
+            combo.currentIndexChanged.connect(
+                lambda index, c=combo, p=prop: self._on_arc_combo_changed(c, p, index)
+            )
         self._step_value_spin.valueChanged.connect(self._on_step_value_changed)
         self._step_mode_combo.currentIndexChanged.connect(self._on_step_mode_changed)
         self._step_text_edit.editingFinished.connect(self._on_step_text_edited)
@@ -1214,6 +1262,9 @@ class PropertyPanel(QDockWidget):
     def _selected_freehand(self) -> list[FreehandItem]:
         return [i for i in self._selected_items() if isinstance(i, FreehandItem)]
 
+    def _selected_arcs(self) -> list[ArcItem]:
+        return [i for i in self._selected_items() if isinstance(i, ArcItem)]
+
     def _selected_arrows(self) -> list[ArrowItem]:
         return [i for i in self._selected_items() if isinstance(i, ArrowItem)]
 
@@ -1265,6 +1316,7 @@ class PropertyPanel(QDockWidget):
             all_text = has_selection and all(isinstance(i, (TextItem, CalloutItem)) for i in items)
             all_text_items = has_selection and all(isinstance(i, TextItem) for i in items)
             all_arrows = has_selection and all(isinstance(i, ArrowItem) for i in items)
+            all_arcs = has_selection and all(isinstance(i, ArcItem) for i in items)
             all_rectangles = has_selection and all(isinstance(i, RectangleItem) for i in items)
             all_freehand = has_selection and all(isinstance(i, FreehandItem) for i in items)
             all_steps = has_selection and all(isinstance(i, NumberedStepItem) for i in items)
@@ -1279,6 +1331,7 @@ class PropertyPanel(QDockWidget):
             self._transform_section.setVisible(has_selection)
             self._appearance_section.setVisible(all_vector or in_vector_defaults)
             self._arrow_section.setVisible(all_arrows)
+            self._arc_section.setVisible(all_arcs)
             self._rectangle_section.setVisible(all_rectangles)
             self._freehand_section.setVisible(all_freehand)
             self._step_section.setVisible(all_steps)
@@ -1314,6 +1367,8 @@ class PropertyPanel(QDockWidget):
                     self._populate_text(self._selected_text_items(), all_text_items)
                 if all_arrows:
                     self._populate_arrow(self._selected_arrows())
+                if all_arcs:
+                    self._populate_arc(self._selected_arcs())
                 if all_rectangles:
                     self._populate_rectangle(self._selected_rectangles())
                 if all_freehand:
@@ -1440,6 +1495,12 @@ class PropertyPanel(QDockWidget):
         self._freehand_smoothing_slider.setValue(int(value) if uniform else 0)
         self._set_spin(self._freehand_smoothing_spin, percents)
         self._set_check(self._freehand_closed_check, [i.is_closed for i in items])
+
+    def _populate_arc(self, items: list[ArcItem]) -> None:
+        self._set_combo_data(self._arc_type_combo, [i.arc_type for i in items])
+        self._set_combo_data(self._arc_head_combo, [i.head_style for i in items])
+        self._set_combo_data(self._arc_tail_combo, [i.tail_style for i in items])
+        self._set_combo_data(self._arc_size_combo, [i.head_size for i in items])
 
     def _populate_arrow(self, items: list[ArrowItem]) -> None:
         self._set_combo_data(self._arrow_head_combo, [i.head_style for i in items])
@@ -2397,6 +2458,11 @@ class PropertyPanel(QDockWidget):
         if self._updating:
             return
         self._push_property(self._selected_freehand(), "is_closed", bool(checked))
+
+    def _on_arc_combo_changed(self, combo: QComboBox, prop: str, index: int) -> None:
+        if self._updating or index < 0:
+            return
+        self._push_property(self._selected_arcs(), prop, combo.itemData(index))
 
     def _on_arrow_head_changed(self, index: int) -> None:
         if self._updating or index < 0:

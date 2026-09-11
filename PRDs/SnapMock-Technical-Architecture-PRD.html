@@ -2034,6 +2034,7 @@ docstring.</p>
         snagit_reader.py          # load Snagit .snagx ZIP archives into a SnapScene
         snagit_writer.py          # save a SnapScene as a Snagit .snagx ZIP archive
     items/                        # Scene items — SnapGraphicsItem subclasses for annotations
+        arc_item.py               # a curved arc through a control point, open, chord, or pie (Basic Shape PRD 7)
         arrow_item.py             # line with arrowhead annotation
         base_item.py              # abstract base class for all scene annotation items
         blur_item.py              # region that applies blur/pixelate effect to layers below
@@ -2072,6 +2073,7 @@ docstring.</p>
             light.qss             # light theme constants and rules (General UI PRD 13.2)
             dark.qss              # dark theme constants and rules (General UI PRD 13.3)
     tools/                        # Tool engine — BaseTool subclasses and ToolManager
+        arc_tool.py               # the three-step arc: drag the chord, move for the curvature, click
         arrow_tool.py             # click-and-drag to create arrows
         base_tool.py              # abstract base class for all interactive tools
         blur_tool.py              # click-and-drag to create blur regions

@@ -17,6 +17,7 @@ from PyQt6.QtGui import QColor
 from snapmock.config.constants import APP_VERSION
 from snapmock.core.scene import SnapScene
 from snapmock.io.rtf_utils import text_to_rtf_base64
+from snapmock.items.arc_item import ArcItem
 from snapmock.items.arrow_item import ArrowItem
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.blur_item import BlurItem
@@ -160,7 +161,8 @@ def _item_to_snagit(item: SnapGraphicsItem, warnings: list[str]) -> dict[str, An
     # Unsupported types
     type_name = type(item).__name__
     if isinstance(
-        item, (EllipseItem, FreehandItem, BlurItem, NumberedStepItem, StampItem, EmojiItem)
+        item,
+        (EllipseItem, FreehandItem, BlurItem, NumberedStepItem, StampItem, EmojiItem, ArcItem),
     ):
         warnings.append(f"{type_name} is not supported in .snagx format — skipped")
         log.warning("Skipping unsupported item type %s for .snagx export", type_name)

@@ -31,6 +31,7 @@ from PyQt6.QtGui import QColor
 
 from snapmock import __version__
 from snapmock.config.constants import (
+    ArcType,
     BadgeShape,
     BorderStyle,
     BubbleShape,
@@ -85,6 +86,7 @@ _ENUM_TYPES: dict[str, type[Enum]] = {
     "HeadSize": HeadSize,
     "LineStyle": LineStyle,
     "CornerRadiusMode": CornerRadiusMode,
+    "ArcType": ArcType,
 }
 
 OPACITY_KEYS: tuple[str, str] = ("fill_opacity", "stroke_opacity")

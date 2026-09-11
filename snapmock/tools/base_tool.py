@@ -134,6 +134,14 @@ class BaseTool(ABC):
         """Handle a key release event. Return True if consumed."""
         return False
 
+    def handle_escape(self) -> bool:
+        """Escape reached the window (the Edit > Deselect shortcut): end the tool's own
+        operation in progress and return True, or return False to let Deselect run.
+
+        The Select tool leaves point-editing mode; the Arc and Polygon tools cancel the
+        shape being drawn (Basic Shape PRD 7.2, 8.2)."""
+        return False
+
     # --- context menu ---
 
     def context_menu(self, event: QContextMenuEvent) -> bool:

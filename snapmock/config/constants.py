@@ -211,6 +211,45 @@ CORNER_KEYS: tuple[str, str, str, str] = (
 """The four individual radii of 5.3, in the PRD's order and under their 10.3 keys."""
 
 
+class ArcType(Enum):
+    """An arc's closure (Basic Shape PRD 7.3): the curve alone, a chord, or a pie slice."""
+
+    OPEN = "open"
+    CHORD = "chord"
+    PIE = "pie"
+
+
+class PolygonMode(Enum):
+    """Arbitrary vertices, or a computed equilateral polygon (Basic Shape PRD 8.3)."""
+
+    FREEFORM = "freeform"
+    REGULAR = "regular"
+
+
+class BlurMode(Enum):
+    """How a blur region obscures what lies beneath it (Blur PRD 2.2)."""
+
+    GAUSSIAN = "gaussian"
+    PIXELATE = "pixelate"
+    SOLID = "solid"
+
+
+class BlurRegionShape(Enum):
+    """A blur region's shape (Blur PRD 2.4); Freeform and Whole Layer are not built."""
+
+    RECTANGLE = "rectangle"
+    ELLIPSE = "ellipse"
+
+
+BLUR_RADIUS_MIN = 1.0
+BLUR_RADIUS_MAX = 50.0
+BLUR_PIXEL_SIZE_MIN = 2
+BLUR_PIXEL_SIZE_MAX = 100
+BLUR_FEATHER_MAX = 30.0
+DEFAULT_BLUR_FILL_COLOR = "#000000"
+"""The Blur PRD's 2.5 ranges and the Solid Fill default."""
+
+
 class LineStyle(Enum):
     """An arrow's path type (Basic Shape PRD 4.3, 4.5, 4.6)."""
 

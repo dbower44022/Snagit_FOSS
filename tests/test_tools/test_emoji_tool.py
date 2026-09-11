@@ -98,7 +98,7 @@ def _menu_texts(menu: QMenu) -> list[str]:
 
 def test_emoji_is_the_nineteenth_tool_after_stamp_with_shift_e(main_window: MainWindow) -> None:
     ids = main_window.tool_manager.tool_ids
-    assert len(ids) == 19
+    assert len(ids) == 20  # twenty since the Arc tool (Basic Shape remainder)
     assert ids.index("emoji") == ids.index("stamp") + 1
     tool = main_window.tool_manager.tool("emoji")
     assert isinstance(tool, EmojiTool)

@@ -24,6 +24,7 @@ TOOL_ICONS: dict[str, str] = {
     "ellipse": "circle",
     "arrow": "arrow-up-right",
     "line": "line",
+    "arc": "vector-bezier-arc",
     "text": "typography",
     "freehand": "pencil",
     "blur": "blur",

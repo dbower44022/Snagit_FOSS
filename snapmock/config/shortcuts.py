@@ -70,6 +70,7 @@ SHORTCUTS: dict[str, str] = {
     "tool.ellipse": "E",
     "tool.line": "L",
     "tool.arrow": "A",
+    "tool.arc": "Shift+A",
     "tool.freehand": "P",
     "tool.text": "T",
     "tool.callout": "C",

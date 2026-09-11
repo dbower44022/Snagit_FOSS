@@ -74,6 +74,76 @@ def point_from_data(raw: object) -> QPointF | None:
     return None
 
 
+def head_geometry(
+    tip: QPointF, forward: QPointF, style: HeadStyle, size: float
+) -> tuple[QPainterPath, QPainterPath, float]:
+    """The filled path, the open lines path, and how far a shaft retreats from *tip* for
+    a head of *style* and *size* pointing along *forward* (Basic Shape PRD 4.4); shared by
+    the arrow and the arc (7.3)."""
+    u = forward
+    v = QPointF(-u.y(), u.x())
+    filled = QPainterPath()
+    lines = QPainterPath()
+    if style is HeadStyle.OPEN:
+        length = size
+        for sign in (1.0, -1.0):
+            end = QPointF(
+                tip.x()
+                - length
+                * (math.cos(_OPEN_HALF_ANGLE) * u.x() + sign * math.sin(_OPEN_HALF_ANGLE) * v.x()),
+                tip.y()
+                - length
+                * (math.cos(_OPEN_HALF_ANGLE) * u.y() + sign * math.sin(_OPEN_HALF_ANGLE) * v.y()),
+            )
+            lines.moveTo(tip)
+            lines.lineTo(end)
+        return filled, lines, 0.0
+    if style is HeadStyle.FILLED:
+        base = QPointF(tip.x() - size * u.x(), tip.y() - size * u.y())
+        filled.addPolygon(
+            QPolygonF(
+                [
+                    tip,
+                    QPointF(base.x() + size * v.x(), base.y() + size * v.y()),
+                    QPointF(base.x() - size * v.x(), base.y() - size * v.y()),
+                ]
+            )
+        )
+        filled.closeSubpath()
+        return filled, lines, size
+    half = size / 2.0
+    if style is HeadStyle.DIAMOND:
+        filled.addPolygon(
+            QPolygonF(
+                [
+                    QPointF(tip.x() + half * u.x(), tip.y() + half * u.y()),
+                    QPointF(tip.x() + half * v.x(), tip.y() + half * v.y()),
+                    QPointF(tip.x() - half * u.x(), tip.y() - half * u.y()),
+                    QPointF(tip.x() - half * v.x(), tip.y() - half * v.y()),
+                ]
+            )
+        )
+        filled.closeSubpath()
+        return filled, lines, half
+    if style is HeadStyle.CIRCLE:
+        filled.addEllipse(tip, half, half)
+        return filled, lines, half
+    if style is HeadStyle.SQUARE:
+        filled.addPolygon(
+            QPolygonF(
+                [
+                    QPointF(tip.x() + half * (u.x() + v.x()), tip.y() + half * (u.y() + v.y())),
+                    QPointF(tip.x() + half * (u.x() - v.x()), tip.y() + half * (u.y() - v.y())),
+                    QPointF(tip.x() - half * (u.x() + v.x()), tip.y() - half * (u.y() + v.y())),
+                    QPointF(tip.x() - half * (u.x() - v.x()), tip.y() - half * (u.y() - v.y())),
+                ]
+            )
+        )
+        filled.closeSubpath()
+        return filled, lines, half
+    return filled, lines, 0.0
+
+
 class ArrowItem(VectorItem):
     """A line with an arrowhead at the end point and an optional one at the start."""
 
@@ -263,85 +333,8 @@ class ArrowItem(VectorItem):
     def _head_geometry(
         self, tip: QPointF, forward: QPointF, style: HeadStyle
     ) -> tuple[QPainterPath, QPainterPath, float]:
-        """The filled path, the open lines path, and how far the shaft retreats from *tip*
-        for a head of *style* pointing along *forward* (4.4)."""
-        size = self.effective_head_size()
-        u = forward
-        v = QPointF(-u.y(), u.x())
-        filled = QPainterPath()
-        lines = QPainterPath()
-        if style is HeadStyle.OPEN:
-            length = size
-            for sign in (1.0, -1.0):
-                end = QPointF(
-                    tip.x()
-                    - length
-                    * (
-                        math.cos(_OPEN_HALF_ANGLE) * u.x()
-                        + sign * math.sin(_OPEN_HALF_ANGLE) * v.x()
-                    ),
-                    tip.y()
-                    - length
-                    * (
-                        math.cos(_OPEN_HALF_ANGLE) * u.y()
-                        + sign * math.sin(_OPEN_HALF_ANGLE) * v.y()
-                    ),
-                )
-                lines.moveTo(tip)
-                lines.lineTo(end)
-            return filled, lines, 0.0
-        if style is HeadStyle.FILLED:
-            base = QPointF(tip.x() - size * u.x(), tip.y() - size * u.y())
-            filled.addPolygon(
-                QPolygonF(
-                    [
-                        tip,
-                        QPointF(base.x() + size * v.x(), base.y() + size * v.y()),
-                        QPointF(base.x() - size * v.x(), base.y() - size * v.y()),
-                    ]
-                )
-            )
-            filled.closeSubpath()
-            return filled, lines, size
-        half = size / 2.0
-        if style is HeadStyle.DIAMOND:
-            filled.addPolygon(
-                QPolygonF(
-                    [
-                        QPointF(tip.x() + half * u.x(), tip.y() + half * u.y()),
-                        QPointF(tip.x() + half * v.x(), tip.y() + half * v.y()),
-                        QPointF(tip.x() - half * u.x(), tip.y() - half * u.y()),
-                        QPointF(tip.x() - half * v.x(), tip.y() - half * v.y()),
-                    ]
-                )
-            )
-            filled.closeSubpath()
-            return filled, lines, half
-        if style is HeadStyle.CIRCLE:
-            filled.addEllipse(tip, half, half)
-            return filled, lines, half
-        if style is HeadStyle.SQUARE:
-            filled.addPolygon(
-                QPolygonF(
-                    [
-                        QPointF(
-                            tip.x() + half * (u.x() + v.x()), tip.y() + half * (u.y() + v.y())
-                        ),
-                        QPointF(
-                            tip.x() + half * (u.x() - v.x()), tip.y() + half * (u.y() - v.y())
-                        ),
-                        QPointF(
-                            tip.x() - half * (u.x() + v.x()), tip.y() - half * (u.y() + v.y())
-                        ),
-                        QPointF(
-                            tip.x() - half * (u.x() - v.x()), tip.y() - half * (u.y() - v.y())
-                        ),
-                    ]
-                )
-            )
-            filled.closeSubpath()
-            return filled, lines, half
-        return filled, lines, 0.0
+        """The head of *style* at *tip* at this arrow's size (4.4)."""
+        return head_geometry(tip, forward, style, self.effective_head_size())
 
     def head_paths(self) -> tuple[QPainterPath, QPainterPath, QPainterPath]:
         """The filled heads, the open heads' lines, and the shaft that remains between them."""
@@ -364,14 +357,13 @@ class ArrowItem(VectorItem):
         the end, so the shaft stops at a filled head's base."""
         path = QPainterPath()
         if self._line_style is LineStyle.CURVED:
-            p0, c, p2 = self._line.p1(), self.effective_control_point(), self._line.p2()
-            b = self._curve_parameter(p0, c, p2, p2, head_retreat, 0.0, 1.0, from_end=True)
-            a = self._curve_parameter(p0, c, p2, p0, tail_retreat, 0.0, b, from_end=False)
-            if b - a <= _EPSILON:
-                return path
-            path.moveTo(_quad_at(p0, c, p2, a))
-            path.quadTo(_quad_blossom(p0, c, p2, a, b), _quad_at(p0, c, p2, b))
-            return path
+            return quad_shaft(
+                self._line.p1(),
+                self.effective_control_point(),
+                self._line.p2(),
+                tail_retreat,
+                head_retreat,
+            )
         points = (
             self.elbow_points()
             if self._line_style is LineStyle.ELBOW
@@ -559,3 +551,19 @@ class ArrowItem(VectorItem):
         item._control_point = point_from_data(data.get("control_point"))
         item._bend_point = point_from_data(data.get("bend_point"))
         return item
+
+
+def quad_shaft(
+    p0: QPointF, c: QPointF, p2: QPointF, tail_retreat: float, head_retreat: float
+) -> QPainterPath:
+    """The quadratic from *p0* through *c* to *p2* with *tail_retreat* taken off the start
+    and *head_retreat* off the end, each measured straight from the end point, so a shaft
+    stops at a filled head's base (4.4, 4.5); shared by the arrow and the arc (7.3)."""
+    path = QPainterPath()
+    b = ArrowItem._curve_parameter(p0, c, p2, p2, head_retreat, 0.0, 1.0, from_end=True)
+    a = ArrowItem._curve_parameter(p0, c, p2, p0, tail_retreat, 0.0, b, from_end=False)
+    if b - a <= _EPSILON:
+        return path
+    path.moveTo(_quad_at(p0, c, p2, a))
+    path.quadTo(_quad_blossom(p0, c, p2, a, b), _quad_at(p0, c, p2, b))
+    return path

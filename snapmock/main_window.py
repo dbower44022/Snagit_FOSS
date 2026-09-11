@@ -104,6 +104,7 @@ from snapmock.items.numbered_step_item import NumberedStepItem
 from snapmock.items.stamp_item import StampItem
 from snapmock.library.manager import LibraryManager
 from snapmock.library.render import export_file, export_target
+from snapmock.tools.arc_tool import ArcTool
 from snapmock.tools.arrow_tool import ArrowTool
 from snapmock.tools.blur_tool import BlurTool
 from snapmock.tools.callout_tool import CalloutTool
@@ -603,6 +604,7 @@ class MainWindow(QMainWindow):
         self._tool_manager.register(EllipseTool())
         self._tool_manager.register(ArrowTool())
         self._tool_manager.register(LineTool())
+        self._tool_manager.register(ArcTool())
         self._tool_manager.register(TextTool())
         self._tool_manager.register(FreehandTool())
         self._tool_manager.register(BlurTool())
@@ -1233,6 +1235,7 @@ class MainWindow(QMainWindow):
                 ("tool.ellipse", "ellipse"),
                 ("tool.line", "line"),
                 ("tool.arrow", "arrow"),
+                ("tool.arc", "arc"),
                 ("tool.freehand", "freehand"),
             ],
             # Text & annotation
@@ -2707,9 +2710,10 @@ class MainWindow(QMainWindow):
             stack.redo()
 
     def _edit_deselect(self) -> None:
-        # Escape leaves point-editing mode first and keeps the selection (Basic Shape PRD 3.5)
+        # Escape ends the active tool's own operation first: point-editing mode leaves and
+        # keeps the selection (Basic Shape PRD 3.5); an arc in progress is cancelled (7.2)
         active = self._tool_manager.active_tool
-        if isinstance(active, SelectTool) and active.leave_point_edit():
+        if active is not None and active.handle_escape():
             return
         if self._require_selection("Deselect"):
             self._selection_manager.deselect_all()

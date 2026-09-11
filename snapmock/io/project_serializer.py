@@ -19,6 +19,7 @@ from snapmock.config.constants import (
 from snapmock.core.guides import Guide
 from snapmock.core.layer import Layer, normalize_blend_mode, normalize_layer_type
 from snapmock.core.scene import SnapScene
+from snapmock.items.arc_item import ArcItem
 from snapmock.items.arrow_item import ArrowItem
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.blur_item import BlurItem
@@ -40,6 +41,7 @@ ITEM_REGISTRY: dict[str, type[SnapGraphicsItem]] = {
     "EllipseItem": EllipseItem,
     "LineItem": LineItem,
     "ArrowItem": ArrowItem,
+    "ArcItem": ArcItem,
     "TextItem": TextItem,
     "FreehandItem": FreehandItem,
     "CalloutItem": CalloutItem,

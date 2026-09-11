@@ -10,3 +10,8 @@ load time by replacing `currentColor` (General UI PRD Section 13.4).
 
 To add a glyph: copy `icons/outline/<name>.svg` from the same release into this
 directory and reference `<name>` from `snapmock/ui/icons.py`.
+
+`vector-bezier-arc.svg` (the Arc tool) and `polygon.svg` (the Polygon tool) were added
+on 09-11-26 by the Basic Shape remainder work from the `@tabler/icons` npm package of the
+same release (`icons/outline/`), which carries the same paths without the repository's
+leading comment block of tags.

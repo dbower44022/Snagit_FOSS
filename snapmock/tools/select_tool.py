@@ -169,6 +169,10 @@ class SelectTool(BaseTool):
         self._show_status_hint()
         return True
 
+    def handle_escape(self) -> bool:
+        """Escape leaves point-editing mode and keeps the selection (PRD 3.5)."""
+        return self.leave_point_edit()
+
     def leave_point_edit(self) -> bool:
         """Leave point-editing mode, undoing a drag in progress; False when not in it."""
         session = self._point_session
