@@ -296,6 +296,7 @@ class ToolOptionsBar(QToolBar):
         self._tool: BaseTool | None = None
         self._updating = False
         self._shared: dict[str, QWidget] = {}
+        self._control_actions: dict[str, list[QAction]] = {}
         self._style_buttons: dict[str, QToolButton] = {}
         self._selection: SelectionManager | None = None
         self._selection_actions: list[QAction] = []
@@ -367,9 +368,16 @@ class ToolOptionsBar(QToolBar):
 
     # ---- composition ----
 
+    def set_control_visible(self, key: str, visible: bool) -> None:
+        """Show or hide one shared control with its label (the Rectangle bar's single
+        Corner Radius slider, replaced by four spin boxes in Individual mode, PRD 5.4)."""
+        for action in self._control_actions.get(key, []):
+            action.setVisible(visible)
+
     def _on_tool_changed(self, tool_id: str) -> None:
         self.clear()
         self._shared.clear()
+        self._control_actions.clear()
         self._style_buttons.clear()
         self._selection_copies.clear()
         self._selection_label = None
@@ -400,7 +408,9 @@ class ToolOptionsBar(QToolBar):
             spec = SHARED_CONTROLS[key]
             if spec.key != "text_style" and spec.key not in tool.creation_defaults:
                 continue
+            before = len(self.actions())
             self._build_control(spec)
+            self._control_actions[spec.key] = self.actions()[before:]
         self._read_defaults(tool)
         self._update_selection_widgets()
         apply_default_names(self)

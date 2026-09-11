@@ -1,19 +1,38 @@
-"""RectangleTool — click-and-drag to create rectangles."""
+"""RectangleTool — click-and-drag to create rectangles.
+
+Basic Shape PRD 5.4: the shared set, the Corner Radius slider and spin box, and the tool's
+own Uniform / Individual toggle; in Individual mode four small spin boxes (top-left,
+top-right, bottom-left, bottom-right) replace the single slider.
+"""
 
 from __future__ import annotations
 
+from typing import Any
+
 from PyQt6.QtCore import QPointF, QRectF, Qt
-from PyQt6.QtGui import QColor, QMouseEvent
+from PyQt6.QtGui import QAction, QColor, QMouseEvent
+from PyQt6.QtWidgets import QLabel, QSpinBox, QToolBar, QToolButton
 
 from snapmock.commands.add_item import AddItemCommand
 from snapmock.config.constants import (
+    CORNER_KEYS,
+    CORNER_RADIUS_MAX,
     DEFAULT_FILL_COLOR,
     DEFAULT_STROKE_COLOR,
     DEFAULT_STROKE_WIDTH,
     BorderStyle,
+    CornerRadiusMode,
 )
 from snapmock.items.rectangle_item import RectangleItem
 from snapmock.tools.base_tool import BaseTool
+
+_CORNER_NAMES: dict[str, tuple[str, str]] = {
+    "corner_radius_tl": ("TL", "Top-left corner radius"),
+    "corner_radius_tr": ("TR", "Top-right corner radius"),
+    "corner_radius_bl": ("BL", "Bottom-left corner radius"),
+    "corner_radius_br": ("BR", "Bottom-right corner radius"),
+}
+_CONTROL_HEIGHT = 26
 
 
 class RectangleTool(BaseTool):
@@ -35,6 +54,10 @@ class RectangleTool(BaseTool):
         super().__init__()
         self._start: QPointF = QPointF()
         self._item: RectangleItem | None = None
+        self._toolbar: QToolBar | None = None
+        self._mode_button: QToolButton | None = None
+        self._corner_spins: dict[str, QSpinBox] = {}
+        self._corner_actions: list[QAction] = []
         self._creation_defaults = {
             "stroke_color": QColor(DEFAULT_STROKE_COLOR),
             "fill_color": QColor(DEFAULT_FILL_COLOR),
@@ -44,6 +67,8 @@ class RectangleTool(BaseTool):
             "stroke_opacity": 1.0,
             "shadow_enabled": False,
             "corner_radius": 0.0,
+            "corner_radius_mode": CornerRadiusMode.UNIFORM,
+            **dict.fromkeys(CORNER_KEYS, 0.0),
         }
 
     @property
@@ -61,6 +86,95 @@ class RectangleTool(BaseTool):
     @property
     def status_hint(self) -> str:
         return "Click and drag to draw rectangle | Shift: square"
+
+    # ------------------------------------------------------------ the options bar
+
+    def build_options_widgets(self, toolbar: QToolBar) -> None:
+        """The Uniform / Individual toggle and the four corner spin boxes (PRD 5.4)."""
+        self._toolbar = toolbar
+        button = QToolButton()
+        button.setCheckable(True)
+        button.setText("Individual")
+        button.setToolTip("Individual corners: a radius for each corner")
+        button.setAccessibleName("Individual corner radii")
+        button.setMaximumHeight(_CONTROL_HEIGHT)
+        button.toggled.connect(self._on_mode_toggled)
+        toolbar.addWidget(button)
+        self._mode_button = button
+        self._corner_spins = {}
+        self._corner_actions = []
+        for key in CORNER_KEYS:
+            short, name = _CORNER_NAMES[key]
+            label_action = toolbar.addWidget(QLabel(f" {short}:"))
+            spin = QSpinBox()
+            spin.setRange(0, int(CORNER_RADIUS_MAX))
+            spin.setSuffix(" px")
+            spin.setMaximumWidth(64)
+            spin.setMaximumHeight(_CONTROL_HEIGHT)
+            spin.setToolTip(name)
+            spin.setAccessibleName(name)
+            spin.valueChanged.connect(lambda v, k=key: self._on_corner_changed(k, v))
+            spin_action = toolbar.addWidget(spin)
+            self._corner_spins[key] = spin
+            self._corner_actions.extend(a for a in (label_action, spin_action) if a is not None)
+        self._sync_corner_controls()
+
+    @property
+    def mode_button(self) -> QToolButton | None:
+        return self._mode_button
+
+    @property
+    def corner_spins(self) -> dict[str, QSpinBox]:
+        return dict(self._corner_spins)
+
+    def _individual(self) -> bool:
+        return self._creation_defaults.get("corner_radius_mode") is CornerRadiusMode.INDIVIDUAL
+
+    def _sync_corner_controls(self) -> None:
+        """Show the four spin boxes in Individual mode and the single slider otherwise."""
+        individual = self._individual()
+        if self._mode_button is not None:
+            self._mode_button.blockSignals(True)
+            self._mode_button.setChecked(individual)
+            self._mode_button.blockSignals(False)
+        for key, spin in self._corner_spins.items():
+            spin.blockSignals(True)
+            spin.setValue(int(round(float(self._creation_defaults.get(key, 0.0)))))
+            spin.blockSignals(False)
+        for action in self._corner_actions:
+            action.setVisible(individual)
+        show_uniform = getattr(self._toolbar, "set_control_visible", None)
+        if callable(show_uniform):
+            show_uniform("corner_radius", not individual)
+
+    def _announce(self) -> None:
+        view = self._view
+        window: Any = view.window() if view is not None else None
+        manager = getattr(window, "tool_manager", None)
+        if manager is not None:
+            manager.tool_defaults_changed.emit(self.tool_id)
+
+    def _on_mode_toggled(self, checked: bool) -> None:
+        mode = CornerRadiusMode.INDIVIDUAL if checked else CornerRadiusMode.UNIFORM
+        if mode is CornerRadiusMode.INDIVIDUAL and not any(
+            float(self._creation_defaults.get(k, 0.0)) for k in CORNER_KEYS
+        ):
+            # The four start from the uniform radius, so the next rectangle looks the same
+            for key in CORNER_KEYS:
+                self._creation_defaults[key] = float(self._creation_defaults["corner_radius"])
+        self._creation_defaults["corner_radius_mode"] = mode
+        self._sync_corner_controls()
+        self._announce()
+
+    def _on_corner_changed(self, key: str, value: int) -> None:
+        self._creation_defaults[key] = float(value)
+        self._announce()
+
+    def on_option_changed(self, key: str, value: Any) -> None:
+        if key == "corner_radius_mode" or key in CORNER_KEYS:
+            self._sync_corner_controls()
+
+    # ------------------------------------------------------------ drawing
 
     def mouse_press(self, event: QMouseEvent) -> bool:
         if self._scene is None or event.button() != Qt.MouseButton.LeftButton:

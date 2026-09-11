@@ -39,6 +39,7 @@ from snapmock.commands.scale_geometry_command import ScaleGeometryCommand
 from snapmock.config.constants import (
     BADGE_SIZE_MAX,
     BADGE_SIZE_MIN,
+    CORNER_KEYS,
     CORNER_RADIUS_MAX,
     DEFAULT_LINE_SPACING,
     HEAD_SIZE_CUSTOM_MAX,
@@ -46,6 +47,7 @@ from snapmock.config.constants import (
     LINE_SPACING_MIN,
     BadgeShape,
     BorderStyle,
+    CornerRadiusMode,
     DisplayMode,
     FontWeight,
     HeadSize,
@@ -589,12 +591,23 @@ class PropertyPanel(QDockWidget):
         self._corner_radius_spin.setSuffix(" px")
         self._corner_radius_spin.setSpecialValueText(MIXED_TEXT)
         self._corner_radius_spin.setKeyboardTracking(False)
-        self._rectangle_section.add_row(
-            "Corner radius:",
-            self._slider_spin_row(
-                self._corner_radius_spin, self._corner_radius_slider, "Corner radius"
-            ),
+        self._corner_radius_row = self._slider_spin_row(
+            self._corner_radius_spin, self._corner_radius_slider, "Corner radius"
         )
+        self._rectangle_section.add_row("Corner radius:", self._corner_radius_row)
+        # Uniform / Individual and the four radii of 5.3 (Basic Shape remainder Phase 2)
+        self._corner_mode_check = QCheckBox("Individual corners")
+        self._corner_mode_check.setAccessibleName("Individual corner radii")
+        self._rectangle_section.add_row("Corners:", self._corner_mode_check)
+        self._corner_spins: dict[str, QDoubleSpinBox] = {}
+        for key, label in zip(
+            CORNER_KEYS, ("Top-left:", "Top-right:", "Bottom-left:", "Bottom-right:")
+        ):
+            spin = self._make_double_spin(
+                -1.0, CORNER_RADIUS_MAX, 0, " px", f"{label[:-1]} corner radius"
+            )
+            self._rectangle_section.add_row(label, spin)
+            self._corner_spins[key] = spin
         self._main_layout.addWidget(self._rectangle_section)
 
     def _build_step_section(self) -> None:
@@ -1036,6 +1049,9 @@ class PropertyPanel(QDockWidget):
         self._arrow_line_style_combo.currentIndexChanged.connect(self._on_arrow_line_style_changed)
         self._corner_radius_slider.valueChanged.connect(self._on_corner_radius_slider_changed)
         self._corner_radius_spin.valueChanged.connect(self._on_corner_radius_spin_changed)
+        self._corner_mode_check.toggled.connect(self._on_corner_mode_changed)
+        for key, spin in self._corner_spins.items():
+            spin.valueChanged.connect(lambda v, k=key: self._on_corner_spin_changed(k, v))
         self._step_value_spin.valueChanged.connect(self._on_step_value_changed)
         self._step_mode_combo.currentIndexChanged.connect(self._on_step_mode_changed)
         self._step_text_edit.editingFinished.connect(self._on_step_text_edited)
@@ -1261,10 +1277,7 @@ class PropertyPanel(QDockWidget):
                 if all_arrows:
                     self._populate_arrow(self._selected_arrows())
                 if all_rectangles:
-                    radii = [i.corner_radius for i in self._selected_rectangles()]
-                    value, uniform = _uniform(radii)
-                    self._corner_radius_slider.setValue(int(value) if uniform else 0)
-                    self._set_spin(self._corner_radius_spin, radii)
+                    self._populate_rectangle(self._selected_rectangles())
                 if all_steps:
                     self._populate_step(self._selected_steps())
                 if all_stamps:
@@ -1366,6 +1379,20 @@ class PropertyPanel(QDockWidget):
                 self._text_auto_size_check,
                 [i.auto_size for i in items if isinstance(i, TextItem)],
             )
+
+    def _populate_rectangle(self, items: list[RectangleItem]) -> None:
+        radii = [i.corner_radius for i in items]
+        value, uniform = _uniform(radii)
+        self._corner_radius_slider.setValue(int(value) if uniform else 0)
+        self._set_spin(self._corner_radius_spin, radii)
+        modes = [i.corner_radius_mode is CornerRadiusMode.INDIVIDUAL for i in items]
+        self._set_check(self._corner_mode_check, modes)
+        individual = all(modes)
+        section = self._rectangle_section
+        self._set_row_visible(section, self._corner_radius_row, not individual)
+        for key, spin in self._corner_spins.items():
+            self._set_row_visible(section, spin, individual)
+            self._set_spin(spin, [getattr(i, key) for i in items])
 
     def _populate_arrow(self, items: list[ArrowItem]) -> None:
         self._set_combo_data(self._arrow_head_combo, [i.head_style for i in items])
@@ -2279,6 +2306,17 @@ class PropertyPanel(QDockWidget):
         self._corner_radius_slider.setValue(int(value))
         self._updating = False
         self._push_property(self._selected_rectangles(), "corner_radius", float(value))
+
+    def _on_corner_mode_changed(self, checked: bool) -> None:
+        if self._updating:
+            return
+        mode = CornerRadiusMode.INDIVIDUAL if checked else CornerRadiusMode.UNIFORM
+        self._push_property(self._selected_rectangles(), "corner_radius_mode", mode)
+
+    def _on_corner_spin_changed(self, key: str, value: float) -> None:
+        if self._updating or value < 0:
+            return
+        self._push_property(self._selected_rectangles(), key, float(value))
 
     def _on_arrow_head_changed(self, index: int) -> None:
         if self._updating or index < 0:

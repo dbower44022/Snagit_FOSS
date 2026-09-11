@@ -34,6 +34,7 @@ from snapmock.config.constants import (
     BadgeShape,
     BorderStyle,
     BubbleShape,
+    CornerRadiusMode,
     DisplayMode,
     FontWeight,
     HeadSize,
@@ -83,6 +84,7 @@ _ENUM_TYPES: dict[str, type[Enum]] = {
     "HeadStyle": HeadStyle,
     "HeadSize": HeadSize,
     "LineStyle": LineStyle,
+    "CornerRadiusMode": CornerRadiusMode,
 }
 
 OPACITY_KEYS: tuple[str, str] = ("fill_opacity", "stroke_opacity")

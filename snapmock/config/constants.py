@@ -195,6 +195,22 @@ CORNER_RADIUS_MAX = 200.0
 smaller side (5.3)."""
 
 
+class CornerRadiusMode(Enum):
+    """One radius for all four corners, or one per corner (Basic Shape PRD 5.3)."""
+
+    UNIFORM = "uniform"
+    INDIVIDUAL = "individual"
+
+
+CORNER_KEYS: tuple[str, str, str, str] = (
+    "corner_radius_tl",
+    "corner_radius_tr",
+    "corner_radius_bl",
+    "corner_radius_br",
+)
+"""The four individual radii of 5.3, in the PRD's order and under their 10.3 keys."""
+
+
 class LineStyle(Enum):
     """An arrow's path type (Basic Shape PRD 4.3, 4.5, 4.6)."""
 
