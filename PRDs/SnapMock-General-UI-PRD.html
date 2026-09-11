@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.17</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.18</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.17</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 15:38</dd>
+    <dt>Document version</dt><dd>2.18</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 16:45</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.18</td>
+        <td class="nowrap">09-11-26 16:45</td>
+        <td>Doug Bower</td>
+        <td>Basic Shape remainder Phase 1 built: the Arrow row's Line Style toggles, the Arrow section's Line style row, Escape leaving point editing.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>2.17</td>
         <td class="nowrap">09-11-26 15:38</td>
@@ -276,6 +283,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 16:45</td>
+        <td>3.2, 5.3, 8, 12.2</td>
+        <td>Built</td>
+        <td>Basic Shape remainder Phase 1 (09-11-26): the Arrow row of 5.3 gains the Line Style toggles (Straight, Curved, Elbow) after the head controls, as the Basic Shape PRD's 4.7 lists them; the Property Panel's Arrow section gains a Line style row for placed arrows. Point-editing mode is a state of the Select tool, entered by a double-click on a line or an arrow (Basic Shape remainder decision 1); while it lasts, Edit &gt; Deselect's Escape leaves the mode and keeps the selection, and a second Escape deselects (3.2). Shift while drawing a line or an arrow constrains the angle to 15-degree steps, the convention of 12.2 the two tools had not honoured.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 15:38</td>
         <td>3.7, 5.3, 17.3</td>
