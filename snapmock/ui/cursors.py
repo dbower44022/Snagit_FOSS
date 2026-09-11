@@ -140,6 +140,40 @@ def numbered_step_cursor() -> QCursor:
     return cursor
 
 
+def preview_cursor(key: str, preview: QPixmap | None) -> QCursor:
+    """Crosshair with a 24 px *preview* at the lower right (Stamp and Emoji tools; kickoff
+    silence 8); the plain crosshair when *preview* is None. Cached by *key*."""
+    if preview is None or preview.isNull():
+        return QCursor(Qt.CursorShape.CrossCursor)
+    cached = _cache.get(key)
+    if cached is not None:
+        return cached
+    size = CURSOR_SIZE * 2
+    mid = CURSOR_SIZE // 2
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+    for pen in (_halo_pen(3), QPen(_GLYPH, 1)):
+        painter.setPen(pen)
+        painter.drawLine(mid, 1, mid, mid - 3)
+        painter.drawLine(mid, mid + 3, mid, CURSOR_SIZE - 2)
+        painter.drawLine(1, mid, mid - 3, mid)
+        painter.drawLine(mid + 3, mid, CURSOR_SIZE - 2, mid)
+    painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+    scaled = preview.scaled(
+        CURSOR_SIZE,
+        CURSOR_SIZE,
+        Qt.AspectRatioMode.KeepAspectRatio,
+        Qt.TransformationMode.SmoothTransformation,
+    )
+    painter.drawPixmap(mid + 4, mid + 4, scaled)
+    painter.end()
+    cursor = QCursor(pixmap, mid, mid)
+    _cache[key] = cursor
+    return cursor
+
+
 def text_hover_cursor() -> QCursor:
     """I-beam with an accent highlight bar, shown over an existing text item."""
     cached = _cache.get("text-hover")

@@ -50,6 +50,8 @@ from snapmock.config.constants import (
     DisplayMode,
     FontWeight,
 )
+from snapmock.core.stamp_library import STAMP_SIZE_MAX, STAMP_SIZE_MIN
+from snapmock.core.theme_manager import theme_manager
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.tools.eyedropper_tool import EyedropperTool
 from snapmock.ui.accessibility import apply_default_names
@@ -82,6 +84,8 @@ class ControlSpec:
     decimals: int = 0
     choices: tuple[tuple[str, Any], ...] = ()
     """The enum kind's rows as (label, value) pairs, in order."""
+    icon: str = ""
+    """The toggle kind's Tabler glyph."""
 
 
 SHARED_CONTROLS: dict[str, ControlSpec] = {
@@ -135,6 +139,16 @@ SHARED_CONTROLS: dict[str, ControlSpec] = {
         choices=tuple((s.value.replace("dashdot", "dash-dot").title(), s) for s in BorderStyle),
     ),
     "shadow_enabled": ControlSpec("shadow_enabled", "Shadow", "check"),
+    # The Stamp tool (PRD 3.6) and the Emoji tool (PRD 4.5)
+    "stamp_size": ControlSpec(
+        "stamp_size", "Size", "slider", STAMP_SIZE_MIN, STAMP_SIZE_MAX, 1, " px"
+    ),
+    "stamp_color": ControlSpec("stamp_color", "Color", "color"),
+    "stamp_secondary_color": ControlSpec("stamp_secondary_color", "Secondary", "color"),
+    "flip_horizontal": ControlSpec(
+        "flip_horizontal", "Flip Horizontal", "toggle", icon="flip-horizontal"
+    ),
+    "flip_vertical": ControlSpec("flip_vertical", "Flip Vertical", "toggle", icon="flip-vertical"),
 }
 
 _TEXT_STYLE_KEYS: tuple[tuple[str, str, str], ...] = (
@@ -360,6 +374,20 @@ class ToolOptionsBar(QToolBar):
             )
             self._add_labelled(spec.label, combo)
             self._shared[spec.key] = combo
+        elif spec.kind == "toggle":
+            toggle = QToolButton()
+            toggle.setCheckable(True)
+            toggle.setToolTip(spec.label)
+            toggle.setAccessibleName(spec.label)
+            toggle.setFixedSize(_CONTROL_HEIGHT, _CONTROL_HEIGHT)
+            icon = theme_manager().icon(spec.icon) if spec.icon else QIcon()
+            if icon.isNull():
+                toggle.setText(spec.label[:1])
+            else:
+                toggle.setIcon(icon)
+            toggle.toggled.connect(lambda checked, k=spec.key: self._write(k, bool(checked)))
+            self.addWidget(toggle)
+            self._shared[spec.key] = toggle
         elif spec.kind == "check":
             check = QCheckBox(spec.label)
             check.setAccessibleName(spec.label)

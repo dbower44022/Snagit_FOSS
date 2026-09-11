@@ -31,6 +31,7 @@ from snapmock.config.constants import (
     DisplayMode,
     FontWeight,
 )
+from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.numbered_step_item import NumberedStepItem
 from snapmock.tools.base_tool import BaseTool
 from snapmock.ui.cursors import numbered_step_cursor
@@ -52,7 +53,7 @@ ANIMATIONS_ENABLED = True
 
 
 def animate_placement(
-    item: NumberedStepItem, start_scale: float, duration_ms: int, parent: Any = None
+    item: SnapGraphicsItem, start_scale: float, duration_ms: int, parent: Any = None
 ) -> QVariantAnimation | None:
     """Scale *item* from *start_scale* to 1 over *duration_ms*; None when animations are off.
 

@@ -201,6 +201,18 @@ def build_item_context_menu(parent: MainWindow) -> QMenu:
             convert_action.triggered.connect(parent._step_toggle_text_mode)  # noqa: SLF001
         menu.addSeparator()
 
+    # --- Stamp rows (PRD 3.7): Flip Horizontal and Flip Vertical are above already ---
+    from snapmock.items.stamp_item import StampItem
+
+    if len(selected) == 1 and isinstance(selected[0], StampItem):
+        change_action = menu.addAction("Change Stamp...")
+        if change_action is not None:
+            change_action.triggered.connect(parent._stamp_change)  # noqa: SLF001
+        reset_action = menu.addAction("Reset Size")
+        if reset_action is not None:
+            reset_action.triggered.connect(parent._stamp_reset_size)  # noqa: SLF001
+        menu.addSeparator()
+
     # --- Properties ---
     props_action = menu.addAction("Properties...")
     if props_action is not None:

@@ -11,9 +11,11 @@ from typing import TYPE_CHECKING
 from snapmock.config.constants import DisplayMode
 from snapmock.core.command_stack import BaseCommand
 from snapmock.items.numbered_step_item import NumberedStepItem
+from snapmock.items.stamp_item import StampItem
 
 if TYPE_CHECKING:
     from snapmock.core.scene import SnapScene
+    from snapmock.core.stamp_library import StampInfo
 
 
 def steps_in_reading_order(scene: SnapScene) -> list[NumberedStepItem]:
@@ -64,3 +66,40 @@ class RenumberStepsCommand(BaseCommand):
     @property
     def description(self) -> str:
         return "Renumber all steps"
+
+
+class ChangeStampCommand(BaseCommand):
+    """Replace a stamp item's stamp (PRD 6.2): id, SVG, colorizable flag, and source."""
+
+    def __init__(self, item: StampItem, new_info: StampInfo, new_svg: str | None) -> None:
+        self._item = item
+        self._old_state = item.stamp_state()
+        self._new_info = new_info
+        self._new_svg = new_svg
+        self._new_state: dict[str, object] | None = None
+
+    @property
+    def item_id(self) -> str:
+        return self._item.item_id
+
+    @property
+    def old_stamp_id(self) -> str:
+        return str(self._old_state["stamp_id"])
+
+    @property
+    def new_stamp_id(self) -> str:
+        return self._new_info.id
+
+    def redo(self) -> None:
+        if self._new_state is None:
+            self._item.set_stamp(self._new_info, self._new_svg)
+            self._new_state = self._item.stamp_state()
+        else:
+            self._item.apply_stamp_state(self._new_state)
+
+    def undo(self) -> None:
+        self._item.apply_stamp_state(self._old_state)
+
+    @property
+    def description(self) -> str:
+        return f"Change stamp to {self._new_info.name}"

@@ -293,7 +293,7 @@ def test_crop_checkbox_is_named_rule_of_thirds(main_window: MainWindow) -> None:
 
 def test_tools_without_options_show_only_their_name(main_window: MainWindow) -> None:
     bar = _bar(main_window)
-    for tool_id in ("pan", "zoom", "blur", "stamp"):
+    for tool_id in ("pan", "zoom", "blur"):
         main_window.tool_manager.activate(tool_id)
         assert bar.shared_widgets == {}
         assert len([a for a in bar.actions() if not a.isSeparator()]) == 1

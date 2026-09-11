@@ -16,6 +16,7 @@ from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.callout_item import CalloutItem
 from snapmock.items.group_item import GroupItem
 from snapmock.items.numbered_step_item import NumberedStepItem
+from snapmock.items.stamp_item import StampItem
 from snapmock.items.text_item import TextItem
 from snapmock.tools.base_tool import BaseTool
 from snapmock.ui.transform_handles import (
@@ -372,7 +373,7 @@ class SelectTool(BaseTool):
                 return True
             # Double-click on a marker item: its editor (Numbered Steps PRD 2.8; kickoff
             # silence 9), through the window so the placing tool shares the route
-            if isinstance(item, NumberedStepItem):
+            if isinstance(item, NumberedStepItem | StampItem):
                 view = self._view
                 window = view.window() if view is not None else None
                 open_editor = getattr(window, "open_marker_editor", None)

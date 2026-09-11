@@ -100,6 +100,7 @@ from snapmock.io.snagit_reader import load_snagx
 from snapmock.io.snagit_writer import save_snagx
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.numbered_step_item import NumberedStepItem
+from snapmock.items.stamp_item import StampItem
 from snapmock.library.manager import LibraryManager
 from snapmock.library.render import export_file, export_target
 from snapmock.tools.arrow_tool import ArrowTool
@@ -3493,6 +3494,24 @@ class MainWindow(QMainWindow):
         from snapmock.items.numbered_step_item import NumberedStepItem
 
         self.close_marker_editor()
+        if isinstance(item, StampItem):
+            tool = self._tool_manager.tool("stamp")
+            if not isinstance(tool, StampTool):
+                return False
+            self._selection_manager.select(item)
+            anchor = self._view.mapFromScene(item.sceneBoundingRect().bottomLeft())
+            target: StampItem = item
+
+            def _chosen(stamp_id: str) -> None:
+                self._change_stamp(target, stamp_id)
+
+            tool.choose_stamp(
+                None,
+                _chosen,
+                item.stamp_id,
+                self._view.viewport().mapToGlobal(anchor),  # type: ignore[union-attr]
+            )
+            return True
         if isinstance(item, NumberedStepItem):
             from snapmock.ui.step_inline_editor import EDIT_HINT, StepInlineEditor
 
@@ -3521,6 +3540,45 @@ class MainWindow(QMainWindow):
     def _on_marker_editor_finished(self) -> None:
         self._marker_editor = None
         self._on_tool_changed_for_hint(self._tool_manager.active_tool_id)
+
+    def _change_stamp(self, item: StampItem, stamp_id: str) -> None:
+        """Change Stamp (PRD 3.7, 6.2): one undoable command replacing the stamp."""
+        from snapmock.commands.marker_commands import ChangeStampCommand
+        from snapmock.core.stamp_library import stamp_library
+
+        info = stamp_library().stamp(stamp_id)
+        if info is None or info.id == item.stamp_id:
+            return
+        self._scene.command_stack.push(
+            ChangeStampCommand(item, info, stamp_library().svg_data(info.id))
+        )
+
+    def _selected_marker(self, kind: type[SnapGraphicsItem]) -> SnapGraphicsItem | None:
+        items = self._selected_snap_items()
+        if len(items) == 1 and isinstance(items[0], kind):
+            return items[0]
+        return None
+
+    def _stamp_change(self) -> None:
+        """Change Stamp... (PRD 3.7): the library for the one selected stamp."""
+        stamp = self._selected_marker(StampItem)
+        if not self._require("Change Stamp", (stamp is not None, "one stamp")):
+            return
+        assert stamp is not None
+        self.open_marker_editor(stamp)
+
+    def _stamp_reset_size(self) -> None:
+        """Reset Size (PRD 3.7; kickoff silence 13): the index's default size."""
+        from snapmock.commands.modify_property import ModifyPropertyCommand
+
+        stamp = self._selected_marker(StampItem)
+        if not self._require("Reset Size", (stamp is not None, "one stamp")):
+            return
+        assert isinstance(stamp, StampItem)
+        if stamp.stamp_size != stamp.default_size:
+            self._scene.command_stack.push(
+                ModifyPropertyCommand(stamp, "stamp_size", stamp.stamp_size, stamp.default_size)
+            )
 
     def _selected_step(self) -> NumberedStepItem | None:
         """The one selected numbered step, or None."""
