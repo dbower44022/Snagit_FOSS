@@ -196,7 +196,7 @@ smaller side (5.3)."""
 
 
 class LineStyle(Enum):
-    """An arrow's path type (Basic Shape PRD 4.3); only Straight is drawn."""
+    """An arrow's path type (Basic Shape PRD 4.3, 4.5, 4.6)."""
 
     STRAIGHT = "straight"
     CURVED = "curved"

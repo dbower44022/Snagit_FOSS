@@ -39,6 +39,7 @@ from snapmock.config.constants import (
     HeadSize,
     HeadStyle,
     LabelPosition,
+    LineStyle,
     StrokeCap,
     StrokeJoin,
     TailStyle,
@@ -81,6 +82,7 @@ _ENUM_TYPES: dict[str, type[Enum]] = {
     "StrokeJoin": StrokeJoin,
     "HeadStyle": HeadStyle,
     "HeadSize": HeadSize,
+    "LineStyle": LineStyle,
 }
 
 OPACITY_KEYS: tuple[str, str] = ("fill_opacity", "stroke_opacity")

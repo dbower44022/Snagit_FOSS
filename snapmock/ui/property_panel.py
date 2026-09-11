@@ -51,6 +51,7 @@ from snapmock.config.constants import (
     HeadSize,
     HeadStyle,
     LabelPosition,
+    LineStyle,
     VerticalAlign,
 )
 from snapmock.config.settings import AppSettings
@@ -565,6 +566,16 @@ class PropertyPanel(QDockWidget):
         )
         self._arrow_custom_spin.setToolTip("0 uses the named size")
         self._arrow_section.add_row("Custom size:", self._arrow_custom_spin)
+        # The line style of 4.3 for a placed arrow (Basic Shape remainder Phase 1 step 3)
+        from snapmock.tools.arrow_tool import line_style_icon
+
+        self._arrow_line_style_combo = QComboBox()
+        for line_style in LineStyle:
+            self._arrow_line_style_combo.addItem(
+                line_style_icon(line_style), line_style.value.title(), line_style
+            )
+        self._arrow_line_style_combo.setAccessibleName("Line style")
+        self._arrow_section.add_row("Line style:", self._arrow_line_style_combo)
         self._main_layout.addWidget(self._arrow_section)
 
     def _build_rectangle_section(self) -> None:
@@ -1022,6 +1033,7 @@ class PropertyPanel(QDockWidget):
         self._arrow_tail_combo.currentIndexChanged.connect(self._on_arrow_tail_changed)
         self._arrow_size_combo.currentIndexChanged.connect(self._on_arrow_size_changed)
         self._arrow_custom_spin.valueChanged.connect(self._on_arrow_custom_changed)
+        self._arrow_line_style_combo.currentIndexChanged.connect(self._on_arrow_line_style_changed)
         self._corner_radius_slider.valueChanged.connect(self._on_corner_radius_slider_changed)
         self._corner_radius_spin.valueChanged.connect(self._on_corner_radius_spin_changed)
         self._step_value_spin.valueChanged.connect(self._on_step_value_changed)
@@ -1360,6 +1372,7 @@ class PropertyPanel(QDockWidget):
         self._set_combo_data(self._arrow_tail_combo, [i.tail_style for i in items])
         self._set_combo_data(self._arrow_size_combo, [i.head_size for i in items])
         self._set_spin(self._arrow_custom_spin, [i.head_size_custom for i in items])
+        self._set_combo_data(self._arrow_line_style_combo, [i.line_style for i in items])
 
     def _populate_step(self, items: list[NumberedStepItem]) -> None:
         self._set_spin(self._step_value_spin, [i.number_value for i in items])
@@ -2292,6 +2305,13 @@ class PropertyPanel(QDockWidget):
         if self._updating or value < 0:
             return
         self._push_property(self._selected_arrows(), "head_size_custom", float(value))
+
+    def _on_arrow_line_style_changed(self, index: int) -> None:
+        if self._updating or index < 0:
+            return
+        style = self._arrow_line_style_combo.itemData(index)
+        if isinstance(style, LineStyle):
+            self._push_property(self._selected_arrows(), "line_style", style)
 
     def _on_step_value_changed(self, value: int) -> None:
         if self._updating or value < 0:

@@ -19,6 +19,7 @@ from PyQt6.QtGui import QColor, QPainter, QPen
 from PyQt6.QtWidgets import QGraphicsItem
 
 from snapmock.commands.geometry_commands import ModifyGeometryCommand, copy_geometry
+from snapmock.config.constants import LineStyle
 from snapmock.core.command_stack import BaseCommand
 from snapmock.core.path_utils import constrain_angle
 from snapmock.core.theme_manager import current_theme
@@ -75,7 +76,12 @@ def _mirror(item: SnapGraphicsItem, point: QPointF) -> QPointF:
 class PointEditSession:
     """The point editing of one item. Subclasses name the handles and apply the drags."""
 
-    status_hint: str = "Drag points to reshape. Escape: exit."
+    HINT: str = "Drag points to reshape. Escape: exit."
+
+    @property
+    def status_hint(self) -> str:
+        """The status bar text while the mode lasts (the PRD's Point editing rows)."""
+        return self.HINT
 
     def __init__(self, item: SnapGraphicsItem) -> None:
         self.item = item
@@ -153,7 +159,7 @@ class PointEditSession:
 class LinePointSession(PointEditSession):
     """A line's two endpoints (Basic Shape PRD 3.5)."""
 
-    status_hint = "Drag endpoints to reshape. Shift: constrain angle. Escape: exit."
+    HINT = "Drag endpoints to reshape. Shift: constrain angle. Escape: exit."
 
     item: LineItem | ArrowItem
 
@@ -183,7 +189,58 @@ class LinePointSession(PointEditSession):
 
 
 class ArrowPointSession(LinePointSession):
-    """An arrow's endpoints (Basic Shape PRD 4.8: the straight arrow's point editing)."""
+    """An arrow's endpoints, and its control point when curved (4.5) or its bend point
+    when an elbow (4.6), each as the green handle of 4.5."""
+
+    item: ArrowItem
+
+    @property
+    def status_hint(self) -> str:
+        style = self.item.line_style
+        if style is LineStyle.CURVED:
+            return "Drag endpoints or control point to reshape. Escape: exit."
+        if style is LineStyle.ELBOW:
+            return "Drag endpoints or bend point to reshape. Escape: exit."
+        return self.HINT
+
+    def handles(self) -> list[PointHandle]:
+        handles = super().handles()
+        style = self.item.line_style
+        if style is LineStyle.CURVED:
+            control = self.to_scene(self.item.effective_control_point())
+            handles.append(PointHandle("control", control, HandleKind.CONTROL))
+        elif style is LineStyle.ELBOW:
+            bend = self.to_scene(self.item.bend_handle_point())
+            handles.append(PointHandle("bend", bend, HandleKind.CONTROL))
+        return handles
+
+    def guide_lines(self) -> list[QLineF]:
+        if self.item.line_style is not LineStyle.CURVED:
+            return []
+        line = self.item.line
+        control = self.to_scene(self.item.effective_control_point())
+        return [
+            QLineF(control, self.to_scene(line.p1())),
+            QLineF(control, self.to_scene(line.p2())),
+        ]
+
+    def property_for(self, key: str) -> str:
+        if key == "control":
+            return "control_point"
+        if key == "bend":
+            return "bend_point"
+        return "line"
+
+    def drag_to(self, key: str, scene_pos: QPointF, modifiers: Qt.KeyboardModifier) -> None:
+        if key == "control":
+            self.item.control_point = self.to_local(scene_pos)
+        elif key == "bend":
+            # Only across: the bend keeps every segment at a right angle (4.6)
+            line = self.item.line
+            local = self.to_local(scene_pos)
+            self.item.bend_point = QPointF(local.x(), (line.y1() + line.y2()) / 2.0)
+        else:
+            super().drag_to(key, scene_pos, modifiers)
 
 
 def session_for(item: SnapGraphicsItem) -> PointEditSession | None:

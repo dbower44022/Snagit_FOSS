@@ -93,7 +93,7 @@ def test_each_head_style_renders_at_the_head(qapp: QApplication) -> None:
     # Filled: the shaft ends at the base, so with a faint stroke nothing overlaps
     item.head_style = HeadStyle.FILLED
     _fill, _lines, shaft = item.head_paths()
-    assert shaft.p2().x() == 120.0 - item.effective_head_size()
+    assert shaft.currentPosition().x() == 120.0 - item.effective_head_size()
 
 
 def test_the_tail_takes_its_own_style(qapp: QApplication) -> None:
@@ -104,7 +104,7 @@ def test_the_tail_takes_its_own_style(qapp: QApplication) -> None:
     item.head_size = HeadSize.LARGE
     assert _black(_render(item), QPointF(10.0, 7.0))
     _fill, _lines, shaft = item.head_paths()
-    assert shaft.p1().x() == item.effective_head_size()
+    assert shaft.elementAt(0).x == item.effective_head_size()
     assert item.shape().contains(QPointF(10.0, 7.0))
 
 

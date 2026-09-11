@@ -1,12 +1,14 @@
 """ArrowItem — line with arrowhead annotation.
 
-Basic Shape Annotation Tools PRD Section 4: a straight shaft from the tail (``p1``) to the
-head (``p2``) with a head style and a tail style from the six of 4.3 (None, Open, Filled,
+Basic Shape Annotation Tools PRD Section 4: a shaft from the tail (``p1``) to the head
+(``p2``) with a head style and a tail style from the six of 4.3 (None, Open, Filled,
 Diamond, Circle, Square), a head size from the four named sizes or a custom size, all
 painted per 4.4: an open head is two stroked lines at 30 degrees with a round cap; the
 filled heads take the stroke colour at the stroke opacity, and the shaft ends at a filled
-head's base so nothing overlaps. ``line_style`` is stored and stays Straight; curved and
-elbow arrows (4.5, 4.6) are the following kickoff's (Vector Item Properties decision 3).
+head's base so nothing overlaps. ``line_style`` draws the shaft Straight, Curved (a
+quadratic Bezier through ``control_point``, the midpoint by default, 4.5), or Elbow (two
+or three right-angle segments through ``bend_point``, 4.6); the heads orient along the
+tangent at each end or along the terminal segment.
 """
 
 from __future__ import annotations
@@ -27,6 +29,49 @@ from snapmock.config.constants import (
 from snapmock.items.vector_item import VectorItem, _enum, with_alpha
 
 _OPEN_HALF_ANGLE = math.radians(30.0)
+_EPSILON = 1e-9
+
+
+def _unit(dx: float, dy: float, default: QPointF) -> QPointF:
+    length = math.hypot(dx, dy)
+    if length <= _EPSILON:
+        return QPointF(default)
+    return QPointF(dx / length, dy / length)
+
+
+def _quad_at(p0: QPointF, c: QPointF, p2: QPointF, t: float) -> QPointF:
+    """The quadratic Bezier through *p0*, *c*, *p2* at *t*."""
+    u = 1.0 - t
+    return QPointF(
+        u * u * p0.x() + 2 * u * t * c.x() + t * t * p2.x(),
+        u * u * p0.y() + 2 * u * t * c.y() + t * t * p2.y(),
+    )
+
+
+def _quad_blossom(p0: QPointF, c: QPointF, p2: QPointF, a: float, b: float) -> QPointF:
+    """The control point of the piece of the curve between *a* and *b*."""
+    w0 = (1 - a) * (1 - b)
+    w1 = (1 - a) * b + a * (1 - b)
+    w2 = a * b
+    return QPointF(w0 * p0.x() + w1 * c.x() + w2 * p2.x(), w0 * p0.y() + w1 * c.y() + w2 * p2.y())
+
+
+def _distance(a: QPointF, b: QPointF) -> float:
+    return math.hypot(a.x() - b.x(), a.y() - b.y())
+
+
+def point_to_data(point: QPointF | None) -> dict[str, float] | None:
+    """The 10.2 form of a nullable point: ``{"x": float, "y": float}`` or null."""
+    return None if point is None else {"x": point.x(), "y": point.y()}
+
+
+def point_from_data(raw: object) -> QPointF | None:
+    """A point from its 10.2 form, or from an ``[x, y]`` list; None when absent."""
+    if isinstance(raw, dict) and "x" in raw and "y" in raw:
+        return QPointF(float(raw["x"]), float(raw["y"]))
+    if isinstance(raw, list | tuple) and len(raw) == 2:
+        return QPointF(float(raw[0]), float(raw[1]))
+    return None
 
 
 class ArrowItem(VectorItem):
@@ -44,6 +89,8 @@ class ArrowItem(VectorItem):
         self._head_size: HeadSize = HeadSize.MEDIUM
         self._head_size_custom: float = 0.0
         self._line_style: LineStyle = LineStyle.STRAIGHT
+        self._control_point: QPointF | None = None
+        self._bend_point: QPointF | None = None
 
     # ------------------------------------------------------------ properties
 
@@ -99,12 +146,34 @@ class ArrowItem(VectorItem):
 
     @property
     def line_style(self) -> LineStyle:
-        """Straight; Curved and Elbow are stored for the following kickoff and drawn straight."""
+        """Straight, Curved (4.5), or Elbow (4.6)."""
         return self._line_style
 
     @line_style.setter
     def line_style(self, value: LineStyle) -> None:
         self._line_style = LineStyle(value)
+        self._geometry_changed()
+
+    @property
+    def control_point(self) -> QPointF | None:
+        """A curved arrow's Bezier control point in item coordinates; None means the
+        midpoint of the line, so a new curved arrow is straight until the point moves."""
+        return None if self._control_point is None else QPointF(self._control_point)
+
+    @control_point.setter
+    def control_point(self, value: QPointF | None) -> None:
+        self._control_point = None if value is None else QPointF(value)
+        self._geometry_changed()
+
+    @property
+    def bend_point(self) -> QPointF | None:
+        """An elbow arrow's bend in item coordinates; its x places the vertical segment.
+        None means the midpoint's x (4.6)."""
+        return None if self._bend_point is None else QPointF(self._bend_point)
+
+    @bend_point.setter
+    def bend_point(self, value: QPointF | None) -> None:
+        self._bend_point = None if value is None else QPointF(value)
         self._geometry_changed()
 
     def effective_head_size(self) -> float:
@@ -125,6 +194,12 @@ class ArrowItem(VectorItem):
             self._line.x2() * sx,
             self._line.y2() * sy,
         )
+        if self._control_point is not None:
+            self._control_point = QPointF(
+                self._control_point.x() * sx, self._control_point.y() * sy
+            )
+        if self._bend_point is not None:
+            self._bend_point = QPointF(self._bend_point.x() * sx, self._bend_point.y() * sy)
         if self._head_size_custom > 0:
             self._head_size_custom = max(
                 4.0, min(HEAD_SIZE_CUSTOM_MAX, self._head_size_custom * (sx + sy) / 2.0)
@@ -132,10 +207,58 @@ class ArrowItem(VectorItem):
 
     def _direction(self) -> QPointF:
         """The unit vector from the tail to the head; along x for a zero-length line."""
-        length = self._line.length()
-        if length <= 0.0:
-            return QPointF(1.0, 0.0)
-        return QPointF(self._line.dx() / length, self._line.dy() / length)
+        return _unit(self._line.dx(), self._line.dy(), QPointF(1.0, 0.0))
+
+    def effective_control_point(self) -> QPointF:
+        """The control point the curve is drawn through (4.5)."""
+        if self._control_point is not None:
+            return QPointF(self._control_point)
+        return self._line.center()
+
+    def bend_x(self) -> float:
+        """The x of an elbow's vertical segment (4.6)."""
+        if self._bend_point is not None:
+            return self._bend_point.x()
+        return (self._line.x1() + self._line.x2()) / 2.0
+
+    def bend_handle_point(self) -> QPointF:
+        """Where the bend point's handle sits: the middle of the vertical segment."""
+        return QPointF(self.bend_x(), (self._line.y1() + self._line.y2()) / 2.0)
+
+    def elbow_points(self) -> list[QPointF]:
+        """The elbow's corners from the tail to the head: horizontal, vertical, horizontal,
+        with a zero-length segment dropped, so two or three segments at right angles."""
+        p1, p2 = self._line.p1(), self._line.p2()
+        x = self.bend_x()
+        points = [p1, QPointF(x, p1.y()), QPointF(x, p2.y()), p2]
+        kept = [points[0]]
+        for point in points[1:]:
+            if _distance(point, kept[-1]) > _EPSILON:
+                kept.append(point)
+        if len(kept) == 1:
+            kept.append(QPointF(p2))
+        return kept
+
+    def end_directions(self) -> tuple[QPointF, QPointF]:
+        """Unit vectors along which the head points at the end point and the tail points
+        at the start point: the tangent for a curve (4.5), the terminal segment for an
+        elbow (4.6), the line itself when straight."""
+        u = self._direction()
+        back = QPointF(-u.x(), -u.y())
+        p1, p2 = self._line.p1(), self._line.p2()
+        if self._line_style is LineStyle.CURVED:
+            c = self.effective_control_point()
+            head_from = c if _distance(c, p2) > _EPSILON else p1
+            tail_from = c if _distance(c, p1) > _EPSILON else p2
+            head = _unit(p2.x() - head_from.x(), p2.y() - head_from.y(), u)
+            tail = _unit(p1.x() - tail_from.x(), p1.y() - tail_from.y(), back)
+            return head, tail
+        if self._line_style is LineStyle.ELBOW:
+            points = self.elbow_points()
+            head = _unit(points[-1].x() - points[-2].x(), points[-1].y() - points[-2].y(), u)
+            tail = _unit(points[0].x() - points[1].x(), points[0].y() - points[1].y(), back)
+            return head, tail
+        return u, back
 
     def _head_geometry(
         self, tip: QPointF, forward: QPointF, style: HeadStyle
@@ -220,33 +343,99 @@ class ArrowItem(VectorItem):
             return filled, lines, half
         return filled, lines, 0.0
 
-    def head_paths(self) -> tuple[QPainterPath, QPainterPath, QLineF]:
+    def head_paths(self) -> tuple[QPainterPath, QPainterPath, QPainterPath]:
         """The filled heads, the open heads' lines, and the shaft that remains between them."""
-        u = self._direction()
-        back = QPointF(-u.x(), -u.y())
+        head_dir, tail_dir = self.end_directions()
         head_fill, head_lines, head_retreat = self._head_geometry(
-            self._line.p2(), u, self._head_style
+            self._line.p2(), head_dir, self._head_style
         )
         tail_fill, tail_lines, tail_retreat = self._head_geometry(
-            self._line.p1(), back, self._tail_style
+            self._line.p1(), tail_dir, self._tail_style
         )
         filled = head_fill.united(tail_fill) if not tail_fill.isEmpty() else head_fill
         if head_fill.isEmpty():
             filled = tail_fill
         lines = QPainterPath(head_lines)
         lines.addPath(tail_lines)
-        length = self._line.length()
-        head_retreat = min(head_retreat, length)
-        tail_retreat = min(tail_retreat, max(0.0, length - head_retreat))
-        shaft = QLineF(
-            QPointF(
-                self._line.x1() + u.x() * tail_retreat, self._line.y1() + u.y() * tail_retreat
-            ),
-            QPointF(
-                self._line.x2() - u.x() * head_retreat, self._line.y2() - u.y() * head_retreat
-            ),
+        return filled, lines, self._shaft_path(tail_retreat, head_retreat)
+
+    def _shaft_path(self, tail_retreat: float, head_retreat: float) -> QPainterPath:
+        """The line path with *tail_retreat* taken off the start and *head_retreat* off
+        the end, so the shaft stops at a filled head's base."""
+        path = QPainterPath()
+        if self._line_style is LineStyle.CURVED:
+            p0, c, p2 = self._line.p1(), self.effective_control_point(), self._line.p2()
+            b = self._curve_parameter(p0, c, p2, p2, head_retreat, 0.0, 1.0, from_end=True)
+            a = self._curve_parameter(p0, c, p2, p0, tail_retreat, 0.0, b, from_end=False)
+            if b - a <= _EPSILON:
+                return path
+            path.moveTo(_quad_at(p0, c, p2, a))
+            path.quadTo(_quad_blossom(p0, c, p2, a, b), _quad_at(p0, c, p2, b))
+            return path
+        points = (
+            self.elbow_points()
+            if self._line_style is LineStyle.ELBOW
+            else [self._line.p1(), self._line.p2()]
         )
-        return filled, lines, shaft
+        total = sum(_distance(p, q) for p, q in zip(points, points[1:]))
+        head_retreat = min(head_retreat, total)
+        tail_retreat = min(tail_retreat, max(0.0, total - head_retreat))
+        start = tail_retreat
+        end = total - head_retreat
+        walked = 0.0
+        started = False
+        for seg_a, seg_b in zip(points, points[1:]):
+            seg = _distance(seg_a, seg_b)
+            if seg <= _EPSILON:
+                continue
+            lo, hi = walked, walked + seg
+            walked = hi
+            if hi < start or lo > end:
+                continue
+            t0 = max(0.0, (start - lo) / seg)
+            t1 = min(1.0, (end - lo) / seg)
+            p_from = QPointF(
+                seg_a.x() + (seg_b.x() - seg_a.x()) * t0, seg_a.y() + (seg_b.y() - seg_a.y()) * t0
+            )
+            p_to = QPointF(
+                seg_a.x() + (seg_b.x() - seg_a.x()) * t1, seg_a.y() + (seg_b.y() - seg_a.y()) * t1
+            )
+            if not started:
+                path.moveTo(p_from)
+                started = True
+            path.lineTo(p_to)
+        if not started:
+            path.moveTo(self._line.p1())
+            path.lineTo(self._line.p1())
+        return path
+
+    @staticmethod
+    def _curve_parameter(
+        p0: QPointF,
+        c: QPointF,
+        p2: QPointF,
+        anchor: QPointF,
+        retreat: float,
+        low: float,
+        high: float,
+        *,
+        from_end: bool,
+    ) -> float:
+        """The curve parameter, between *low* and *high*, at *retreat* straight-line
+        distance from *anchor*, the end point (*from_end*) or the start point."""
+        if retreat <= 0.0:
+            return high if from_end else low
+        near, far = (high, low) if from_end else (low, high)
+        if _distance(_quad_at(p0, c, p2, far), anchor) <= retreat:
+            return far  # the whole piece lies within the head
+        # near is within the retreat, far beyond it: bisect toward the boundary
+        for _ in range(48):
+            mid = (near + far) / 2.0
+            if _distance(_quad_at(p0, c, p2, mid), anchor) > retreat:
+                far = mid
+            else:
+                near = mid
+        return (near + far) / 2.0
 
     def _arrowhead_polygon(self) -> QPolygonF:
         """The head's outline as a polygon (kept for callers that had the one filled head)."""
@@ -254,16 +443,24 @@ class ArrowItem(VectorItem):
         return filled.toFillPolygon()
 
     def line_path(self) -> QPainterPath:
+        """The whole centre line from the tail to the head, in its line style."""
         path = QPainterPath()
         path.moveTo(self._line.p1())
-        path.lineTo(self._line.p2())
+        if self._line_style is LineStyle.CURVED:
+            path.quadTo(self.effective_control_point(), self._line.p2())
+        elif self._line_style is LineStyle.ELBOW:
+            for point in self.elbow_points()[1:]:
+                path.lineTo(point)
+        else:
+            path.lineTo(self._line.p2())
         return path
 
     def boundingRect(self) -> QRectF:
         margin = self.effective_head_size() + self._stroke_width + 4
         body = (
-            QRectF(self._line.p1(), self._line.p2())
-            .normalized()
+            self.line_path()
+            .boundingRect()
+            .united(QRectF(self._line.p1(), self._line.p2()).normalized())
             .adjusted(-margin, -margin, margin, margin)
         )
         return body.united(self.shadow_rect(body))
@@ -283,10 +480,7 @@ class ArrowItem(VectorItem):
             return
         self._apply_flip(painter)
         filled, lines, shaft = self.head_paths()
-        shaft_path = QPainterPath()
-        shaft_path.moveTo(shaft.p1())
-        shaft_path.lineTo(shaft.p2())
-        shadow = self.shadow_path(shaft_path, closed=False)
+        shadow = self.shadow_path(shaft, closed=False)
         if not filled.isEmpty():
             shadow = shadow.united(filled.united(self.stroke_outline(filled)))
         if not lines.isEmpty():
@@ -296,7 +490,7 @@ class ArrowItem(VectorItem):
         painter.setPen(pen)
         painter.setBrush(Qt.BrushStyle.NoBrush)
         if shaft.length() > 0.0:
-            painter.drawLine(shaft)
+            painter.drawPath(shaft)
         if not lines.isEmpty():
             # The open head keeps a round cap (4.4) and a solid line
             open_pen = QPen(pen)
@@ -326,6 +520,9 @@ class ArrowItem(VectorItem):
             self._head_size = size
         if "head_size_custom" in defaults:
             self.head_size_custom = float(defaults["head_size_custom"])
+        style = defaults.get("line_style")
+        if isinstance(style, LineStyle):
+            self._line_style = style
         self._geometry_changed()
 
     # ------------------------------------------------------------ serialization
@@ -344,6 +541,8 @@ class ArrowItem(VectorItem):
         data["head_size"] = self._head_size.value
         data["head_size_custom"] = self._head_size_custom
         data["line_style"] = self._line_style.value
+        data["control_point"] = point_to_data(self._control_point)
+        data["bend_point"] = point_to_data(self._bend_point)
         return data
 
     @classmethod
@@ -357,4 +556,6 @@ class ArrowItem(VectorItem):
         item._head_size = _enum(HeadSize, data.get("head_size"), HeadSize.MEDIUM)
         item.head_size_custom = float(data.get("head_size_custom", 0.0))
         item._line_style = _enum(LineStyle, data.get("line_style"), LineStyle.STRAIGHT)
+        item._control_point = point_from_data(data.get("control_point"))
+        item._bend_point = point_from_data(data.get("bend_point"))
         return item
