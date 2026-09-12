@@ -1,6 +1,6 @@
 # Eyedropper and Blur Performance Implementation Notes
 
-Last Updated: 09-11-26 22:58 · Revision 1.0
+Last Updated: 09-11-26 23:47 · Revision 1.1
 
 Implements the Eyedropper's Section 4 whole and the Blur / Pixelate tool's remaining Performance rows from the Blur, Highlighter, and Eyedropper Tools PRD (`PRDs/SnapMock-Blur-Highlighter-Eyedropper-Tools-PRD.html`, version 1.8 at the start), with the General UI PRD (version 2.22) and Technical Architecture PRD (version 1.34) rows they own, in the five phases and the close-out defined by `docs/Eyedropper-Blur-Performance-Kickoff-Prompt.md` (revision 1.0). A session pasting that prompt starts at the first phase not marked done in Section 1. `docs/General-UI-Implementation-Kickoff-Prompt.md` (revision 1.1) governs the standards; the General UI implementation notes (`docs/General-UI-Implementation.md`) hold the walk table of Section 17.2. Finishing this work closes the Blur, Highlighter, and Eyedropper Tools PRD.
 
@@ -10,7 +10,7 @@ Starting state, verified at commit 1bafbad on 09-11-26 (the kickoff names 314beb
 
 | Phase | Scope | Status | Commits |
 |---|---|---|---|
-| 1 | The Blur tool's performance (Blur PRD 2.10, 8.1): the decisions and these notes, the render's remaining rows, close-out | In progress | |
+| 1 | The Blur tool's performance (Blur PRD 2.10, 8.1): the decisions and these notes, the render's remaining rows, close-out | In progress | 668d0c1, then this commit |
 | 2 | Sampling (4.2): the four sample sizes, the arithmetic mean, the press-and-drag live sample | Not started | |
 | 3 | The preview loupe (4.3) | Not started | |
 | 4 | The properties and the Tool Options Bar (4.4, 4.5) | Not started | |
@@ -75,10 +75,42 @@ The direct sum of shifted slices wins while the box is one or two pixels wide, w
 
 ## 3. What Phase 1 built
 
-Step 1, this commit: the decisions of Section 2.1, the silences of 2.2, the corrections of 2.3, and the measurement of 2.4; Blur PRD 1.9, General UI PRD 2.23, Technical Architecture PRD 1.35.
+Step 1, 668d0c1: the decisions of Section 2.1, the silences of 2.2, the corrections of 2.3, and the measurement of 2.4; Blur PRD 1.9, General UI PRD 2.23, Technical Architecture PRD 1.35.
+
+Step 2, this commit: decision 4, option C, in `snapmock/items/shadow.py`. `blur_image` converts the capture to float32 rather than float64 and blurs all four colour channels in one three-dimensional array rather than one plane at a time. `_box_blur`, which blurred both axes of one plane, is replaced by `_box_pass(planes, radius, axis)`, which blurs one axis of the stack and chooses between two arithmetics: at a box radius of `_DIRECT_BOX_MAX` (two) or under it sums the shifted slices directly, adding each window in place with no padded copy, and above it keeps the cumulative sum over a padded array. Nothing else changed: the zero padding, the three passes, the `radius / 1.7` box, the `np.rint` rounding, and the under-half-a-pixel copy are all as they were.
+
+Silences found while building:
+
+- The two arithmetics agree exactly while the box is narrow and within one level of 255 where the cumulative sum runs, since float32 puts a few values on the other side of a rounding boundary. A test pins the one-level bound. Every existing pixel test over the blur and the shadow passes unchanged.
+- The direct sum is written without `np.pad`. Padding a 1000 by 1000 pixel four-channel float32 array costs more than the sum it feeds: dropping it took radius 1 from 63 ms to 49 ms over a 1004 by 1004 pixel capture.
+- The half-scale capture of radius 4 and up stays. It is now the faster of two fast paths rather than the only one, and at radius 4 the halved image takes the narrow-box arithmetic as well, which is why a 1000 by 1000 pixel region at radius 4 fell from 37 ms to 11 ms.
+- `blur_image` is shared with every item's drop shadow and with the feather of a blur region's mask, so both are faster by the same arithmetic. Neither changes its appearance.
+
+## 4. Measured render times
+
+A 1000 by 1000 pixel region over a striped screenshot on this machine, the median of five renders with the cache cleared each time. The "before" column is the state the freeform blur work left (its Section 9.1) re-measured in this session; the load average was about 2 of 16 cores throughout, so both columns carry the same overhead.
+
+| Mode | Before this work | After |
+|---|---|---|
+| Gaussian, radius 1 | 163 ms (2.10's 100 ms unmet) | **55 ms** |
+| Gaussian, radius 2 | 161 ms (unmet) | **57 ms** |
+| Gaussian, radius 3 | about 190 ms (unmet) | **72 ms** |
+| Gaussian, radius 4 | 37 ms | 11 ms |
+| Gaussian, radius 10 | 40 ms | 29 ms |
+| Gaussian, radius 50 | 50 ms | 42 ms |
+| Pixelate | 41 ms | 37 ms |
+| Solid Fill | 1 ms | 1 ms |
+| Inverted Gaussian, radius 10, over 1920 by 1080 | 80 ms | 59 ms |
+
+Where the time went at radius 1 before the change: the capture 0.6 ms, the blur 159 ms, the mask 0.3 ms of a 163 ms render. That is the measurement that retired the kickoff's option B.
+
+The blur itself, over a 1004 by 1004 pixel capture, the median of five runs: 151 ms before against 49 ms after at radius 1 and 2, 161 ms against 66 ms at radius 3, and 159 ms against 102 to 109 ms at radius 10 and 50, where the wide-box cumulative sum runs. The blur region never takes the wide-box path at full resolution, since radius 4 and up captures at half size.
+
+Past 2.10's stated 1000 by 1000 pixel region the render is still linear in the pixel count: a 1920 by 1080 pixel region at radius 1 takes 129 ms, and a 2000 by 2000 pixel region 287 ms at radius 1 and 117 ms at radius 10. 2.10's progress indicator past 2000 pixels is a departure and stays one, since it cannot repaint during a synchronous render.
 
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 09-11-26 23:47 | Claude (Claude Code) | Phase 1 step 2: decision 4 option C built in `snapmock/items/shadow.py` — float32, all four channels in one array, and a direct sum of shifted slices at a narrow box. Section 3's step 2 with the four silences found while building, and Section 4's measured render times before and after: 2.10's 100 ms is met at every radius for a 1000 by 1000 px region. |
 | 1.0 | 09-11-26 22:58 | Claude (Claude Code) | Initial notes: the starting state at commit 1bafbad, the phase table, the four decisions (1 B, 2 A, 3 A, 4 C) and the kickoff's six silences as chosen 09-11-26, three corrections to the kickoff found in the reading, and the measurement that retired decision 4's option B and produced option C. Blur PRD 1.9, General UI PRD 2.23, Technical Architecture PRD 1.35. |
