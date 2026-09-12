@@ -50,9 +50,12 @@ from snapmock.config.constants import (
     CORNER_RADIUS_MAX,
     DEFAULT_BLUR_BRUSH_SIZE,
     DEFAULT_LINE_SPACING,
+    DEFAULT_STRAIGHTEN_THRESHOLD,
     HEAD_SIZE_CUSTOM_MAX,
     LINE_SPACING_MAX,
     LINE_SPACING_MIN,
+    STRAIGHTEN_THRESHOLD_MAX,
+    STRAIGHTEN_THRESHOLD_MIN,
     ArcType,
     BadgeShape,
     BlurMode,
@@ -244,6 +247,7 @@ class PropertyPanel(QDockWidget):
         self._build_arc_section()
         self._build_polygon_section()
         self._build_blur_section()
+        self._build_highlight_section()
         self._build_rectangle_section()
         self._build_freehand_section()
         self._build_step_section()
@@ -261,6 +265,7 @@ class PropertyPanel(QDockWidget):
             self._arc_section,
             self._polygon_section,
             self._blur_section,
+            self._highlight_section,
             self._rectangle_section,
             self._freehand_section,
             self._step_section,
@@ -750,6 +755,31 @@ class PropertyPanel(QDockWidget):
         self._blur_border_spin = self._make_double_spin(-1.0, 50.0, 1, " px", "Border width")
         self._blur_section.add_row("Border width:", self._blur_border_spin)
         self._main_layout.addWidget(self._blur_section)
+
+    def _build_highlight_section(self) -> None:
+        """The Highlighter's straightening, shown for the tool's defaults only.
+
+        Blur PRD 3.6: auto_straighten and snap_to_axis have no retroactive effect, so a
+        placed stroke shows no row for them (freeform blur silence 5); the section appears
+        while the Highlighter is active with nothing selected, as General UI PRD Section 8
+        shows a creation tool's defaults. The rows are not undoable, since they are tool
+        settings and not document state.
+        """
+        self._highlight_section = CollapsibleSection("Highlighter")
+        self._highlight_straighten_check = QCheckBox("Auto-straighten")
+        self._highlight_straighten_check.setAccessibleName("Auto-straighten")
+        self._highlight_section.add_row("Straighten:", self._highlight_straighten_check)
+        self._highlight_threshold_spin = QDoubleSpinBox()
+        self._highlight_threshold_spin.setRange(STRAIGHTEN_THRESHOLD_MIN, STRAIGHTEN_THRESHOLD_MAX)
+        self._highlight_threshold_spin.setSingleStep(0.01)
+        self._highlight_threshold_spin.setDecimals(2)
+        self._highlight_threshold_spin.setKeyboardTracking(False)
+        self._highlight_threshold_spin.setAccessibleName("Straighten threshold")
+        self._highlight_section.add_row("Threshold:", self._highlight_threshold_spin)
+        self._highlight_snap_check = QCheckBox("Snap to axis")
+        self._highlight_snap_check.setAccessibleName("Snap to axis")
+        self._highlight_section.add_row("Snap:", self._highlight_snap_check)
+        self._main_layout.addWidget(self._highlight_section)
 
     def _build_rectangle_section(self) -> None:
         """The rectangle's corner radius (Basic Shape PRD 5.3, 5.4), for a placed rectangle."""
@@ -1283,6 +1313,15 @@ class PropertyPanel(QDockWidget):
             lambda checked: self._on_blur_value_changed("invert_mask", bool(checked), None)
         )
         self._blur_brush_spin.valueChanged.connect(self._on_blur_brush_size_changed)
+        self._highlight_straighten_check.toggled.connect(
+            lambda checked: self._on_highlight_default("auto_straighten", bool(checked))
+        )
+        self._highlight_snap_check.toggled.connect(
+            lambda checked: self._on_highlight_default("snap_to_axis", bool(checked))
+        )
+        self._highlight_threshold_spin.valueChanged.connect(
+            lambda value: self._on_highlight_default("straighten_threshold", float(value))
+        )
         self._blur_source_combo.currentIndexChanged.connect(
             lambda index: self._on_blur_combo_changed(
                 self._blur_source_combo, "source_mode", index
@@ -1516,6 +1555,10 @@ class PropertyPanel(QDockWidget):
             self._arc_section.setVisible(all_arcs)
             self._polygon_section.setVisible(all_polygons)
             self._blur_section.setVisible(all_blurs)
+            in_highlight_defaults = not has_selection and self._active_tool_id == "highlight"
+            self._highlight_section.setVisible(in_highlight_defaults)
+            if in_highlight_defaults:
+                self._populate_highlight_defaults()
             self._rectangle_section.setVisible(all_rectangles)
             self._freehand_section.setVisible(all_freehand)
             self._step_section.setVisible(all_steps)
@@ -2725,6 +2768,27 @@ class PropertyPanel(QDockWidget):
             return
         layer_id = self._blur_source_layer_combo.itemData(index)
         self._push_property(self._selected_blurs(), "source_layer_id", layer_id)
+
+    def _populate_highlight_defaults(self) -> None:
+        tool = self._tool_manager.tool("highlight") if self._tool_manager is not None else None
+        defaults = getattr(tool, "creation_defaults", {}) or {}
+        self._highlight_straighten_check.setChecked(bool(defaults.get("auto_straighten", True)))
+        self._highlight_snap_check.setChecked(bool(defaults.get("snap_to_axis", True)))
+        self._highlight_threshold_spin.setValue(
+            float(defaults.get("straighten_threshold", DEFAULT_STRAIGHTEN_THRESHOLD))
+        )
+
+    def _on_highlight_default(self, key: str, value: object) -> None:
+        """Set one of the Highlighter's straightening defaults (3.4). Not undoable: it is a
+        tool setting, and 3.6 gives it no retroactive effect on a placed stroke."""
+        if self._updating or self._tool_manager is None:
+            return
+        tool = self._tool_manager.tool("highlight")
+        if tool is None:
+            return
+        tool.creation_defaults[key] = value
+        tool.on_option_changed(key, value)
+        self._tool_manager.tool_defaults_changed.emit("highlight")
 
     def _brush_size(self) -> float:
         """The brush the Blur tool paints with; the panel's row and the bar's share it."""

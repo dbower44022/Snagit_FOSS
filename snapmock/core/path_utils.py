@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 
 import numpy as np
-from PyQt6.QtCore import QPointF
+from PyQt6.QtCore import QLineF, QPointF
 
 
 def _perpendicular_distance(point: QPointF, line_start: QPointF, line_end: QPointF) -> float:
@@ -188,3 +188,54 @@ def fit_cubic_beziers(points: list[QPointF], error: float) -> list[BezierSegment
         )
         for b in out
     ]
+
+
+def moving_average(points: list[QPointF], window: int) -> list[QPointF]:
+    """*points* smoothed by a moving average over the last *window* points (Blur PRD 3.2).
+
+    Each point is replaced by the mean of itself and the points before it, at most *window*
+    in all, so the stroke smooths as it is drawn without waiting for the release. The first
+    point is never moved, so the stroke starts where the press did.
+    """
+    if window <= 1 or len(points) < 2:
+        return [QPointF(p) for p in points]
+    smoothed = [QPointF(points[0])]
+    for index in range(1, len(points)):
+        run = points[max(0, index - window + 1) : index + 1]
+        x = sum(p.x() for p in run) / len(run)
+        y = sum(p.y() for p in run) / len(run)
+        smoothed.append(QPointF(x, y))
+    return smoothed
+
+
+def path_length(points: list[QPointF]) -> float:
+    """The length of the polyline through *points*."""
+    return sum(QLineF(points[i], points[i + 1]).length() for i in range(len(points) - 1))
+
+
+def straightness(points: list[QPointF]) -> float:
+    """Arc length over the straight-line distance from the first point to the last (3.3).
+
+    1.0 is a perfect straight line; a stroke that ends where it began has no straight-line
+    distance at all and gives infinity, so it is never straightened.
+    """
+    if len(points) < 2:
+        return 1.0
+    direct = QLineF(points[0], points[-1]).length()
+    if direct < 1e-9:
+        return float("inf")
+    return path_length(points) / direct
+
+
+def snap_to_axis(start: QPointF, end: QPointF, degrees: float) -> QPointF:
+    """*end* pulled onto the horizontal or vertical through *start* when it lies within
+    *degrees* of one, keeping its distance (3.3)."""
+    line = QLineF(start, end)
+    if line.length() < 1e-9:
+        return QPointF(end)
+    angle = line.angle() % 90.0
+    if angle > 90.0 - degrees or angle < degrees:
+        snapped = QLineF(line)
+        snapped.setAngle(round(line.angle() / 90.0) * 90.0)
+        return snapped.p2()
+    return QPointF(end)

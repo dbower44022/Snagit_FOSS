@@ -1,9 +1,11 @@
-"""Point editing — the control-point handles of Basic Shape PRD 3.5, 4.5, 4.6, 7.5, 8.5, 9.7.
+"""Point editing — the control-point handles of Basic Shape PRD 3.5, 4.5, 4.6, 7.5, 8.5, 9.7
+and of the Blur, Highlighter & Eyedropper PRD 3.6.
 
 Point-editing mode is a mode of the Select tool (Basic Shape remainder decision 1,
-option A): a double-click on a line, an arrow, an arc, a polygon, or a freehand item
-starts a :class:`PointEditSession` for it. The session knows the item's handles in scene
-coordinates, applies a drag with its modifiers, and builds the command the drag pushes,
+option A): a double-click on a line, an arrow, an arc, a polygon, a freehand item, or a
+highlight stroke starts a :class:`PointEditSession` for it. The session knows the item's
+handles in scene coordinates, applies a drag with its modifiers, and builds the command it
+pushes,
 a :class:`ModifyGeometryCommand` (11.3). :class:`PointHandlesItem` draws the handles as a
 scene item above every annotation item, as the transform handles are drawn.
 """
@@ -33,6 +35,7 @@ from snapmock.items.arc_item import ArcItem
 from snapmock.items.arrow_item import ArrowItem
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.freehand_item import FreehandItem
+from snapmock.items.highlight_item import HighlightItem
 from snapmock.items.line_item import LineItem
 from snapmock.items.polygon_item import MIN_VERTICES, PolygonItem
 
@@ -566,8 +569,51 @@ class PolygonPointSession(PointEditSession):
         return RemoveVertexCommand(self.item, index, vertices[index])
 
 
+class HighlightPointSession(PointEditSession):
+    """A highlight stroke's points (Blur PRD 3.6).
+
+    A straightened stroke has two points and shows two endpoint handles, so the start and
+    the end of the highlight can be adjusted; a freeform one shows its simplified points as
+    the freehand item shows its on-curve points. Each drag is one
+    :class:`ModifyGeometryCommand` over ``path_points``, and Shift constrains an endpoint
+    drag of a straightened stroke to 15-degree steps from the other end.
+    """
+
+    HINT = "Drag points to reshape. Escape: exit."
+
+    item: HighlightItem
+
+    def handles(self) -> list[PointHandle]:
+        points = self.item.path_points
+        if self.item.is_straight:
+            return [
+                PointHandle("p0", self.to_scene(points[0])),
+                PointHandle("p1", self.to_scene(points[1])),
+            ]
+        return [
+            PointHandle(f"p{i}", self.to_scene(p), HandleKind.ON_CURVE)
+            for i, p in enumerate(points)
+        ]
+
+    def property_for(self, key: str) -> str:
+        return "path_points"
+
+    def drag_to(self, key: str, scene_pos: QPointF, modifiers: Qt.KeyboardModifier) -> None:
+        points = self.item.path_points
+        index = int(key[1:])
+        if index >= len(points):
+            return
+        if self.item.is_straight and modifiers & Qt.KeyboardModifier.ShiftModifier:
+            other = points[1 - index]
+            scene_pos = constrain_angle(self.to_scene(other), scene_pos)
+        points[index] = self.to_local(scene_pos)
+        self.item.path_points = points
+
+
 def session_for(item: SnapGraphicsItem) -> PointEditSession | None:
     """The point-editing session for *item*, or None when the item has no points to edit."""
+    if isinstance(item, HighlightItem):
+        return HighlightPointSession(item)
     if isinstance(item, PolygonItem):
         return PolygonPointSession(item)
     if isinstance(item, ArcItem):

@@ -251,6 +251,23 @@ class BlurSourceMode(Enum):
     SPECIFIC_LAYER = "specific_layer"
 
 
+HIGHLIGHT_SMOOTHING_WINDOW = 5
+"""The moving average while drawing runs over the last this many points (Blur PRD 3.2)."""
+
+HIGHLIGHT_SIMPLIFY_EPSILON = 2.0
+"""Ramer-Douglas-Peucker tolerance applied to a highlight stroke on release (3.2)."""
+
+HIGHLIGHT_MIN_LENGTH = 4.0
+"""A stroke shorter than this many pixels is an accidental click (3.2)."""
+
+DEFAULT_STRAIGHTEN_THRESHOLD = 1.15
+STRAIGHTEN_THRESHOLD_MIN = 1.01
+STRAIGHTEN_THRESHOLD_MAX = 1.50
+"""Arc length over straight-line distance: below the threshold the stroke is a line (3.3)."""
+
+SNAP_TO_AXIS_DEGREES = 5.0
+"""A straightened stroke within this many degrees of an axis snaps to it (3.3)."""
+
 BLUR_RADIUS_MIN = 1.0
 BLUR_RADIUS_MAX = 50.0
 BLUR_PIXEL_SIZE_MIN = 2

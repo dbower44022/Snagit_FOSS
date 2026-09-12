@@ -3,15 +3,15 @@
 Each cursor is a 24 px pixmap with a white halo under a black glyph so it reads on
 any canvas content, and a hotspot on the point the glyph indicates. The glyph
 cursors reuse the vendored Tabler files under ``resources/icons/tabler/``; the
-raster-selection, numbered-step, brush, and text-hover cursors are drawn here because no
-glyph matches.
+raster-selection, numbered-step, brush, marker-tip, and text-hover cursors are drawn here
+because no glyph matches.
 Cursors are built on first use (a QCursor needs the application) and cached.
 """
 
 from __future__ import annotations
 
 from PyQt6.QtCore import QPointF, QRect, Qt
-from PyQt6.QtGui import QColor, QCursor, QPainter, QPen, QPixmap
+from PyQt6.QtGui import QColor, QCursor, QPainter, QPen, QPixmap, QPolygonF
 from PyQt6.QtSvg import QSvgRenderer
 
 from snapmock.core.theme_manager import ICONS_DIR, current_theme
@@ -211,6 +211,37 @@ def brush_cursor(diameter: int) -> QCursor:
     painter.end()
     cursor = QCursor(pixmap, mid, mid)
     _cache[key] = cursor
+    return cursor
+
+
+def marker_tip_cursor() -> QCursor:
+    """The Highlighter's angled marker tip (Blur PRD 3.1); the hotspot is the tip.
+
+    A chisel tip at the lower left with the barrel running up to the right, drawn black
+    over a white halo so it reads on any canvas content.
+    """
+    cached = _cache.get("marker-tip")
+    if cached is not None:
+        return cached
+    size = CURSOR_SIZE
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    tip = QPolygonF([QPointF(2, 22), QPointF(6, 14), QPointF(11, 19), QPointF(7, 22)])
+    barrel = QPolygonF([QPointF(6, 13), QPointF(14, 3), QPointF(20, 9), QPointF(12, 18)])
+    painter.setPen(_halo_pen(3))
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+    painter.drawPolygon(tip)
+    painter.drawPolygon(barrel)
+    painter.setPen(QPen(_GLYPH, 1))
+    painter.setBrush(_HALO)
+    painter.drawPolygon(barrel)
+    painter.setBrush(_GLYPH)
+    painter.drawPolygon(tip)
+    painter.end()
+    cursor = QCursor(pixmap, 2, 22)
+    _cache["marker-tip"] = cursor
     return cursor
 
 
