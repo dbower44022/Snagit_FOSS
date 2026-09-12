@@ -280,6 +280,7 @@ class ResizeImageCommand(BaseCommand):
             target._blur_radius = source._blur_radius  # noqa: SLF001
             target._corner_radius = source._corner_radius  # noqa: SLF001
             target._feather = source._feather  # noqa: SLF001
+            target._alpha_mask = source._alpha_mask  # noqa: SLF001
             target._cache_key = None  # noqa: SLF001
         elif isinstance(target, RasterRegionItem) and isinstance(source, RasterRegionItem):
             target._pixmap = source._pixmap  # noqa: SLF001

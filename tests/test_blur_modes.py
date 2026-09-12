@@ -182,8 +182,8 @@ def test_the_keys_round_trip_and_an_old_file_loads(qapp: QApplication) -> None:
     old = BlurItem.deserialize({"type": "BlurItem", "rect": [0, 0, 50, 50], "blur_radius": 8})
     assert old.blur_mode is BlurMode.GAUSSIAN and old.blur_radius == 8.0
     assert old.region_shape is BlurRegionShape.RECTANGLE and old.opacity() == 1.0
-    freeform = BlurItem.deserialize({"rect": [0, 0, 9, 9], "region_shape": "freeform"})
-    assert freeform.region_shape is BlurRegionShape.RECTANGLE  # not built (decision 4)
+    whole = BlurItem.deserialize({"rect": [0, 0, 9, 9], "region_shape": "whole_layer"})
+    assert whole.region_shape is BlurRegionShape.RECTANGLE  # not built yet
 
 
 def _view(qtbot: QtBot, scene: SnapScene) -> SnapView:

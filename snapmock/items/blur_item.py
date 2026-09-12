@@ -6,10 +6,17 @@ the region, the item's opacity blending the result with the content beneath, and
 optional border (2.5). The result is rendered from what lies below the item through
 ``RenderEngine.render_below`` (2.7) and cached until the region, a property, the zoom (by
 a factor of two), or the content below changes, the last read from the scene's content
-revision (Basic Shape remainder silence 3). The brush-painted freeform region, Whole
-Layer, the source modes, and the background-thread render are not built (decision 4); a
-file naming Freeform or Whole Layer reads as a rectangle. The class keeps the name
-``BlurItem`` that every saved file carries (the PRD's ``BlurRegionItem``).
+revision (Basic Shape remainder silence 3).
+
+A Freeform region carries an ``alpha_mask`` instead of a shape (freeform blur decision 1,
+option A): a ``QImage`` in canvas pixels aligned to the region's rectangle, opaque where
+the region obscures and transparent where it does not, which replaces the shape in the
+render's clip and feathers and inverts exactly as a shape does. The rectangle follows the
+painted bounds, a resize resamples the mask, and a rotation leaves it in the item's own
+coordinates, where the capture already works. Whole Layer, the source modes, and the
+background-thread render are not built yet; a file naming Whole Layer reads as a
+rectangle. The class keeps the name ``BlurItem`` that every saved file carries (the PRD's
+``BlurRegionItem``).
 """
 
 from __future__ import annotations
@@ -34,6 +41,14 @@ from snapmock.config.constants import (
     BlurRegionShape,
 )
 from snapmock.items.base_item import SnapGraphicsItem
+from snapmock.items.mask_utils import (
+    blank_mask,
+    decode_mask_field,
+    decode_mask_png,
+    encode_mask_field,
+    mask_file_reference,
+    scaled_mask,
+)
 from snapmock.items.shadow import blur_image
 
 _SCALE_MIN = 0.25
@@ -103,6 +118,7 @@ class BlurItem(SnapGraphicsItem):
         self._corner_radius = 0.0
         self._feather = 0.0
         self._invert_mask = False
+        self._alpha_mask: QImage | None = None
         self._border_color = QColor(0, 0, 0, 0)
         self._border_width = 0.0
         self._cache_key: tuple[Any, ...] | None = None
@@ -138,7 +154,7 @@ class BlurItem(SnapGraphicsItem):
 
     @property
     def region_shape(self) -> BlurRegionShape:
-        """Rectangle or Ellipse (2.4; Freeform and Whole Layer are not built)."""
+        """Rectangle, Ellipse, or Freeform (2.4; Whole Layer is not built)."""
         return self._region_shape
 
     @region_shape.setter
@@ -208,6 +224,30 @@ class BlurItem(SnapGraphicsItem):
         self._changed()
 
     @property
+    def alpha_mask(self) -> QImage | None:
+        """A Freeform region's painted mask (2.5): canvas pixels aligned to the region's
+        rectangle, opaque where the region obscures. None for every other shape."""
+        return None if self._alpha_mask is None else self._alpha_mask.copy()
+
+    @alpha_mask.setter
+    def alpha_mask(self, value: QImage | None) -> None:
+        if value is None or value.isNull():
+            self._alpha_mask = None
+        else:
+            self._alpha_mask = value.copy()
+        self._changed()
+
+    def ensure_mask(self) -> QImage:
+        """The mask to paint into, made to fit the region's rectangle if there is none."""
+        rect = self._rect
+        width, height = max(1, round(rect.width())), max(1, round(rect.height()))
+        mask = self._alpha_mask
+        if mask is None or mask.isNull():
+            mask = blank_mask(width, height)
+            self._alpha_mask = mask
+        return mask
+
+    @property
     def border_color(self) -> QColor:
         return QColor(self._border_color)
 
@@ -231,6 +271,11 @@ class BlurItem(SnapGraphicsItem):
         """The region's shape in item coordinates: the rectangle, rounded when a corner
         radius is set, or the ellipse (2.4)."""
         path = QPainterPath()
+        if self._region_shape is BlurRegionShape.FREEFORM:
+            # The mask itself shapes the effect (2.7); the rectangle is what is clicked
+            # and what a border follows (2.9)
+            path.addRect(self._rect)
+            return path
         if self._region_shape is BlurRegionShape.ELLIPSE:
             path.addEllipse(self._rect)
             return path
@@ -259,6 +304,12 @@ class BlurItem(SnapGraphicsItem):
             self._rect.width() * sx,
             self._rect.height() * sy,
         )
+        if self._alpha_mask is not None:
+            self._alpha_mask = scaled_mask(
+                self._alpha_mask,
+                max(1, round(self._rect.width())),
+                max(1, round(self._rect.height())),
+            )
         factor = (sx + sy) / 2.0
         self._blur_radius = _clamp(
             self._blur_radius * factor, BLUR_RADIUS_MIN, BLUR_RADIUS_MAX, 10
@@ -328,6 +379,7 @@ class BlurItem(SnapGraphicsItem):
             self._corner_radius,
             self._feather,
             self._invert_mask,
+            None if self._alpha_mask is None else self._alpha_mask.cacheKey(),
             (t.m11(), t.m12(), t.m21(), t.m22(), t.dx(), t.dy()),
             getattr(scene, "content_revision", 0),
             scale,
@@ -365,17 +417,7 @@ class BlurItem(SnapGraphicsItem):
                 effect = blurred.copy(QRect(offset, offset, w, h))
             else:
                 effect = pixelate_image(source, round(self._pixel_size * scale))
-        mask = QImage(w, h, QImage.Format.Format_ARGB32_Premultiplied)
-        mask.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(mask)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        painter.scale(w / area.width(), h / area.height())
-        painter.translate(-area.topLeft())
-        if self._invert_mask:
-            painter.fillRect(area, QColor(0, 0, 0))
-            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
-        painter.fillPath(self.region_path(), QColor(0, 0, 0))
-        painter.end()
+        mask = self._mask_for(area, w, h)
         if self._feather > 0:
             mask = blur_image(mask, self._feather * scale / 2.0)
         painter = QPainter(effect)
@@ -383,6 +425,28 @@ class BlurItem(SnapGraphicsItem):
         painter.drawImage(0, 0, mask)
         painter.end()
         return effect, area
+
+    def _mask_for(self, area: QRectF, w: int, h: int) -> QImage:
+        """Where the effect shows, as an image *w* by *h* covering *area*: the region's
+        shape, or a Freeform region's painted mask, and with Invert Mask the whole of
+        *area* outside it (2.7)."""
+        mask = QImage(w, h, QImage.Format.Format_ARGB32_Premultiplied)
+        mask.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(mask)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.scale(w / area.width(), h / area.height())
+        painter.translate(-area.topLeft())
+        if self._invert_mask:
+            painter.fillRect(area, QColor(255, 255, 255))
+            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_DestinationOut)
+        freeform = self._region_shape is BlurRegionShape.FREEFORM
+        if freeform and self._alpha_mask is not None:
+            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+            painter.drawImage(self._rect, self._alpha_mask)
+        else:
+            painter.fillPath(self.region_path(), QColor(255, 255, 255))
+        painter.end()
+        return mask
 
     def paint(self, painter: QPainter | None, option: Any, widget: Any = None) -> None:
         if painter is None:
@@ -437,6 +501,21 @@ class BlurItem(SnapGraphicsItem):
 
     # ------------------------------------------------------------ serialization (5.1, 7.1)
 
+    def mask_side_file(self) -> tuple[str, bytes] | None:
+        """The archive entry and bytes a mask too large to inline needs, or None (7.1)."""
+        value, png = encode_mask_field(self._alpha_mask, self.item_id)
+        reference = mask_file_reference(value)
+        if reference is None or not png:
+            return None
+        return reference, png
+
+    def set_mask_png(self, data: bytes) -> None:
+        """Take the mask the project serializer read from the archive (7.1)."""
+        mask = decode_mask_png(data)
+        if mask is not None:
+            self._alpha_mask = mask
+            self._changed()
+
     def serialize(self) -> dict[str, Any]:
         return {
             "type": "BlurItem",
@@ -453,6 +532,7 @@ class BlurItem(SnapGraphicsItem):
             "corner_radius": self._corner_radius,
             "feather": self._feather,
             "invert_mask": self._invert_mask,
+            "alpha_mask_data": encode_mask_field(self._alpha_mask, self.item_id)[0],
             "opacity": self.opacity(),
             "border_color": self._border_color.name(QColor.NameFormat.HexArgb),
             "border_width": self._border_width,
@@ -484,6 +564,9 @@ class BlurItem(SnapGraphicsItem):
         item._corner_radius = _clamp(data.get("corner_radius", 0.0), 0.0, CORNER_RADIUS_MAX, 0.0)
         item._feather = _clamp(data.get("feather", 0.0), 0.0, BLUR_FEATHER_MAX, 0.0)
         item._invert_mask = bool(data.get("invert_mask", False))
+        # A "file:" reference is resolved by the project serializer, which alone can read
+        # the archive (7.1); it calls set_mask_png afterwards
+        item._alpha_mask = decode_mask_field(data.get("alpha_mask_data"))
         item.setOpacity(_clamp(data.get("opacity", 1.0), 0.0, 1.0, 1.0))
         border = QColor(str(data.get("border_color", "#00000000")))
         item._border_color = border if border.isValid() else QColor(0, 0, 0, 0)

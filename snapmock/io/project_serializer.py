@@ -30,6 +30,7 @@ from snapmock.items.freehand_item import FreehandItem
 from snapmock.items.group_item import GroupItem
 from snapmock.items.highlight_item import HighlightItem
 from snapmock.items.line_item import LineItem
+from snapmock.items.mask_utils import mask_file_reference
 from snapmock.items.numbered_step_item import NumberedStepItem
 from snapmock.items.polygon_item import PolygonItem
 from snapmock.items.raster_region_item import RasterRegionItem
@@ -137,6 +138,14 @@ def save_project(
     for item in scene.annotation_items():
         items_data.append(item.serialize())
 
+    # A freeform blur mask too large to inline is written to raster/ (Blur PRD 7.1)
+    side_files: dict[str, bytes] = {}
+    for item in scene.all_annotation_items():
+        if isinstance(item, BlurItem):
+            side = item.mask_side_file()
+            if side is not None:
+                side_files[side[0]] = side[1]
+
     thumb_png = _encode_png(render_thumbnail(scene)) if write_thumbnail else b""
 
     # Write to a sibling temp file then replace, so a crash mid-write never
@@ -146,6 +155,8 @@ def save_project(
         zf.writestr("manifest.json", json.dumps(manifest, indent=2))
         zf.writestr("layers.json", json.dumps(layers_data, indent=2))
         zf.writestr("items.json", json.dumps(items_data, indent=2))
+        for name, blob in side_files.items():
+            zf.writestr(name, blob)
         if thumb_png:
             zf.writestr(THUMBNAIL_ENTRY, thumb_png)
     tmp_path.replace(path)
@@ -240,12 +251,34 @@ def read_project_summary(path: Path) -> dict[str, Any]:
     }
 
 
+def _mask_references(entries: list[Any]) -> dict[str, str]:
+    """item_id to archive entry for every blur mask stored as a file (Blur PRD 7.1),
+    a group's members included."""
+    found: dict[str, str] = {}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        reference = mask_file_reference(entry.get("alpha_mask_data"))
+        item_id = entry.get("item_id")
+        if reference is not None and isinstance(item_id, str):
+            found[item_id] = reference
+        members = entry.get("members")
+        if isinstance(members, list):
+            found.update(_mask_references(members))
+    return found
+
+
 def load_project(path: Path) -> SnapScene:
     """Load a .smk ZIP archive and reconstruct the scene."""
     with zipfile.ZipFile(path, "r") as zf:
         manifest = json.loads(zf.read("manifest.json"))
         layers_data = json.loads(zf.read("layers.json"))
         items_data = json.loads(zf.read("items.json"))
+        masks: dict[str, bytes] = {}
+        names = set(zf.namelist())
+        for item_id, entry_name in _mask_references(items_data).items():
+            if entry_name in names:
+                masks[item_id] = zf.read(entry_name)
 
     canvas = manifest.get("canvas", {})
     scene = SnapScene(
@@ -293,6 +326,12 @@ def load_project(path: Path) -> SnapScene:
 
     for layer in scene.layer_manager.layers:
         apply_layer_z_values(scene, layer.layer_id)
+
+    if masks:
+        for item in scene.all_annotation_items():
+            data = masks.get(item.item_id)
+            if data is not None and isinstance(item, BlurItem):
+                item.set_mask_png(data)
 
     raw_guides = manifest.get("guides", [])
     if isinstance(raw_guides, list):

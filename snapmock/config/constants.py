@@ -235,10 +235,11 @@ class BlurMode(Enum):
 
 
 class BlurRegionShape(Enum):
-    """A blur region's shape (Blur PRD 2.4); Freeform and Whole Layer are not built."""
+    """A blur region's shape (Blur PRD 2.4); Whole Layer is not built."""
 
     RECTANGLE = "rectangle"
     ELLIPSE = "ellipse"
+    FREEFORM = "freeform"
 
 
 BLUR_RADIUS_MIN = 1.0
@@ -246,8 +247,11 @@ BLUR_RADIUS_MAX = 50.0
 BLUR_PIXEL_SIZE_MIN = 2
 BLUR_PIXEL_SIZE_MAX = 100
 BLUR_FEATHER_MAX = 30.0
+BLUR_BRUSH_SIZE_MIN = 5.0
+BLUR_BRUSH_SIZE_MAX = 200.0
+DEFAULT_BLUR_BRUSH_SIZE = 30.0
 DEFAULT_BLUR_FILL_COLOR = "#000000"
-"""The Blur PRD's 2.5 ranges and the Solid Fill default."""
+"""The Blur PRD's 2.5 ranges and defaults."""
 
 
 class LineStyle(Enum):
