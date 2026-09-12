@@ -14,12 +14,13 @@ from __future__ import annotations
 import math
 from collections.abc import Callable
 
-from PyQt6.QtCore import QPointF, QRectF, Qt
+from PyQt6.QtCore import QPoint, QPointF, QRectF, Qt
 from PyQt6.QtGui import QColor, QCursor, QImage, QMouseEvent
 
 from snapmock.config.constants import DEFAULT_SAMPLE_SIZE, SAMPLE_SIZES
 from snapmock.tools.base_tool import BaseTool
 from snapmock.ui.cursors import eyedropper_cursor
+from snapmock.ui.loupe_overlay import LOUPE_CAPTURE_SIDE, LoupeOverlay
 
 
 def sample_rect(scene_pos: QPointF, size: int) -> QRectF:
@@ -77,6 +78,7 @@ class EyedropperTool(BaseTool):
         self._preview_color: QColor = QColor()
         self._preview_callback: Callable[[QColor], None] | None = None
         self._sampling = False
+        self._loupe: LoupeOverlay | None = None
         self._creation_defaults["sample_size"] = DEFAULT_SAMPLE_SIZE
 
     @property
@@ -157,15 +159,52 @@ class EyedropperTool(BaseTool):
             return QColor(0, 0, 0, 0)
         return average_color(image)
 
+    # ---- the preview loupe (4.3) ----
+
+    @property
+    def loupe(self) -> LoupeOverlay | None:
+        """The magnified preview, once the tool has had a view to put it over."""
+        return self._loupe
+
+    def _ensure_loupe(self) -> LoupeOverlay | None:
+        view = self._view
+        viewport = view.viewport() if view is not None else None
+        if viewport is None:
+            return None
+        if self._loupe is None or self._loupe.parentWidget() is not viewport:
+            self._loupe = LoupeOverlay(viewport)
+        return self._loupe
+
+    def update_loupe(self, view_pos: QPoint) -> None:
+        """Show the loupe beside *view_pos*, in the viewport's coordinates, magnifying the
+        canvas under it (4.3). Called on every move, and on the Alt key press, so the loupe
+        appears before any click (4.7)."""
+        loupe = self._ensure_loupe()
+        view = self._view
+        if loupe is None or view is None:
+            return
+        scene_pos = view.mapToScene(view_pos)
+        image = self.sample_image(scene_pos, LOUPE_CAPTURE_SIDE)
+        loupe.show_sample(view_pos, image, self.sample_at(scene_pos), self.sample_size)
+
+    def hide_loupe(self) -> None:
+        if self._loupe is not None:
+            self._loupe.hide()
+
     # ---- the press, the drag, and the release (4.2) ----
 
     @property
     def is_active_operation(self) -> bool:
         return self._sampling
 
+    def deactivate(self) -> None:
+        self.hide_loupe()
+        super().deactivate()
+
     def cancel(self) -> None:
         """A focus loss or Escape drops the drag; nothing is applied."""
         self._sampling = False
+        self.hide_loupe()
 
     def _scene_pos(self, event: QMouseEvent) -> QPointF:
         if self._scene is not None and self._scene.views():
@@ -189,11 +228,15 @@ class EyedropperTool(BaseTool):
             return False
         self._sampling = True
         self._preview(self.sample_at(self._scene_pos(event)))
+        self.update_loupe(event.pos())
         return True
 
     def mouse_move(self, event: QMouseEvent) -> bool:
+        """The loupe follows the cursor whether or not a button is down (4.3); only a drag
+        previews the colour into the Tool Options Bar (4.2)."""
         if self._scene is None:
             return False
+        self.update_loupe(event.pos())
         if not self._sampling:
             return False
         self._preview(self.sample_at(self._scene_pos(event)))
@@ -206,6 +249,7 @@ class EyedropperTool(BaseTool):
             return False
         color = self.sample_at(self._scene_pos(event))
         self._sampling = False
+        self.update_loupe(event.pos())
         # Last: a pick callback may deactivate the tool (the colour picker's button).
         self._apply(color)
         return True

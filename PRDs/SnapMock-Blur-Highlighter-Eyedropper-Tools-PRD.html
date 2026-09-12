@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Blur, Highlighter &amp; Eyedropper Tools</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.11</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.12</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Blur / Pixelate · Highlighter · Eyedropper</dd>
-    <dt>Document version</dt><dd>1.11</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 23:49</dd>
+    <dt>Document version</dt><dd>1.12</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 23:55</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.12</td>
+        <td class="nowrap">09-11-26 23:55</td>
+        <td>Doug Bower</td>
+        <td>Eyedropper and Blur performance Phase 3 built: the preview loupe of 4.3 as a widget over the canvas view's viewport.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.11</td>
         <td class="nowrap">09-11-26 23:49</td>
@@ -136,6 +143,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 23:55</td>
+        <td>4.3, 8.3</td>
+        <td>Built</td>
+        <td>Eyedropper and Blur performance Phase 3 (09-11-26; notes in <code>docs/Eyedropper-Blur-Performance-Implementation.md</code>, Section 6; decision 1, option B). The preview loupe of 4.3 is <code>snapmock/ui/loupe_overlay.py</code>, a widget parented to the canvas view's viewport and transparent to mouse events, so it is neither a scene item nor a pass of the view's foreground and can never reach a render of the scene, and its geometry is arithmetic on the viewport rectangle. It is a 120 px circle at 8 times magnification, which is the fifteen canvas pixels across that 4.3's own arithmetic gives, drawn with nearest-neighbour scaling so the pixel grid shows, with a thin crosshair at the exact sample point, the sampled area outlined as a square of the sample size times the magnification, a 2 px border in the accent colour, and a drop shadow painted as a radial fade beneath the circle. Below the circle sit the 40 by 24 px colour swatch and the hexadecimal value in a smaller font. Over transparent canvas, and beyond the canvas edge, both the circle and the swatch show the theme's checkerboard and the value reads "transparent". The loupe sits 20 px above and to the right of the cursor and is repositioned when it would leave the viewport: it flips to the left of the cursor rather than crossing the right edge and below the cursor rather than crossing the top edge, and is clamped to the viewport after either flip, so it is always wholly visible, including in a corner and in a viewport smaller than itself. What it magnifies is the Eyedropper's own sampling render (decision 2), so the loupe and a click can never disagree. It follows the cursor on every move whether or not a button is down, hides when the pointer leaves the viewport, and hides when the tool's operation is cancelled or the tool is deactivated. The 8.3 rows on the loupe's rendering, its repositioning, and the transparent case are met by tests.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 23:49</td>
         <td>4.2, 4.4, 8.3</td>
