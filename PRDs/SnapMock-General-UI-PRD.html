@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.22</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.23</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.22</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 22:36</dd>
+    <dt>Document version</dt><dd>2.23</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 22:58</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.23</td>
+        <td class="nowrap">09-11-26 22:58</td>
+        <td>Doug Bower</td>
+        <td>Eyedropper and Blur performance implementation started: the decisions of that work recorded against 5.2, 5.3, 6.6, 11.1, and 12.2.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>2.22</td>
         <td class="nowrap">09-11-26 22:36</td>
@@ -311,6 +318,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 22:58</td>
+        <td>5.2, 5.3, 6.6, 11.1, 12.2</td>
+        <td>Decision</td>
+        <td>Eyedropper and Blur performance implementation started 09-11-26 (notes in <code>docs/Eyedropper-Blur-Performance-Implementation.md</code>), from <code>docs/Eyedropper-Blur-Performance-Kickoff-Prompt.md</code> revision 1.0. The Eyedropper's row in the per-tool table of 5.3 — "Display: picked color swatch, hex value, RGB values. Button: Apply to Stroke / Apply to Fill" — is replaced by the eight-control bar of the Blur, Highlighter and Eyedropper Tools PRD's Section 4.5 (that work's decision 3, option A): the sampled colour swatch, the colour value field with click-to-copy, the Color Format dropdown, the four Sample Size toggles, the Apply Target dropdown, the Copy to Clipboard toggle, and the Color History row of eight swatches. The two Apply buttons are removed, since the Apply Target dropdown with the apply-on-sample rule of that PRD's 4.6 is what 4.5 and 4.6 together describe; each tool's own PRD owns its details, as the Arc tool's Shift+A came the same way. Section 5.2's line that "Select, Stamp, Blur, Eyedropper, Pan, and Zoom have no options to capture" no longer holds for the Eyedropper: <code>sample_size</code>, <code>color_format</code>, <code>apply_target</code>, and <code>copy_to_clipboard</code> are creation defaults a theme and a preset capture, and <code>last_sampled_color</code> and the colour history are not. The preview loupe of that PRD's 4.3 is a widget over the canvas view's viewport (that work's decision 1, option B), so the Eyedropper cursor row of 6.6 is unchanged: the loupe follows the cursor beside it rather than replacing it. A pick still lands in the colour picker of 11.1 and in its recent-colour list, as it does today. The Alt convention of 12.2 is unchanged in its wording and gains the loupe: the loupe appears on the key press, before any click, as that PRD's 4.7 asks, and Alt stands down during inline text editing.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 22:36</td>
         <td>5.3, 6.6, 8, 12.2</td>

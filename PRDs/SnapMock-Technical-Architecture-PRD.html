@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Technical Architecture</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.34</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.35</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
-    <dt>Document version</dt><dd>1.34</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 22:36</dd>
+    <dt>Document version</dt><dd>1.35</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 22:58</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.35</td>
+        <td class="nowrap">09-11-26 22:58</td>
+        <td>Doug Bower</td>
+        <td>Eyedropper and Blur performance implementation started: the decisions of that work recorded against 3.7, 3.9, 8, 9.1, and Section 10.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.34</td>
         <td class="nowrap">09-11-26 22:36</td>
@@ -364,6 +371,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 22:58</td>
+        <td>3.7, 3.9, 8, 9.1, 10</td>
+        <td>Decision</td>
+        <td>Eyedropper and Blur performance implementation started 09-11-26 (notes in <code>docs/Eyedropper-Blur-Performance-Implementation.md</code>), from <code>docs/Eyedropper-Blur-Performance-Kickoff-Prompt.md</code> revision 1.0. Section 3.9's tool overlays, which are drawn "on a dedicated overlay layer that is always on top", gain the Eyedropper's preview loupe as a widget over the canvas view's viewport rather than as a scene item or a pass of the view's foreground (that work's decision 1, option B), so no render can capture it; Section 10 gains <code>ui/loupe_overlay.py</code> in the commit that creates it. Section 3.9 also gains the Eyedropper's sampling composite (its decision 2, option A): the canvas colour where the canvas covers the sampled area, then every visible annotation item in stacking order, by an item walk of the kind <code>RenderEngine.render_below</code> uses, so the grid, the guides, the crosshairs, the selection and crop overlays, the handles, the pasteboard, and the loupe itself are excluded by construction. Section 3.7's command types gain <code>ApplyEyedropperColorCommand</code> (that PRD's 6.2) in the commit that creates it, as one entry with its own undo. Section 9.1's dependency policy is unchanged and Section 8 gains no metric: the Blur tool's Performance rows close by making the blur cheaper rather than by a thread (its decision 4, option C) — float32 in place of float64, all four colour channels in one array, and a direct sum of shifted slices in place of the cumulative sums while the box is one or two pixels wide — so the code still has no thread, and NumPy, already a core dependency, does the work. The kickoff prompt names "Section 7.1's overlay order"; Section 7 is Cross-Platform Considerations and 7.1 is Target Platforms, so the rows above are Section 3.9's.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 22:36</td>
         <td>3.9, 6.1, 10</td>
