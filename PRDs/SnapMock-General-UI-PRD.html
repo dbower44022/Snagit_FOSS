@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.21</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.22</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.21</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 20:14</dd>
+    <dt>Document version</dt><dd>2.22</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 22:36</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.22</td>
+        <td class="nowrap">09-11-26 22:36</td>
+        <td>Doug Bower</td>
+        <td>Freeform blur brush and Highlighter straightening built: the 5.3 rows for both tools, the two 6.6 cursor rows, and the Property Panel's new rows and Highlighter section.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>2.21</td>
         <td class="nowrap">09-11-26 20:14</td>
@@ -304,6 +311,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 22:36</td>
+        <td>5.3, 6.6, 8, 12.2</td>
+        <td>Built</td>
+        <td>Freeform blur brush and Highlighter straightening built (09-11-26; Blur PRD 1.8; notes in <code>docs/Freeform-Blur-Highlighter-Implementation.md</code>). <strong>5.3.</strong> The Blur / Pixelate row is Mode toggles | Intensity (Blur Radius or Pixel Size, hidden for Solid Fill) | Fill Color (Solid Fill) | Region Shape toggles (Rectangle, Ellipse, Freeform, Whole Layer) | Corner Radius (Rectangle) | Feather | Brush Size (Freeform) | Invert Mask | Opacity; the Region Shape group carries four toggles where Blur PRD 2.6 lists three, because without a Whole Layer toggle that shape could not be created. The Highlighter row gains the Auto-Straighten and Snap to Axis toggles on the vendored Tabler ruler and magnet glyphs, which the Vector Item Properties work left off because the tool did not straighten strokes; it now does. <strong>6.6.</strong> Two cursor rows the table did not carry, where it gives every drawing tool the crosshair: the Blur tool's brush cursor, a circle at the brush's size in screen pixels with a centre dot and the hotspot at the centre, shown while the region shape is Freeform and while brush editing lasts, capped at 128 px since a cursor cannot grow without end; and the Highlighter's angled marker tip, a chisel tip with its barrel and the hotspot on the tip (Blur PRD 3.1). Both are drawn in <code>ui/cursors.py</code>, like the raster-selection and numbered-step cursors, because no glyph matches. <strong>Section 8.</strong> The Property Panel's Blur section gains Brush size (Freeform regions only), Source, and Source layer (Specific Layer only, the list rebuilt on each populate so renames and deletions show at once), and its Shape dropdown lists all four shapes. A Highlighter section shows Auto-straighten, Threshold, and Snap to axis while the Highlighter is active with nothing selected, which is Section 8's creation-tool-defaults state; a placed stroke shows no row for them, since Blur PRD 3.6 gives them no retroactive effect. Neither the Brush size row nor the Highlighter section is undoable: both are tool settings, not document state, as Manage Presets already is. Brush editing is the Select tool's second mode beside point editing, entered by a double-click on a Freeform blur region; a double-click on a rectangular or elliptical one does nothing, and the Alt momentary eyedropper of 12.2 stands down while either mode lasts.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 20:14</td>
         <td>5.3, 6.6, 8</td>

@@ -1,6 +1,6 @@
 # Freeform Blur Brush and Highlighter Straightening Implementation Notes
 
-Last Updated: 09-11-26 20:14 · Revision 1.0
+Last Updated: 09-11-26 22:36 · Revision 1.1
 
 Implements the remainder of the Blur / Pixelate tool and the whole of the Highlighter's drawing behaviour from the Blur, Highlighter, and Eyedropper Tools PRD (`PRDs/SnapMock-Blur-Highlighter-Eyedropper-Tools-PRD.html`, version 1.6 at the start), with the General UI PRD (version 2.20) and Technical Architecture PRD (version 1.32) rows they own, in the five phases and the close-out defined by `docs/Freeform-Blur-Highlighter-Kickoff-Prompt.md` (revision 1.0). A session pasting that prompt starts at the first phase not marked done in Section 1. `docs/General-UI-Implementation-Kickoff-Prompt.md` (revision 1.1) governs the standards; the General UI implementation notes (`docs/General-UI-Implementation.md`) hold the walk table of Section 17.2.
 
@@ -10,12 +10,12 @@ Starting state, verified at commit 0029bf7 on 09-11-26 (the kickoff names 035fa5
 
 | Phase | Scope | Status | Commits |
 |---|---|---|---|
-| 1 | The mask (Blur PRD 2.4, 2.5, 2.7, 5.1, 7.1): the decisions and these notes, the mask on the item, close-out | In progress | this commit |
-| 2 | The brush (2.3, 2.6, 2.11): painting, the Freeform toggle, the Brush Size control, the brush cursor, the hints, close-out | Not started | |
-| 3 | Brush editing (2.8, 6.1): the editing mode beside point editing, `ModifyBlurMaskCommand`, the panel's Brush size row, close-out | Not started | |
-| 4 | Whole Layer, the source modes, and the render (2.4, 2.5, 2.7, 2.10) | Not started | |
-| 5 | The Highlighter (3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.9): drawing and straightening, point editing, close-out | Not started | |
-| Close-out | PRD rows, the General UI notes' Section 23 pointer, the Basic Shape remainder notes' Section 10 pointer, the display checks owed | Not started | |
+| 1 | The mask (Blur PRD 2.4, 2.5, 2.7, 5.1, 7.1): the decisions and these notes, the mask on the item, close-out | Done | f654fd6, f9e78e1, then the shared close-out commit |
+| 2 | The brush (2.3, 2.6, 2.11): painting, the Freeform toggle, the Brush Size control, the brush cursor, the hints, close-out | Done | 60ffd5f, then the shared close-out commit |
+| 3 | Brush editing (2.8, 6.1): the editing mode beside point editing, `ModifyBlurMaskCommand`, the panel's Brush size row, close-out | Done | 87be2ce, then the shared close-out commit |
+| 4 | Whole Layer, the source modes, and the render (2.4, 2.5, 2.7, 2.10) | Done | 98ec5c9, then the shared close-out commit |
+| 5 | The Highlighter (3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.9): drawing and straightening, point editing, close-out | Done | bae3963, then the shared close-out commit |
+| Close-out | PRD rows, the General UI notes' Section 23 pointer, the Basic Shape remainder notes' Section 10 pointer, the display checks owed | Done | the shared close-out commit |
 
 ## 2. Decisions
 
@@ -59,10 +59,110 @@ Each decided as the kickoff recommended, on 09-11-26.
 
 ## 3. What Phase 1 built
 
-Step 1, this commit: the decisions of Section 2; Blur PRD 1.7, General UI PRD 2.21, Technical Architecture PRD 1.33.
+Step 1, f654fd6: the decisions of Section 2; Blur PRD 1.7, General UI PRD 2.21, Technical Architecture PRD 1.33. Step 2, f9e78e1: `snapmock/items/mask_utils.py` (a Technical Architecture PRD Section 10 row) with `blank_mask`, `scaled_mask`, `encode_mask_png` and `decode_mask_png`, `mask_entry_name`, `encode_mask_field` and `decode_mask_field` carrying the 100 KB rule of 7.1, and `mask_file_reference`; `BlurRegionShape.FREEFORM` and the brush-size constants of 2.5; `BlurItem.alpha_mask` and `ensure_mask`, `region_path` returning the rectangle for a Freeform region, the mask building of `_render` moved into `_mask_for`, `scale_geometry` resampling the mask, and the cache key taking it; `alpha_mask_data` written and read, with `mask_side_file` and `set_mask_png` for the archive; `save_project` writing each side file and `load_project` resolving each `file:` reference, a group's members included; `ResizeImageCommand._restore_geometry` restoring the mask. Step 3, the shared close-out commit.
+
+Silences found while building, decided as the code says:
+
+- The mask is opaque **white** where the region obscures, not the luminance mask 2.5 describes ("White = blur, Black = no blur"): the render clips with `DestinationIn`, which reads alpha. White keeps both readings true at once, since a saved mask is white where it blurs.
+- The inverted mask is punched out with `DestinationOut` rather than `Clear`, so an image's alpha subtracts correctly at its antialiased edges; the two agree for a filled path.
+- A Freeform region's `shape()` is its rectangle, as 2.9 says, so a click anywhere in the rectangle selects it even where nothing is painted.
+
+## 4. What Phase 2 built
+
+Step 1, 60ffd5f: the Freeform toggle and the Brush Size control of 2.6, shown only while the shape is Freeform; `brush_cursor` in `ui/cursors.py` and `BlurTool.cursor` returning it at the brush's size times the view's zoom; `paint_stroke`, `restore_region`, and `painted_bounds` in `mask_utils.py`; the tool's painting state machine with the working mask over the canvas, the painted bounds on the item after each segment, Shift holding the stroke straight from the press point, strokes accumulating, Enter and a tool switch finalizing, Escape dropping, and an empty region dropped; the hints of 2.11. Step 2, the shared close-out commit.
+
+Silences found while building:
+
+- `brush_size` is a tool property and not an item key: Section 5.1 gives it none, so it is a creation default that the Property Panel's row and the brush-editing session share.
+- The working mask covers the canvas, so a stroke that leaves the canvas is clipped to it; a blur outside the canvas would be invisible in every export anyway.
+- Shift's straight strokes are built, which 2.11's hint names and 2.3 does not define: the band the straight line last painted is restored from a snapshot taken at the press, so the path the cursor took on the way is not left behind.
+- `BlurTool.cancel` ends a live stroke and leaves the painted region standing, and `is_active_operation` is true only while the mouse is down: the view's focus-out and the first Ctrl+Z both call `cancel` on an active operation, and neither should decide the region's fate.
+- A brush cursor is capped at 128 screen pixels; past that the circle stops growing, since a cursor cannot.
+
+## 5. What Phase 3 built
+
+Step 1, 87be2ce: `snapmock/commands/blur_commands.py` with `ModifyBlurMaskCommand` and `mask_state`, and `snapmock/tools/blur_edit.py` with `BlurBrushSession` and `brush_editable` (two Section 10 rows); the Select tool's brush-editing mode with its `BRUSH_STROKE` state, the double-click entry, the hidden transform handles, the brush cursor, the 2.11 hint, and the Enter, Escape, tool-switch, and selection-change exits; the main window's Alt momentary eyedropper standing down during the mode; the Property Panel's Brush size row. Step 2, the shared close-out commit.
+
+Silences found while building:
+
+- `ModifyBlurMaskCommand` carries the region's rectangle with the mask, which 6.1 does not name: the rectangle follows the painted bounds, so a stroke past the region moves it and an undo must put it back.
+- Painting past the region grows the rectangle in the item's own coordinates and never moves its position, so a rotated region stays where it was placed; erasing never shrinks the rectangle, so the handles do not jump while the brush is working.
+- Every press paints wherever it lands, as 2.8 lists only Enter and Escape as the exits; a press away from the region does not leave the mode, which is how a region grows past its own edge.
+- Brush editing and point editing never run together: entering one leaves the other, and `handle_escape` asks brush editing first.
+
+## 6. What Phase 4 built
+
+98ec5c9, both steps in one commit (they share `blur_item.py` and `property_panel.py`): `BlurRegionShape.WHOLE_LAYER` and `BlurSourceMode`; `BlurItem.region_rect` giving the canvas for a Whole Layer region, read by `region_path`, `effect_rect`, `boundingRect`, and the mask draw; `source_mode` and `source_layer_id` with their keys and their place in the cache key; `RenderEngine.source_layer_filter` and the two new arguments of `render_below`; the bar's fourth shape toggle and the one-click placement; the Property Panel's Shape list, Source, and Source layer rows; and the half-scale Gaussian of decision 4 with its radius threshold.
+
+Silences found while building:
+
+- Whole Layer joins the bar's Region Shape group as a fourth toggle, which 2.6's three do not list: without it the shape of 2.4 could not be created at all.
+- A narrowed capture (`active_layer` or `specific_layer`) leaves the canvas colour out, so a region over a layer with nothing under it obscures nothing rather than painting the canvas colour over the content of other layers.
+- `active_layer` follows the scene's active layer, so switching layers changes what such a region obscures; the cache key carries the active layer id for that reason.
+- The half-scale Gaussian is used from radius 4 up only. Halving the capture throws away detail finer than two pixels, which 2.10's own acceptance row asks a radius of 1 to keep, so a weak blur still renders at full resolution and still misses the 100 ms target.
+
+## 7. What Phase 5 built
+
+bae3963, both steps in one commit (they share `highlight_item.py` and `point_edit.py`): `moving_average`, `path_length`, `straightness`, and `snap_to_axis` in `core/path_utils.py` with 3.2's and 3.3's numbers in `config/constants.py`; `HighlightItem` rebuilt on `path_points` with `auto_straighten`, `straighten_threshold`, `snap_to_axis`, `set_points`, and `is_straight`, reading the older `points` key; `HighlightTool`'s live smoothing, Shift's straight line and Shift+Alt's 15-degree steps, the release straightening, snapping, simplification, and 4 px minimum, the two bar toggles on the vendored ruler and magnet glyphs, the marker-tip cursor, and the hints of 3.9; the Property Panel's Highlighter section for the tool's defaults; and `HighlightPointSession` in `tools/point_edit.py`.
+
+Silences found while building:
+
+- The straightening reads the smoothed stroke, not the raw points, since 3.2 smooths before 3.3 straightens; a wobble that the moving average flattens is straightened at a tighter threshold than its raw points would allow.
+- A stroke that ends where it began has no straight-line distance, so `straightness` gives infinity and it is never straightened.
+- With auto-straighten off, a stroke whose wobble is under the 2 px simplification tolerance still comes out as two points. That is simplification, not straightening, and the point editing shows two handles either way.
+- `is_straight` is "two points", which is what 3.6 needs to choose between two endpoint handles and the simplified points.
+- The Property Panel shows the three straightening properties for the tool's defaults only, in a Highlighter section visible while the tool is active with nothing selected; 3.6 gives them no retroactive effect, so a placed stroke shows no row for them.
+- `points` stays on the item as a list of pairs beside `path_points`: the Snagit writer and `ResizeImageCommand` read it, and its Snagit mapping is unchanged.
+
+## 8. Deviations from the PRDs
+
+Each has its PRD row.
+
+- Blur PRD 2.5 and 7.1: the mask is opaque white where the region obscures, read through its alpha; 2.5 describes a luminance mask.
+- Blur PRD 2.6: the Region Shape group has four toggles, not three; Whole Layer is one of them, and Brush Size joins the bar.
+- Blur PRD 2.8: the mask edit pushes `ModifyBlurMaskCommand` (6.1), not the `ModifyPropertyCommand` 2.8 names, and the command carries the region's rectangle with the mask.
+- Blur PRD 2.8: a press away from the region paints rather than leaving the mode; only Enter, Escape, a tool switch, and a selection change leave, as 2.8 lists.
+- Blur PRD 2.10: the Gaussian meets the 100 ms target from radius 4 up by rendering at half size; below that it renders at full size and the target is unmet. The background thread, the progress indicator past 2000 px, and the separate half-resolution drag preview are not built.
+- Blur PRD 3.4 and 5.2: `straighten_threshold` is clamped to the 1.01 to 1.50 range on the way in, and `brush_size` has no serialization key, so it is a tool setting only.
+- Blur PRD 3.6: the Property Panel shows Auto-straighten, Threshold, and Snap to axis for the tool's defaults and not for a placed stroke.
+- General UI PRD 5.3 and 6.6: the Blur and Highlighter rows gain the controls above, and 6.6 gains the brush and marker-tip cursor rows it did not carry.
+- Blur PRD 5.1: the colours are written `#AARRGGBB`, as the Basic Shape remainder work recorded.
+
+## 9. Tests
+
+New modules: `tests/test_blur_mask.py` (8), `tests/test_blur_brush.py` (8), `tests/test_blur_brush_edit.py` (8), `tests/test_blur_source_modes.py` (5), and `tests/test_highlight_straightening.py` (13). The round-trip tests of `tests/test_blur_modes.py` and `tests/test_blur_mask.py` now read `freeform` and `whole_layer` as themselves, with an unknown shape still reading as a rectangle.
+
+The full suite at the Phase 1 code commit (f9e78e1), run from a scratch worktree while the Phase 2 to 5 work's targeted runs shared the machine, ran 1366 tests with 13 skipped and the one environmental deselection: 1352 passed and one failed, the pre-existing timing-sensitive Zoom tool test (`tests/test_tools/test_zoom_tool.py::test_left_click_zooms_in_and_alt_at_the_release_zooms_out`), which passes alone; the run took 65 minutes. The full suite at the last code commit (bae3963), run alone from a scratch worktree, ran 1400 tests with 13 skipped and the one environmental deselection: 1385 passed and two failed; the run took 69 minutes. Both failures are environmental and both pass alone at that commit: the pre-existing timing-sensitive Zoom tool test, and `tests/test_capture/test_x11.py::test_live_key_press_is_delivered`, which synthesizes a real key event through XTest against the live display and so races with whatever else holds it during a full run. Nothing in `snapmock/capture/` was touched by this work. Ruff and mypy are clean at every commit; the accessibility audit passes over the Blur bar's Brush Size and Whole Layer controls, the Highlighter bar's two toggles, and the new Property Panel rows.
+
+Under load a second Zoom tool test (`test_alt_at_the_press_alone_zooms_out`) also fails and also passes alone; both are the same timing-sensitive pair the Basic Shape remainder notes record.
+
+### 9.1 Measured render times
+
+A 1000 by 1000 px region on this machine, the median of five renders with the cache cleared each time, measured alone:
+
+| Mode | Before this work | After |
+|---|---|---|
+| Gaussian, radius 1 | about 200 ms | 154 ms (full resolution; 2.10's 100 ms unmet) |
+| Gaussian, radius 4 | about 200 ms | 34 ms |
+| Gaussian, radius 10 | about 200 ms | 36 ms |
+| Gaussian, radius 50 | about 200 ms | 50 ms |
+| Pixelate | about 50 ms | 41 ms |
+| Solid Fill | about 3 ms | 1 ms |
+| Inverted Gaussian over 1920 by 1080 | about 500 ms | 80 ms |
+
+The same measurements while another full-suite run shared the machine were 284, 41, 43, 62, 134, 1, and 95 ms, which is what a loaded machine costs.
+
+## 10. Close-out of the work
+
+Every phase is done. The PRDs stand at Blur PRD 1.8, General UI PRD 2.22, and Technical Architecture PRD 1.34, with the Snagit notes at 1.6 and the General UI notes at 1.35 (Section 23). The Basic Shape remainder notes' Section 10 points here. Phases 2 to 5 were each built and committed in one step rather than the kickoff's several, since each phase's files overlap and the phases were built while the Phase 1 suite ran; the close-outs are written together in this commit after one full-suite run at the last code commit.
+
+Owed, on the real display, since every render check here is a pixel test on the offscreen platform: a painted blur region and an erased one over a screenshot, with the brush cursor at two sizes; a Whole Layer region and each source mode; a straightened highlight and a freeform one with their point handles; and the angled marker-tip cursor. These join the checks the Basic Shape remainder notes list (curved and elbow arrows in point editing, individual corner radii, a freehand stroke's handles, each arc type, a star polygon, and each blur mode over a screenshot) and the older ones the Vector Item Properties notes list.
+
+**Next required step:** the work is complete and no kickoff follows it yet. Two candidates are known. The Eyedropper's Section 4 rows that the General UI work did not build — the preview loupe (4.3), the sample sizes, the colour history, and the colour formats (4.4, 4.5) — need checking against the code before a kickoff is written for them, and they would finish the Blur, Highlighter, and Eyedropper PRD. The Windows backend (`docs/Windows-Backend-Kickoff-Prompt.md`) waits for a Windows machine. Recommended: the Eyedropper remainder, since it runs on this machine and closes the PRD this work has been building. Before either, the display checks above.
 
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.1 | 09-11-26 22:36 | Claude (Claude Code) | Every phase done and the work closed out: the phase table, Sections 3 to 7 (what each phase built and the silences found while building), Section 8's deviations, Section 9's tests and the two suite runs with the measured render times of 9.1, and Section 10's close-out with the display checks owed and the next required step. Blur PRD 1.8, General UI PRD 2.22, Technical Architecture PRD 1.34, Snagit notes 1.6, General UI notes 1.35 (Section 23), Basic Shape remainder notes 1.5. |
 | 1.0 | 09-11-26 20:14 | Claude (Claude Code) | Initial notes: the starting state at commit 0029bf7, the phase table, the four decisions (1 A, 2 A, 3 A, 4 A) and the kickoff's six silences as chosen 09-11-26, four corrections to the kickoff found in the reading, four findings decided with the decisions. Blur PRD 1.7, General UI PRD 2.21, Technical Architecture PRD 1.33. |

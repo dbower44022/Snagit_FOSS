@@ -1,6 +1,6 @@
 # Snagit .snagx File Format — Read/Write Support
 
-Last Updated: 09-11-26 18:44 · Revision 1.5
+Last Updated: 09-11-26 22:36 · Revision 1.6
 
 ## 1. Overview
 
@@ -81,13 +81,13 @@ snapmock/io/
 | `LineItem` | `Line` | QLineF + pos → PointsArray |
 | `RectangleItem` | `Shape` | QRectF + pos → PointsArray, corner_radius > 0 → RoundedRectangle + CornerRadiusRatio |
 | `RectangleItem` (highlight-tagged) | `Highlight` | fill_color → BackgroundColor |
-| `HighlightItem` | `Highlight` | Bounding rect → PointsArray, stroke_color → BackgroundColor |
+| `HighlightItem` | `Highlight` | Bounding rect → PointsArray, stroke_color → BackgroundColor; unchanged by the stroke's move to the `path_points` key, since the writer reads the item's bounding rectangle and not its points |
 | `CalloutItem` | `Callout` | Text/font/color → RTFEncodedText, tail_tip + pos → CalloutTails |
 | `TextItem` | `Text` | Text/font/color → RTFEncodedText |
 | `RasterRegionItem` | `Image` | QPixmap → base64 PNG in Image field |
 | `EllipseItem` | — | **Skipped** (no Snagit equivalent) |
 | `FreehandItem` | — | **Skipped** (no Snagit equivalent) |
-| `BlurItem` | — | **Skipped** (no Snagit equivalent; none of the 239 samples carries a blur object) |
+| `BlurItem` | — | **Skipped** (no Snagit equivalent; none of the 239 samples carries a blur object), whatever its region shape, the freeform and whole-layer ones included |
 | `ArcItem` | — | **Skipped** with the writer's warning (Basic Shape remainder Phase 3) |
 | `PolygonItem` | — | **Skipped** with the writer's warning (Basic Shape remainder Phase 4) |
 | `NumberedStepItem` | — | **Skipped** (would need stamp PDF generation) |
@@ -291,6 +291,7 @@ Internal converters: `_item_to_arrow`, `_item_to_line`, `_item_to_shape`, `_item
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.6 | 09-11-26 22:36 | Claude (Claude Code) | Section 3.2's table: the highlight row notes that the mapping is unchanged by the stroke's move to `path_points`, and the blur row that every region shape is skipped (freeform blur brush and Highlighter straightening work). |
 | 1.5 | 09-11-26 18:44 | Claude (Claude Code) | Section 3.2's table gains `ArcItem` and `PolygonItem`, skipped with the writer's warning, and the blur row notes that no sample carries a blur object (Basic Shape remainder Phases 3 to 5). |
 | 1.4 | 09-11-26 16:16 | Claude (Claude Code) | Section 7's item 6: a curved or elbow arrow is written as its straight line (Basic Shape remainder Phase 1). |
 | 1.3 | 09-11-26 13:34 | Claude (Claude Code) | Section 7's item 6 gains the reader's Filled head for imported arrows (Vector Item Properties Phase 3). |

@@ -1,6 +1,6 @@
 # General UI Implementation Notes
 
-Last Updated: 09-11-26 18:44 · Revision 1.34
+Last Updated: 09-11-26 22:36 · Revision 1.35
 
 Implements the SnapMock General User Interface PRD (version 2.4, `PRDs/SnapMock-General-UI-PRD.html`) in the eight phases defined by `docs/General-UI-Implementation-Kickoff-Prompt.md`. A session pasting that prompt starts at the first phase not marked done in Section 1.
 
@@ -674,10 +674,15 @@ Run from `docs/Vector-Item-Properties-Kickoff-Prompt.md` (revision 1.0) from 09-
 
 Run from `docs/Basic-Shape-Remainder-Kickoff-Prompt.md` (revision 1.0) from 09-11-26, with its own notes in `docs/Basic-Shape-Remainder-Implementation.md`: point editing as a mode of the Select tool, curved and elbow arrows, the Rectangle's individual radii, the Freehand Bezier pipeline, the Arc and Polygon tools (the palette counts twenty-one), and the Blur tool's three modes. Section 6's bullet on the per-tool bar contents is closed. The Section 17.2 table gains no walk; the one walk that names item types one by one, Resize Image's geometry restore, takes the new shapes. General UI PRD 2.17 to 2.20 carry the rows.
 
+## 23. Freeform Blur Brush and Highlighter Straightening
+
+Run from `docs/Freeform-Blur-Highlighter-Kickoff-Prompt.md` (revision 1.0) from 09-11-26, with its own notes in `docs/Freeform-Blur-Highlighter-Implementation.md`: the Blur tool's brush-painted freeform region, the Whole Layer shape, the three source modes, the mask's serialization into the archive's first `raster/` entry, brush editing as the Select tool's second mode, and the render's speed; and the Highlighter's smoothing, straightening, snap to axis, point editing, bar toggles, and marker-tip cursor. The Section 17.2 table gains no walk; `ResizeImageCommand._restore_geometry`, the one walk that names item types one by one, takes the blur mask. Section 6's bullet on the per-tool bar contents stays closed, with the Blur and Highlighter rows now complete. General UI PRD 2.21 and 2.22 carry the rows, and Section 6.6 gains the brush and marker-tip cursor rows it did not carry.
+
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.35 | 09-11-26 22:36 | Claude (Claude Code) | Section 23: the freeform blur brush and Highlighter straightening work, with its own notes; the Section 17.2 table gains no walk and Resize Image's geometry restore takes the blur mask. General UI PRD 2.21 and 2.22. |
 | 1.34 | 09-11-26 18:44 | Claude (Claude Code) | Section 22: the pointer to the Basic Shape remainder and Blur modes work; the Section 6 bullet on the per-tool bar contents closed. |
 | 1.33 | 09-11-26 13:05 | Claude (Claude Code) | Section 21: the pointer to the Vector Item Properties work; decision 6.2 closed, the Section 6 bullets on the shared controls and the per-tool bar contents closed. |
 | 1.32 | 09-11-26 01:48 | Claude (Claude Code) | Section 20: the pointer to the Numbered Steps, Stamps, and Emoji work; decision 6.2 partly closed (the Shadow section for the marker items), silence 7 of Section 18.1 closed, the tool count nineteen. |

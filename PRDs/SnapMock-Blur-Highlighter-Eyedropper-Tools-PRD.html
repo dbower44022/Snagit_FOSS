@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Blur, Highlighter &amp; Eyedropper Tools</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.7</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.8</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Blur / Pixelate · Highlighter · Eyedropper</dd>
-    <dt>Document version</dt><dd>1.7</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 20:14</dd>
+    <dt>Document version</dt><dd>1.8</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 22:36</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.8</td>
+        <td class="nowrap">09-11-26 22:36</td>
+        <td>Doug Bower</td>
+        <td>Freeform blur brush and Highlighter straightening built: the Blur tool's brush, Whole Layer, source modes, mask serialization, brush editing, and render speed, and the Highlighter's smoothing, straightening, snap to axis, toggles, point editing, and cursor; the departures recorded.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.7</td>
         <td class="nowrap">09-11-26 20:14</td>
@@ -108,6 +115,18 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 22:36</td>
+        <td>2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.11, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.9, 5.1, 5.2, 6.1, 7.1, 7.2, 8.1, 8.2</td>
+        <td>Built</td>
+        <td>Freeform blur brush and Highlighter straightening (09-11-26; notes in <code>docs/Freeform-Blur-Highlighter-Implementation.md</code>, Sections 3 to 7). <strong>The Blur / Pixelate tool.</strong> A Freeform region is painted rather than dragged (2.3): press and drag paints into the region's alpha mask with a round brush <code>brush_size</code> pixels across, Shift holds the stroke straight from the press point, strokes accumulate into one region, Enter or a tool switch finalizes it, Escape drops it, and a region with nothing painted is dropped too. The region's rectangle follows the painted bounds, so the transform handles frame the paint; the working mask covers the canvas, so paint outside it is clipped away. The Region Shape group gains Freeform and Whole Layer, and the bar gains Brush Size (5 to 200) for a Freeform region (2.6). A Whole Layer region takes the canvas as its region with nothing to drag and is placed with one click (2.4). <code>alpha_mask</code> is a premultiplied ARGB image in canvas pixels aligned to the region's rectangle, opaque where the region obscures; it replaces the shape in the render's clip and feathers and inverts exactly as a shape does, a resize resamples it, and a rotation leaves it in the item's own coordinates (2.5, 2.7). <code>source_mode</code> and <code>source_layer_id</code> narrow what <code>RenderEngine.render_below</code> paints to the active layer or one named layer, a narrowed capture leaving the canvas colour out and a file naming a layer that is gone falling back to every layer below; Active Layer follows the scene's active layer, which the cache key carries (2.5, 2.7). Brush editing (2.8): a double-click on a Freeform region with the Select tool enters it beside point editing, painting adds and Alt+painting takes away, the cursor is the brush circle, the transform handles hide, and Enter, Escape, a tool switch, or a new selection leave; each stroke pushes one <code>ModifyBlurMaskCommand</code> (6.1), so an undo returns the mask. <code>alpha_mask_data</code> (5.1, 7.1) is a base64 PNG inline in <code>items.json</code> under 100 KB and a <code>file:raster/blur_mask_&lt;item_id&gt;.png</code> reference past it, the archive's first <code>raster/</code> entry, written by the project serializer and resolved on load, a group's members included; <code>format_version</code> is unchanged. The hints of 2.11 are complete for the brush. Measured alone on this machine for a 1000 by 1000 px region: the Gaussian at 34 ms at radius 4, 36 ms at radius 10, and 50 ms at radius 50, against about 200 ms before; an inverted Gaussian over the whole 1920 by 1080 canvas at 80 ms against about 500 ms; Pixelate at 41 ms and Solid Fill at 1 ms. <strong>The Highlighter.</strong> The raw points are smoothed by a moving average over the last five while the stroke is drawn and simplified with Ramer-Douglas-Peucker at 2 px on release, and a stroke under 4 px long is dropped (3.2). On release an approximately straight stroke, within <code>straighten_threshold</code> of its straight-line distance, becomes a line; Shift forces a straight line from the press point to the cursor at whatever angle, Shift+Alt constrains that to 15-degree steps, and a straightened stroke within 5 degrees of an axis snaps onto it (3.3). <code>auto_straighten</code>, <code>straighten_threshold</code> (clamped to its 1.01 to 1.50 range), and <code>snap_to_axis</code> are carried and serialized (3.4, 7.2), and the stroke is stored under <code>path_points</code> as {"x", "y"} objects (5.2), read from the older <code>points</code> key. The bar gains the Auto-Straighten and Snap to Axis toggles of 3.5 on the vendored ruler and magnet glyphs. Point editing (3.6): a double-click enters it, a straightened stroke showing two endpoint handles and a freeform one its simplified points, each drag one <code>ModifyGeometryCommand</code> and Shift constraining an endpoint drag to 15-degree steps. The cursor is the angled marker tip of 3.1 and the hints of 3.9 follow the state. The 8.1 rows on Freeform painting and editing and the 8.2 rows on straightening, the manual straight mode, Shift+Alt, the snap, the 4 px minimum, and point editing are met by tests.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 22:36</td>
+        <td>2.5, 2.6, 2.8, 2.9, 2.10, 2.11, 3.2, 3.3, 3.6, 5.1, 7.1</td>
+        <td>Departure</td>
+        <td>Departures (freeform blur decisions 1 to 4 and the silences found while building; notes Section 8). 2.5 and 7.1: the mask is opaque white where the region obscures and is read through its alpha, where 2.5 describes a luminance mask ("White = blur, Black = no blur"); white keeps both readings true, since a saved mask is white where it blurs. 2.6: the Region Shape group has four toggles, not the three listed, because without a Whole Layer toggle the shape of 2.4 could not be created at all; Brush Size joins the bar as 2.6 asks. 2.8: the mask edit pushes <code>ModifyBlurMaskCommand</code> (6.1), not the <code>ModifyPropertyCommand</code> 2.8 names, and the command carries the region's rectangle with the mask, since the rectangle follows the painted bounds and an undo must put it back; painting past the region grows the rectangle and erasing never shrinks it; and a press away from the region paints rather than leaving the mode, since 2.8 lists only Enter and Escape as the exits. 2.9: a Freeform region's <code>shape()</code> is its rectangle, so a click anywhere in it selects the region. 2.10: the Gaussian meets the 100 ms target from radius 4 up by capturing and blurring at half size and scaling the result back; below that radius it renders at full size, because halving the capture throws away detail finer than two pixels, which 2.10's own acceptance row asks a radius of 1 to keep, so the target stays unmet at radius 1 (154 ms). The background thread, the progress indicator past 2000 px, and a separate half-resolution drag preview are not built. 2.5: <code>brush_size</code> has no serialization key in 5.1, so it is a tool setting shared by the bar, the Property Panel's row, and the brush-editing session, and is not undoable. 2.11: Shift's straight strokes, which the Freeform hint names and 2.3 does not define, are built by restoring the band the straight line last painted from a snapshot taken at the press. 3.6: the Property Panel shows Auto-straighten, Threshold, and Snap to axis for the tool's defaults only, in a Highlighter section visible while the tool is active with nothing selected, since 3.6 gives them no retroactive effect on a placed stroke. 3.2 and 3.3: the straightening reads the smoothed stroke rather than the raw points, since 3.2 smooths before 3.3 straightens; a stroke that ends where it began is never straightened; and with auto-straighten off a stroke whose wobble is under the 2 px simplification tolerance still comes out as two points, which is simplification and not straightening. 5.1: the colours stay in the <code>#AARRGGBB</code> form every other item writes. The Snagit writer keeps skipping a blur region with its warning whatever its shape, and a highlight keeps its present mapping, which reads the item's bounding rectangle and not its points.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 20:14</td>
         <td>2, 3, 5.1, 5.2, 6.1, 7.1, 7.2, 8.1, 8.2</td>
