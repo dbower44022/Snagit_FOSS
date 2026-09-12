@@ -71,7 +71,7 @@ class PointHandle:
     kind: HandleKind = HandleKind.ENDPOINT
 
 
-def _mirror(item: SnapGraphicsItem, point: QPointF) -> QPointF:
+def mirror_point(item: SnapGraphicsItem, point: QPointF) -> QPointF:
     """*point* mirrored as the item's flips mirror its painting (around the bounding-rect
     centre); the mirror is its own inverse."""
     if not (item.flip_horizontal or item.flip_vertical):
@@ -102,11 +102,11 @@ class PointEditSession:
 
     def to_scene(self, local: QPointF) -> QPointF:
         """The scene position where the item paints its local point *local*."""
-        return self.item.mapToScene(_mirror(self.item, local))
+        return self.item.mapToScene(mirror_point(self.item, local))
 
     def to_local(self, scene_pos: QPointF) -> QPointF:
         """The item's local point that paints at *scene_pos*."""
-        return _mirror(self.item, self.item.mapFromScene(scene_pos))
+        return mirror_point(self.item, self.item.mapFromScene(scene_pos))
 
     # --- what the subclass supplies ---
 

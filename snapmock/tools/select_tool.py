@@ -4,15 +4,16 @@ from __future__ import annotations
 
 import math
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
-from PyQt6.QtGui import QBrush, QColor, QKeyEvent, QMouseEvent, QPen, QTransform
+from PyQt6.QtGui import QBrush, QColor, QCursor, QKeyEvent, QMouseEvent, QPen, QTransform
 from PyQt6.QtWidgets import QGraphicsRectItem, QToolTip
 
 from snapmock.commands.move_items import MoveItemsCommand
-from snapmock.config.constants import DRAG_THRESHOLD, MIN_TEXT_BOX_HEIGHT
+from snapmock.config.constants import DEFAULT_BLUR_BRUSH_SIZE, DRAG_THRESHOLD, MIN_TEXT_BOX_HEIGHT
 from snapmock.items.base_item import SnapGraphicsItem
+from snapmock.items.blur_item import BlurItem
 from snapmock.items.callout_item import CalloutItem
 from snapmock.items.emoji_item import EmojiItem
 from snapmock.items.group_item import GroupItem
@@ -20,6 +21,7 @@ from snapmock.items.numbered_step_item import NumberedStepItem
 from snapmock.items.stamp_item import StampItem
 from snapmock.items.text_item import TextItem
 from snapmock.tools.base_tool import BaseTool
+from snapmock.tools.blur_edit import BlurBrushSession, brush_editable
 from snapmock.tools.point_edit import PointEditSession, PointHandlesItem, session_for
 from snapmock.ui.transform_handles import (
     CORNER_HANDLES,
@@ -39,6 +41,7 @@ class _State(Enum):
     DRAGGING = auto()
     HANDLE_DRAG = auto()
     POINT_DRAG = auto()
+    BRUSH_STROKE = auto()
 
 
 class SelectTool(BaseTool):
@@ -71,6 +74,9 @@ class SelectTool(BaseTool):
         # Point-editing mode (Basic Shape PRD 3.5; Basic Shape remainder decision 1)
         self._point_session: PointEditSession | None = None
         self._point_handles: PointHandlesItem | None = None
+        # Brush-editing mode of a freeform blur region (Blur PRD 2.8; freeform blur
+        # silence 3): the Select tool's second mode, never live while the first is
+        self._brush_session: BlurBrushSession | None = None
 
     @property
     def tool_id(self) -> str:
@@ -81,8 +87,16 @@ class SelectTool(BaseTool):
         return "Select"
 
     @property
-    def cursor(self) -> Qt.CursorShape:
-        return Qt.CursorShape.ArrowCursor
+    def cursor(self) -> Qt.CursorShape | QCursor:
+        """The arrow, or the brush circle while brush editing lasts (Blur PRD 2.8)."""
+        session = self._brush_session
+        if session is None:
+            return Qt.CursorShape.ArrowCursor
+        from snapmock.ui.cursors import brush_cursor
+
+        view = self._view
+        zoom = (view.zoom_percent / 100.0) if view is not None else 1.0
+        return brush_cursor(round(session.brush_size * zoom))
 
     @property
     def is_active_operation(self) -> bool:
@@ -91,6 +105,7 @@ class SelectTool(BaseTool):
             _State.RUBBER_BAND,
             _State.HANDLE_DRAG,
             _State.POINT_DRAG,
+            _State.BRUSH_STROKE,
         )
 
     def activate(self, scene: SnapScene, selection_manager: SelectionManager) -> None:
@@ -121,6 +136,7 @@ class SelectTool(BaseTool):
         super().deactivate()
 
     def cancel(self) -> None:
+        self.leave_brush_edit()
         self.leave_point_edit()
         if self._rubber_band is not None and self._scene is not None:
             self._scene.removeItem(self._rubber_band)
@@ -130,6 +146,13 @@ class SelectTool(BaseTool):
         self._constrain_axis = None
 
     def _on_selection_changed(self, _items: list[object]) -> None:
+        brush = self._brush_session
+        if (
+            brush is not None
+            and self._selection_manager is not None
+            and self._selection_manager.items != [brush.item]
+        ):
+            self.leave_brush_edit()
         session = self._point_session
         if (
             session is not None
@@ -170,8 +193,66 @@ class SelectTool(BaseTool):
         return True
 
     def handle_escape(self) -> bool:
-        """Escape leaves point-editing mode and keeps the selection (PRD 3.5)."""
-        return self.leave_point_edit()
+        """Escape leaves brush editing or point-editing mode and keeps the selection
+        (Blur PRD 2.8; Basic Shape PRD 3.5)."""
+        return self.leave_brush_edit() or self.leave_point_edit()
+
+    # --- brush-editing mode of a freeform blur region (Blur PRD 2.8) ---
+
+    @property
+    def brush_session(self) -> BlurBrushSession | None:
+        """The brush-editing session in progress, or None outside brush-editing mode."""
+        return self._brush_session
+
+    def enter_brush_edit(self, item: SnapGraphicsItem) -> bool:
+        """Enter brush editing on *item*; False unless it is a Freeform blur region."""
+        if self._scene is None or not brush_editable(item):
+            return False
+        self.leave_point_edit()
+        if self._selection_manager is not None and self._selection_manager.items != [item]:
+            self._selection_manager.select(item)
+        self._brush_session = BlurBrushSession(cast("BlurItem", item), self._brush_default())
+        self._update_handles()
+        self._show_status_hint()
+        self._refresh_cursor()
+        return True
+
+    def _brush_default(self) -> float:
+        """The Blur tool's Brush Size, so both brushes are the one size (2.6)."""
+        view = self._view
+        window = view.window() if view is not None else None
+        manager = getattr(window, "tool_manager", None)
+        tool = manager.tool("blur") if manager is not None else None
+        size = getattr(tool, "brush_size", None)
+        return float(size) if isinstance(size, (int, float)) else DEFAULT_BLUR_BRUSH_SIZE
+
+    def leave_brush_edit(self) -> bool:
+        """Leave brush editing, undoing a stroke in progress; False when not in it."""
+        session = self._brush_session
+        if session is None:
+            return False
+        session.cancel_stroke()
+        self._brush_session = None
+        if self._state == _State.BRUSH_STROKE:
+            self._state = _State.IDLE
+        self._update_handles()
+        self._show_status_hint()
+        self._refresh_cursor()
+        return True
+
+    def _refresh_cursor(self) -> None:
+        view = self._view
+        if view is not None:
+            view.set_hover_cursor(None if self._brush_session is None else self.cursor)
+
+    def _brush_stroke_release(self) -> bool:
+        session = self._brush_session
+        self._state = _State.IDLE
+        if session is not None:
+            command = session.end_stroke()
+            if command is not None and self._scene is not None:
+                self._scene.command_stack.push(command)
+        return True
 
     def leave_point_edit(self) -> bool:
         """Leave point-editing mode, undoing a drag in progress; False when not in it."""
@@ -228,8 +309,9 @@ class SelectTool(BaseTool):
     def _update_handles(self) -> None:
         if self._handles is None or self._selection_manager is None:
             return
-        if self._point_session is not None:
-            # The item's own points replace the transform handles while the mode lasts
+        if self._point_session is not None or self._brush_session is not None:
+            # The item's own points, or the brush, replace the transform handles while
+            # the mode lasts
             self._handles.remove_from_scene()
             return
         items = [i for i in self._selection_manager.items if isinstance(i, SnapGraphicsItem)]
@@ -342,6 +424,16 @@ class SelectTool(BaseTool):
         self._constrain_axis = None
         self._group_hint = False
 
+        # Brush-editing mode: every press paints and Alt+press erases, wherever it lands,
+        # since painting past the region is how the region grows; only Enter, Escape, a
+        # tool switch, or a new selection leave the mode (Blur PRD 2.8)
+        brush = self._brush_session
+        if brush is not None:
+            erase = bool(event.modifiers() & Qt.KeyboardModifier.AltModifier)
+            brush.begin_stroke(scene_pos, erase=erase)
+            self._state = _State.BRUSH_STROKE
+            return True
+
         # Point-editing mode: a handle starts a point drag, a press on the item keeps the
         # mode, and a press anywhere else leaves it and is handled as usual (PRD 3.5)
         session = self._point_session
@@ -451,6 +543,13 @@ class SelectTool(BaseTool):
             return self._handle_transform_move(scene_pos, event)
         elif self._state == _State.POINT_DRAG:
             return self._point_drag_move(scene_pos, event)
+        elif self._state == _State.BRUSH_STROKE:
+            if self._brush_session is not None:
+                self._brush_session.stroke_to(scene_pos)
+            return True
+        if self._brush_session is not None:
+            self._refresh_cursor()
+            return False
         self._update_hover_cursor(scene_pos)
         return False
 
@@ -472,6 +571,8 @@ class SelectTool(BaseTool):
             return self._handle_transform_release()
         elif self._state == _State.POINT_DRAG:
             return self._point_drag_release()
+        elif self._state == _State.BRUSH_STROKE:
+            return self._brush_stroke_release()
 
         self._state = _State.IDLE
         return True
@@ -484,6 +585,8 @@ class SelectTool(BaseTool):
             return False
 
         item = self._item_at(scene_pos)
+        if self._brush_session is not None:
+            return True  # the second press of the double-click already painted
         session = self._point_session
         if session is not None and (item is session.item or session.handle_at(scene_pos)):
             # A double-click on the item in point-editing mode inserts a point (9.7, 8.5)
@@ -515,6 +618,11 @@ class SelectTool(BaseTool):
                 open_editor = getattr(window, "open_marker_editor", None)
                 if callable(open_editor):
                     open_editor(item)
+                return True
+            # A Freeform blur region: brush-editing mode (Blur PRD 2.8); a rectangular or
+            # elliptical one has no mask to paint and nothing happens
+            if isinstance(item, BlurItem):
+                self.enter_brush_edit(item)
                 return True
             # A line, an arrow, an arc, a polygon, or a freehand item: point-editing mode
             # (Basic Shape PRD 3.5; Basic Shape remainder decision 1, option A)
@@ -1108,7 +1216,11 @@ class SelectTool(BaseTool):
         key = event.key()
         shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
 
-        # Escape leaves point-editing mode and keeps the selection (PRD 3.5)
+        # Enter and Escape leave brush-editing mode (Blur PRD 2.8); Escape also leaves
+        # point-editing mode and keeps the selection (Basic Shape PRD 3.5)
+        if key in (Qt.Key.Key_Escape, Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            if self.leave_brush_edit():
+                return True
         if key == Qt.Key.Key_Escape and self.leave_point_edit():
             return True
 
@@ -1195,6 +1307,8 @@ class SelectTool(BaseTool):
 
     @property
     def status_hint(self) -> str:
+        if self._brush_session is not None:
+            return self._brush_session.status_hint
         if self._point_session is not None:
             return self._point_session.status_hint
         if self._state == _State.DRAGGING:

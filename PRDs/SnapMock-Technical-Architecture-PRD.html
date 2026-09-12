@@ -2026,6 +2026,7 @@ docstring.</p>
     commands/                     # Command objects for the undo/redo system
         add_item.py               # adds a SnapGraphicsItem to the scene
         arrange_commands.py       # Arrange commands — z-order, alignment, and distribution
+        blur_commands.py          # Blur commands — the freeform mask edit of Blur PRD 6.1
         canvas_property_commands.py # Canvas property commands — undoable canvas colour and DPI changes
         canvas_transform_commands.py # Canvas transform commands — rotate and flip the entire…
         geometry_commands.py      # Geometry commands — the point edits of Basic Shape PRD 11.3 to 11.5
@@ -2121,6 +2122,7 @@ docstring.</p>
         arc_tool.py               # the three-step arc: drag the chord, move for the curvature, click
         arrow_tool.py             # click-and-drag to create arrows
         base_tool.py              # abstract base class for all interactive tools
+        blur_edit.py              # brush-editing mode of the Select tool (Blur PRD 2.8)
         blur_tool.py              # click-and-drag to create blur regions
         callout_tool.py           # drag to place tail tip then position bubble, or click for…
         crop_tool.py              # interactive crop with overlay, handles, and state machine

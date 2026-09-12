@@ -39,6 +39,8 @@ from snapmock.commands.scale_geometry_command import ScaleGeometryCommand
 from snapmock.config.constants import (
     BADGE_SIZE_MAX,
     BADGE_SIZE_MIN,
+    BLUR_BRUSH_SIZE_MAX,
+    BLUR_BRUSH_SIZE_MIN,
     BLUR_FEATHER_MAX,
     BLUR_PIXEL_SIZE_MAX,
     BLUR_PIXEL_SIZE_MIN,
@@ -46,6 +48,7 @@ from snapmock.config.constants import (
     BLUR_RADIUS_MIN,
     CORNER_KEYS,
     CORNER_RADIUS_MAX,
+    DEFAULT_BLUR_BRUSH_SIZE,
     DEFAULT_LINE_SPACING,
     HEAD_SIZE_CUSTOM_MAX,
     LINE_SPACING_MAX,
@@ -709,6 +712,13 @@ class PropertyPanel(QDockWidget):
             -1.0, BLUR_FEATHER_MAX, 0, " px", "Feather"
         )
         self._blur_section.add_row("Feather:", self._blur_feather_spin)
+        self._blur_brush_spin = QSpinBox()
+        self._blur_brush_spin.setRange(int(BLUR_BRUSH_SIZE_MIN), int(BLUR_BRUSH_SIZE_MAX))
+        self._blur_brush_spin.setSuffix(" px")
+        self._blur_brush_spin.setKeyboardTracking(False)
+        self._blur_brush_spin.setAccessibleName("Brush size")
+        self._blur_brush_spin.setToolTip("The brush that paints a freeform region")
+        self._blur_section.add_row("Brush size:", self._blur_brush_spin)
         self._blur_invert_check = QCheckBox("Invert mask")
         self._blur_invert_check.setAccessibleName("Invert mask")
         self._blur_section.add_row("Mask:", self._blur_invert_check)
@@ -1257,6 +1267,7 @@ class PropertyPanel(QDockWidget):
         self._blur_invert_check.toggled.connect(
             lambda checked: self._on_blur_value_changed("invert_mask", bool(checked), None)
         )
+        self._blur_brush_spin.valueChanged.connect(self._on_blur_brush_size_changed)
         self._polygon_star_check.toggled.connect(
             lambda checked: self._on_polygon_flag_changed("star_enabled", checked)
         )
@@ -1661,6 +1672,10 @@ class PropertyPanel(QDockWidget):
         self._set_combo_data(self._blur_shape_combo, shapes)
         rectangles = set(shapes) == {BlurRegionShape.RECTANGLE}
         self._set_row_visible(section, self._blur_corner_spin, rectangles)
+        freeform = set(shapes) == {BlurRegionShape.FREEFORM}
+        self._set_row_visible(section, self._blur_brush_spin, freeform)
+        if freeform:
+            self._blur_brush_spin.setValue(int(round(self._brush_size())))
         self._set_spin(self._blur_radius_spin, [i.blur_radius for i in items])
         self._set_spin(self._blur_pixel_spin, [i.pixel_size for i in items])
         self._set_color(self._blur_fill_picker, None, [i.fill_color for i in items])
@@ -2660,6 +2675,35 @@ class PropertyPanel(QDockWidget):
         if low is not None and float(value) < low:
             return  # the mixed indicator, not a value
         self._push_property(self._selected_blurs(), prop, value)
+
+    def _brush_size(self) -> float:
+        """The brush the Blur tool paints with; the panel's row and the bar's share it."""
+        session = getattr(self._active_brush_owner(), "brush_session", None)
+        if session is not None:
+            return float(session.brush_size)
+        tool = self._tool_manager.tool("blur") if self._tool_manager is not None else None
+        size = getattr(tool, "brush_size", None)
+        return float(size) if isinstance(size, (int, float)) else DEFAULT_BLUR_BRUSH_SIZE
+
+    def _active_brush_owner(self) -> object:
+        """The Select tool, which owns brush-editing mode (Blur PRD 2.8)."""
+        if self._tool_manager is None:
+            return None
+        return self._tool_manager.tool("select")
+
+    def _on_blur_brush_size_changed(self, value: int) -> None:
+        """The brush is not a stored property of the region (Section 5.1 gives it no key):
+        the row sets the brush both brushes use, and is not undoable."""
+        if self._updating or self._tool_manager is None:
+            return
+        session = getattr(self._active_brush_owner(), "brush_session", None)
+        if session is not None:
+            session.brush_size = float(value)
+        blur_tool = self._tool_manager.tool("blur")
+        if blur_tool is not None:
+            blur_tool.creation_defaults["brush_size"] = float(value)
+            blur_tool.on_option_changed("brush_size", float(value))
+            self._tool_manager.tool_defaults_changed.emit("blur")
 
     def _on_polygon_sides_changed(self, value: int) -> None:
         if self._updating or value < SIDES_MIN:
