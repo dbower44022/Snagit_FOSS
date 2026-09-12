@@ -183,7 +183,9 @@ def test_the_keys_round_trip_and_an_old_file_loads(qapp: QApplication) -> None:
     assert old.blur_mode is BlurMode.GAUSSIAN and old.blur_radius == 8.0
     assert old.region_shape is BlurRegionShape.RECTANGLE and old.opacity() == 1.0
     whole = BlurItem.deserialize({"rect": [0, 0, 9, 9], "region_shape": "whole_layer"})
-    assert whole.region_shape is BlurRegionShape.RECTANGLE  # not built yet
+    assert whole.region_shape is BlurRegionShape.WHOLE_LAYER
+    unknown = BlurItem.deserialize({"rect": [0, 0, 9, 9], "region_shape": "spiral"})
+    assert unknown.region_shape is BlurRegionShape.RECTANGLE
 
 
 def _view(qtbot: QtBot, scene: SnapScene) -> SnapView:

@@ -13,10 +13,12 @@ option A): a ``QImage`` in canvas pixels aligned to the region's rectangle, opaq
 the region obscures and transparent where it does not, which replaces the shape in the
 render's clip and feathers and inverts exactly as a shape does. The rectangle follows the
 painted bounds, a resize resamples the mask, and a rotation leaves it in the item's own
-coordinates, where the capture already works. Whole Layer, the source modes, and the
-background-thread render are not built yet; a file naming Whole Layer reads as a
-rectangle. The class keeps the name ``BlurItem`` that every saved file carries (the PRD's
-``BlurRegionItem``).
+coordinates, where the capture already works.
+
+The Whole Layer shape takes the canvas as its region, with nothing to drag (2.4), and
+``source_mode`` with ``source_layer_id`` narrow what the capture reads to the active layer
+or to one named layer (2.5). The background-thread render of 2.10 is not built. The class
+keeps the name ``BlurItem`` that every saved file carries (the PRD's ``BlurRegionItem``).
 """
 
 from __future__ import annotations
@@ -39,6 +41,7 @@ from snapmock.config.constants import (
     DEFAULT_BLUR_FILL_COLOR,
     BlurMode,
     BlurRegionShape,
+    BlurSourceMode,
 )
 from snapmock.items.base_item import SnapGraphicsItem
 from snapmock.items.mask_utils import (
@@ -53,6 +56,18 @@ from snapmock.items.shadow import blur_image
 
 _SCALE_MIN = 0.25
 _SCALE_MAX = 4.0
+
+GAUSSIAN_RENDER_SCALE = 0.5
+"""The Gaussian captures and blurs at half size and scales the result back (2.10; freeform
+blur decision 4, option A): about four times faster, so a 1000 by 1000 px region meets the
+100 ms target, at the cost of a slightly softer result at the largest radii. 2.10's
+background thread and progress indicator are not built."""
+
+GAUSSIAN_HALF_SCALE_MIN_RADIUS = 4.0
+"""Below this radius the Gaussian renders at full size. Halving the capture throws away
+detail finer than two pixels, which a blur of radius 1 or 2 is meant to keep: 2.10's own
+acceptance row asks that radius 1 stay barely noticeable. The 100 ms target is met from
+this radius up."""
 
 
 def _clamp(value: object, low: float, high: float, default: float) -> float:
@@ -119,6 +134,8 @@ class BlurItem(SnapGraphicsItem):
         self._feather = 0.0
         self._invert_mask = False
         self._alpha_mask: QImage | None = None
+        self._source_mode: BlurSourceMode = BlurSourceMode.ALL_BELOW
+        self._source_layer_id: str | None = None
         self._border_color = QColor(0, 0, 0, 0)
         self._border_width = 0.0
         self._cache_key: tuple[Any, ...] | None = None
@@ -154,7 +171,7 @@ class BlurItem(SnapGraphicsItem):
 
     @property
     def region_shape(self) -> BlurRegionShape:
-        """Rectangle, Ellipse, or Freeform (2.4; Whole Layer is not built)."""
+        """Rectangle, Ellipse, Freeform, or Whole Layer (2.4)."""
         return self._region_shape
 
     @region_shape.setter
@@ -248,6 +265,27 @@ class BlurItem(SnapGraphicsItem):
         return mask
 
     @property
+    def source_mode(self) -> BlurSourceMode:
+        """What the region obscures: everything below it, the active layer, or one named
+        layer (2.5)."""
+        return self._source_mode
+
+    @source_mode.setter
+    def source_mode(self, value: BlurSourceMode) -> None:
+        self._source_mode = BlurSourceMode(value)
+        self._changed()
+
+    @property
+    def source_layer_id(self) -> str | None:
+        """The layer Specific Layer reads; a layer that is gone falls back to all below."""
+        return self._source_layer_id
+
+    @source_layer_id.setter
+    def source_layer_id(self, value: str | None) -> None:
+        self._source_layer_id = str(value) if value else None
+        self._changed()
+
+    @property
     def border_color(self) -> QColor:
         return QColor(self._border_color)
 
@@ -267,10 +305,22 @@ class BlurItem(SnapGraphicsItem):
 
     # ------------------------------------------------------------ geometry
 
+    def region_rect(self) -> QRectF:
+        """The region's rectangle in item coordinates: the stored one, or the canvas for a
+        Whole Layer region, which has nothing to drag (2.4)."""
+        if self._region_shape is BlurRegionShape.WHOLE_LAYER:
+            scene = self.scene()
+            if scene is not None and hasattr(scene, "canvas_rect"):
+                return self.mapRectFromScene(scene.canvas_rect)
+        return QRectF(self._rect)
+
     def region_path(self) -> QPainterPath:
         """The region's shape in item coordinates: the rectangle, rounded when a corner
-        radius is set, or the ellipse (2.4)."""
+        radius is set, the ellipse, the painted mask's rectangle, or the canvas (2.4)."""
         path = QPainterPath()
+        if self._region_shape is BlurRegionShape.WHOLE_LAYER:
+            path.addRect(self.region_rect())
+            return path
         if self._region_shape is BlurRegionShape.FREEFORM:
             # The mask itself shapes the effect (2.7); the rectangle is what is clicked
             # and what a border follows (2.9)
@@ -291,10 +341,11 @@ class BlurItem(SnapGraphicsItem):
         """Where the effect is painted, in item coordinates: the region with its feather,
         or the whole canvas when the mask is inverted."""
         scene = self.scene()
+        region = self.region_rect()
         if self._invert_mask and scene is not None and hasattr(scene, "canvas_rect"):
-            return self.mapRectFromScene(scene.canvas_rect).united(self._rect)
+            return self.mapRectFromScene(scene.canvas_rect).united(region)
         f = self._feather
-        return self._rect.adjusted(-f, -f, f, f)
+        return region.adjusted(-f, -f, f, f)
 
     def scale_geometry(self, sx: float, sy: float) -> None:
         self.prepareGeometryChange()
@@ -320,7 +371,7 @@ class BlurItem(SnapGraphicsItem):
 
     def boundingRect(self) -> QRectF:
         b = self._border_width / 2.0 + 1.0
-        return self.effect_rect().united(self._rect.adjusted(-b, -b, b, b))
+        return self.effect_rect().united(self.region_rect().adjusted(-b, -b, b, b))
 
     def shape(self) -> QPainterPath:
         """The region's own shape: a blur is always visible, so it needs no padding (2.9)."""
@@ -364,6 +415,15 @@ class BlurItem(SnapGraphicsItem):
         scale = 2.0 ** round(math.log2(scale))
         return max(_SCALE_MIN, min(_SCALE_MAX, scale))
 
+    def _active_layer_id(self) -> str | None:
+        """The active layer, which a Source of Active Layer follows (2.5)."""
+        if self._source_mode is not BlurSourceMode.ACTIVE_LAYER:
+            return None
+        scene = self.scene()
+        manager = getattr(scene, "layer_manager", None)
+        active = manager.active_layer if manager is not None else None
+        return active.layer_id if active is not None else None
+
     def _key(self, scale: float) -> tuple[Any, ...]:
         scene = self.scene()
         t = self.sceneTransform()
@@ -380,6 +440,9 @@ class BlurItem(SnapGraphicsItem):
             self._feather,
             self._invert_mask,
             None if self._alpha_mask is None else self._alpha_mask.cacheKey(),
+            self._source_mode,
+            self._source_layer_id,
+            self._active_layer_id(),
             (t.m11(), t.m12(), t.m21(), t.m22(), t.dx(), t.dy()),
             getattr(scene, "content_revision", 0),
             scale,
@@ -407,14 +470,33 @@ class BlurItem(SnapGraphicsItem):
             effect = QImage(w, h, QImage.Format.Format_ARGB32_Premultiplied)
             effect.fill(self._fill_color)
         else:
+            gaussian = self._blur_mode is BlurMode.GAUSSIAN
+            # The Gaussian works at half size and scales the result back (2.10), but only
+            # where the radius already destroys the detail the halving would
+            half = gaussian and self._blur_radius >= GAUSSIAN_HALF_SCALE_MIN_RADIUS
+            capture_scale = scale * GAUSSIAN_RENDER_SCALE if half else scale
             # A Gaussian blur reads its neighbours: capture a margin and crop it away
-            margin = self._blur_radius * 2.0 if self._blur_mode is BlurMode.GAUSSIAN else 0.0
+            margin = self._blur_radius * 2.0 if gaussian else 0.0
             capture = area.adjusted(-margin, -margin, margin, margin)
-            source = RenderEngine(scene).render_below(self, capture, scale)  # type: ignore[arg-type]
-            if self._blur_mode is BlurMode.GAUSSIAN:
-                blurred = blur_image(source, self._blur_radius * scale)
-                offset = round(margin * scale)
-                effect = blurred.copy(QRect(offset, offset, w, h))
+            source = RenderEngine(scene).render_below(  # type: ignore[arg-type]
+                self,
+                capture,
+                capture_scale,
+                source_mode=self._source_mode.value,
+                source_layer_id=self._source_layer_id,
+            )
+            if gaussian:
+                blurred = blur_image(source, self._blur_radius * capture_scale)
+                offset = round(margin * capture_scale)
+                inner_w = max(1, math.ceil(area.width() * capture_scale))
+                inner_h = max(1, math.ceil(area.height() * capture_scale))
+                cropped = blurred.copy(QRect(offset, offset, inner_w, inner_h))
+                effect = cropped.scaled(
+                    w,
+                    h,
+                    Qt.AspectRatioMode.IgnoreAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
             else:
                 effect = pixelate_image(source, round(self._pixel_size * scale))
         mask = self._mask_for(area, w, h)
@@ -442,7 +524,7 @@ class BlurItem(SnapGraphicsItem):
         freeform = self._region_shape is BlurRegionShape.FREEFORM
         if freeform and self._alpha_mask is not None:
             painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
-            painter.drawImage(self._rect, self._alpha_mask)
+            painter.drawImage(self.region_rect(), self._alpha_mask)
         else:
             painter.fillPath(self.region_path(), QColor(255, 255, 255))
         painter.end()
@@ -495,6 +577,9 @@ class BlurItem(SnapGraphicsItem):
             self._feather = _clamp(defaults["feather"], 0.0, BLUR_FEATHER_MAX, 0.0)
         if "invert_mask" in defaults:
             self._invert_mask = bool(defaults["invert_mask"])
+        source = defaults.get("source_mode")
+        if isinstance(source, BlurSourceMode):
+            self._source_mode = source
         if "opacity" in defaults:
             self.setOpacity(_clamp(defaults["opacity"], 0.0, 1.0, 1.0))
         self._changed()
@@ -533,6 +618,8 @@ class BlurItem(SnapGraphicsItem):
             "feather": self._feather,
             "invert_mask": self._invert_mask,
             "alpha_mask_data": encode_mask_field(self._alpha_mask, self.item_id)[0],
+            "source_mode": self._source_mode.value,
+            "source_layer_id": self._source_layer_id,
             "opacity": self.opacity(),
             "border_color": self._border_color.name(QColor.NameFormat.HexArgb),
             "border_width": self._border_width,
@@ -553,7 +640,6 @@ class BlurItem(SnapGraphicsItem):
         item.item_id = data.get("item_id", item.item_id)
         item.layer_id = data.get("layer_id", "")
         item._blur_mode = _enum_or(BlurMode, data.get("blur_mode"), BlurMode.GAUSSIAN)
-        # Freeform and Whole Layer are not built (decision 4): they read as a rectangle
         item._region_shape = _enum_or(
             BlurRegionShape, data.get("region_shape"), BlurRegionShape.RECTANGLE
         )
@@ -567,6 +653,11 @@ class BlurItem(SnapGraphicsItem):
         # A "file:" reference is resolved by the project serializer, which alone can read
         # the archive (7.1); it calls set_mask_png afterwards
         item._alpha_mask = decode_mask_field(data.get("alpha_mask_data"))
+        item._source_mode = _enum_or(
+            BlurSourceMode, data.get("source_mode"), BlurSourceMode.ALL_BELOW
+        )
+        raw_layer = data.get("source_layer_id")
+        item._source_layer_id = str(raw_layer) if raw_layer else None
         item.setOpacity(_clamp(data.get("opacity", 1.0), 0.0, 1.0, 1.0))
         border = QColor(str(data.get("border_color", "#00000000")))
         item._border_color = border if border.isValid() else QColor(0, 0, 0, 0)

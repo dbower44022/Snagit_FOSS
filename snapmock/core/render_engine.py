@@ -137,12 +137,41 @@ class RenderEngine:
             gitem.layer_blend_mode = mode
         return image
 
-    def render_below(self, target: QGraphicsItem, rect: QRectF, scale: float = 1.0) -> QImage:
+    def source_layer_filter(
+        self, source_mode: str | None, source_layer_id: str | None
+    ) -> str | None:
+        """The one layer a blur region's source mode reads, or None for every layer below
+        (Blur PRD 2.5). ``active_layer`` follows the scene's active layer, so switching
+        layers changes what such a region obscures; ``specific_layer`` falls back to every
+        layer when the named layer is gone."""
+        if source_mode == "active_layer":
+            active = self._scene.layer_manager.active_layer
+            return active.layer_id if active is not None else None
+        if source_mode == "specific_layer":
+            if source_layer_id and self._scene.layer_manager.layer_by_id(source_layer_id):
+                return source_layer_id
+            return None
+        return None
+
+    def render_below(
+        self,
+        target: QGraphicsItem,
+        rect: QRectF,
+        scale: float = 1.0,
+        *,
+        source_mode: str | None = None,
+        source_layer_id: str | None = None,
+    ) -> QImage:
         """What lies under *target* within *rect* (in *target*'s own coordinates, so a
         rotated region captures what it covers), *scale* times its size: the canvas colour,
         then every visible annotation item stacked below *target*, which is every item of
         the lower layers and the lower items of its own layer (Blur PRD 2.7; Basic Shape
         remainder silence 3).
+
+        *source_mode* narrows that to one layer (2.5): ``active_layer`` reads the scene's
+        active layer and ``specific_layer`` the layer *source_layer_id* names, each falling
+        back to every layer below when there is no such layer. A narrowed capture leaves the
+        canvas colour out, so a region over a layer that has nothing there obscures nothing.
 
         Each item is painted directly with its scene transform and effective opacity,
         nothing hidden or shown, so a paint can call this without painting *target* itself
@@ -165,15 +194,19 @@ class RenderEngine:
         if invertible:
             painter.setTransform(to_local, True)
         scene_rect = target.mapRectToScene(rect)
+        only_layer = self.source_layer_filter(source_mode, source_layer_id)
+        narrowed = source_mode in ("active_layer", "specific_layer")
         canvas = self._scene.canvas_rect.intersected(scene_rect)
         background = self._scene.background_color
-        if background.alpha() > 0 and not canvas.isEmpty():
+        if not narrowed and background.alpha() > 0 and not canvas.isEmpty():
             painter.fillRect(canvas, background)
         option = QStyleOptionGraphicsItem()
         for gitem in self._scene.items(Qt.SortOrder.AscendingOrder):
             if gitem is target:
                 break
             if not isinstance(gitem, SnapGraphicsItem) or not gitem.isVisible():
+                continue
+            if only_layer is not None and gitem.layer_id != only_layer:
                 continue
             if target.isAncestorOf(gitem) or not gitem.sceneBoundingRect().intersects(scene_rect):
                 continue

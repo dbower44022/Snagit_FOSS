@@ -162,8 +162,8 @@ def test_the_mask_round_trips_inline_and_an_old_file_is_unaffected(
 
     old = BlurItem.deserialize({"type": "BlurItem", "rect": [0, 0, 50, 50], "blur_radius": 8})
     assert old.region_shape is BlurRegionShape.RECTANGLE and old.alpha_mask is None
-    whole = BlurItem.deserialize({"rect": [0, 0, 9, 9], "region_shape": "whole_layer"})
-    assert whole.region_shape is BlurRegionShape.RECTANGLE  # not built yet
+    unknown = BlurItem.deserialize({"rect": [0, 0, 9, 9], "region_shape": "spiral"})
+    assert unknown.region_shape is BlurRegionShape.RECTANGLE
 
 
 def test_a_mask_past_the_inline_limit_goes_into_the_archive(

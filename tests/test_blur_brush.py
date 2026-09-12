@@ -243,6 +243,7 @@ def test_the_bar_shows_brush_size_only_for_a_freeform_region(main_window: object
         BlurRegionShape.RECTANGLE,
         BlurRegionShape.ELLIPSE,
         BlurRegionShape.FREEFORM,
+        BlurRegionShape.WHOLE_LAYER,
     ]
     assert shown("corner") and not shown("brush")
     tool.shape_buttons[BlurRegionShape.FREEFORM].click()

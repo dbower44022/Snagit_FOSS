@@ -235,11 +235,20 @@ class BlurMode(Enum):
 
 
 class BlurRegionShape(Enum):
-    """A blur region's shape (Blur PRD 2.4); Whole Layer is not built."""
+    """A blur region's shape (Blur PRD 2.4)."""
 
     RECTANGLE = "rectangle"
     ELLIPSE = "ellipse"
     FREEFORM = "freeform"
+    WHOLE_LAYER = "whole_layer"
+
+
+class BlurSourceMode(Enum):
+    """What content a blur region obscures (Blur PRD 2.5)."""
+
+    ALL_BELOW = "all_below"
+    ACTIVE_LAYER = "active_layer"
+    SPECIFIC_LAYER = "specific_layer"
 
 
 BLUR_RADIUS_MIN = 1.0

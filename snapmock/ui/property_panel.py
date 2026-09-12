@@ -57,6 +57,7 @@ from snapmock.config.constants import (
     BadgeShape,
     BlurMode,
     BlurRegionShape,
+    BlurSourceMode,
     BorderStyle,
     CornerRadiusMode,
     DisplayMode,
@@ -700,6 +701,8 @@ class PropertyPanel(QDockWidget):
         for shape, label in (
             (BlurRegionShape.RECTANGLE, "Rectangle"),
             (BlurRegionShape.ELLIPSE, "Ellipse"),
+            (BlurRegionShape.FREEFORM, "Freeform"),
+            (BlurRegionShape.WHOLE_LAYER, "Whole Layer"),
         ):
             self._blur_shape_combo.addItem(label, shape)
         self._blur_shape_combo.setAccessibleName("Region shape")
@@ -719,6 +722,18 @@ class PropertyPanel(QDockWidget):
         self._blur_brush_spin.setAccessibleName("Brush size")
         self._blur_brush_spin.setToolTip("The brush that paints a freeform region")
         self._blur_section.add_row("Brush size:", self._blur_brush_spin)
+        self._blur_source_combo = QComboBox()
+        for source, label in (
+            (BlurSourceMode.ALL_BELOW, "All below"),
+            (BlurSourceMode.ACTIVE_LAYER, "Active layer"),
+            (BlurSourceMode.SPECIFIC_LAYER, "Specific layer"),
+        ):
+            self._blur_source_combo.addItem(label, source)
+        self._blur_source_combo.setAccessibleName("Blur source")
+        self._blur_section.add_row("Source:", self._blur_source_combo)
+        self._blur_source_layer_combo = QComboBox()
+        self._blur_source_layer_combo.setAccessibleName("Blur source layer")
+        self._blur_section.add_row("Source layer:", self._blur_source_layer_combo)
         self._blur_invert_check = QCheckBox("Invert mask")
         self._blur_invert_check.setAccessibleName("Invert mask")
         self._blur_section.add_row("Mask:", self._blur_invert_check)
@@ -1268,6 +1283,14 @@ class PropertyPanel(QDockWidget):
             lambda checked: self._on_blur_value_changed("invert_mask", bool(checked), None)
         )
         self._blur_brush_spin.valueChanged.connect(self._on_blur_brush_size_changed)
+        self._blur_source_combo.currentIndexChanged.connect(
+            lambda index: self._on_blur_combo_changed(
+                self._blur_source_combo, "source_mode", index
+            )
+        )
+        self._blur_source_layer_combo.currentIndexChanged.connect(
+            self._on_blur_source_layer_changed
+        )
         self._polygon_star_check.toggled.connect(
             lambda checked: self._on_polygon_flag_changed("star_enabled", checked)
         )
@@ -1676,6 +1699,11 @@ class PropertyPanel(QDockWidget):
         self._set_row_visible(section, self._blur_brush_spin, freeform)
         if freeform:
             self._blur_brush_spin.setValue(int(round(self._brush_size())))
+        sources = [i.source_mode for i in items]
+        self._set_combo_data(self._blur_source_combo, sources)
+        specific = set(sources) == {BlurSourceMode.SPECIFIC_LAYER}
+        self._set_row_visible(section, self._blur_source_layer_combo, specific)
+        self._fill_source_layers([i.source_layer_id for i in items])
         self._set_spin(self._blur_radius_spin, [i.blur_radius for i in items])
         self._set_spin(self._blur_pixel_spin, [i.pixel_size for i in items])
         self._set_color(self._blur_fill_picker, None, [i.fill_color for i in items])
@@ -2675,6 +2703,28 @@ class PropertyPanel(QDockWidget):
         if low is not None and float(value) < low:
             return  # the mixed indicator, not a value
         self._push_property(self._selected_blurs(), prop, value)
+
+    def _fill_source_layers(self, current: list[str | None]) -> None:
+        """The layer list for Specific Layer, rebuilt each time so renames and deletions
+        show at once; a layer that is gone reads as the mixed indicator (2.5)."""
+        combo = self._blur_source_layer_combo
+        combo.blockSignals(True)
+        combo.clear()
+        for layer in self._scene.layer_manager.layers:
+            combo.addItem(layer.name, layer.layer_id)
+        chosen = set(current)
+        index = -1
+        if len(chosen) == 1:
+            wanted = next(iter(chosen))
+            index = combo.findData(wanted) if wanted else -1
+        combo.setCurrentIndex(index)
+        combo.blockSignals(False)
+
+    def _on_blur_source_layer_changed(self, index: int) -> None:
+        if self._updating or index < 0:
+            return
+        layer_id = self._blur_source_layer_combo.itemData(index)
+        self._push_property(self._selected_blurs(), "source_layer_id", layer_id)
 
     def _brush_size(self) -> float:
         """The brush the Blur tool paints with; the panel's row and the bar's share it."""

@@ -15,7 +15,9 @@ The Tool Options Bar of 2.6: the Blur Mode toggles, the intensity slider whose l
 follows the mode (Blur Radius 1 to 50, Pixel Size 2 to 100, hidden for Solid Fill), Fill
 Color for Solid Fill, the Region Shape toggles (Rectangle, Ellipse, Freeform), Corner
 Radius for a rectangle, Feather, Brush Size for a Freeform region, Invert Mask, and
-Opacity.
+Opacity. Whole Layer joins the Region Shape group as a fourth toggle, which 2.6's three do
+not list: without it the shape of 2.4 could not be created at all. One click places it and
+its region is the canvas.
 """
 
 from __future__ import annotations
@@ -61,6 +63,7 @@ _SHAPES: tuple[tuple[BlurRegionShape, str], ...] = (
     (BlurRegionShape.RECTANGLE, "Rectangle"),
     (BlurRegionShape.ELLIPSE, "Ellipse"),
     (BlurRegionShape.FREEFORM, "Freeform"),
+    (BlurRegionShape.WHOLE_LAYER, "Whole Layer"),
 )
 _CONTROL_HEIGHT = 26
 
@@ -169,6 +172,8 @@ class BlurTool(BaseTool):
         if item is None:
             if self.freeform:
                 return "Paint to define blur area. Enter: finish. Shift: straight strokes."
+            if self._creation_defaults.get("region_shape") is BlurRegionShape.WHOLE_LAYER:
+                return "Click to blur the whole canvas."
             return "Click and drag to define blur region. Shift: constrain. Alt: from center."
         mode = dict(_MODES)[item.blur_mode]
         detail = ""
@@ -542,13 +547,34 @@ class BlurTool(BaseTool):
     def mouse_press(self, event: QMouseEvent) -> bool:
         if self._scene is None or event.button() != Qt.MouseButton.LeftButton:
             return False
-        if self.freeform or self._paint_mask is not None:
+        if self._paint_mask is not None or self.freeform:
             return self._paint_press(self._scene_pos(event))
+        if self._creation_defaults.get("region_shape") is BlurRegionShape.WHOLE_LAYER:
+            return self._place_whole_layer()
         self._start = self._snap_pos(self._scene_pos(event))
         self._item = BlurItem(rect=QRectF(0, 0, 0, 0))
         self._item.apply_creation_defaults(self._creation_defaults)
         self._item.setPos(self._start)
         self._scene.addItem(self._item)
+        self._show_hint()
+        return True
+
+    def _place_whole_layer(self) -> bool:
+        """One click places a Whole Layer region over the canvas; there is nothing to drag
+        (2.4)."""
+        scene = self._scene
+        layer = scene.layer_manager.active_layer if scene is not None else None
+        if scene is None or layer is None:
+            return False
+        canvas = scene.canvas_rect
+        item = BlurItem(rect=QRectF(0, 0, canvas.width(), canvas.height()))
+        item.apply_creation_defaults(self._creation_defaults)
+        item.region_shape = BlurRegionShape.WHOLE_LAYER
+        item.setPos(canvas.topLeft())
+        scene.command_stack.push(AddItemCommand(scene, item, layer.layer_id))
+        if self._selection_manager is not None:
+            self._selection_manager.select(item)
+        self._switch_to_select()
         self._show_hint()
         return True
 
