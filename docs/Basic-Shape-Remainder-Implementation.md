@@ -1,6 +1,6 @@
 # Basic Shape Remainder and Blur Modes Implementation Notes
 
-Last Updated: 09-11-26 18:44 · Revision 1.3
+Last Updated: 09-11-26 20:07 · Revision 1.4
 
 Implements the remainder of the Basic Shape Annotation Tools PRD (`PRDs/SnapMock-Basic-Shape-Annotation-Tools-PRD.html`, version 1.8 at the start) and the Blur / Pixelate tool of the Blur, Highlighter, and Eyedropper Tools PRD (version 1.4), with the General UI PRD (version 2.16) and Technical Architecture PRD (version 1.28) rows they own, in the five phases and the close-out defined by `docs/Basic-Shape-Remainder-Kickoff-Prompt.md` (revision 1.0). A session pasting that prompt starts at the first phase not marked done in Section 1. `docs/General-UI-Implementation-Kickoff-Prompt.md` (revision 1.1) governs the standards; the General UI implementation notes (`docs/General-UI-Implementation.md`) hold the walk table of Section 17.2.
 
@@ -162,12 +162,13 @@ Every phase is done. The PRDs stand at Basic Shape PRD 1.12, Blur PRD 1.6, Gener
 
 Owed: a look on the real display at a curved arrow and an elbow arrow with their point editing, a rectangle with individual radii, a freehand stroke's handles, an arc of each type, a star polygon, and a blur region in each mode over a screenshot, since every render check here is a pixel test on the offscreen platform; and the older checks the Vector Item Properties notes list.
 
-**Next required step:** the work is complete. Two candidates are known: the freeform blur brush with the Highlighter's straightening (Blur PRD 2.3, 2.8, 3.3), which has no kickoff prompt yet and runs on this machine; and the Windows backend kickoff (`docs/Windows-Backend-Kickoff-Prompt.md`), which waits for a Windows machine. Recommended: write the freeform blur kickoff prompt next. Before either, the display checks above.
+**Next required step:** the work is complete, and the following kickoff is written: `docs/Freeform-Blur-Highlighter-Kickoff-Prompt.md` (revision 1.0, starting state at commit 035fa5e), the Blur tool's freeform brush, Whole Layer, source modes, and render speed and the Highlighter's smoothing, straightening, snap to axis, point editing, and cursor, in five phases with four decisions and six silences. It runs on this machine and is recommended next; the Windows backend kickoff (`docs/Windows-Backend-Kickoff-Prompt.md`) waits for a Windows machine. Before either, the display checks above.
 
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 09-11-26 20:07 | Claude (Claude Code) | The next required step names the kickoff written at Doug's request: `docs/Freeform-Blur-Highlighter-Kickoff-Prompt.md` (revision 1.0). |
 | 1.3 | 09-11-26 18:44 | Claude (Claude Code) | Phases 3 to 5 done and the work complete: the phase table, the Phase 3, 4, and 5 sections (what each built, the silences found while building, the blur timings), five deviations added, the tests and the suite run, the close-out of the work with the display checks owed and the next required step. Basic Shape PRD 1.12, Blur PRD 1.6, General UI PRD 2.20, Technical Architecture PRD 1.32, Snagit notes 1.5, General UI notes 1.34, Vector Item Properties notes 1.4. |
 | 1.2 | 09-11-26 17:41 | Claude (Claude Code) | Phase 2 done: the phase table, the Phase 2 section (what it built, the silences found while building, the Freehand timings), three deviations added, the Phase 2 tests and the suite run, the next required step. Basic Shape PRD 1.11, General UI PRD 2.19, Technical Architecture PRD 1.31. |
 | 1.1 | 09-11-26 16:45 | Claude (Claude Code) | Phase 1 done: the phase table, Section 3 (what Phase 1 built, the silences found while building), Sections 4 and 5 renumbered, Section 5 with the Phase 1 tests and the suite run, the next required step. Basic Shape PRD 1.10, General UI PRD 2.18, Technical Architecture PRD 1.30, Snagit notes 1.4. |
