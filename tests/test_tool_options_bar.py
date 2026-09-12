@@ -245,7 +245,7 @@ def test_eyedropper_bar_is_the_row_of_blur_prd_4_5(main_window: MainWindow) -> N
     assert bar.eyedropper_value_text == "transparent"  # nothing sampled yet
     assert sorted(bar.eyedropper_size_buttons) == [1, 3, 5, 11]
     assert len(bar.eyedropper_history_swatches) == 8  # noqa: PLR2004
-    assert not any(s.isVisibleTo(bar) for s in bar.eyedropper_history_swatches)
+    assert not any(a.isVisible() for a in bar._eyedropper_history_actions)  # noqa: SLF001
     names = {w.accessibleName() for w in bar.findChildren(QWidget) if w.accessibleName()}
     assert {
         "Sampled color",

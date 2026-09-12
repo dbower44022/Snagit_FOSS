@@ -48,10 +48,9 @@ cumulative sum costs the same whatever the box is, while a direct sum costs one 
 box pixel, so the two cross over between a box of two and a box of four. Measured on a
 1004 by 1004 px capture, all four channels, the median of five runs: the direct sum takes
 67 ms at a box of 1 and 86 ms at a box of 2, where the cumulative sum takes about 106 ms;
-at a box of 4 the direct sum takes 134 ms and the cumulative sum 110 ms. The small boxes
-are the radii the half-scale capture of :data:`~snapmock.items.blur_item.
-GAUSSIAN_HALF_SCALE_MIN_RADIUS` cannot serve, so this is what closes 2.10's 100 ms below
-radius 4."""
+at a box of 4 the direct sum takes 134 ms and the cumulative sum 110 ms. A narrow box is
+what a blur radius under 4 needs, which is where ``BlurItem``'s half-scale capture cannot
+help, so this is what closes 2.10's 100 ms below that radius."""
 
 
 def _box_pass(planes: np.ndarray, radius: int, axis: int) -> np.ndarray:

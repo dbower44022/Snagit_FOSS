@@ -1,6 +1,6 @@
 # Eyedropper and Blur Performance Implementation Notes
 
-Last Updated: 09-12-26 00:16 · Revision 1.6
+Last Updated: 09-12-26 00:53 · Revision 1.7
 
 Implements the Eyedropper's Section 4 whole and the Blur / Pixelate tool's remaining Performance rows from the Blur, Highlighter, and Eyedropper Tools PRD (`PRDs/SnapMock-Blur-Highlighter-Eyedropper-Tools-PRD.html`, version 1.8 at the start), with the General UI PRD (version 2.22) and Technical Architecture PRD (version 1.34) rows they own, in the five phases and the close-out defined by `docs/Eyedropper-Blur-Performance-Kickoff-Prompt.md` (revision 1.0). A session pasting that prompt starts at the first phase not marked done in Section 1. `docs/General-UI-Implementation-Kickoff-Prompt.md` (revision 1.1) governs the standards; the General UI implementation notes (`docs/General-UI-Implementation.md`) hold the walk table of Section 17.2. Finishing this work closes the Blur, Highlighter, and Eyedropper Tools PRD.
 
@@ -15,7 +15,7 @@ Starting state, verified at commit 1bafbad on 09-11-26 (the kickoff names 314beb
 | 3 | The preview loupe (4.3) | Done | this commit |
 | 4 | The properties and the Tool Options Bar (4.4, 4.5) | Done | this commit |
 | 5 | Applying the colour, the Alt mode, and the hints (4.6, 4.7, 4.8, 6.2) | Done | this commit |
-| Close-out | PRD rows, the General UI notes' Section 24 pointer, the freeform blur notes' Section 10 pointer, the display checks owed | In progress | |
+| Close-out | PRD rows, the General UI notes' Section 24 pointer, the freeform blur notes' Section 10 pointer, the display checks owed | Done | this commit |
 
 ## 2. Decisions
 
@@ -108,7 +108,11 @@ The blur itself, over a 1004 by 1004 pixel capture, the median of five runs: 151
 
 Past 2.10's stated 1000 by 1000 pixel region the render is still linear in the pixel count: a 1920 by 1080 pixel region at radius 1 takes 129 ms, and a 2000 by 2000 pixel region 287 ms at radius 1 and 117 ms at radius 10. 2.10's progress indicator past 2000 pixels is a departure and stays one, since it cannot repaint during a synchronous render.
 
-### 4.1 Phase 1 close-out
+### 4.1 The loupe's cost per mouse move
+
+4.3 asks that the loupe's capture and render happen every frame at sixty frames a second, and the 8.3 row asks the same. Measured on this machine over a 1920 by 1080 pixel screenshot with fifty annotations over it, thirty moves, both the loupe's fifteen by fifteen pixel capture and the sampled colour's own render included: **0.36 ms** per update at a one-pixel sample and **0.45 ms** at an eleven-pixel one, the worst of thirty being 1.8 ms. A frame at sixty frames a second is 16.7 ms, so the loupe has two orders of magnitude of headroom and needs no capture cache.
+
+### 4.2 Phase 1 close-out
 
 Blur PRD 1.10 carries the Built row for 2.10 and 8.1 and the Departure row for what stays: 2.10's background-thread re-render, its progress indicator past 2000 pixels, and its separate half-resolution drag preview are not built, and the first two are now permanent rather than deferred. The render is fast enough on the main thread at the region size 2.10 names; a progress indicator cannot repaint during a synchronous render, so it cannot exist without the thread; and the drag preview needs no separate path, since the Gaussian already captures at half size from radius 4 up and the full-resolution radii render in 55 to 72 milliseconds. Option A, the thread, stays available on its own kickoff if a display check ever finds a region this cannot carry.
 
@@ -177,14 +181,45 @@ Silences found while building:
 
 **Next required step:** the close-out of the work — the PRD rows for what was built and where it departs, the General UI notes' Section 24 pointer, the freeform blur notes' Section 10 pointer, the display checks carried forward, and a full-suite run.
 
+## 9. Deviations from the PRDs
+
+Each has its PRD row.
+
+- **Blur PRD 2.10**: the background-thread re-render and the progress indicator past 2000 pixels are not built and are now permanent, not deferred. The render is fast enough on the main thread at the 1000 by 1000 pixel region 2.10 names, and a progress indicator cannot repaint during a synchronous render. The separate half-resolution drag preview is unnecessary: the Gaussian already captures at half size from radius 4 up and the full-resolution radii render in 55 to 72 milliseconds. Past 2.10's stated region size the render stays linear in the pixel count — 129 milliseconds for a 1920 by 1080 pixel region at radius 1, 287 for a 2000 by 2000 one.
+- **Blur PRD 4.2 and 4.4**: `sample_size` is stored as the side of the square in canvas pixels (1, 3, 5, 11) where 4.4 names an enumeration of "1x1" and the rest; a transparent pixel is left out of the colour mean and the result's alpha is the mean over the whole area, which 4.2 does not specify; and both a click and a drag apply at the release, since a click is a press and a release at one place.
+- **Blur PRD 4.4 and 4.5**: 4.4's HSL example for `#4A90D9` reads 63 percent saturation where the standard value is 65 (143 of 219), and the bar writes 65. The Apply Target dropdown offers 4.5's three values of the five 4.4 gives the property; the other two are reached by 4.7's momentary mode. The Copy to Clipboard toggle copies the hexadecimal value, as 4.4 says, while a click on the value field copies the value in whichever format is shown. An empty Color History slot is hidden rather than shown, because General UI PRD 1.3 forbids a control that does nothing.
+- **Blur PRD 4.6**: the three routes are applied together rather than as alternatives, since a previous tool and a selection can both exist and they answer different questions; and 4.6's "application's active `stroke_color`" is written as the property on every tool that carries it, the application having no single one.
+- **Blur PRD 4.7**: the mid-drag row is not built and is permanent. General UI PRD 12.2 gives Alt "draw from center" while drawing, which is built and relied on by every drag-drawn shape, by point editing, and by brush editing; one key cannot carry both meanings, so Alt keeps its drawing meaning and the momentary eyedropper stands down mid-drag. The momentary mode also ignores `apply_target`, since 4.7 names the property per tool.
+- **Blur PRD 4.3**: the drop shadow is painted as a radial fade rather than through a graphics effect, and the checkerboard uses the theme's own colours.
+- **General UI PRD 5.2 and 5.3**: the Eyedropper has creation defaults and so a preset dropdown, where 5.2 lists it among the tools with nothing to capture; and its 5.3 row is the Blur PRD's bar of 4.5, the two Apply buttons removed.
+
+## 10. Tests
+
+New modules: `tests/test_blur_performance.py` (3), `tests/test_eyedropper_sampling.py` (13), `tests/test_eyedropper_loupe.py` (10), `tests/test_eyedropper_bar.py` (10), and `tests/test_eyedropper_apply.py` (13). `tests/test_tool_options_bar.py` reads the new bar in place of the Apply buttons, and `tests/test_color_picker.py`'s pick test sends the release the colour now lands on. The accessibility audit passes over the Eyedropper's bar, whose every control carries an accessible name; the loupe carries one too, though it is transparent to mouse events and takes no focus.
+
+A targeted run over the ten modules this work touches — the five new ones, the bar, the colour picker, the navigation keys, the cursors, the freehand point edit, and the blur brush edit — passes 102 tests at the Phase 5 commit.
+
+The full suite at the Phase 1 code commit (b218275), run from a scratch worktree while this work's targeted runs shared the machine, ran 1403 tests with 13 skipped and the one environmental deselection: 1389 passed and one failed, the pre-existing timing-sensitive Zoom tool test (`tests/test_tools/test_zoom_tool.py::test_left_click_zooms_in_and_alt_at_the_release_zooms_out`), which passes alone; the run took 66 minutes. The full suite at the close-out commit is recorded in the change-log row below. A run at the Phase 5 commit (9594c8d) was stopped at 9 percent and restarted at the close-out commit, because reviewing the phase's own code found the Color History's hidden swatches leaving their slots in the bar: the swatch was hidden but not its toolbar action, so eight empty slots stayed on the widest bar in the application. The close-out hides the action instead. Ruff and mypy are clean at every commit.
+
+## 11. Close-out of the work
+
+Every phase is done. The PRDs stand at Blur, Highlighter, and Eyedropper Tools PRD 1.14, General UI PRD 2.25, and Technical Architecture PRD 1.37, with the General UI notes at 1.36 (Section 24) and the freeform blur notes at 1.3 (Section 10). Phases 2 to 5 were each built and closed out in one commit rather than the kickoff's two, as the freeform blur work's phases were: each phase's build and its PRD rows touch the same files.
+
+**The Blur, Highlighter, and Eyedropper Tools PRD has no open row left.** Section 2, the Blur / Pixelate tool, closed with the Performance rows of Phase 1; Section 3, the Highlighter, closed with the freeform blur and Highlighter work on 09-11-26; Section 4, the Eyedropper, closes here. Two rows of Section 4 are recorded as permanent departures rather than built: 2.10's background thread with its progress indicator, and 4.7's mid-drag Alt sampling, which General UI PRD 12.2's "draw from center" convention holds against. Every other row of Sections 4, 6.2, 7.3, 8.1, and 8.3 is built and met by tests.
+
+**What remains across the other PRDs.** The Basic Shape Annotation Tools PRD's 2.4 and 2.5 are open, and have been since before the Basic Shape remainder work: no dimension tooltip or constrain icon near the cursor for the drag-drawn shapes, and every shape tool selecting its new item and returning to the Select tool. The Screen Capture PRD's Windows backend waits for a Windows machine (`docs/Windows-Backend-Kickoff-Prompt.md`), and its macOS backend is deferred with no Mac available. The General UI PRD has no open row; the Library, Navigation and Raster Operations, Text and Callout, and Numbered Steps, Stamps, and Emoji PRDs have none from this work.
+
+**Display checks owed**, since every render check in this work is a pixel test on the offscreen platform. This work adds three: the loupe at each of the four sample sizes over a screenshot, the loupe near the right and top edges of the viewport where it flips, and the Eyedropper's bar at a narrow window, which is now the widest bar in the application. They join the checks the freeform blur work owes (a painted blur region and an erased one with the brush cursor at two sizes, a Whole Layer region and each source mode, a straightened highlight and a freeform one with their point handles, and the angled marker-tip cursor), the Basic Shape remainder work's (curved and elbow arrows in point editing, individual corner radii, a freehand stroke's handles, each arc type, a star polygon, and each blur mode over a screenshot), the Vector Item Properties work's older ones, and the two answers the General UI notes' Section 19.2 still awaits.
+
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.7 | 09-12-26 00:53 | Claude (Claude Code) | Close-out: Section 4.1 with the loupe's measured cost per mouse move, Section 9's deviations, Section 10's tests, and Section 11's close-out with what remains across the other PRDs and the display checks owed; the General UI notes' Section 24 and two corrected Section 6 bullets, and the freeform blur notes' Section 10 pointer. One fix found by reviewing this work's own code: the Color History's unused swatches hide their toolbar action, not only the widget, so they take no room in the bar. |
 | 1.6 | 09-12-26 00:16 | Claude (Claude Code) | Phase 5, applying the colour, the Alt mode, and the hints (Blur PRD 4.6, 4.7, 4.8, 6.2, 8.3): Section 8 with what was built and the six silences found while building, including the permanent departure of 4.7's mid-drag row against General UI PRD 12.2's Alt convention; the phase-table row done. Blur PRD 1.14, General UI PRD 2.25, Technical Architecture PRD 1.37. |
 | 1.5 | 09-12-26 00:06 | Claude (Claude Code) | Phase 4, the properties and the Tool Options Bar (Blur PRD 4.4, 4.5, 8.3): Section 7 with what was built, the six silences found while building, and the next required step; the phase-table row done. Blur PRD 1.13, General UI PRD 2.24. |
 | 1.4 | 09-11-26 23:56 | Claude (Claude Code) | Phase 3, the preview loupe (Blur PRD 4.3, 8.3): Section 6 with what was built, the six silences found while building, and the next required step; the phase-table row done. Blur PRD 1.12, Technical Architecture PRD 1.36 (Section 10 gains `ui/loupe_overlay.py`). |
 | 1.3 | 09-11-26 23:50 | Claude (Claude Code) | Phase 2, sampling (Blur PRD 4.2, 4.4, 8.3): Section 5 with what was built, the five silences found while building, and the next required step; the phase-table row done. Blur PRD 1.11. |
-| 1.2 | 09-11-26 23:55 | Claude (Claude Code) | Phase 1 close-out: Section 4.1 with the Blur PRD rows, the departures that stay permanent, and the next required step; the phase-table row done. Blur PRD 1.10. |
+| 1.2 | 09-11-26 23:55 | Claude (Claude Code) | Phase 1 close-out: the Blur PRD rows (now Section 4.2), the departures that stay permanent, and the next required step; the phase-table row done. Blur PRD 1.10. |
 | 1.1 | 09-11-26 23:47 | Claude (Claude Code) | Phase 1 step 2: decision 4 option C built in `snapmock/items/shadow.py` — float32, all four channels in one array, and a direct sum of shifted slices at a narrow box. Section 3's step 2 with the four silences found while building, and Section 4's measured render times before and after: 2.10's 100 ms is met at every radius for a 1000 by 1000 px region. |
 | 1.0 | 09-11-26 22:58 | Claude (Claude Code) | Initial notes: the starting state at commit 1bafbad, the phase table, the four decisions (1 B, 2 A, 3 A, 4 C) and the kickoff's six silences as chosen 09-11-26, three corrections to the kickoff found in the reading, and the measurement that retired decision 4's option B and produced option C. Blur PRD 1.9, General UI PRD 2.23, Technical Architecture PRD 1.35. |

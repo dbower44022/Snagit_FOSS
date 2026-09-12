@@ -121,8 +121,10 @@ def test_a_click_on_a_history_swatch_re_applies_that_colour(main_window: MainWin
     bar.show_picked_color(QColor("#112233"))
     bar.show_picked_color(QColor("#445566"))
     swatches = bar.eyedropper_history_swatches
-    assert swatches[0].isVisibleTo(bar) and swatches[1].isVisibleTo(bar)
-    assert not swatches[2].isVisibleTo(bar)
+    # The actions carry the visibility, so an unused slot takes no room in the bar.
+    actions = bar._eyedropper_history_actions  # noqa: SLF001
+    assert actions[0].isVisible() and actions[1].isVisible()
+    assert not actions[2].isVisible()
     swatches[1].click()  # the older of the two
     assert tool.last_sampled_color == QColor("#112233")
     assert bar.eyedropper_value_text == "#112233"

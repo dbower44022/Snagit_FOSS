@@ -375,6 +375,7 @@ class ToolOptionsBar(QToolBar):
         self._eyedropper_clipboard: QToolButton | None = None
         self._eyedropper_sizes: dict[int, QToolButton] = {}
         self._eyedropper_history: list[QToolButton] = []
+        self._eyedropper_history_actions: list[QAction] = []
         self._themes: ToolThemeManager | None = None
         self._preset_button: QToolButton | None = None
         self._preset_menu: QMenu | None = None
@@ -456,6 +457,7 @@ class ToolOptionsBar(QToolBar):
         self._eyedropper_clipboard = None
         self._eyedropper_sizes = {}
         self._eyedropper_history = []
+        self._eyedropper_history_actions = []
         self._preset_button = self._preset_menu = None
         tool = self._tool_manager.tool(tool_id)
         self._tool = tool
@@ -933,13 +935,18 @@ class ToolOptionsBar(QToolBar):
 
         self.addWidget(QLabel(" History:"))
         self._eyedropper_history = []
+        self._eyedropper_history_actions = []
         for index in range(COLOR_HISTORY_MAX):
             swatch = QToolButton()
             swatch.setFixedSize(HISTORY_SWATCH_SIZE, HISTORY_SWATCH_SIZE)
             swatch.setAccessibleName(f"Color history {index + 1}")
             swatch.clicked.connect(lambda _c=False, i=index: self._reapply_history(i))
-            self.addWidget(swatch)
-            swatch.setVisible(False)
+            action = self.addWidget(swatch)
+            # The action, not only the widget: a hidden widget would leave its slot in the
+            # bar, and this is the widest bar in the application already.
+            if action is not None:
+                action.setVisible(False)
+                self._eyedropper_history_actions.append(action)
             self._eyedropper_history.append(swatch)
 
         tool.set_pick_callback(self._on_color_applied)
@@ -1003,13 +1010,13 @@ class ToolOptionsBar(QToolBar):
         tool = self._eyedropper()
         history = tool.color_history if tool is not None else []
         for index, swatch in enumerate(self._eyedropper_history):
-            if index < len(history):
+            shown = index < len(history)
+            if shown:
                 color = history[index]
                 swatch.setIcon(QIcon(_color_pixmap(color, HISTORY_SWATCH_SIZE - 6)))
                 swatch.setToolTip(f"Re-apply {color.name().upper()}")
-                swatch.setVisible(True)
-            else:
-                swatch.setVisible(False)
+            if index < len(self._eyedropper_history_actions):
+                self._eyedropper_history_actions[index].setVisible(shown)
 
     def _show_sampled_color(self, color: QColor) -> None:
         """The swatch and the colour value field, for a preview or an applied sample."""
