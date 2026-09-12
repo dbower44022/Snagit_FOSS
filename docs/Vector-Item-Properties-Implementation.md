@@ -1,6 +1,6 @@
 # Vector Item Properties Implementation Notes
 
-Last Updated: 09-12-26 09:58 · Revision 1.5
+Last Updated: 09-12-26 10:35 · Revision 1.6
 
 Implements the shared vector item properties that General UI Phase 6 decision 6.2 named and deferred (Stroke Style, Fill Opacity, Stroke Opacity, the Shadow section, Blend Mode, and Line Spacing), from the Basic Shape Annotation Tools PRD (`PRDs/SnapMock-Basic-Shape-Annotation-Tools-PRD.html`, version 1.5 at the start), the Text and Callout Annotation Tools PRD (version 1.6), the Blur, Highlighter, and Eyedropper Tools PRD (version 1.3), the General UI PRD (version 2.12), and the Technical Architecture PRD (version 1.24), in the three phases and the close-out defined by `docs/Vector-Item-Properties-Kickoff-Prompt.md` (revision 1.0). A session pasting that prompt starts at the first phase not marked done in Section 1. `docs/General-UI-Implementation-Kickoff-Prompt.md` (revision 1.1) governs the standards; the General UI implementation notes (`docs/General-UI-Implementation.md`) hold the walk table of Section 17.2, which this work does not expect to extend.
 
@@ -105,7 +105,9 @@ Every phase is done. The General UI notes' Section 5.1 decision 6.2 row and Sect
 
 Display checks, run by Doug on 09-12-26 from a checklist page whose marks and notes were read back. **Answered and passing**, three of the four this work owed: a rectangle with a shadow and a dashed stroke at 50 percent fill opacity ("perfect"), an arrow with a diamond head and an open tail ("perfect"), and a text box at 2.0 line spacing ("perfect"). The three marker tools owed from before this work also pass, and are recorded in the marker notes' Section 7.
 
-**Still owed:** a highlight in Multiply over dark text, which was marked without a note and is unrecorded; and the Zoom tool display check of the General UI notes' Section 19.2 (row 20), whose Alt+click half was answered on 09-12-26 — "Alt still does not work" — and whose right-click half is still unanswered. Verified on this machine 09-12-26: `org.cinnamon.desktop.wm.preferences mouse-button-modifier` reads `<Alt>`, which is the cause row 20 already suspected.
+The fourth, a highlight in Multiply over dark text, was run on 09-12-26 in a second session and **passes**: the dark text shows through the highlight and stays readable while the light background takes the colour. **Every display check this work owed is now answered.**
+
+The Zoom tool check owed from before this work (General UI notes' Section 19.2, row 20) is also answered in full by that run and the row is closed there: Alt+click cannot work on this desktop, since `org.cinnamon.desktop.wm.preferences mouse-button-modifier` reads `<Alt>` (verified 09-12-26), and the right-click route built for exactly that case zooms out correctly.
 
 The following kickoff ran on 09-11-26 and is complete: `docs/Basic-Shape-Remainder-Implementation.md` (revision 1.3) holds its record, including the display checks it adds.
 
@@ -115,6 +117,7 @@ The following kickoff ran on 09-11-26 and is complete: `docs/Basic-Shape-Remaind
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.6 | 09-12-26 10:35 | Claude (Claude Code) | Section 8: the second display run of 09-12-26. The Multiply highlight over dark text passes, closing every display check this work owed; the Zoom tool's row 20, owed from before it, is answered in full and closed in the General UI notes |
 | 1.5 | 09-12-26 09:58 | Claude (Claude Code) | Section 8: the display checks Doug ran on 09-12-26, quoted. The shadowed dashed rectangle, the diamond-and-open arrow, and the 2.0 line spacing pass, as do the three marker checks owed from before this work. The Multiply highlight and the Zoom tool's row 20 stay owed. |
 | 1.4 | 09-11-26 18:44 | Claude (Claude Code) | Section 8 points to the completed Basic Shape remainder work. |
 | 1.3 | 09-11-26 14:21 | Claude (Claude Code) | Phase 3 done and the work complete: the phase table, Section 5 (what Phase 3 built in one commit, the silences found while building), Section 6 (three deviations added), Section 7 (the tests and the suite run), Section 8 (the close-out of the work, the display checks owed, the next required step). Basic Shape PRD 1.8, General UI PRD 2.16, Technical Architecture PRD 1.28; General UI notes 1.33, marker notes 1.5, Snagit notes 1.3; `docs/Basic-Shape-Remainder-Kickoff-Prompt.md` 1.0. |

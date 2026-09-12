@@ -1,6 +1,6 @@
 # Basic Shape Remainder and Blur Modes Implementation Notes
 
-Last Updated: 09-12-26 09:58 · Revision 1.6
+Last Updated: 09-12-26 10:35 · Revision 1.7
 
 Implements the remainder of the Basic Shape Annotation Tools PRD (`PRDs/SnapMock-Basic-Shape-Annotation-Tools-PRD.html`, version 1.8 at the start) and the Blur / Pixelate tool of the Blur, Highlighter, and Eyedropper Tools PRD (version 1.4), with the General UI PRD (version 2.16) and Technical Architecture PRD (version 1.28) rows they own, in the five phases and the close-out defined by `docs/Basic-Shape-Remainder-Kickoff-Prompt.md` (revision 1.0). A session pasting that prompt starts at the first phase not marked done in Section 1. `docs/General-UI-Implementation-Kickoff-Prompt.md` (revision 1.1) governs the standards; the General UI implementation notes (`docs/General-UI-Implementation.md`) hold the walk table of Section 17.2.
 
@@ -171,7 +171,9 @@ Display checks, run by Doug on 09-12-26 from a checklist page whose marks and no
 | A star polygon: five points with even notches, sized and turned by the drag | "perfect" |
 | A rectangle with individual radii: two rounded corners diagonally opposite, the uniform slider hidden | "perfect" |
 
-**Still owed:** a blur region in each mode over a screenshot. Gaussian Blur and Pixelate were not reached, and Solid Fill was blocked by its colour picker: "When I pick a color, there is no button to save it, and if I click off the color is not selected." That is the shared colour picker of General UI PRD 11.1, which this work did not touch, so it is either long-standing or environmental; it is recorded here because it blocked this check and nowhere else yet.
+The seventh, a blur region in each mode over a screenshot, was run on 09-12-26 in a second session: **Gaussian Blur passes** (the text under the region completely unreadable and smoothly smeared) and **Pixelate passes** (a clean mosaic of equal tiles with straight edges). **Solid Fill is still blocked**, now by a narrower fault than the first run suggested: "Color would not select. So transparent was only color selectable."
+
+The picker itself is not at fault. The same run took the Rectangle tool's Stroke swatch through the shared picker and it committed a blue correctly, so General UI PRD 11.1 holds. What fails is the Blur tool's own **Fill:** swatch, which `tools/blur_tool.py` builds directly rather than through the Tool Options Bar's shared control path. Checked headlessly on 09-12-26: the wiring is sound — a `color_changed` signal from that picker does set `fill_color` on the tool's creation defaults — so the fault is in the popover interaction, which no headless test can drive and which this work's tests therefore never covered. A Blur PRD row when it is diagnosed; not reproduced in code.
 
 The older checks the Vector Item Properties notes list are answered there.
 
@@ -181,6 +183,7 @@ The older checks the Vector Item Properties notes list are answered there.
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.7 | 09-12-26 10:35 | Claude (Claude Code) | Section 10: the second display run of 09-12-26. Gaussian Blur and Pixelate pass; Solid Fill stays blocked, narrowed from the shared colour picker (which the same run proved works) to the Blur tool's own Fill swatch, whose signal wiring is sound headlessly, leaving the popover interaction as the fault |
 | 1.6 | 09-12-26 09:58 | Claude (Claude Code) | Section 10: the display checks Doug ran on 09-12-26, quoted. Six of the seven pass — the curved and elbow arrows, the freehand handles, the three arc types, the star polygon, and the individual corner radii. The blur modes stay owed, Solid Fill blocked by a colour picker that does not commit a pick. |
 | 1.5 | 09-11-26 22:36 | Claude (Claude Code) | Section 10: the kickoff this work named is complete, with its notes in `docs/Freeform-Blur-Highlighter-Implementation.md`; the display checks stay owed. |
 | 1.4 | 09-11-26 20:07 | Claude (Claude Code) | The next required step names the kickoff written at Doug's request: `docs/Freeform-Blur-Highlighter-Kickoff-Prompt.md` (revision 1.0). |

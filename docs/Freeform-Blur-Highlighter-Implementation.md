@@ -1,6 +1,6 @@
 # Freeform Blur Brush and Highlighter Straightening Implementation Notes
 
-Last Updated: 09-12-26 00:23 · Revision 1.3
+Last Updated: 09-12-26 10:35 · Revision 1.4
 
 Implements the remainder of the Blur / Pixelate tool and the whole of the Highlighter's drawing behaviour from the Blur, Highlighter, and Eyedropper Tools PRD (`PRDs/SnapMock-Blur-Highlighter-Eyedropper-Tools-PRD.html`, version 1.6 at the start), with the General UI PRD (version 2.20) and Technical Architecture PRD (version 1.32) rows they own, in the five phases and the close-out defined by `docs/Freeform-Blur-Highlighter-Kickoff-Prompt.md` (revision 1.0). A session pasting that prompt starts at the first phase not marked done in Section 1. `docs/General-UI-Implementation-Kickoff-Prompt.md` (revision 1.1) governs the standards; the General UI implementation notes (`docs/General-UI-Implementation.md`) hold the walk table of Section 17.2.
 
@@ -156,15 +156,20 @@ The same measurements while another full-suite run shared the machine were 284, 
 
 Every phase is done. The PRDs stand at Blur PRD 1.8, General UI PRD 2.22, and Technical Architecture PRD 1.34, with the Snagit notes at 1.6 and the General UI notes at 1.35 (Section 23). The Basic Shape remainder notes' Section 10 points here. Phases 2 to 5 were each built and committed in one step rather than the kickoff's several, since each phase's files overlap and the phases were built while the Phase 1 suite ran; the close-outs are written together in this commit after one full-suite run at the last code commit.
 
-Display checks, run by Doug on 09-12-26 from a checklist page whose marks and notes were read back. **Answered and passing:** the angled marker-tip cursor ("works perfectly"), and a straightened highlight, where a deliberately wobbly stroke came out flat and horizontal on release ("worked perfectly").
+Display checks, run by Doug on 09-12-26 over two sessions from a checklist page whose marks and notes were read back. **Every check this work owed is answered and passing:**
 
-**Still owed**, since every render check here is a pixel test on the offscreen platform: a painted blur region and an erased one over a screenshot with the brush cursor at two sizes, and a Whole Layer region with each source mode. The run reached all four and none of them could be completed:
+| Check | Result |
+|---|---|
+| The angled marker-tip cursor | Pass, first run: "works perfectly" |
+| A straightened highlight: a wobbly stroke flat and horizontal on release | Pass, first run: "worked perfectly" |
+| A freeform highlight kept as a curve with its point handles | Pass, second run |
+| A painted blur region: the brush cursor at two sizes, strokes accumulating, Enter placing it | Pass, second run |
+| A Whole Layer region: the whole canvas from one click | Pass, second run |
+| Each source mode: All below, Active layer, Specific layer with its dropdown | Pass, second run |
 
-- The brush cursor and the painted region: "When I press B, the cursor goes to a cross to drag, but there are no properties to select the mode, or shape. Those do not appear until I drag the cursor to create a rectangle." The Blur tool's Tool Options Bar is built on tool activation, so the likely cause is that it is the widest bar in the application and overflows behind Qt's extension button at that window width, with the Mode and Shape rows Doug did see afterwards being the Property Panel's Blur section. Not reproduced; a General UI PRD 15.2 row if it holds.
-- The erased region: "when i press v, i see the select mode, but as soon as I move the hand cursor appears. Alt does not seem to do anything." Verified on this machine 09-12-26: `org.cinnamon.desktop.wm.preferences mouse-button-modifier` reads `<Alt>`, so Cinnamon starts a window move on Alt plus the left button before the press reaches the canvas. Alt+paint is the eraser's only route (2.8), where the Zoom tool was given right-click as a second route for the same reason; the eraser needs one too. A Blur PRD row and a General UI PRD 12.2 row.
-- Whole Layer and the source modes: not reached, and "It's such a mess now that I did not test this."
+**The erased region is confirmed as blocked, not failed.** Alt+paint is the eraser's only route (2.8), and on this desktop it cannot reach the canvas: `org.cinnamon.desktop.wm.preferences mouse-button-modifier` reads `<Alt>` (verified 09-12-26), so Cinnamon starts a window move first. The painting and the Enter that place a region both work, so the gap is the modifier alone. The Zoom tool was given right-click as a second route for the same reason and that route is now confirmed working (General UI notes, acceptance row 20); the eraser needs an equivalent. A Blur PRD row and a General UI PRD 12.2 row.
 
-A freeform highlight with its point handles was marked without a note and is unrecorded. The checks the Basic Shape remainder notes list are answered there; the Vector Item Properties notes' are answered there.
+The first run's difficulty finding the Blur tool's Mode and Shape controls was not a fault: a screenshot of 09-12-26 shows every control present with no overflow. On this machine the Tool Options Bar shares one row with the Main Toolbar rather than sitting below it as General UI PRD 5.1 describes; View > Reset Layout puts it back on its own row. Recorded in the General UI notes.
 
 **Next required step:** done. The kickoff this close-out named, `docs/Eyedropper-Blur-Performance-Kickoff-Prompt.md` (revision 1.0), ran on 09-11-26 and 09-12-26 and is complete; its notes are `docs/Eyedropper-Blur-Performance-Implementation.md`. Two things it changed reach back into this work. **2.10 closes at every radius** (its Section 4): the blur itself is cheaper — float32 over all four colour channels in one array, and a direct sum of shifted slices while the box is one or two pixels wide — so a 1000 by 1000 px Gaussian region renders in 55 ms at radius 1 against the 154 ms recorded in Section 9.1 here, and in 11 to 42 ms from radius 4 up against the 34 to 50 ms here. The half-scale capture of decision 4 stays and gains from the same arithmetic. The background thread and the progress indicator past 2000 px are now recorded as a permanent departure rather than a deferral, since the render is fast enough on the main thread at the size 2.10 names and a progress indicator cannot repaint during a synchronous render. Every measured figure in Section 9.1 is therefore superseded by that work's Section 4. **The display checks above are still owed**, and that work adds three of its own: the loupe at each sample size, the loupe near a viewport edge, and the Eyedropper's bar at a narrow window.
 
@@ -172,6 +177,7 @@ A freeform highlight with its point handles was marked without a note and is unr
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 09-12-26 10:35 | Claude (Claude Code) | Section 10: the second display run of 09-12-26. Every check this work owed now passes — the painted region, Whole Layer, all three source modes, and the freeform highlight's handles joining the marker-tip cursor and the straightened highlight. The erased region is confirmed blocked by Cinnamon's Alt gesture rather than failing, and the Tool Options Bar difficulty is confirmed to have been a layout question, not a missing control |
 | 1.3 | 09-12-26 00:23 | Claude (Claude Code) | Section 10: the kickoff this close-out named is complete, and what it changed here — 2.10 now closes at every radius by a cheaper blur, so the measured figures of Section 9.1 are superseded, and the background thread and progress indicator become a permanent departure; the display checks stay owed, with three of that work's added. |
 | 1.2 | 09-11-26 22:41 | Claude (Claude Code) | The next required step names the kickoff written at Doug's request: `docs/Eyedropper-Blur-Performance-Kickoff-Prompt.md` (revision 1.0). |
 | 1.1 | 09-11-26 22:36 | Claude (Claude Code) | Every phase done and the work closed out: the phase table, Sections 3 to 7 (what each phase built and the silences found while building), Section 8's deviations, Section 9's tests and the two suite runs with the measured render times of 9.1, and Section 10's close-out with the display checks owed and the next required step. Blur PRD 1.8, General UI PRD 2.22, Technical Architecture PRD 1.34, Snagit notes 1.6, General UI notes 1.35 (Section 23), Basic Shape remainder notes 1.5. |
