@@ -1,6 +1,6 @@
 # Eyedropper and Blur Performance Implementation Notes
 
-Last Updated: 09-11-26 23:47 · Revision 1.1
+Last Updated: 09-11-26 23:55 · Revision 1.2
 
 Implements the Eyedropper's Section 4 whole and the Blur / Pixelate tool's remaining Performance rows from the Blur, Highlighter, and Eyedropper Tools PRD (`PRDs/SnapMock-Blur-Highlighter-Eyedropper-Tools-PRD.html`, version 1.8 at the start), with the General UI PRD (version 2.22) and Technical Architecture PRD (version 1.34) rows they own, in the five phases and the close-out defined by `docs/Eyedropper-Blur-Performance-Kickoff-Prompt.md` (revision 1.0). A session pasting that prompt starts at the first phase not marked done in Section 1. `docs/General-UI-Implementation-Kickoff-Prompt.md` (revision 1.1) governs the standards; the General UI implementation notes (`docs/General-UI-Implementation.md`) hold the walk table of Section 17.2. Finishing this work closes the Blur, Highlighter, and Eyedropper Tools PRD.
 
@@ -10,8 +10,8 @@ Starting state, verified at commit 1bafbad on 09-11-26 (the kickoff names 314beb
 
 | Phase | Scope | Status | Commits |
 |---|---|---|---|
-| 1 | The Blur tool's performance (Blur PRD 2.10, 8.1): the decisions and these notes, the render's remaining rows, close-out | In progress | 668d0c1, then this commit |
-| 2 | Sampling (4.2): the four sample sizes, the arithmetic mean, the press-and-drag live sample | Not started | |
+| 1 | The Blur tool's performance (Blur PRD 2.10, 8.1): the decisions and these notes, the render's remaining rows, close-out | Done | 668d0c1, b218275, then this commit |
+| 2 | Sampling (4.2): the four sample sizes, the arithmetic mean, the press-and-drag live sample | In progress | |
 | 3 | The preview loupe (4.3) | Not started | |
 | 4 | The properties and the Tool Options Bar (4.4, 4.5) | Not started | |
 | 5 | Applying the colour, the Alt mode, and the hints (4.6, 4.7, 4.8, 6.2) | Not started | |
@@ -108,9 +108,18 @@ The blur itself, over a 1004 by 1004 pixel capture, the median of five runs: 151
 
 Past 2.10's stated 1000 by 1000 pixel region the render is still linear in the pixel count: a 1920 by 1080 pixel region at radius 1 takes 129 ms, and a 2000 by 2000 pixel region 287 ms at radius 1 and 117 ms at radius 10. 2.10's progress indicator past 2000 pixels is a departure and stays one, since it cannot repaint during a synchronous render.
 
+### 4.1 Phase 1 close-out
+
+Blur PRD 1.10 carries the Built row for 2.10 and 8.1 and the Departure row for what stays: 2.10's background-thread re-render, its progress indicator past 2000 pixels, and its separate half-resolution drag preview are not built, and the first two are now permanent rather than deferred. The render is fast enough on the main thread at the region size 2.10 names; a progress indicator cannot repaint during a synchronous render, so it cannot exist without the thread; and the drag preview needs no separate path, since the Gaussian already captures at half size from radius 4 up and the full-resolution radii render in 55 to 72 milliseconds. Option A, the thread, stays available on its own kickoff if a display check ever finds a region this cannot carry.
+
+The 8.1 performance rows are met, the Gaussian inside 100 ms and Pixelate inside 50 ms, and Section 2 of the Blur PRD has no open row left.
+
+**Next required step:** Phase 2, sampling (Blur PRD 4.2) — what the Eyedropper reads per decision 2, `sample_size` with its four values and the arithmetic mean, and a press-and-drag that samples continuously and applies the colour under the cursor at the release.
+
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 09-11-26 23:55 | Claude (Claude Code) | Phase 1 close-out: Section 4.1 with the Blur PRD rows, the departures that stay permanent, and the next required step; the phase-table row done. Blur PRD 1.10. |
 | 1.1 | 09-11-26 23:47 | Claude (Claude Code) | Phase 1 step 2: decision 4 option C built in `snapmock/items/shadow.py` — float32, all four channels in one array, and a direct sum of shifted slices at a narrow box. Section 3's step 2 with the four silences found while building, and Section 4's measured render times before and after: 2.10's 100 ms is met at every radius for a 1000 by 1000 px region. |
 | 1.0 | 09-11-26 22:58 | Claude (Claude Code) | Initial notes: the starting state at commit 1bafbad, the phase table, the four decisions (1 B, 2 A, 3 A, 4 C) and the kickoff's six silences as chosen 09-11-26, three corrections to the kickoff found in the reading, and the measurement that retired decision 4's option B and produced option C. Blur PRD 1.9, General UI PRD 2.23, Technical Architecture PRD 1.35. |
