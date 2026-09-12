@@ -1,6 +1,6 @@
 # Freeform Blur Brush and Highlighter Straightening Implementation Notes
 
-Last Updated: 09-11-26 22:36 · Revision 1.1
+Last Updated: 09-11-26 22:41 · Revision 1.2
 
 Implements the remainder of the Blur / Pixelate tool and the whole of the Highlighter's drawing behaviour from the Blur, Highlighter, and Eyedropper Tools PRD (`PRDs/SnapMock-Blur-Highlighter-Eyedropper-Tools-PRD.html`, version 1.6 at the start), with the General UI PRD (version 2.20) and Technical Architecture PRD (version 1.32) rows they own, in the five phases and the close-out defined by `docs/Freeform-Blur-Highlighter-Kickoff-Prompt.md` (revision 1.0). A session pasting that prompt starts at the first phase not marked done in Section 1. `docs/General-UI-Implementation-Kickoff-Prompt.md` (revision 1.1) governs the standards; the General UI implementation notes (`docs/General-UI-Implementation.md`) hold the walk table of Section 17.2.
 
@@ -158,11 +158,12 @@ Every phase is done. The PRDs stand at Blur PRD 1.8, General UI PRD 2.22, and Te
 
 Owed, on the real display, since every render check here is a pixel test on the offscreen platform: a painted blur region and an erased one over a screenshot, with the brush cursor at two sizes; a Whole Layer region and each source mode; a straightened highlight and a freeform one with their point handles; and the angled marker-tip cursor. These join the checks the Basic Shape remainder notes list (curved and elbow arrows in point editing, individual corner radii, a freehand stroke's handles, each arc type, a star polygon, and each blur mode over a screenshot) and the older ones the Vector Item Properties notes list.
 
-**Next required step:** the work is complete and no kickoff follows it yet. Two candidates are known. The Eyedropper's Section 4 rows that the General UI work did not build — the preview loupe (4.3), the sample sizes, the colour history, and the colour formats (4.4, 4.5) — need checking against the code before a kickoff is written for them, and they would finish the Blur, Highlighter, and Eyedropper PRD. The Windows backend (`docs/Windows-Backend-Kickoff-Prompt.md`) waits for a Windows machine. Recommended: the Eyedropper remainder, since it runs on this machine and closes the PRD this work has been building. Before either, the display checks above.
+**Next required step:** the work is complete, and the following kickoff is written: `docs/Eyedropper-Blur-Performance-Kickoff-Prompt.md` (revision 1.0, starting state at commit 314beb9), the Eyedropper's Section 4 whole and the Blur / Pixelate tool's remaining 2.10 performance rows, in five phases with four decisions and six silences. It closes this PRD, it runs on this machine, and it is recommended next; the Windows backend kickoff (`docs/Windows-Backend-Kickoff-Prompt.md`) waits for a Windows machine. Before either, the display checks above.
 
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 09-11-26 22:41 | Claude (Claude Code) | The next required step names the kickoff written at Doug's request: `docs/Eyedropper-Blur-Performance-Kickoff-Prompt.md` (revision 1.0). |
 | 1.1 | 09-11-26 22:36 | Claude (Claude Code) | Every phase done and the work closed out: the phase table, Sections 3 to 7 (what each phase built and the silences found while building), Section 8's deviations, Section 9's tests and the two suite runs with the measured render times of 9.1, and Section 10's close-out with the display checks owed and the next required step. Blur PRD 1.8, General UI PRD 2.22, Technical Architecture PRD 1.34, Snagit notes 1.6, General UI notes 1.35 (Section 23), Basic Shape remainder notes 1.5. |
 | 1.0 | 09-11-26 20:14 | Claude (Claude Code) | Initial notes: the starting state at commit 0029bf7, the phase table, the four decisions (1 A, 2 A, 3 A, 4 A) and the kickoff's six silences as chosen 09-11-26, four corrections to the kickoff found in the reading, four findings decided with the decisions. Blur PRD 1.7, General UI PRD 2.21, Technical Architecture PRD 1.33. |
