@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Technical Architecture</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.37</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.38</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
-    <dt>Document version</dt><dd>1.37</dd>
-    <dt>Last Updated</dt>    <dd>09-12-26 00:15</dd>
+    <dt>Document version</dt><dd>1.38</dd>
+    <dt>Last Updated</dt>    <dd>09-12-26 12:01</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.38</td>
+        <td class="nowrap">09-12-26 12:01</td>
+        <td>Doug Bower</td>
+        <td>The shape tools' shared drawing work: Section 3.3's BaseTool gains the shared drawing lifecycle, and Section 3.9's tool overlays gain the dimension tooltip and the guide lines.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.37</td>
         <td class="nowrap">09-12-26 00:15</td>
@@ -385,6 +392,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-12-26 12:01</td>
+        <td>3.3, 3.9, 8, 10</td>
+        <td>Decision</td>
+        <td>The shape tools' shared drawing behaviour implementation, 09-12-26 (<code>docs/Basic-Shape-Shared-Drawing-Implementation.md</code>, Section 2). <strong>3.3:</strong> <code>BaseTool</code> gains the shared drawing lifecycle every shape tool uses rather than seven copies of it — the active layer's visible-and-unlocked check before a press is accepted (the Basic Shape PRD's 2.1, shown through the never-disabled message of General UI PRD 1.3), the removal of the preview item in <code>cancel</code>, and <code>is_active_operation</code> true while a drag lasts, which the interface already declares and the five drag-drawn shape tools do not implement. Escape reaches the tool through <code>handle_escape</code>, the route the Arc and Polygon tools already use. <strong>3.9, decision 1 (option A):</strong> the tool overlays list gains two entries. The dimension tooltip of the Basic Shape PRD's 2.4, with the constrain icon and the centre marker beside it, is a widget over the canvas view's viewport, as the Eyedropper's preview loupe of 1.36 is, since every measurement is in screen pixels and the repositioning is a screen-edge rule; the screen-edge arithmetic is factored out of <code>ui/loupe_overlay.py</code> and shared. The dashed guide lines to the rulers (decision 3, option A) are drawn in the view's foreground pass beside the grid, the guides, and the crosshairs, from the preview's bounding box while a drag lasts. Neither is a scene item, so no render of the scene and no export can contain either. <strong>Section 8:</strong> the Basic Shape PRD's Section 12 asks for 60 frames a second preview rendering at 4K with 100 items, which the canvas-interaction row of this section already measures at that size; the overlays share the per-mouse-move budget the Eyedropper's loupe measured at 0.36 to 0.45 ms, and this work records its own measurement in its notes. <strong>Section 10:</strong> one module is expected, <code>ui/dimension_overlay.py</code>, added in the commit that creates it.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-12-26 00:15</td>
         <td>3.7, 10</td>

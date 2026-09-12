@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Blur, Highlighter &amp; Eyedropper Tools</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.14</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.15</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Blur / Pixelate · Highlighter · Eyedropper</dd>
-    <dt>Document version</dt><dd>1.14</dd>
-    <dt>Last Updated</dt>    <dd>09-12-26 00:15</dd>
+    <dt>Document version</dt><dd>1.15</dd>
+    <dt>Last Updated</dt>    <dd>09-12-26 12:01</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.15</td>
+        <td class="nowrap">09-12-26 12:01</td>
+        <td>Doug Bower</td>
+        <td>The shape tools' shared drawing work decides the Blur tool's and the Highlighter's post-creation behaviour, on which this document was silent: both stay active and leave the new item unselected.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.14</td>
         <td class="nowrap">09-12-26 00:15</td>
@@ -157,6 +164,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-12-26 12:01</td>
+        <td>2, 3, 8.1</td>
+        <td>Decision</td>
+        <td>The shape tools' shared drawing behaviour implementation, decision 2 (option A), 09-12-26 (<code>docs/Basic-Shape-Shared-Drawing-Implementation.md</code>, Section 2.1). This document is silent on what happens after a blur region or a highlight stroke is created, and the code selects the new item and switches to the Select tool. The Basic Shape Annotation Tools PRD's 2.1 and 2.5 give the opposite rule for the shape tools — the tool stays active and the new item is not selected, so shapes can be drawn one after another — and that rule is applied here too, so one rule holds for every tool that draws. The Blur tool reaches the Select tool from three release paths (the drag-drawn region, the Whole Layer region, and the brush-painted region of 2.3); all three stay on the Blur tool from Phase 5 of that work. The cost, recorded: a user who draws one blur region and then wants to resize it presses <code>V</code> first, the same cost every shape tool pays. The Numbered Step, Stamp, and Emoji tools already behave this way under their own PRD's rapid-placement rule; the Text and Callout tools are excepted, because their PRD puts a new item straight into inline edit mode. 8.1's locked and hidden layer row for the Blur tool is also unbuilt and is built by that work's Phase 1, through the same <code>BaseTool</code> helper the shape tools use.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-12-26 00:15</td>
         <td>4.6, 4.7, 4.8, 6.2, 8.3</td>

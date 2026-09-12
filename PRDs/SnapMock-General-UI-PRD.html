@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.25</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.26</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.25</dd>
-    <dt>Last Updated</dt>    <dd>09-12-26 00:15</dd>
+    <dt>Document version</dt><dd>2.26</dd>
+    <dt>Last Updated</dt>    <dd>09-12-26 12:01</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.26</td>
+        <td class="nowrap">09-12-26 12:01</td>
+        <td>Doug Bower</td>
+        <td>The shape tools' shared drawing work adds Ctrl as a second route to 12.2's centre-draw modifier, since Alt plus a mouse button never reaches the canvas on the desktop this project is built on.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>2.25</td>
         <td class="nowrap">09-12-26 00:15</td>
@@ -332,6 +339,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-12-26 12:01</td>
+        <td>1.3, 6.6, 9, 12.2</td>
+        <td>Decision</td>
+        <td>The shape tools' shared drawing behaviour implementation, 09-12-26 (<code>docs/Basic-Shape-Shared-Drawing-Implementation.md</code>, Section 2). <strong>12.2, decision 4 (option B):</strong> every drawing tool that reads Alt for "draw from center" also reads Ctrl for it, and Alt keeps the meaning this table gives it. The reason is a desktop limitation, not a preference: Cinnamon's window manager takes Alt plus a mouse button as its own window-move gesture (<code>org.cinnamon.desktop.wm.preferences mouse-button-modifier</code> reads <code>&lt;Alt&gt;</code>, verified 09-12-26 and twice before), so an Alt+drag never reaches the canvas there and the centre-draw behaviour does not exist for that user by any change to the tool. The Basic Shape PRD's 2.3 reserves Ctrl "for future use, such as snapping to item edges" and nothing reads it during a drag today — no shape tool reads <code>ControlModifier</code>, the canvas view reads it only on the wheel for zoom, and the Text tool reads it for its editor shortcuts — so the edge snapping it is reserved for will need another key or a chord when it is built. The 12.2 row for Ctrl while drawing, "special modifier per tool", is read with this second route added; the Ctrl+drag skew of that row's example is a transform-handle gesture of the Select tool and is untouched. This work adds the second route in the drawing tools only; the Zoom tool's Alt+click (acceptance pass row 20) and the blur brush's Alt+paint eraser belong to other PRDs and stay without a working route on that desktop until their own follow-up. <strong>1.3:</strong> the locked and hidden layer warning the Basic Shape PRD's 2.1 asks for is the never-disabled message, shown through <code>check_requirements</code> from one <code>BaseTool</code> helper; no control is disabled and nothing is greyed out. <strong>6.6:</strong> the "Tool over locked layer item" cursor row names a locked item, not a locked layer, so it does not cover that press guard and no cursor change is built for it. <strong>Section 9:</strong> the tool hint zone keeps the whole hint line with its modifier reminders; the dimension tooltip beside the cursor shows the measurement only, and both are built from one set of values per tool, so the two can never disagree.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-12-26 00:15</td>
         <td>12.2, 6.6</td>
