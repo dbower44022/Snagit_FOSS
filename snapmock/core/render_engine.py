@@ -218,6 +218,50 @@ class RenderEngine:
         painter.end()
         return image
 
+    def render_sample(self, rect: QRectF) -> QImage:
+        """What the Eyedropper reads over *rect*, in scene coordinates at canvas scale
+        (Blur PRD 4.2): the canvas colour where the canvas covers *rect*, then every
+        visible annotation item in stacking order, exactly as the display composites them.
+
+        Only :class:`SnapGraphicsItem` instances are painted, so the grid, the guides, the
+        crosshairs, the marching ants of a raster selection, the crop overlay's dimming and
+        handles, and the pasteboard are all left out, and so is the preview loupe, which is
+        a widget (Eyedropper and Blur performance decisions 1 and 2). The render is clipped
+        to the canvas, so a sample over the pasteboard beyond the canvas edge is transparent
+        whatever hangs over it there (4.3, 8.3).
+        """
+        from PyQt6.QtWidgets import QStyleOptionGraphicsItem
+
+        from snapmock.items.base_item import SnapGraphicsItem
+
+        w = max(1, math.ceil(rect.width()))
+        h = max(1, math.ceil(rect.height()))
+        image = QImage(w, h, QImage.Format.Format_ARGB32_Premultiplied)
+        image.fill(Qt.GlobalColor.transparent)
+        canvas = self._scene.canvas_rect.intersected(rect)
+        if canvas.isEmpty():
+            return image
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.translate(-rect.topLeft())
+        painter.setClipRect(canvas)
+        background = self._scene.background_color
+        if background.alpha() > 0:
+            painter.fillRect(canvas, background)
+        option = QStyleOptionGraphicsItem()
+        for gitem in self._scene.items(Qt.SortOrder.AscendingOrder):
+            if not isinstance(gitem, SnapGraphicsItem) or not gitem.isVisible():
+                continue
+            if not gitem.sceneBoundingRect().intersects(rect):
+                continue
+            painter.save()
+            painter.setTransform(gitem.sceneTransform(), True)
+            painter.setOpacity(gitem.effectiveOpacity())
+            gitem.paint(painter, option, None)
+            painter.restore()
+        painter.end()
+        return image
+
     def render_layer_region(
         self,
         layer_id: str,

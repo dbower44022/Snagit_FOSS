@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Blur, Highlighter &amp; Eyedropper Tools</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.10</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.11</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Blur / Pixelate · Highlighter · Eyedropper</dd>
-    <dt>Document version</dt><dd>1.10</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 23:53</dd>
+    <dt>Document version</dt><dd>1.11</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 23:49</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.11</td>
+        <td class="nowrap">09-11-26 23:49</td>
+        <td>Doug Bower</td>
+        <td>Eyedropper and Blur performance Phase 2 built: the sampling of 4.2 — the canvas composite, the four sample sizes with their arithmetic mean, and the press-and-drag live preview applied at the release.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.10</td>
         <td class="nowrap">09-11-26 23:53</td>
@@ -129,6 +136,18 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 23:49</td>
+        <td>4.2, 4.4, 8.3</td>
+        <td>Built</td>
+        <td>Eyedropper and Blur performance Phase 2 (09-12-26; notes in <code>docs/Eyedropper-Blur-Performance-Implementation.md</code>, Section 5; decision 2, option A). <strong>What is sampled.</strong> <code>RenderEngine.render_sample(rect)</code> builds the composite 4.2 describes over the sampled area, in scene coordinates at canvas scale: the canvas colour where the canvas covers the area, then every visible annotation item in stacking order, each painted with its own scene transform and effective opacity. Only <code>SnapGraphicsItem</code> instances are painted, so the grid, the guides, the crosshairs, the marching ants of a raster selection, the crop overlay's dimming and handles, and every future tool overlay are left out by construction, and so is the preview loupe, which is a widget. The render is clipped to the canvas, so a sample beyond the canvas edge is transparent whatever hangs over the pasteboard there (4.3, 8.3). This replaces a 1 by 1 <code>QGraphicsScene.render</code>, which painted no canvas colour at all: a click on empty canvas over a white canvas had reported transparent black. <strong>The sample area.</strong> <code>sample_size</code> (4.4) is 1, 3, 5, or 11, the side of the square in canvas pixels, centred on the pixel under the cursor; an unrecognised value falls back to 1. The colour is 4.2's arithmetic mean of the red, green, and blue channels of every pixel in the area, with a transparent pixel left out of the mean, since it has no colour to contribute; the result's alpha is the mean over every pixel in the area, so an area half beyond the canvas comes back half transparent and an area with nothing in it comes back fully transparent, which is what "transparent" means in 4.3 and in the 8.3 row. <strong>The press, the drag, and the release.</strong> A press previews the colour under the cursor and applies nothing; a drag keeps previewing it as the cursor moves, which the Tool Options Bar's colour display follows through a new preview callback; and the release applies the colour under the cursor at that moment, which is what a plain click does too. A focus loss or Escape drops the drag and applies nothing. <code>pick_serial</code> counts applied samples only, so a preview never looks like a pick to the momentary Alt mode or to the colour picker. The bar's colour display reads "transparent" for a transparent sample rather than showing black.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-11-26 23:49</td>
+        <td>4.2, 4.4</td>
+        <td>Departure</td>
+        <td>Departures in Phase 2 (notes Section 5). 4.4 names <code>sample_size</code> an enum over "1x1", "3x3", "5x5", and "11x11"; it is stored as the side of the square in canvas pixels (1, 3, 5, 11), which carries the same four values, lets the label be derived, and lets a preset or a theme store it as a plain number. 4.2 does not say what alpha a sampled colour carries or how a partly transparent area averages: a transparent pixel is left out of the colour mean and the result's alpha is the mean over the whole area. 4.2 says a click "samples the pixel color at the click position" and the drag applies "the color under the cursor at the release position"; both are applied at the release, since a click is a press and a release at one place and applying at both would apply twice. The Eyedropper now has a creation default, so it joins the preset and theme model of General UI PRD 5.2 as that section's Eyedropper line said it would not.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 23:53</td>
         <td>2.10, 8.1</td>

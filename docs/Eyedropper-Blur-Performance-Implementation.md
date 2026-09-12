@@ -1,6 +1,6 @@
 # Eyedropper and Blur Performance Implementation Notes
 
-Last Updated: 09-11-26 23:55 · Revision 1.2
+Last Updated: 09-11-26 23:50 · Revision 1.3
 
 Implements the Eyedropper's Section 4 whole and the Blur / Pixelate tool's remaining Performance rows from the Blur, Highlighter, and Eyedropper Tools PRD (`PRDs/SnapMock-Blur-Highlighter-Eyedropper-Tools-PRD.html`, version 1.8 at the start), with the General UI PRD (version 2.22) and Technical Architecture PRD (version 1.34) rows they own, in the five phases and the close-out defined by `docs/Eyedropper-Blur-Performance-Kickoff-Prompt.md` (revision 1.0). A session pasting that prompt starts at the first phase not marked done in Section 1. `docs/General-UI-Implementation-Kickoff-Prompt.md` (revision 1.1) governs the standards; the General UI implementation notes (`docs/General-UI-Implementation.md`) hold the walk table of Section 17.2. Finishing this work closes the Blur, Highlighter, and Eyedropper Tools PRD.
 
@@ -11,8 +11,8 @@ Starting state, verified at commit 1bafbad on 09-11-26 (the kickoff names 314beb
 | Phase | Scope | Status | Commits |
 |---|---|---|---|
 | 1 | The Blur tool's performance (Blur PRD 2.10, 8.1): the decisions and these notes, the render's remaining rows, close-out | Done | 668d0c1, b218275, then this commit |
-| 2 | Sampling (4.2): the four sample sizes, the arithmetic mean, the press-and-drag live sample | In progress | |
-| 3 | The preview loupe (4.3) | Not started | |
+| 2 | Sampling (4.2): the four sample sizes, the arithmetic mean, the press-and-drag live sample | Done | this commit |
+| 3 | The preview loupe (4.3) | In progress | |
 | 4 | The properties and the Tool Options Bar (4.4, 4.5) | Not started | |
 | 5 | Applying the colour, the Alt mode, and the hints (4.6, 4.7, 4.8, 6.2) | Not started | |
 | Close-out | PRD rows, the General UI notes' Section 24 pointer, the freeform blur notes' Section 10 pointer, the display checks owed | Not started | |
@@ -116,10 +116,27 @@ The 8.1 performance rows are met, the Gaussian inside 100 ms and Pixelate inside
 
 **Next required step:** Phase 2, sampling (Blur PRD 4.2) — what the Eyedropper reads per decision 2, `sample_size` with its four values and the arithmetic mean, and a press-and-drag that samples continuously and applies the colour under the cursor at the release.
 
+## 5. What Phase 2 built
+
+One commit, both steps together, as the freeform blur work's phases were: the sampling and its close-out share the Blur PRD rows.
+
+`RenderEngine.render_sample(rect)` (Technical Architecture PRD 3.9): the composite of 4.2 over the sampled area in scene coordinates at canvas scale — the canvas colour where the canvas covers the area, then every visible `SnapGraphicsItem` in stacking order, each with its own scene transform and effective opacity — clipped to the canvas. `SAMPLE_SIZES` and `DEFAULT_SAMPLE_SIZE` in `config/constants.py`. In `tools/eyedropper_tool.py`: `sample_rect` and `average_color` as module functions, `sample_size` reading `creation_defaults`, `sample_image` and `sample_at`, a preview callback beside the pick callback, and the press, move, release, and cancel of the drag. In `ui/tool_options_bar.py`: the preview callback wired to the colour display, and "transparent" in place of black for a sample with no alpha.
+
+Silences found while building:
+
+- A vector item's edge is antialiased, so a sample straddling one is a blend of the two colours and not either of them. That is correct — 4.2 names antialiased areas as a reason for the wider sample sizes — but it means the tests that check the arithmetic use a raster item, whose pixels land one for one on the canvas.
+- The press applies nothing. 4.2 reads as though a click samples at the press and a drag samples at the release; a click is a press and a release at one place, so applying at both would apply twice. The release is the one that applies, and the press and the moves preview.
+- `pick_serial` counts applied samples only. The momentary Alt mode compares the serial before and after to tell whether a pick happened, so a preview must not move it.
+- The Eyedropper's first creation default puts it into `ToolThemeManager.tool_ids`, which is every tool that has any, so the preset dropdown appears on its bar from this phase rather than from Phase 4. That is the silence the kickoff decided; General UI PRD 5.2's Eyedropper line is corrected in the close-out of the work.
+- `render_sample` walks every item rather than the top-level items, as `render_below` does: a group paints nothing itself and each member carries the group's transform in its own `sceneTransform`, so walking all of them paints each once, in the right place.
+
+**Next required step:** Phase 3, the preview loupe (Blur PRD 4.3) — a 120 pixel circular window at 8 times magnification per decision 1, as a widget over the canvas view's viewport.
+
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 09-11-26 23:50 | Claude (Claude Code) | Phase 2, sampling (Blur PRD 4.2, 4.4, 8.3): Section 5 with what was built, the five silences found while building, and the next required step; the phase-table row done. Blur PRD 1.11. |
 | 1.2 | 09-11-26 23:55 | Claude (Claude Code) | Phase 1 close-out: Section 4.1 with the Blur PRD rows, the departures that stay permanent, and the next required step; the phase-table row done. Blur PRD 1.10. |
 | 1.1 | 09-11-26 23:47 | Claude (Claude Code) | Phase 1 step 2: decision 4 option C built in `snapmock/items/shadow.py` — float32, all four channels in one array, and a direct sum of shifted slices at a narrow box. Section 3's step 2 with the four silences found while building, and Section 4's measured render times before and after: 2.10's 100 ms is met at every radius for a 1000 by 1000 px region. |
 | 1.0 | 09-11-26 22:58 | Claude (Claude Code) | Initial notes: the starting state at commit 1bafbad, the phase table, the four decisions (1 B, 2 A, 3 A, 4 C) and the kickoff's six silences as chosen 09-11-26, three corrections to the kickoff found in the reading, and the measurement that retired decision 4's option B and produced option C. Blur PRD 1.9, General UI PRD 2.23, Technical Architecture PRD 1.35. |

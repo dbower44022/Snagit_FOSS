@@ -788,12 +788,26 @@ class ToolOptionsBar(QToolBar):
         fill.clicked.connect(lambda: self._apply_picked("fill_color"))
         self.addWidget(fill)
         tool.set_pick_callback(self._on_color_picked)
+        # The colour display follows the cursor while a drag lasts (Blur PRD 4.2)
+        tool.set_preview_callback(self._on_color_picked)
         self._on_color_picked(tool.picked_color)
 
     def _on_color_picked(self, color: QColor) -> None:
         if self._eyedropper_swatch is None or self._eyedropper_hex is None:
             return
         pixmap = QPixmap(SWATCH_SIZE, SWATCH_SIZE)
+        if color.isValid() and color.alpha() == 0:
+            # Nothing on the canvas there: 4.2's transparent sample, not black
+            pixmap.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(pixmap)
+            painter.setPen(Qt.GlobalColor.gray)
+            painter.drawRect(0, 0, SWATCH_SIZE - 1, SWATCH_SIZE - 1)
+            painter.end()
+            self._eyedropper_hex.setText("transparent")
+            if self._eyedropper_rgb is not None:
+                self._eyedropper_rgb.setText("")
+            self._eyedropper_swatch.setPixmap(pixmap)
+            return
         if color.isValid():
             pixmap.fill(color)
             self._eyedropper_hex.setText(color.name().upper())

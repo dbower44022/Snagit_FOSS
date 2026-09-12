@@ -187,7 +187,16 @@ def test_eyedropper_pick_lands_in_the_picker_and_restores_the_tool(
         Qt.MouseButton.LeftButton,
         Qt.KeyboardModifier.NoModifier,
     )
+    release = QMouseEvent(
+        QMouseEvent.Type.MouseButtonRelease,
+        QPointF(view_pos),
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+    # The release applies the colour under the cursor at that moment (Blur PRD 4.2).
     assert eyedropper.mouse_press(press)
+    assert eyedropper.mouse_release(release)
     assert seen and seen[-1] == QColor("#123456")
     assert picker.color == QColor("#123456")
     assert main_window.tool_manager.active_tool_id == "rectangle"

@@ -411,3 +411,16 @@ class LabelPosition(Enum):
     LEFT = "left"
     TOP = "top"
     BOTTOM = "bottom"
+
+
+# --- Eyedropper (Blur, Highlighter & Eyedropper PRD Sections 4.2, 4.4) ---
+SAMPLE_SIZES: tuple[int, ...] = (1, 3, 5, 11)
+"""The four sample areas of 4.2, as the side of the square in canvas pixels.
+
+4.4 names the property an enum over "1x1", "3x3", "5x5", and "11x11"; the side length
+carries the same four values, the label is derived from it, and a preset or a theme stores
+it as a plain number (Eyedropper and Blur performance Phase 2).
+"""
+
+DEFAULT_SAMPLE_SIZE = 1
+"""4.4's default: the exact pixel under the cursor."""
