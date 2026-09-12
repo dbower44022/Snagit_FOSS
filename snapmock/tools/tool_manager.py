@@ -42,6 +42,7 @@ class ToolManager(QObject):
         self._tools: dict[str, BaseTool] = {}
         self._active_tool: BaseTool | None = None
         self._previous_tool_id: str | None = None
+        self._last_tool_id: str | None = None
 
     # --- registration ---
 
@@ -68,11 +69,25 @@ class ToolManager(QObject):
             return self._active_tool.tool_id
         return ""
 
+    @property
+    def previous_tool_id(self) -> str | None:
+        """The tool a temporary activation will return to: the Space-bar pan's and the
+        momentary eyedropper's."""
+        return self._previous_tool_id
+
+    @property
+    def last_tool_id(self) -> str | None:
+        """The tool that was active before the current one, by whatever route — what Blur
+        PRD 4.6 calls the previously active tool."""
+        return self._last_tool_id
+
     def activate(self, tool_id: str) -> None:
         """Switch to the tool identified by *tool_id*."""
         tool = self._tools.get(tool_id)
         if tool is None:
             return
+        if self._active_tool is not None and self._active_tool.tool_id != tool_id:
+            self._last_tool_id = self._active_tool.tool_id
         if self._active_tool is not None:
             self._active_tool.cancel()
             self._active_tool.deactivate()

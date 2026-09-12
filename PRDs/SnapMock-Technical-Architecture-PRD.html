@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Technical Architecture</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.36</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.37</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Scene graph · Layers · Tools · Selection · Raster operations · Commands · File I/O · Rendering · Data models · Plugins · Platforms · Performance</dd>
-    <dt>Document version</dt><dd>1.36</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 23:55</dd>
+    <dt>Document version</dt><dd>1.37</dd>
+    <dt>Last Updated</dt>    <dd>09-12-26 00:15</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.37</td>
+        <td class="nowrap">09-12-26 00:15</td>
+        <td>Doug Bower</td>
+        <td>Eyedropper and Blur performance Phase 5 built: Section 3.7's command types gain ApplyEyedropperColorCommand and Section 10 gains commands/eyedropper_commands.py.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.36</td>
         <td class="nowrap">09-11-26 23:55</td>
@@ -378,6 +385,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-12-26 00:15</td>
+        <td>3.7, 10</td>
+        <td>Built</td>
+        <td>Eyedropper and Blur performance Phase 5 (09-12-26). Section 3.7's command types gain <code>ApplyEyedropperColorCommand</code> (Blur, Highlighter and Eyedropper Tools PRD 6.2), one entry with its own undo: it sets one colour property to a sampled colour on every selected item that carries it as a colour and restores each item's own previous value, so it replaces the <code>MacroCommand</code> of <code>ModifyPropertyCommand</code>s the Eyedropper's Apply buttons pushed. Section 10 gains <code>commands/eyedropper_commands.py</code>. <code>ToolManager</code> gains <code>previous_tool_id</code> and <code>last_tool_id</code>, which 4.6's first apply route reads to find the tool the Eyedropper was reached from; the event routing of Section 5.3 is unchanged.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 23:55</td>
         <td>3.9, 10</td>
@@ -2068,6 +2081,7 @@ docstring.</p>
         blur_commands.py          # Blur commands — the freeform mask edit of Blur PRD 6.1
         canvas_property_commands.py # Canvas property commands — undoable canvas colour and DPI changes
         canvas_transform_commands.py # Canvas transform commands — rotate and flip the entire…
+        eyedropper_commands.py    # Apply Eyedropper Color of Blur PRD 6.2, one entry for a whole selection
         geometry_commands.py      # Geometry commands — the point edits of Basic Shape PRD 11.3 to 11.5
         group_commands.py         # Group commands — Group and Ungroup of General UI PRD 3.6, both undoable
         guide_commands.py         # Guide commands — undoable add, move, remove, and clear of guides

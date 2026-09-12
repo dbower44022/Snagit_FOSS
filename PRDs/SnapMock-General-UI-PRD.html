@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.24</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.25</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.24</dd>
-    <dt>Last Updated</dt>    <dd>09-12-26 00:05</dd>
+    <dt>Document version</dt><dd>2.25</dd>
+    <dt>Last Updated</dt>    <dd>09-12-26 00:15</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.25</td>
+        <td class="nowrap">09-12-26 00:15</td>
+        <td>Doug Bower</td>
+        <td>Eyedropper and Blur performance Phase 5 built: 12.2's Alt convention keeps its drawing meaning while a drag lasts, and the momentary eyedropper gains the loupe and the per-tool colour property.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>2.24</td>
         <td class="nowrap">09-12-26 00:05</td>
@@ -325,6 +332,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-12-26 00:15</td>
+        <td>12.2, 6.6</td>
+        <td>Built</td>
+        <td>Eyedropper and Blur performance Phase 5 (09-12-26). The momentary eyedropper of 12.2 is unchanged in its wording and gains three things from the Blur, Highlighter and Eyedropper Tools PRD's Section 4.7: the preview loupe appears on the Alt key press, before any click, wherever the pointer already is; the status bar names the tool the colour is being picked for; and the release applies the colour to that tool's own primary colour property rather than always to the stroke colour — the stroke colour for a shape tool, the highlight colour for the Highlighter, the text colour for the Text tool, and the badge colour for the Numbered Step tool, with a tool that carries no colour at all taking nothing. <strong>The conflict between the two Alt conventions is resolved in favour of this document.</strong> Section 4.7 of the tool PRD asks that Alt+click during an in-progress drawing operation sample a colour and let the drawing continue; 12.2 gives Alt "draw from center" while drawing, and that convention is built and relied on by every drag-drawn shape, by point editing, where Alt breaks a curve's continuity, and by brush editing, where Alt erases. One key cannot carry both meanings at once, so Alt keeps the meaning 12.2 gives it while a drag lasts and the momentary eyedropper stands down, as it did before this work; the tool PRD carries the departure row. Alt also stands down while the Zoom tool is active, as the 2.1 row already records, and during inline text editing, which 4.7 asks for and the Text tool already produced by reporting an open editor as an active operation.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-12-26 00:05</td>
         <td>5.2, 5.3</td>

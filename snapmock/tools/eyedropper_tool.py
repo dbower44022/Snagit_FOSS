@@ -68,6 +68,23 @@ def average_color(image: QImage) -> QColor:
     )
 
 
+_TARGET_LABELS: dict[ApplyTarget, str] = {
+    ApplyTarget.STROKE_COLOR: "Stroke Color",
+    ApplyTarget.FILL_COLOR: "Fill Color",
+    ApplyTarget.TEXT_COLOR: "Text Color",
+    ApplyTarget.HIGHLIGHT_COLOR: "Highlight Color",
+    ApplyTarget.BADGE_COLOR: "Badge Color",
+}
+"""How each target of 4.4 reads in the bar and in the hints of 4.8."""
+
+
+def _rgb_text(color: QColor) -> str:
+    """The compact red-green-blue text of 4.8's drag hint."""
+    if not color.isValid() or color.alpha() == 0:
+        return "transparent"
+    return f"rgb {color.red()},{color.green()},{color.blue()}"
+
+
 def format_color_value(color: QColor, color_format: ColorFormat) -> str:
     """*color* written as 4.4's three formats, in 4.4's own spelling.
 
@@ -104,6 +121,7 @@ class EyedropperTool(BaseTool):
         self._sampling = False
         self._loupe: LoupeOverlay | None = None
         self._history: list[QColor] = []
+        self._momentary_from: str | None = None
         # 4.4's tool-session properties. The four the bar edits are creation defaults, so a
         # preset and a theme capture them; last_sampled_color and the history do not persist.
         self._creation_defaults["sample_size"] = DEFAULT_SAMPLE_SIZE
@@ -278,6 +296,7 @@ class EyedropperTool(BaseTool):
 
     def deactivate(self) -> None:
         self.hide_loupe()
+        self._momentary_from = None
         super().deactivate()
 
     def cancel(self) -> None:
@@ -308,6 +327,7 @@ class EyedropperTool(BaseTool):
         self._sampling = True
         self._preview(self.sample_at(self._scene_pos(event)))
         self.update_loupe(event.pos())
+        self.show_hint()
         return True
 
     def mouse_move(self, event: QMouseEvent) -> bool:
@@ -319,6 +339,7 @@ class EyedropperTool(BaseTool):
         if not self._sampling:
             return False
         self._preview(self.sample_at(self._scene_pos(event)))
+        self.show_hint()
         return True
 
     def mouse_release(self, event: QMouseEvent) -> bool:
@@ -333,6 +354,47 @@ class EyedropperTool(BaseTool):
         self._apply(color)
         return True
 
+    # ---- the momentary Alt mode (4.7) ----
+
+    @property
+    def momentary_from(self) -> str | None:
+        """The display name of the tool Alt was held from, while the momentary mode
+        lasts (4.7, 4.8); None when the Eyedropper is the chosen tool."""
+        return self._momentary_from
+
+    def set_momentary_from(self, display_name: str | None) -> None:
+        self._momentary_from = display_name
+
+    # ---- the status bar hints (4.8) ----
+
     @property
     def status_hint(self) -> str:
-        return "Click to sample color"
+        target = _TARGET_LABELS.get(self.apply_target, "Stroke Color")
+        if self._momentary_from is not None:
+            return (
+                f"Eyedropper: click to sample color for {self._momentary_from}. "
+                "Release Alt to cancel."
+            )
+        if self._sampling:
+            color = self._preview_color
+            return (
+                f"Sampling: {format_color_value(color, ColorFormat.HEX)} "
+                f"({_rgb_text(color)}). Release to apply."
+            )
+        if self._picked_color.isValid() and self._picked_color.alpha() > 0:
+            return (
+                f"Sampled: {format_color_value(self._picked_color, ColorFormat.HEX)}. "
+                f"Applied to {target}. Click to sample again."
+            )
+        size = self.sample_size
+        return (
+            f"Click to sample a color. Drag to preview. Sample: {size}x{size} | Target: {target}."
+        )
+
+    def show_hint(self) -> None:
+        """Push the hint of the moment into the status bar (4.8)."""
+        view = self._view
+        window = view.window() if view is not None else None
+        show = getattr(window, "show_status_hint", None)
+        if callable(show):
+            show(self.status_hint)

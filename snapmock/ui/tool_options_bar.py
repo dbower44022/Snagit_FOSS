@@ -50,8 +50,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from snapmock.commands.macro_command import MacroCommand
-from snapmock.commands.modify_property import ModifyPropertyCommand
+from snapmock.commands.eyedropper_commands import ApplyEyedropperColorCommand
 from snapmock.config.constants import (
     BADGE_SIZE_MAX,
     BADGE_SIZE_MIN,
@@ -80,7 +79,6 @@ from snapmock.ui.color_picker import ColorPicker
 from snapmock.ui.unmet_requirements import check_requirements
 
 if TYPE_CHECKING:
-    from snapmock.core.command_stack import BaseCommand
     from snapmock.core.selection_manager import SelectionManager
     from snapmock.core.tool_themes import ToolThemeManager
     from snapmock.tools.base_tool import BaseTool
@@ -873,8 +871,11 @@ class ToolOptionsBar(QToolBar):
         fmt = QComboBox()
         fmt.setMaximumHeight(_CONTROL_HEIGHT)
         fmt.setAccessibleName("Color format")
-        for label, item in (("Hex", ColorFormat.HEX), ("RGB", ColorFormat.RGB),
-                            ("HSL", ColorFormat.HSL)):
+        for label, item in (
+            ("Hex", ColorFormat.HEX),
+            ("RGB", ColorFormat.RGB),
+            ("HSL", ColorFormat.HSL),
+        ):
             fmt.addItem(label, item)
         fmt.currentIndexChanged.connect(
             lambda _i: self._write_eyedropper("color_format", fmt.currentData())
@@ -895,9 +896,9 @@ class ToolOptionsBar(QToolBar):
             button.setAccessibleName(f"{size}x{size} sample")
             button.setMaximumHeight(_CONTROL_HEIGHT)
             button.toggled.connect(
-                lambda checked, s=size: self._write_eyedropper("sample_size", s)
-                if checked
-                else None
+                lambda checked, s=size: (
+                    self._write_eyedropper("sample_size", s) if checked else None
+                )
             )
             group.addButton(button)
             self.addWidget(button)
@@ -1059,20 +1060,55 @@ class ToolOptionsBar(QToolBar):
         self._apply_picked(tool.apply_target.value, history[index])
 
     def _apply_picked(self, key: str, color: QColor) -> None:
-        """Apply *color* to the selected items, else to every tool's matching default."""
+        """Apply *color* to *key*, by the three routes of Blur PRD 4.6 in its order.
+
+        The routes are not exclusive, because they answer different questions. The tool
+        the Eyedropper was reached from takes the colour as its creation default, so it is
+        ready when the user switches back (route 1); a selection takes it on the items
+        themselves, as one undoable command (route 2, and ``ApplyEyedropperColorCommand``
+        of 6.2); and when there is neither a previous tool nor a selection, every tool
+        that carries the property takes the colour, which is the closest thing the
+        application has to route 3's active stroke colour.
+        """
         if not color.isValid() or color.alpha() == 0:
             return
-        if self._selection is not None and self._selection.count:
-            scene = None
-            commands: list[BaseCommand] = []
-            for item in self._selection.items:
-                if isinstance(item, SnapGraphicsItem) and hasattr(item, key):
-                    commands.append(ModifyPropertyCommand(item, key, getattr(item, key), color))
-                    scene = item.scene()
-            if commands and scene is not None and hasattr(scene, "command_stack"):
-                label = "Apply to Stroke" if key == "stroke_color" else "Apply to Fill"
-                scene.command_stack.push(MacroCommand(commands, label))
-                return
+        applied = self._apply_to_previous_tool(key, color)
+        applied = self._apply_to_selection(key, color) or applied
+        if not applied:
+            self._apply_to_every_tool(key, color)
+
+    def _apply_to_previous_tool(self, key: str, color: QColor) -> bool:
+        """Route 1: the tool the Eyedropper was reached from takes the colour (4.6)."""
+        tool_id = self._tool_manager.previous_tool_id or self._tool_manager.last_tool_id
+        if tool_id is None:
+            return False
+        other = self._tool_manager.tool(tool_id)
+        if other is None or key not in other.creation_defaults:
+            return False
+        other.creation_defaults[key] = QColor(color)
+        self._tool_manager.tool_defaults_changed.emit(tool_id)
+        return True
+
+    def _apply_to_selection(self, key: str, color: QColor) -> bool:
+        """Route 2: the selected items take the colour, undoably (4.6, 6.2)."""
+        if self._selection is None or not self._selection.count:
+            return False
+        items = [
+            item
+            for item in self._selection.items
+            if isinstance(item, SnapGraphicsItem) and hasattr(item, key)
+        ]
+        if not items:
+            return False
+        scene = items[0].scene()
+        if scene is None or not hasattr(scene, "command_stack"):
+            return False
+        scene.command_stack.push(ApplyEyedropperColorCommand(items, key, color))
+        return True
+
+    def _apply_to_every_tool(self, key: str, color: QColor) -> None:
+        """Route 3: with no previous tool and no selection, every tool that carries the
+        property takes the colour (4.6)."""
         for tool_id in self._tool_manager.tool_ids:
             other = self._tool_manager.tool(tool_id)
             if other is not None and key in other.creation_defaults:

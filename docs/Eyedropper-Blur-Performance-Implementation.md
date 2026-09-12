@@ -1,6 +1,6 @@
 # Eyedropper and Blur Performance Implementation Notes
 
-Last Updated: 09-12-26 00:06 · Revision 1.5
+Last Updated: 09-12-26 00:16 · Revision 1.6
 
 Implements the Eyedropper's Section 4 whole and the Blur / Pixelate tool's remaining Performance rows from the Blur, Highlighter, and Eyedropper Tools PRD (`PRDs/SnapMock-Blur-Highlighter-Eyedropper-Tools-PRD.html`, version 1.8 at the start), with the General UI PRD (version 2.22) and Technical Architecture PRD (version 1.34) rows they own, in the five phases and the close-out defined by `docs/Eyedropper-Blur-Performance-Kickoff-Prompt.md` (revision 1.0). A session pasting that prompt starts at the first phase not marked done in Section 1. `docs/General-UI-Implementation-Kickoff-Prompt.md` (revision 1.1) governs the standards; the General UI implementation notes (`docs/General-UI-Implementation.md`) hold the walk table of Section 17.2. Finishing this work closes the Blur, Highlighter, and Eyedropper Tools PRD.
 
@@ -14,8 +14,8 @@ Starting state, verified at commit 1bafbad on 09-11-26 (the kickoff names 314beb
 | 2 | Sampling (4.2): the four sample sizes, the arithmetic mean, the press-and-drag live sample | Done | this commit |
 | 3 | The preview loupe (4.3) | Done | this commit |
 | 4 | The properties and the Tool Options Bar (4.4, 4.5) | Done | this commit |
-| 5 | Applying the colour, the Alt mode, and the hints (4.6, 4.7, 4.8, 6.2) | In progress | |
-| Close-out | PRD rows, the General UI notes' Section 24 pointer, the freeform blur notes' Section 10 pointer, the display checks owed | Not started | |
+| 5 | Applying the colour, the Alt mode, and the hints (4.6, 4.7, 4.8, 6.2) | Done | this commit |
+| Close-out | PRD rows, the General UI notes' Section 24 pointer, the freeform blur notes' Section 10 pointer, the display checks owed | In progress | |
 
 ## 2. Decisions
 
@@ -162,10 +162,26 @@ Silences found while building:
 
 **Next required step:** Phase 5, applying the colour, the Alt mode, and the hints (Blur PRD 4.6, 4.7, 4.8, 6.2).
 
+## 8. What Phase 5 built
+
+One commit, both steps together. `snapmock/commands/eyedropper_commands.py` (Technical Architecture PRD Section 10 and 3.7) with `ApplyEyedropperColorCommand`. In `tools/tool_manager.py`: `previous_tool_id` and `last_tool_id`, the latter recorded on every switch to a different tool. In `tools/eyedropper_tool.py`: `_TARGET_LABELS`, `_rgb_text`, `momentary_from` and `set_momentary_from`, the four hints of 4.8 in `status_hint`, and `show_hint`, pushed from the press, each move, and the release. In `ui/tool_options_bar.py`: `_apply_picked` split into the three routes of 4.6, `_apply_to_previous_tool`, `_apply_to_selection` (through the command), and `_apply_to_every_tool`. In `main_window.py`: `MOMENTARY_PICK_KEYS` and `momentary_pick_key`, the Alt press setting the momentary context and showing the loupe under the pointer, the Alt release clearing both, `_apply_momentary_pick` using the per-tool property, and the colour picker's route calling the bar's `show_picked_color` rather than its pick callback, so a picker pick is shown and remembered without being applied to the Eyedropper's own target.
+
+Silences found while building:
+
+- **4.7's mid-drag row cannot be built.** Its second behaviour detail asks that Alt during a drawing operation sample a colour; General UI PRD 12.2 gives Alt "draw from center" while drawing, and that is built and relied on by every drag-drawn shape, by point editing, where Alt breaks a curve's continuity, and by brush editing, where Alt erases. One key cannot carry both meanings, so Alt keeps its drawing meaning while a drag lasts and the momentary eyedropper stands down, as before this work. Both PRDs carry the row. This is the one row of Section 4 that is not built, and it is a permanent departure rather than a deferral.
+- Alt already stood down during inline text editing. The Text tool reports an open editor as an active operation and the Alt branch refuses one, so the row of 4.7 was met before this work; a test now pins it, as the kickoff's silence said it would.
+- 4.6's three routes are not alternatives. A previous tool and a selection can both exist, and they answer different questions — what the next item will look like, and what the selected items look like now — so the first two routes both run and the third runs only when neither did.
+- 4.6's "application's active `stroke_color`" has no single home: the application keeps a stroke colour per tool. Route three writes the property on every tool that carries it, which is what the Apply buttons did.
+- The momentary Alt mode ignores `apply_target`. 4.7 names the property per tool, which is why `apply_target` carries five values and 4.5's dropdown offers three.
+- A pick routed through the colour picker is shown in the bar and remembered in the history, and it is not applied to the Eyedropper's target: the user opened the picker to set one particular colour, and applying it twice would be a surprise.
+
+**Next required step:** the close-out of the work — the PRD rows for what was built and where it departs, the General UI notes' Section 24 pointer, the freeform blur notes' Section 10 pointer, the display checks carried forward, and a full-suite run.
+
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.6 | 09-12-26 00:16 | Claude (Claude Code) | Phase 5, applying the colour, the Alt mode, and the hints (Blur PRD 4.6, 4.7, 4.8, 6.2, 8.3): Section 8 with what was built and the six silences found while building, including the permanent departure of 4.7's mid-drag row against General UI PRD 12.2's Alt convention; the phase-table row done. Blur PRD 1.14, General UI PRD 2.25, Technical Architecture PRD 1.37. |
 | 1.5 | 09-12-26 00:06 | Claude (Claude Code) | Phase 4, the properties and the Tool Options Bar (Blur PRD 4.4, 4.5, 8.3): Section 7 with what was built, the six silences found while building, and the next required step; the phase-table row done. Blur PRD 1.13, General UI PRD 2.24. |
 | 1.4 | 09-11-26 23:56 | Claude (Claude Code) | Phase 3, the preview loupe (Blur PRD 4.3, 8.3): Section 6 with what was built, the six silences found while building, and the next required step; the phase-table row done. Blur PRD 1.12, Technical Architecture PRD 1.36 (Section 10 gains `ui/loupe_overlay.py`). |
 | 1.3 | 09-11-26 23:50 | Claude (Claude Code) | Phase 2, sampling (Blur PRD 4.2, 4.4, 8.3): Section 5 with what was built, the five silences found while building, and the next required step; the phase-table row done. Blur PRD 1.11. |

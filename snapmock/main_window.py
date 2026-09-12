@@ -13,6 +13,7 @@ from PyQt6.QtGui import (
     QActionGroup,
     QCloseEvent,
     QColor,
+    QCursor,
     QDesktopServices,
     QKeyEvent,
     QKeySequence,
@@ -40,6 +41,8 @@ if TYPE_CHECKING:
     from datetime import datetime
 
     from PyQt6.QtWidgets import QGraphicsItem
+
+    from snapmock.tools.base_tool import BaseTool
 
 from snapmock.capture.manager import CaptureManager
 from snapmock.capture.models import (
@@ -154,6 +157,30 @@ MODE_ACTIONS = {
     CaptureMode.ACTIVE_WINDOW: HOTKEY_ACTION_WINDOW,
     CaptureMode.FULL_SCREEN: HOTKEY_ACTION_FULL_SCREEN,
 }
+MOMENTARY_PICK_KEYS: dict[str, str] = {
+    "highlight": "highlight_color",
+    "numbered_step": "badge_color",
+    "text": "text_color",
+}
+"""Blur PRD 4.7's per-tool primary colour property for the momentary Alt mode; every other
+tool takes the stroke colour."""
+
+
+def momentary_pick_key(tool: BaseTool) -> str | None:
+    """Which colour property a colour picked while Alt was held sets on *tool* (4.7).
+
+    None when the tool carries no colour property at all, as the Select, Crop, Pan, and
+    Zoom tools do not: nothing is applied and nothing is lost.
+    """
+    wanted = MOMENTARY_PICK_KEYS.get(tool.tool_id, "stroke_color")
+    if wanted in tool.creation_defaults:
+        return wanted
+    for fallback in ("stroke_color", "text_color", "badge_color", "highlight_color"):
+        if fallback in tool.creation_defaults:
+            return fallback
+    return None
+
+
 # Tools that are held or momentary and never restored as the last-used tool.
 TRANSIENT_TOOLS = frozenset({"pan", "zoom", "eyedropper"})
 TRAY_UNAVAILABLE_MESSAGE = (
@@ -1818,12 +1845,22 @@ class MainWindow(QMainWindow):
         self._status_bar.setVisible(checked)
         self._settings.set_status_bar_visible(checked)
 
-    def _apply_momentary_pick(self) -> None:
-        """A colour picked while Alt was held becomes the returned-to tool's stroke colour.
+    def _show_loupe_at_cursor(self, eyedropper: EyedropperTool) -> None:
+        """Put the loupe where the pointer is, without waiting for a move (4.7)."""
+        viewport = self._view.viewport()
+        if viewport is None:
+            return
+        local = viewport.mapFromGlobal(QCursor.pos())
+        if viewport.rect().contains(local):
+            eyedropper.update_loupe(local)
 
-        The Eyedropper PRD's apply target defaults to the stroke colour of the
-        previously active tool (Section 4.5); the General UI PRD's Apply buttons
-        cover the explicit Eyedropper tool.
+    def _apply_momentary_pick(self) -> None:
+        """A colour picked while Alt was held becomes the returned-to tool's primary colour.
+
+        Blur PRD 4.7 names the property per tool: the stroke colour for a shape tool, the
+        highlight colour for the Highlighter, the text colour for the Text tool, and the
+        badge colour for the Numbered Step tool. The Eyedropper's own Apply Target (4.4)
+        is not consulted here: the momentary mode is about the tool being used.
         """
         eyedropper = self._tool_manager.tool("eyedropper")
         if not isinstance(eyedropper, EyedropperTool):
@@ -1831,9 +1868,12 @@ class MainWindow(QMainWindow):
         if eyedropper.pick_serial == self._momentary_pick_serial:
             return
         tool = self._tool_manager.active_tool
-        if tool is None or "stroke_color" not in tool.creation_defaults:
+        if tool is None:
             return
-        tool.creation_defaults["stroke_color"] = eyedropper.picked_color
+        key = momentary_pick_key(tool)
+        if key is None:
+            return
+        tool.creation_defaults[key] = eyedropper.picked_color
         self._tool_manager.tool_defaults_changed.emit(tool.tool_id)
 
     def _apply_tab_order(self) -> None:
@@ -3404,8 +3444,9 @@ class MainWindow(QMainWindow):
         def _picked(color: QColor) -> None:
             eyedropper.set_pick_callback(bar_callback)
             self._picker_pick_active = False
-            if bar_callback is not None:
-                bar_callback(color)
+            # The bar shows the sample and remembers it; the colour is applied by the
+            # picker the user opened, not by the Eyedropper's Apply Target (Blur PRD 4.6).
+            self._tool_options.show_picked_color(color)
             self._tool_manager.restore_previous()
             deliver(color)
 
@@ -4160,7 +4201,7 @@ class MainWindow(QMainWindow):
 
     def _space_held(self) -> bool:
         """Whether Space is currently held for temporary pan."""
-        return self._tool_manager._previous_tool_id is not None  # noqa: SLF001
+        return self._tool_manager.previous_tool_id is not None
 
     def keyPressEvent(self, event: QKeyEvent | None) -> None:  # noqa: N802
         if event is None:
@@ -4188,10 +4229,17 @@ class MainWindow(QMainWindow):
             active = self._tool_manager.active_tool
             if active is None or not active.is_active_operation:
                 self._momentary_tool = "eyedropper"
+                from_name = active.display_name if active is not None else None
                 eyedropper = self._tool_manager.tool("eyedropper")
                 if isinstance(eyedropper, EyedropperTool):
                     self._momentary_pick_serial = eyedropper.pick_serial
                 self._tool_manager.activate_temporary("eyedropper")
+                if isinstance(eyedropper, EyedropperTool):
+                    # 4.7: the loupe appears on the key press, before any click, and the
+                    # hint names the tool the colour is being picked for
+                    eyedropper.set_momentary_from(from_name)
+                    self._show_loupe_at_cursor(eyedropper)
+                    eyedropper.show_hint()
                 event.accept()
                 return
 
@@ -4248,6 +4296,11 @@ class MainWindow(QMainWindow):
         # Alt release → back from the momentary eyedropper
         if event.key() == Qt.Key.Key_Alt and not event.isAutoRepeat() and self._momentary_tool:
             self._momentary_tool = None
+            eyedropper = self._tool_manager.tool("eyedropper")
+            if isinstance(eyedropper, EyedropperTool):
+                # 4.7: a preview with no click leaves everything as it was
+                eyedropper.set_momentary_from(None)
+                eyedropper.hide_loupe()
             self._tool_manager.restore_previous()
             self._apply_momentary_pick()
             event.accept()

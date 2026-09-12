@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Blur, Highlighter &amp; Eyedropper Tools</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.13</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.14</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Blur / Pixelate · Highlighter · Eyedropper</dd>
-    <dt>Document version</dt><dd>1.13</dd>
-    <dt>Last Updated</dt>    <dd>09-12-26 00:05</dd>
+    <dt>Document version</dt><dd>1.14</dd>
+    <dt>Last Updated</dt>    <dd>09-12-26 00:15</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.14</td>
+        <td class="nowrap">09-12-26 00:15</td>
+        <td>Doug Bower</td>
+        <td>Eyedropper and Blur performance Phase 5 built: the apply routes of 4.6, ApplyEyedropperColorCommand of 6.2, the momentary Alt mode of 4.7, and the four hints of 4.8. Section 4 is complete.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.13</td>
         <td class="nowrap">09-12-26 00:05</td>
@@ -150,6 +157,18 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-12-26 00:15</td>
+        <td>4.6, 4.7, 4.8, 6.2, 8.3</td>
+        <td>Built</td>
+        <td>Eyedropper and Blur performance Phase 5 (09-12-26; notes in <code>docs/Eyedropper-Blur-Performance-Implementation.md</code>, Section 8). <strong>Applying the colour (4.6).</strong> The three routes run in 4.6's order and are not exclusive, because they answer different questions: the tool the Eyedropper was reached from takes the colour as its creation default, so it is ready when the user switches back; a selection takes it on the items themselves through <code>ApplyEyedropperColorCommand</code>; and when there is neither a previous tool nor a selection, every tool that carries the property takes the colour, which is the closest thing the application has to 4.6's "application's active stroke_color". <code>ToolManager</code> gained <code>previous_tool_id</code> and <code>last_tool_id</code> for the first route. A pick routed through the colour picker's eyedropper button still lands in the picker and in its recent colours and is not applied to the Eyedropper's own target, since the user opened the picker to set one particular colour. <strong>The command (6.2).</strong> <code>snapmock/commands/eyedropper_commands.py</code> holds <code>ApplyEyedropperColorCommand</code>, which sets one colour property to the sampled colour on every selected item that carries it as a colour, remembers each item's own previous value, and describes itself as "Apply eyedropper color". It replaces the macro of <code>ModifyPropertyCommand</code>s the Apply buttons pushed: the undo entry's text changes and the behaviour does not. <strong>The momentary Alt mode (4.7).</strong> The loupe appears on the key press, before any click, at wherever the pointer already is; the status hint names the tool the colour is being picked for; the release applies the colour to that tool's own primary colour property — the stroke colour for a shape tool, the highlight colour for the Highlighter, the text colour for the Text tool, and the badge colour for the Numbered Step tool — and the Eyedropper's own Apply Target is not consulted, since the momentary mode is about the tool being used. Alt released without a click leaves everything as it was. Alt stands down during inline text editing, which it already did: the Text tool reports an open editor as an active operation and the Alt branch refuses one, and a test now pins it. <strong>The hints (4.8).</strong> All four, following the state: the idle hint naming the sample size and the target, the drag hint naming the colour under the cursor in both hexadecimal and red-green-blue, the momentary hint naming the tool, and the after-sampling hint naming what was applied and where. The 8.3 rows on the apply routes, the undoable selection change, the clipboard, the formats, the history, the momentary mode from any tool, and its standing down in text editing are met by tests. With this phase Section 4 of this document is complete.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-12-26 00:15</td>
+        <td>4.6, 4.7</td>
+        <td>Departure</td>
+        <td>Departures in Phase 5 (notes Section 8). <strong>4.7's mid-drag row is not built and is a permanent departure.</strong> Its second behaviour detail asks that Alt+click during an in-progress drawing operation activate the eyedropper temporarily and the drawing continue with the new colour; General UI PRD 12.2 gives Alt a different meaning while drawing — "draw from center" — and that convention is built, tested, and relied on by every drag-drawn shape, by point editing, where Alt breaks a curve's continuity, and by brush editing, where Alt erases. One key cannot carry both meanings mid-drag, so Alt keeps its drawing meaning while a drag lasts and the momentary eyedropper stands down, as it did before this work. The Eyedropper is still reachable mid-drag by finishing the drag, or from the Tool Palette and the I shortcut, as 4.7 already says for text editing. <strong>4.6's routes are applied together rather than as alternatives.</strong> 4.6 lists three cases, and a previous tool and a selection can both exist; the first two routes then both run, which sets the tool's default for what comes next and changes the selected items as one undoable command. Route three runs only when neither of the others does. <strong>4.6's "application's active stroke_color" has no single home:</strong> the application keeps a stroke colour per tool, so route three writes the property on every tool that carries it, which is what the Apply buttons did before this work.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-12-26 00:05</td>
         <td>4.4, 4.5, 8.3</td>
