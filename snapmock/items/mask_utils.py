@@ -12,8 +12,9 @@ from __future__ import annotations
 
 import base64
 
-from PyQt6.QtCore import QBuffer, QIODevice, Qt
-from PyQt6.QtGui import QImage
+import numpy as np
+from PyQt6.QtCore import QBuffer, QIODevice, QPointF, QRect, QRectF, Qt
+from PyQt6.QtGui import QColor, QImage, QPainter, QPen
 
 MASK_FORMAT = QImage.Format.Format_ARGB32_Premultiplied
 """Masks are premultiplied ARGB, so a painter can clip with ``DestinationIn`` directly."""
@@ -103,3 +104,75 @@ def mask_file_reference(value: object) -> str | None:
     if isinstance(value, str) and value.startswith(FILE_PREFIX):
         return value[len(FILE_PREFIX) :]
     return None
+
+
+def paint_stroke(
+    mask: QImage,
+    start: QPointF,
+    end: QPointF,
+    width: float,
+    *,
+    erase: bool = False,
+) -> QRectF:
+    """Paint one brush segment from *start* to *end* into *mask* and give the rectangle it
+    covered, in the mask's own pixels.
+
+    The brush is a round-capped, round-joined stroke *width* pixels across (2.3). With
+    *erase* the segment is taken back out of the mask instead (2.8).
+    """
+    painter = QPainter(mask)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    if erase:
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_DestinationOut)
+    pen = QPen(
+        QColor(255, 255, 255),
+        max(1.0, float(width)),
+        Qt.PenStyle.SolidLine,
+        Qt.PenCapStyle.RoundCap,
+        Qt.PenJoinStyle.RoundJoin,
+    )
+    if start == end:
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(255, 255, 255))
+        painter.drawEllipse(start, width / 2.0, width / 2.0)
+    else:
+        painter.setPen(pen)
+        painter.drawLine(start, end)
+    painter.end()
+    reach = max(1.0, float(width)) / 2.0 + 1.0
+    return QRectF(start, end).normalized().adjusted(-reach, -reach, reach, reach)
+
+
+def restore_region(mask: QImage, source: QImage, region: QRectF) -> None:
+    """Put *region* of *mask* back as *source* has it, replacing what is there.
+
+    Used while Shift holds a brush stroke straight: the straight line is redrawn from the
+    mask as it stood when the stroke began (2.11).
+    """
+    rect = region.toAlignedRect().intersected(QRect(0, 0, mask.width(), mask.height()))
+    if rect.isEmpty():
+        return
+    painter = QPainter(mask)
+    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
+    painter.drawImage(rect, source, rect)
+    painter.end()
+
+
+def painted_bounds(mask: QImage) -> QRectF:
+    """The rectangle of *mask* that carries any paint at all, empty when none does."""
+    if mask.isNull():
+        return QRectF()
+    image = mask.convertToFormat(MASK_FORMAT)
+    pointer = image.bits()
+    if pointer is None:
+        return QRectF()
+    pointer.setsize(image.sizeInBytes())
+    raw = np.frombuffer(pointer.asstring(image.sizeInBytes()), dtype=np.uint8)
+    rows = raw.reshape(image.height(), image.bytesPerLine())[:, : image.width() * 4]
+    alpha = rows.reshape(image.height(), image.width(), 4)[:, :, 3]
+    ys, xs = np.nonzero(alpha)
+    if ys.size == 0:
+        return QRectF()
+    x0, x1 = float(xs.min()), float(xs.max())
+    y0, y1 = float(ys.min()), float(ys.max())
+    return QRectF(x0, y0, x1 - x0 + 1.0, y1 - y0 + 1.0)

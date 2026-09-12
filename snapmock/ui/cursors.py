@@ -3,13 +3,14 @@
 Each cursor is a 24 px pixmap with a white halo under a black glyph so it reads on
 any canvas content, and a hotspot on the point the glyph indicates. The glyph
 cursors reuse the vendored Tabler files under ``resources/icons/tabler/``; the
-raster-selection and text-hover cursors are drawn here because no glyph matches.
+raster-selection, numbered-step, brush, and text-hover cursors are drawn here because no
+glyph matches.
 Cursors are built on first use (a QCursor needs the application) and cached.
 """
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QRect, Qt
+from PyQt6.QtCore import QPointF, QRect, Qt
 from PyQt6.QtGui import QColor, QCursor, QPainter, QPen, QPixmap
 from PyQt6.QtSvg import QSvgRenderer
 
@@ -168,6 +169,45 @@ def preview_cursor(key: str, preview: QPixmap | None) -> QCursor:
         Qt.TransformationMode.SmoothTransformation,
     )
     painter.drawPixmap(mid + 4, mid + 4, scaled)
+    painter.end()
+    cursor = QCursor(pixmap, mid, mid)
+    _cache[key] = cursor
+    return cursor
+
+
+BRUSH_CURSOR_MAX = 128
+"""A brush cursor never grows past this many screen pixels, so it stays a cursor."""
+
+
+def brush_cursor(diameter: int) -> QCursor:
+    """A circle *diameter* screen pixels across, the Blur tool's brush (Blur PRD 2.6).
+
+    The outline is black over a white halo with a centre dot, so the size reads on any
+    canvas content; the hotspot is the centre. A brush wider than
+    :data:`BRUSH_CURSOR_MAX` draws at that size, since a cursor cannot grow without end.
+    """
+    size = max(4, min(int(diameter), BRUSH_CURSOR_MAX))
+    key = f"brush-{size}"
+    cached = _cache.get(key)
+    if cached is not None:
+        return cached
+    extent = size + 6
+    mid = extent // 2
+    pixmap = QPixmap(extent, extent)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    radius = size / 2.0
+    centre = QPointF(mid, mid)
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+    painter.setPen(_halo_pen(3))
+    painter.drawEllipse(centre, radius, radius)
+    painter.setPen(QPen(_GLYPH, 1))
+    painter.drawEllipse(centre, radius, radius)
+    painter.setPen(_halo_pen(3))
+    painter.drawPoint(centre)
+    painter.setPen(QPen(_GLYPH, 1))
+    painter.drawPoint(centre)
     painter.end()
     cursor = QCursor(pixmap, mid, mid)
     _cache[key] = cursor
