@@ -17,7 +17,14 @@ from collections.abc import Callable
 from PyQt6.QtCore import QPoint, QPointF, QRectF, Qt
 from PyQt6.QtGui import QColor, QCursor, QImage, QMouseEvent
 
-from snapmock.config.constants import DEFAULT_SAMPLE_SIZE, SAMPLE_SIZES
+from snapmock.config.constants import (
+    COLOR_HISTORY_MAX,
+    DEFAULT_APPLY_TARGET,
+    DEFAULT_SAMPLE_SIZE,
+    SAMPLE_SIZES,
+    ApplyTarget,
+    ColorFormat,
+)
 from snapmock.tools.base_tool import BaseTool
 from snapmock.ui.cursors import eyedropper_cursor
 from snapmock.ui.loupe_overlay import LOUPE_CAPTURE_SIDE, LoupeOverlay
@@ -61,6 +68,23 @@ def average_color(image: QImage) -> QColor:
     )
 
 
+def format_color_value(color: QColor, color_format: ColorFormat) -> str:
+    """*color* written as 4.4's three formats, in 4.4's own spelling.
+
+    A sample with nothing under it reads "transparent", as 4.3 and the 8.3 row ask.
+    """
+    if not color.isValid() or color.alpha() == 0:
+        return "transparent"
+    if color_format is ColorFormat.RGB:
+        return f"rgb ({color.red()}, {color.green()}, {color.blue()})"
+    if color_format is ColorFormat.HSL:
+        hue = max(0, color.hslHue())
+        saturation = round(color.hslSaturation() / 255 * 100)
+        lightness = round(color.lightness() / 255 * 100)
+        return f"{hue}°, {saturation}%, {lightness}%"
+    return color.name().upper()
+
+
 class EyedropperTool(BaseTool):
     """Sample a colour from the canvas; the tool creates no items.
 
@@ -79,7 +103,13 @@ class EyedropperTool(BaseTool):
         self._preview_callback: Callable[[QColor], None] | None = None
         self._sampling = False
         self._loupe: LoupeOverlay | None = None
+        self._history: list[QColor] = []
+        # 4.4's tool-session properties. The four the bar edits are creation defaults, so a
+        # preset and a theme capture them; last_sampled_color and the history do not persist.
         self._creation_defaults["sample_size"] = DEFAULT_SAMPLE_SIZE
+        self._creation_defaults["color_format"] = ColorFormat.HEX
+        self._creation_defaults["apply_target"] = DEFAULT_APPLY_TARGET
+        self._creation_defaults["copy_to_clipboard"] = False
 
     @property
     def tool_id(self) -> str:
@@ -139,6 +169,55 @@ class EyedropperTool(BaseTool):
         except (TypeError, ValueError):
             return DEFAULT_SAMPLE_SIZE
         return size if size in SAMPLE_SIZES else DEFAULT_SAMPLE_SIZE
+
+    @property
+    def color_format(self) -> ColorFormat:
+        """How the colour value reads: hexadecimal, red-green-blue, or
+        hue-saturation-lightness (4.4)."""
+        raw = self._creation_defaults.get("color_format", ColorFormat.HEX)
+        return raw if isinstance(raw, ColorFormat) else ColorFormat.HEX
+
+    @property
+    def apply_target(self) -> ApplyTarget:
+        """Which colour property an applied sample sets (4.4, 4.6)."""
+        raw = self._creation_defaults.get("apply_target", DEFAULT_APPLY_TARGET)
+        return raw if isinstance(raw, ApplyTarget) else DEFAULT_APPLY_TARGET
+
+    @property
+    def copy_to_clipboard(self) -> bool:
+        """Whether each applied sample also copies its value to the system clipboard (4.4)."""
+        return bool(self._creation_defaults.get("copy_to_clipboard", False))
+
+    @property
+    def last_sampled_color(self) -> QColor:
+        """4.4's ``last_sampled_color``: the most recently applied sample."""
+        return QColor(self._picked_color)
+
+    @property
+    def color_history(self) -> list[QColor]:
+        """4.5's Color History: the last eight applied samples, newest first."""
+        return [QColor(color) for color in self._history]
+
+    def push_history(self, color: QColor) -> None:
+        """Put *color* at the head of the history, de-duplicated, capped at eight (4.5).
+
+        Session state: 7.3 offers a settings file for it and does not require one.
+        """
+        if not color.isValid() or color.alpha() == 0:
+            return
+        self._history = [c for c in self._history if c.rgba() != color.rgba()]
+        self._history.insert(0, QColor(color))
+        del self._history[COLOR_HISTORY_MAX:]
+
+    def set_last_sampled_color(self, color: QColor) -> None:
+        """Make *color* the last sampled colour without counting a new sample: a click on
+        a Color History swatch re-applies one that was sampled already (4.5)."""
+        self._picked_color = QColor(color)
+        self._preview_color = QColor(color)
+
+    def value_text(self, color: QColor | None = None) -> str:
+        """The last sampled colour, or *color*, in the chosen format (4.5)."""
+        return format_color_value(self.picked_color if color is None else color, self.color_format)
 
     def sample_image(self, scene_pos: QPointF, size: int | None = None) -> QImage | None:
         """The canvas composite over the sampled area, or None with no scene."""

@@ -1,6 +1,6 @@
 # Eyedropper and Blur Performance Implementation Notes
 
-Last Updated: 09-11-26 23:56 · Revision 1.4
+Last Updated: 09-12-26 00:06 · Revision 1.5
 
 Implements the Eyedropper's Section 4 whole and the Blur / Pixelate tool's remaining Performance rows from the Blur, Highlighter, and Eyedropper Tools PRD (`PRDs/SnapMock-Blur-Highlighter-Eyedropper-Tools-PRD.html`, version 1.8 at the start), with the General UI PRD (version 2.22) and Technical Architecture PRD (version 1.34) rows they own, in the five phases and the close-out defined by `docs/Eyedropper-Blur-Performance-Kickoff-Prompt.md` (revision 1.0). A session pasting that prompt starts at the first phase not marked done in Section 1. `docs/General-UI-Implementation-Kickoff-Prompt.md` (revision 1.1) governs the standards; the General UI implementation notes (`docs/General-UI-Implementation.md`) hold the walk table of Section 17.2. Finishing this work closes the Blur, Highlighter, and Eyedropper Tools PRD.
 
@@ -13,8 +13,8 @@ Starting state, verified at commit 1bafbad on 09-11-26 (the kickoff names 314beb
 | 1 | The Blur tool's performance (Blur PRD 2.10, 8.1): the decisions and these notes, the render's remaining rows, close-out | Done | 668d0c1, b218275, then this commit |
 | 2 | Sampling (4.2): the four sample sizes, the arithmetic mean, the press-and-drag live sample | Done | this commit |
 | 3 | The preview loupe (4.3) | Done | this commit |
-| 4 | The properties and the Tool Options Bar (4.4, 4.5) | In progress | |
-| 5 | Applying the colour, the Alt mode, and the hints (4.6, 4.7, 4.8, 6.2) | Not started | |
+| 4 | The properties and the Tool Options Bar (4.4, 4.5) | Done | this commit |
+| 5 | Applying the colour, the Alt mode, and the hints (4.6, 4.7, 4.8, 6.2) | In progress | |
 | Close-out | PRD rows, the General UI notes' Section 24 pointer, the freeform blur notes' Section 10 pointer, the display checks owed | Not started | |
 
 ## 2. Decisions
@@ -147,10 +147,26 @@ Silences found while building:
 
 **Next required step:** Phase 4, the properties and the Tool Options Bar (Blur PRD 4.4, 4.5) — the eight-control bar of decision 3, option A.
 
+## 7. What Phase 4 built
+
+One commit, both steps together. In `config/constants.py`: `ColorFormat`, `ApplyTarget`, `DEFAULT_APPLY_TARGET`, and `COLOR_HISTORY_MAX`, with the two enumerations registered in the Tool Theme codec's `_ENUM_TYPES` so a preset and a theme can store them. In `tools/eyedropper_tool.py`: `format_color_value` as a module function, the `color_format`, `apply_target`, `copy_to_clipboard`, and `last_sampled_color` properties of 4.4, the colour history with `push_history`, `set_last_sampled_color`, and `value_text`. In `ui/tool_options_bar.py`: `EYEDROPPER_SWATCH_SIZE`, `HISTORY_SWATCH_SIZE`, `_ValueField`, `_color_pixmap`, `_sample_size_icon`, and `_to_clipboard`; `_build_eyedropper_controls` rewritten as 4.5's row; `_write_eyedropper` and `_refresh_eyedropper`; `_show_sampled_color`, `_on_color_applied`, `show_picked_color`, `_copy_value_to_clipboard`, and `_reapply_history`; and `_apply_picked` now taking the colour rather than reading it back from the tool.
+
+Silences found while building:
+
+- 4.4's own HSL example is inexact. `#4A90D9` has a hue-saturation-lightness saturation of 65 percent, not the 63 percent 4.4 prints: the difference between 217 and 74 over 219. The bar writes the standard value and the PRD row records the difference.
+- `apply_target` carries five values and 4.5's dropdown offers three. The other two, the highlight colour and the badge colour, are what 4.7's momentary Alt mode sets on the Highlighter and the Numbered Step tool, which chooses by the active tool rather than from this dropdown.
+- An empty Color History slot is hidden, not shown doing nothing: General UI PRD 1.3 forbids a disabled control, and a visible swatch with no colour behind it would be one.
+- A pick routed through the colour picker's eyedropper button is a sample, so it sets `last_sampled_color` and joins the history. Without that, any later refresh of the bar would show the tool's older colour instead.
+- The clipboard toggle copies the hexadecimal value, as 4.4 says; a click on the colour value field copies the value in whichever format is shown, since that is what the field reads.
+- The bar's `_apply_picked` takes the colour as an argument now. It had read `tool.picked_color` back, which only worked because the tool sets that before calling the callback; the history's re-apply route has no such ordering.
+
+**Next required step:** Phase 5, applying the colour, the Alt mode, and the hints (Blur PRD 4.6, 4.7, 4.8, 6.2).
+
 ## Change Log
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 09-12-26 00:06 | Claude (Claude Code) | Phase 4, the properties and the Tool Options Bar (Blur PRD 4.4, 4.5, 8.3): Section 7 with what was built, the six silences found while building, and the next required step; the phase-table row done. Blur PRD 1.13, General UI PRD 2.24. |
 | 1.4 | 09-11-26 23:56 | Claude (Claude Code) | Phase 3, the preview loupe (Blur PRD 4.3, 8.3): Section 6 with what was built, the six silences found while building, and the next required step; the phase-table row done. Blur PRD 1.12, Technical Architecture PRD 1.36 (Section 10 gains `ui/loupe_overlay.py`). |
 | 1.3 | 09-11-26 23:50 | Claude (Claude Code) | Phase 2, sampling (Blur PRD 4.2, 4.4, 8.3): Section 5 with what was built, the five silences found while building, and the next required step; the phase-table row done. Blur PRD 1.11. |
 | 1.2 | 09-11-26 23:55 | Claude (Claude Code) | Phase 1 close-out: Section 4.1 with the Blur PRD rows, the departures that stay permanent, and the next required step; the phase-table row done. Blur PRD 1.10. |

@@ -21,18 +21,28 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction, QColor, QFont, QIcon, QPainter, QPixmap
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import (
+    QAction,
+    QColor,
+    QFont,
+    QGuiApplication,
+    QIcon,
+    QMouseEvent,
+    QPainter,
+    QPixmap,
+)
 from PyQt6.QtWidgets import (
+    QButtonGroup,
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
     QFontComboBox,
     QInputDialog,
     QLabel,
+    QLineEdit,
     QMenu,
     QMessageBox,
-    QPushButton,
     QSlider,
     QSpinBox,
     QToolBar,
@@ -45,12 +55,16 @@ from snapmock.commands.modify_property import ModifyPropertyCommand
 from snapmock.config.constants import (
     BADGE_SIZE_MAX,
     BADGE_SIZE_MIN,
+    COLOR_HISTORY_MAX,
     CORNER_RADIUS_MAX,
     HEAD_SIZE_CUSTOM_MAX,
     HIGHLIGHT_WIDTH_MAX,
     HIGHLIGHT_WIDTH_MIN,
+    SAMPLE_SIZES,
+    ApplyTarget,
     BadgeShape,
     BorderStyle,
+    ColorFormat,
     DisplayMode,
     FontWeight,
     HeadSize,
@@ -60,7 +74,7 @@ from snapmock.core.emoji_data import EMOJI_SIZE_MAX, EMOJI_SIZE_MIN
 from snapmock.core.stamp_library import STAMP_SIZE_MAX, STAMP_SIZE_MIN
 from snapmock.core.theme_manager import theme_manager
 from snapmock.items.base_item import SnapGraphicsItem
-from snapmock.tools.eyedropper_tool import EyedropperTool
+from snapmock.tools.eyedropper_tool import EyedropperTool, format_color_value
 from snapmock.ui.accessibility import apply_default_names
 from snapmock.ui.color_picker import ColorPicker
 from snapmock.ui.unmet_requirements import check_requirements
@@ -75,6 +89,60 @@ if TYPE_CHECKING:
 TOOL_OPTIONS_BAR_HEIGHT = 36
 SWATCH_SIZE = 24
 _CONTROL_HEIGHT = 26
+EYEDROPPER_SWATCH_SIZE = 32
+"""Blur PRD 4.5's large sampled-colour swatch."""
+HISTORY_SWATCH_SIZE = 16
+"""Blur PRD 4.5's Color History swatches."""
+
+
+class _ValueField(QLineEdit):
+    """A read-only colour value that copies itself when clicked (Blur PRD 4.5)."""
+
+    clicked = pyqtSignal()
+
+    def mousePressEvent(self, event: QMouseEvent | None) -> None:  # noqa: N802
+        super().mousePressEvent(event)
+        self.clicked.emit()
+
+
+def _color_pixmap(color: QColor, size: int) -> QPixmap:
+    """*color* as a swatch, or an outlined checkerboard where there is no colour."""
+    pixmap = QPixmap(size, size)
+    if color.isValid() and color.alpha() > 0:
+        pixmap.fill(color)
+        return pixmap
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.fillRect(0, 0, size, size, QColor("#FFFFFF"))
+    cell = max(2, size // 4)
+    for y in range(0, size, cell):
+        for x in range(0, size, cell):
+            if (x // cell + y // cell) % 2:
+                painter.fillRect(x, y, cell, cell, QColor("#CCCCCC"))
+    painter.setPen(QColor("#808080"))
+    painter.drawRect(0, 0, size - 1, size - 1)
+    painter.end()
+    return pixmap
+
+
+def _sample_size_icon(size: int) -> QIcon:
+    """4.5's small visual indicator of the sample area: a square that grows with it."""
+    pixmap = QPixmap(16, 16)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    side = {1: 3, 3: 6, 5: 9, 11: 13}.get(size, 3)
+    offset = (16 - side) // 2
+    painter.setPen(QColor(90, 90, 90))
+    painter.setBrush(QColor(90, 90, 90, 60))
+    painter.drawRect(offset, offset, side - 1, side - 1)
+    painter.end()
+    return QIcon(pixmap)
+
+
+def _to_clipboard(text: str) -> None:
+    clipboard = QGuiApplication.clipboard()
+    if clipboard is not None:
+        clipboard.setText(text)
 
 
 @dataclass(frozen=True)
@@ -303,8 +371,12 @@ class ToolOptionsBar(QToolBar):
         self._selection_copies: list[QAction] = []
         self._selection_label: QLabel | None = None
         self._eyedropper_swatch: QLabel | None = None
-        self._eyedropper_hex: QLabel | None = None
-        self._eyedropper_rgb: QLabel | None = None
+        self._eyedropper_value: _ValueField | None = None
+        self._eyedropper_format: QComboBox | None = None
+        self._eyedropper_target: QComboBox | None = None
+        self._eyedropper_clipboard: QToolButton | None = None
+        self._eyedropper_sizes: dict[int, QToolButton] = {}
+        self._eyedropper_history: list[QToolButton] = []
         self._themes: ToolThemeManager | None = None
         self._preset_button: QToolButton | None = None
         self._preset_menu: QMenu | None = None
@@ -381,7 +453,11 @@ class ToolOptionsBar(QToolBar):
         self._style_buttons.clear()
         self._selection_copies.clear()
         self._selection_label = None
-        self._eyedropper_swatch = self._eyedropper_hex = self._eyedropper_rgb = None
+        self._eyedropper_swatch = self._eyedropper_value = None
+        self._eyedropper_format = self._eyedropper_target = None
+        self._eyedropper_clipboard = None
+        self._eyedropper_sizes = {}
+        self._eyedropper_history = []
         self._preset_button = self._preset_menu = None
         tool = self._tool_manager.tool(tool_id)
         self._tool = tool
@@ -696,6 +772,8 @@ class ToolOptionsBar(QToolBar):
     def _on_tool_defaults_changed(self, tool_id: str) -> None:
         if self._tool is not None and self._tool.tool_id == tool_id:
             self._read_defaults(self._tool)
+            if isinstance(self._tool, EyedropperTool):
+                self._refresh_eyedropper()
 
     def _read_defaults(self, tool: BaseTool) -> None:
         """Show the tool's creation defaults in the shared controls without writing back."""
@@ -766,71 +844,223 @@ class ToolOptionsBar(QToolBar):
         for copy in self._selection_copies:
             copy.setVisible(count >= 2)
 
-    # ---- the Eyedropper's bar (PRD 5.3) ----
+    # ---- the Eyedropper's bar (Blur PRD 4.5; General UI PRD 5.3) ----
 
     def _build_eyedropper_controls(self, tool: EyedropperTool) -> None:
+        """The seven controls of Blur PRD 4.5, in its order.
+
+        Decision 3 of the Eyedropper and Blur performance work, option A: this is the
+        Blur PRD's bar in full, and the Apply to Stroke and Apply to Fill buttons of
+        General UI PRD 5.3 are gone, replaced by the Apply Target dropdown with the
+        apply-on-sample rule of 4.6.
+        """
         self._eyedropper_swatch = QLabel()
-        self._eyedropper_swatch.setFixedSize(SWATCH_SIZE, SWATCH_SIZE)
-        self._eyedropper_swatch.setToolTip("Picked colour")
+        self._eyedropper_swatch.setFixedSize(EYEDROPPER_SWATCH_SIZE, EYEDROPPER_SWATCH_SIZE)
+        self._eyedropper_swatch.setToolTip("Last sampled colour")
+        self._eyedropper_swatch.setAccessibleName("Sampled color")
         self.addWidget(self._eyedropper_swatch)
-        self._eyedropper_hex = QLabel()
-        self._eyedropper_hex.setMinimumWidth(64)
-        self.addWidget(self._eyedropper_hex)
-        self._eyedropper_rgb = QLabel()
-        self._eyedropper_rgb.setMinimumWidth(110)
-        self.addWidget(self._eyedropper_rgb)
-        stroke = QPushButton("Apply to Stroke")
-        stroke.setMaximumHeight(_CONTROL_HEIGHT)
-        stroke.clicked.connect(lambda: self._apply_picked("stroke_color"))
-        self.addWidget(stroke)
-        fill = QPushButton("Apply to Fill")
-        fill.setMaximumHeight(_CONTROL_HEIGHT)
-        fill.clicked.connect(lambda: self._apply_picked("fill_color"))
-        self.addWidget(fill)
-        tool.set_pick_callback(self._on_color_picked)
+
+        value = _ValueField()
+        value.setReadOnly(True)
+        value.setMaximumHeight(_CONTROL_HEIGHT)
+        value.setMinimumWidth(140)
+        value.setToolTip("The sampled colour; click to copy it to the clipboard")
+        value.setAccessibleName("Color value")
+        value.clicked.connect(self._copy_value_to_clipboard)
+        self.addWidget(value)
+        self._eyedropper_value = value
+
+        fmt = QComboBox()
+        fmt.setMaximumHeight(_CONTROL_HEIGHT)
+        fmt.setAccessibleName("Color format")
+        for label, item in (("Hex", ColorFormat.HEX), ("RGB", ColorFormat.RGB),
+                            ("HSL", ColorFormat.HSL)):
+            fmt.addItem(label, item)
+        fmt.currentIndexChanged.connect(
+            lambda _i: self._write_eyedropper("color_format", fmt.currentData())
+        )
+        self._add_labelled("Format", fmt)
+        self._eyedropper_format = fmt
+
+        self.addWidget(QLabel(" Sample:"))
+        group = QButtonGroup(self)
+        group.setExclusive(True)
+        self._eyedropper_sizes = {}
+        for size in SAMPLE_SIZES:
+            button = QToolButton()
+            button.setCheckable(True)
+            button.setText(f"{size}x{size}")
+            button.setIcon(_sample_size_icon(size))
+            button.setToolTip(f"Average a {size} by {size} pixel area")
+            button.setAccessibleName(f"{size}x{size} sample")
+            button.setMaximumHeight(_CONTROL_HEIGHT)
+            button.toggled.connect(
+                lambda checked, s=size: self._write_eyedropper("sample_size", s)
+                if checked
+                else None
+            )
+            group.addButton(button)
+            self.addWidget(button)
+            self._eyedropper_sizes[size] = button
+
+        target = QComboBox()
+        target.setMaximumHeight(_CONTROL_HEIGHT)
+        target.setAccessibleName("Apply target")
+        for name, choice in (
+            ("Stroke Color", ApplyTarget.STROKE_COLOR),
+            ("Fill Color", ApplyTarget.FILL_COLOR),
+            ("Text Color", ApplyTarget.TEXT_COLOR),
+        ):
+            target.addItem(name, choice)
+        target.currentIndexChanged.connect(
+            lambda _i: self._write_eyedropper("apply_target", target.currentData())
+        )
+        self._add_labelled("Target", target)
+        self._eyedropper_target = target
+
+        clipboard = QToolButton()
+        clipboard.setCheckable(True)
+        clipboard.setIcon(theme_manager().icon("clipboard"))
+        clipboard.setToolTip("Copy to Clipboard: every sample copies its hex value")
+        clipboard.setAccessibleName("Copy to clipboard")
+        clipboard.setMaximumHeight(_CONTROL_HEIGHT)
+        clipboard.toggled.connect(
+            lambda checked: self._write_eyedropper("copy_to_clipboard", bool(checked))
+        )
+        self.addWidget(clipboard)
+        self._eyedropper_clipboard = clipboard
+
+        self.addWidget(QLabel(" History:"))
+        self._eyedropper_history = []
+        for index in range(COLOR_HISTORY_MAX):
+            swatch = QToolButton()
+            swatch.setFixedSize(HISTORY_SWATCH_SIZE, HISTORY_SWATCH_SIZE)
+            swatch.setAccessibleName(f"Color history {index + 1}")
+            swatch.clicked.connect(lambda _c=False, i=index: self._reapply_history(i))
+            self.addWidget(swatch)
+            swatch.setVisible(False)
+            self._eyedropper_history.append(swatch)
+
+        tool.set_pick_callback(self._on_color_applied)
         # The colour display follows the cursor while a drag lasts (Blur PRD 4.2)
-        tool.set_preview_callback(self._on_color_picked)
-        self._on_color_picked(tool.picked_color)
+        tool.set_preview_callback(self._show_sampled_color)
+        self._refresh_eyedropper()
 
-    def _on_color_picked(self, color: QColor) -> None:
-        if self._eyedropper_swatch is None or self._eyedropper_hex is None:
-            return
-        pixmap = QPixmap(SWATCH_SIZE, SWATCH_SIZE)
-        if color.isValid() and color.alpha() == 0:
-            # Nothing on the canvas there: 4.2's transparent sample, not black
-            pixmap.fill(Qt.GlobalColor.transparent)
-            painter = QPainter(pixmap)
-            painter.setPen(Qt.GlobalColor.gray)
-            painter.drawRect(0, 0, SWATCH_SIZE - 1, SWATCH_SIZE - 1)
-            painter.end()
-            self._eyedropper_hex.setText("transparent")
-            if self._eyedropper_rgb is not None:
-                self._eyedropper_rgb.setText("")
-            self._eyedropper_swatch.setPixmap(pixmap)
-            return
-        if color.isValid():
-            pixmap.fill(color)
-            self._eyedropper_hex.setText(color.name().upper())
-            if self._eyedropper_rgb is not None:
-                self._eyedropper_rgb.setText(f"RGB {color.red()}, {color.green()}, {color.blue()}")
-        else:
-            pixmap.fill(Qt.GlobalColor.transparent)
-            painter = QPainter(pixmap)
-            painter.setPen(Qt.GlobalColor.gray)
-            painter.drawRect(0, 0, SWATCH_SIZE - 1, SWATCH_SIZE - 1)
-            painter.end()
-            self._eyedropper_hex.setText("—")
-            if self._eyedropper_rgb is not None:
-                self._eyedropper_rgb.setText("Click the canvas to pick")
-        self._eyedropper_swatch.setPixmap(pixmap)
+    @property
+    def eyedropper_value_text(self) -> str:
+        """What the colour value field reads (4.5)."""
+        return "" if self._eyedropper_value is None else self._eyedropper_value.text()
 
-    def _apply_picked(self, key: str) -> None:
-        """Apply the picked colour to the selected items, else to every tool's default."""
-        tool = self._tool
-        if not isinstance(tool, EyedropperTool):
+    @property
+    def eyedropper_size_buttons(self) -> dict[int, QToolButton]:
+        return dict(self._eyedropper_sizes)
+
+    @property
+    def eyedropper_history_swatches(self) -> list[QToolButton]:
+        return list(self._eyedropper_history)
+
+    def _eyedropper(self) -> EyedropperTool | None:
+        return self._tool if isinstance(self._tool, EyedropperTool) else None
+
+    def _write_eyedropper(self, key: str, value: Any) -> None:
+        """A bar control wrote one of 4.4's properties; the tool keeps it as a creation
+        default, so a preset and a theme capture it (General UI PRD 5.2)."""
+        tool = self._eyedropper()
+        if tool is None or self._updating or value is None:
             return
-        color = tool.picked_color
-        if not color.isValid():
+        tool.creation_defaults[key] = value
+        self._tool_manager.tool_defaults_changed.emit(tool.tool_id)
+        self._refresh_eyedropper()
+
+    def _refresh_eyedropper(self) -> None:
+        """Show the tool's properties in the bar without writing them back."""
+        tool = self._eyedropper()
+        if tool is None:
+            return
+        self._updating = True
+        try:
+            if self._eyedropper_format is not None:
+                index = self._eyedropper_format.findData(tool.color_format)
+                if index >= 0:
+                    self._eyedropper_format.setCurrentIndex(index)
+            if self._eyedropper_target is not None:
+                index = self._eyedropper_target.findData(tool.apply_target)
+                if index >= 0:
+                    self._eyedropper_target.setCurrentIndex(index)
+            for size, button in self._eyedropper_sizes.items():
+                button.setChecked(size == tool.sample_size)
+            if self._eyedropper_clipboard is not None:
+                self._eyedropper_clipboard.setChecked(tool.copy_to_clipboard)
+        finally:
+            self._updating = False
+        self._show_sampled_color(tool.picked_color)
+        self._refresh_color_history()
+
+    def _refresh_color_history(self) -> None:
+        """4.5's row of the last eight sampled colours, newest first. A slot with nothing
+        in it is hidden rather than shown doing nothing (General UI PRD 1.3)."""
+        tool = self._eyedropper()
+        history = tool.color_history if tool is not None else []
+        for index, swatch in enumerate(self._eyedropper_history):
+            if index < len(history):
+                color = history[index]
+                swatch.setIcon(QIcon(_color_pixmap(color, HISTORY_SWATCH_SIZE - 6)))
+                swatch.setToolTip(f"Re-apply {color.name().upper()}")
+                swatch.setVisible(True)
+            else:
+                swatch.setVisible(False)
+
+    def _show_sampled_color(self, color: QColor) -> None:
+        """The swatch and the colour value field, for a preview or an applied sample."""
+        if self._eyedropper_swatch is None:
+            return
+        tool = self._eyedropper()
+        self._eyedropper_swatch.setPixmap(_color_pixmap(color, EYEDROPPER_SWATCH_SIZE))
+        if self._eyedropper_value is not None and tool is not None:
+            self._eyedropper_value.setText(format_color_value(color, tool.color_format))
+
+    def _on_color_applied(self, color: QColor) -> None:
+        """An applied sample (4.2): the display, the history, the clipboard, the target."""
+        self.show_picked_color(color)
+        tool = self._eyedropper()
+        if tool is not None:
+            self._apply_picked(tool.apply_target.value, color)
+
+    def show_picked_color(self, color: QColor) -> None:
+        """A sample landed: show it, put it in the history, and copy it if the toggle is
+        on (4.4, 4.5). Used by the colour picker's route, which applies the colour itself."""
+        tool = self._eyedropper()
+        if tool is not None:
+            # 4.4's last_sampled_color: a pick routed through the colour picker is a sample
+            # too, and a later refresh of the bar reads it back from the tool.
+            tool.set_last_sampled_color(color)
+            tool.push_history(color)
+            if tool.copy_to_clipboard:
+                _to_clipboard(color.name().upper())
+        self._show_sampled_color(color)
+        self._refresh_color_history()
+
+    def _copy_value_to_clipboard(self) -> None:
+        """4.5: a click on the colour value field copies what it reads."""
+        if self._eyedropper_value is not None and self._eyedropper_value.text():
+            _to_clipboard(self._eyedropper_value.text())
+
+    def _reapply_history(self, index: int) -> None:
+        """4.5: a click on a history swatch re-applies that colour."""
+        tool = self._eyedropper()
+        if tool is None:
+            return
+        history = tool.color_history
+        if index >= len(history):
+            return
+        tool.set_last_sampled_color(history[index])
+        self._show_sampled_color(history[index])
+        self._refresh_color_history()
+        self._apply_picked(tool.apply_target.value, history[index])
+
+    def _apply_picked(self, key: str, color: QColor) -> None:
+        """Apply *color* to the selected items, else to every tool's matching default."""
+        if not color.isValid() or color.alpha() == 0:
             return
         if self._selection is not None and self._selection.count:
             scene = None

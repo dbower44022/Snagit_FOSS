@@ -424,3 +424,32 @@ it as a plain number (Eyedropper and Blur performance Phase 2).
 
 DEFAULT_SAMPLE_SIZE = 1
 """4.4's default: the exact pixel under the cursor."""
+
+
+class ColorFormat(Enum):
+    """How the Eyedropper's colour value reads (Blur PRD 4.4, 4.5)."""
+
+    HEX = "hex"
+    RGB = "rgb"
+    HSL = "hsl"
+
+
+class ApplyTarget(Enum):
+    """Which colour property an applied sample sets (Blur PRD 4.4, 4.6).
+
+    4.5's dropdown offers the first three; the other two are the properties 4.7's
+    momentary Alt mode reaches on the Highlighter and the Numbered Step tool.
+    """
+
+    STROKE_COLOR = "stroke_color"
+    FILL_COLOR = "fill_color"
+    TEXT_COLOR = "text_color"
+    HIGHLIGHT_COLOR = "highlight_color"
+    BADGE_COLOR = "badge_color"
+
+
+DEFAULT_APPLY_TARGET = ApplyTarget.STROKE_COLOR
+"""4.4's default target."""
+
+COLOR_HISTORY_MAX = 8
+"""4.5's Color History row: the last eight sampled colours."""

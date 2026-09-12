@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Blur, Highlighter &amp; Eyedropper Tools</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.12</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.13</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Blur / Pixelate · Highlighter · Eyedropper</dd>
-    <dt>Document version</dt><dd>1.12</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 23:55</dd>
+    <dt>Document version</dt><dd>1.13</dd>
+    <dt>Last Updated</dt>    <dd>09-12-26 00:05</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.13</td>
+        <td class="nowrap">09-12-26 00:05</td>
+        <td>Doug Bower</td>
+        <td>Eyedropper and Blur performance Phase 4 built: the tool-session properties of 4.4 and the Tool Options Bar of 4.5 in full, the two Apply buttons replaced by the Apply Target dropdown.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.12</td>
         <td class="nowrap">09-11-26 23:55</td>
@@ -143,6 +150,18 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-12-26 00:05</td>
+        <td>4.4, 4.5, 8.3</td>
+        <td>Built</td>
+        <td>Eyedropper and Blur performance Phase 4 (09-12-26; notes in <code>docs/Eyedropper-Blur-Performance-Implementation.md</code>, Section 7; decision 3, option A). <strong>The properties of 4.4.</strong> <code>sample_size</code>, <code>color_format</code>, <code>apply_target</code>, and <code>copy_to_clipboard</code> are creation defaults, so a preset and a Tool Theme capture them (General UI PRD 5.2); <code>last_sampled_color</code> and the colour history are session state and are captured by neither. <code>apply_target</code> carries all five values 4.4 lists; 4.5's dropdown offers the first three, and the other two are the properties 4.7's momentary Alt mode reaches on the Highlighter and the Numbered Step tool. <strong>The bar of 4.5.</strong> In 4.5's order: the 32 by 32 px sampled-colour swatch, showing an outlined checkerboard until something is sampled; the read-only colour value field, which copies what it reads when clicked; the Color Format dropdown over Hex, RGB, and HSL, writing 4.4's own spellings (<code>#4A90D9</code>, <code>rgb (74, 144, 217)</code>, <code>210°, 65%, 57%</code>) and "transparent" for a sample with nothing under it; the four Sample Size toggles, each with a small square icon that grows with the area; the Apply Target dropdown; the Copy to Clipboard toggle on the vendored clipboard glyph, which copies the hexadecimal value of every applied sample; and the Color History row of eight 16 px swatches, newest first, de-duplicated by alpha-red-green-blue value, a click on one re-applying that colour to the target. A history slot with nothing in it is hidden rather than shown doing nothing (General UI PRD 1.3). Every control carries an accessible name and the audit passes over the bar. The Apply to Stroke and Apply to Fill buttons of General UI PRD 5.3 are gone: the Apply Target dropdown and the apply-on-sample rule of 4.6 replace them.</td>
+      </tr>
+      <tr>
+        <td class="nowrap">09-12-26 00:05</td>
+        <td>4.4, 4.5</td>
+        <td>Departure</td>
+        <td>Departures in Phase 4 (notes Section 7). 4.4's HSL example for <code>#4A90D9</code> reads "210°, 63%, 57%"; the standard hue-saturation-lightness saturation of that colour is 65 percent (143 of 219), so the bar writes 65 and the PRD's figure appears to be rounded from something else. 4.5 asks for one Apply Target dropdown but lists only three of the five values 4.4 gives the property; the dropdown offers 4.5's three and the other two are reached by 4.7's momentary mode, which chooses the active tool's own primary colour property. 4.5's Copy to Clipboard copies the hexadecimal value, as 4.4 says, while a click on the colour value field copies the value in whichever format is shown, since that is what the field reads. An empty Color History slot is hidden rather than shown, because General UI PRD 1.3 forbids a control that does nothing. General UI PRD 5.2's line that the Eyedropper has no options to capture no longer holds.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 23:55</td>
         <td>4.3, 8.3</td>

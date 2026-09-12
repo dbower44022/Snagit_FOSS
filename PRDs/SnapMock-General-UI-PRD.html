@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.23</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.24</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.23</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 22:58</dd>
+    <dt>Document version</dt><dd>2.24</dd>
+    <dt>Last Updated</dt>    <dd>09-12-26 00:05</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.24</td>
+        <td class="nowrap">09-12-26 00:05</td>
+        <td>Doug Bower</td>
+        <td>Eyedropper and Blur performance Phase 4 built: the Eyedropper's row of 5.3 is the Blur PRD's eight-control bar, its two Apply buttons removed, and 5.2's line on what it captures is corrected.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>2.23</td>
         <td class="nowrap">09-11-26 22:58</td>
@@ -318,6 +325,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-12-26 00:05</td>
+        <td>5.2, 5.3</td>
+        <td>Built</td>
+        <td>Eyedropper and Blur performance Phase 4 (09-12-26; that work's decision 3, option A). The Eyedropper's row in the per-tool table of 5.3 now reads as the Blur, Highlighter and Eyedropper Tools PRD's Section 4.5 lists it: the sampled-colour swatch, the colour value field with click-to-copy, the Color Format dropdown, the four Sample Size toggles, the Apply Target dropdown, the Copy to Clipboard toggle, and the Color History row of eight swatches. The Apply to Stroke and Apply to Fill buttons this row named, built by the General UI Phase 4 work, are removed: the Apply Target dropdown with that PRD's apply-on-sample rule (4.6) is what 4.5 and 4.6 together describe, and two buttons beside a target dropdown would be two ways to say one thing. Section 5.2's list of tools with nothing to capture no longer includes the Eyedropper: <code>sample_size</code>, <code>color_format</code>, <code>apply_target</code>, and <code>copy_to_clipboard</code> are creation defaults that a preset and a Tool Theme capture, so the tool has the preset dropdown of 5.2 like every other tool with defaults; <code>last_sampled_color</code> and the colour history are session state and are captured by neither. The Eyedropper's bar is now the widest in the application, and the overflow behaviour of a narrow window applies to it as to any other.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 22:58</td>
         <td>5.2, 5.3, 6.6, 11.1, 12.2</td>

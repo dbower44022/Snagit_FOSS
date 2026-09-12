@@ -31,12 +31,14 @@ from PyQt6.QtGui import QColor
 
 from snapmock import __version__
 from snapmock.config.constants import (
+    ApplyTarget,
     ArcType,
     BadgeShape,
     BlurMode,
     BlurRegionShape,
     BorderStyle,
     BubbleShape,
+    ColorFormat,
     CornerRadiusMode,
     DisplayMode,
     FontWeight,
@@ -74,6 +76,8 @@ THEMES_DIRNAME = "themes"
 STATE_FILENAME = "tool_state.json"
 
 _ENUM_TYPES: dict[str, type[Enum]] = {
+    "ApplyTarget": ApplyTarget,
+    "ColorFormat": ColorFormat,
     "VerticalAlign": VerticalAlign,
     "BubbleShape": BubbleShape,
     "TailStyle": TailStyle,

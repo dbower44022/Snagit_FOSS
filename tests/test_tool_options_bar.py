@@ -5,10 +5,17 @@ from __future__ import annotations
 import pytest
 from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import QCheckBox, QDoubleSpinBox, QFontComboBox, QSpinBox, QToolButton
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QDoubleSpinBox,
+    QFontComboBox,
+    QSpinBox,
+    QToolButton,
+    QWidget,
+)
 
 from snapmock.commands.add_item import AddItemCommand
-from snapmock.config.constants import BubbleShape, TailStyle
+from snapmock.config.constants import ApplyTarget, BubbleShape, TailStyle
 from snapmock.core.document import Document
 from snapmock.core.scene import SnapScene
 from snapmock.items.callout_item import CalloutItem
@@ -226,29 +233,55 @@ def test_select_tool_bar_follows_the_active_tab(main_window: MainWindow) -> None
     assert label is not None and label.text().startswith("Selection: 2 items")
 
 
-def test_eyedropper_bar_and_apply_buttons(main_window: MainWindow) -> None:
+def test_eyedropper_bar_is_the_row_of_blur_prd_4_5(main_window: MainWindow) -> None:
+    """Decision 3, option A: 4.5's controls in full, and no Apply buttons (5.3 corrected)."""
+    from PyQt6.QtWidgets import QComboBox, QPushButton
+
     bar = _bar(main_window)
     tm = main_window.tool_manager
     tm.activate("eyedropper")
     tool = tm.tool("eyedropper")
     assert isinstance(tool, EyedropperTool)
-    assert bar._eyedropper_hex is not None and bar._eyedropper_hex.text() == "—"  # noqa: SLF001
-    tool._picked_color = QColor("#FF8800")  # noqa: SLF001
-    tool._pick_serial += 1  # noqa: SLF001
-    bar._on_color_picked(tool.picked_color)  # noqa: SLF001
-    assert bar._eyedropper_hex.text() == "#FF8800"  # noqa: SLF001
-    assert bar._eyedropper_rgb is not None  # noqa: SLF001
-    assert bar._eyedropper_rgb.text() == "RGB 255, 136, 0"  # noqa: SLF001
+    assert bar.eyedropper_value_text == "transparent"  # nothing sampled yet
+    assert sorted(bar.eyedropper_size_buttons) == [1, 3, 5, 11]
+    assert len(bar.eyedropper_history_swatches) == 8  # noqa: PLR2004
+    assert not any(s.isVisibleTo(bar) for s in bar.eyedropper_history_swatches)
+    names = {w.accessibleName() for w in bar.findChildren(QWidget) if w.accessibleName()}
+    assert {
+        "Sampled color",
+        "Color value",
+        "Color format",
+        "Apply target",
+        "Copy to clipboard",
+        "1x1 sample",
+        "11x11 sample",
+        "Color history 1",
+    } <= names
+    assert [c for c in bar.findChildren(QComboBox) if c.accessibleName() == "Apply target"]
+    # The Apply to Stroke and Apply to Fill buttons are gone.
+    assert not [b for b in bar.findChildren(QPushButton) if "Apply to" in b.text()]
+
+
+def test_an_applied_sample_reaches_the_target_and_the_selection(
+    main_window: MainWindow,
+) -> None:
+    bar = _bar(main_window)
+    tm = main_window.tool_manager
+    tm.activate("eyedropper")
+    tool = tm.tool("eyedropper")
+    assert isinstance(tool, EyedropperTool)
     # No selection: every tool with a stroke colour default takes the colour.
-    bar._apply_picked("stroke_color")  # noqa: SLF001
+    bar._on_color_applied(QColor("#FF8800"))  # noqa: SLF001
+    assert bar.eyedropper_value_text == "#FF8800"
     for tool_id in ("rectangle", "line", "freehand"):
         other = tm.tool(tool_id)
         assert other is not None
         assert other.creation_defaults["stroke_color"] == QColor("#FF8800")
-    # With a selection: an undoable change to the items.
+    # With a selection, and the target changed: an undoable change to the items.
     items = _add_rects(main_window, 1)
     main_window.selection_manager.select_items([items[0]])
-    bar._apply_picked("fill_color")  # noqa: SLF001
+    tool.creation_defaults["apply_target"] = ApplyTarget.FILL_COLOR
+    bar._on_color_applied(QColor("#FF8800"))  # noqa: SLF001
     assert items[0].fill_color == QColor("#FF8800")
     main_window.scene.command_stack.undo()
     assert items[0].fill_color != QColor("#FF8800")
