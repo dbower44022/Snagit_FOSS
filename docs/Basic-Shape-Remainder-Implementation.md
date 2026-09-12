@@ -1,6 +1,6 @@
 # Basic Shape Remainder and Blur Modes Implementation Notes
 
-Last Updated: 09-11-26 22:36 · Revision 1.5
+Last Updated: 09-12-26 09:58 · Revision 1.6
 
 Implements the remainder of the Basic Shape Annotation Tools PRD (`PRDs/SnapMock-Basic-Shape-Annotation-Tools-PRD.html`, version 1.8 at the start) and the Blur / Pixelate tool of the Blur, Highlighter, and Eyedropper Tools PRD (version 1.4), with the General UI PRD (version 2.16) and Technical Architecture PRD (version 1.28) rows they own, in the five phases and the close-out defined by `docs/Basic-Shape-Remainder-Kickoff-Prompt.md` (revision 1.0). A session pasting that prompt starts at the first phase not marked done in Section 1. `docs/General-UI-Implementation-Kickoff-Prompt.md` (revision 1.1) governs the standards; the General UI implementation notes (`docs/General-UI-Implementation.md`) hold the walk table of Section 17.2.
 
@@ -160,7 +160,20 @@ Phases 3 to 5: `tests/test_arc_tool.py` (10), `tests/test_arc_point_edit.py` (4)
 
 Every phase is done. The PRDs stand at Basic Shape PRD 1.12, Blur PRD 1.6, General UI PRD 2.20, and Technical Architecture PRD 1.32, with the Snagit notes at 1.5. The General UI notes' Section 6 bullet on the per-tool bar contents is closed with a Section 22 pointer (General UI notes 1.34); the Vector Item Properties notes' Section 8 points here (1.4). The close-outs of Phases 3, 4, and 5 were written together in one commit after one full-suite run at the last code commit, since Phases 3 to 5 were built while the Phase 2 suite ran; each phase's steps are its own commits.
 
-Owed: a look on the real display at a curved arrow and an elbow arrow with their point editing, a rectangle with individual radii, a freehand stroke's handles, an arc of each type, a star polygon, and a blur region in each mode over a screenshot, since every render check here is a pixel test on the offscreen platform; and the older checks the Vector Item Properties notes list.
+Display checks, run by Doug on 09-12-26 from a checklist page whose marks and notes were read back. **Answered and passing**, six of the seven this work owed:
+
+| Check | Doug, 09-12-26 |
+|---|---|
+| A curved arrow and its point editing: the green control point on dashed guides, the bend following it, the head turning along the tangent | "It works perfectly" |
+| An elbow arrow and its point editing: three segments at right angles, the bend point moving across only | "Worked Perfectly" |
+| A freehand stroke's handles: the on-curve points, the off-curve handles on dashed lines, Alt breaking the continuity | "worked perfectly." |
+| An arc of each type: Open, Chord, and Pie | "perfect" |
+| A star polygon: five points with even notches, sized and turned by the drag | "perfect" |
+| A rectangle with individual radii: two rounded corners diagonally opposite, the uniform slider hidden | "perfect" |
+
+**Still owed:** a blur region in each mode over a screenshot. Gaussian Blur and Pixelate were not reached, and Solid Fill was blocked by its colour picker: "When I pick a color, there is no button to save it, and if I click off the color is not selected." That is the shared colour picker of General UI PRD 11.1, which this work did not touch, so it is either long-standing or environmental; it is recorded here because it blocked this check and nowhere else yet.
+
+The older checks the Vector Item Properties notes list are answered there.
 
 **Next required step:** the work is complete. The kickoff it named, `docs/Freeform-Blur-Highlighter-Kickoff-Prompt.md` (revision 1.0), was run on 09-11-26 and is complete: its notes are `docs/Freeform-Blur-Highlighter-Implementation.md`, and every row this work left open in the Blur PRD's Section 2 is now built or recorded as a departure there. The display checks above are still owed, and that work adds its own.
 
@@ -168,6 +181,7 @@ Owed: a look on the real display at a curved arrow and an elbow arrow with their
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.6 | 09-12-26 09:58 | Claude (Claude Code) | Section 10: the display checks Doug ran on 09-12-26, quoted. Six of the seven pass — the curved and elbow arrows, the freehand handles, the three arc types, the star polygon, and the individual corner radii. The blur modes stay owed, Solid Fill blocked by a colour picker that does not commit a pick. |
 | 1.5 | 09-11-26 22:36 | Claude (Claude Code) | Section 10: the kickoff this work named is complete, with its notes in `docs/Freeform-Blur-Highlighter-Implementation.md`; the display checks stay owed. |
 | 1.4 | 09-11-26 20:07 | Claude (Claude Code) | The next required step names the kickoff written at Doug's request: `docs/Freeform-Blur-Highlighter-Kickoff-Prompt.md` (revision 1.0). |
 | 1.3 | 09-11-26 18:44 | Claude (Claude Code) | Phases 3 to 5 done and the work complete: the phase table, the Phase 3, 4, and 5 sections (what each built, the silences found while building, the blur timings), five deviations added, the tests and the suite run, the close-out of the work with the display checks owed and the next required step. Basic Shape PRD 1.12, Blur PRD 1.6, General UI PRD 2.20, Technical Architecture PRD 1.32, Snagit notes 1.5, General UI notes 1.34, Vector Item Properties notes 1.4. |
