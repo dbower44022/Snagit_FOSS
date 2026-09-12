@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>Blur, Highlighter &amp; Eyedropper Tools</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.6</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 1.7</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Blur / Pixelate · Highlighter · Eyedropper</dd>
-    <dt>Document version</dt><dd>1.6</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 18:44</dd>
+    <dt>Document version</dt><dd>1.7</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 20:14</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>1.7</td>
+        <td class="nowrap">09-11-26 20:14</td>
+        <td>Doug Bower</td>
+        <td>Freeform blur brush and Highlighter straightening implementation started: the four decisions of that work and the kickoff's six silences recorded against Sections 2, 3, 5.1, 5.2, 6.1, 7.1, 7.2, 8.1, and 8.2.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>1.6</td>
         <td class="nowrap">09-11-26 18:44</td>
@@ -101,6 +108,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 20:14</td>
+        <td>2, 3, 5.1, 5.2, 6.1, 7.1, 7.2, 8.1, 8.2</td>
+        <td>Decision</td>
+        <td>Freeform blur brush and Highlighter straightening implementation started 09-11-26 (notes in <code>docs/Freeform-Blur-Highlighter-Implementation.md</code>), from <code>docs/Freeform-Blur-Highlighter-Kickoff-Prompt.md</code> revision 1.0. Decision 1, option A: a painted blur region stores a bitmap <code>alpha_mask</code> in canvas pixels aligned to the region's rectangle, written under <code>alpha_mask_data</code> (5.1, 7.1) as an inline base64 PNG under 100 KB and as a <code>file:raster/blur_mask_&lt;item_id&gt;.png</code> reference past it, the archive's first <code>raster/</code> entry; each edit stores the mask before and after through <code>ModifyBlurMaskCommand</code> (6.1); the alternative, a stroke list redrawn on demand, could not reproduce an eraser's result over overlapping strokes. Decision 2, option A: the Highlighter smooths with a moving average over the last five points while drawing and simplifies with Ramer-Douglas-Peucker at 2 px on release (3.2), storing a point list under <code>path_points</code> (5.2), read from the older <code>points</code> key; the alternative, the Freehand item's simplify-then-fit pipeline storing cubic segments, would have left 3.3's arc-length test and 3.6's two handles without a point list. Decision 3, option A: all three source modes of 2.5 with a Property Panel layer dropdown, a file naming a deleted layer falling back to <code>all_below</code>. Decision 4, option A: the Gaussian captures at half scale, blurs, and scales the result back, at rest as during a drag, to meet 2.10's 100 ms without the background thread that section names; option B, the thread with the progress indicator past 2000 px, stays available. Silences decided: the mask lives in canvas pixels aligned to the region's rectangle, resampled on a resize and left in the item's own coordinates under a rotation; a freeform region's rectangle is the painted bounds, so the transform handles frame the paint; brush editing and point editing are two modes of the Select tool, a double-click on a freeform region entering the first and a double-click on a rectangular or elliptical one doing nothing, and neither mode starting while the other lasts; the Snagit writer keeps skipping a blur region whatever its shape and a highlight keeps its present mapping; auto-straightening and the snap to axis apply while drawing only and never retroactively (3.6), the Property Panel showing them for the tool's defaults; the Whole Layer shape has no region to drag, is placed with one click, and takes the canvas as its rectangle. Corrections found in the reading: 2.8 says freeform editing pushes a <code>ModifyPropertyCommand</code> where 6.1 defines <code>ModifyBlurMaskCommand</code> for the same edit, and 6.1's command is the one built; the Blur tool's Status Bar Hints are 2.11, which <code>BlurTool.status_hint</code> documents as 2.10.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 18:44</td>
         <td>2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.9, 2.10, 5.1, 7.1, 8.1</td>

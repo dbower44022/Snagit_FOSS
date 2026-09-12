@@ -11,12 +11,12 @@
 
 <header class="doc-head">
   <h1>General User Interface</h1>
-  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.20</span>
+  <span class="doc-id">SnapMock · Product Requirements Document · Version 2.21</span>
   <dl class="doc-meta">
     <dt>Product</dt>         <dd>SnapMock — open source screenshot annotation and user interface mockup tool</dd>
     <dt>Covers</dt>          <dd>Main window · Menus · Toolbars · Canvas · Layer panel · Property panel · Status bar · Context menus · Dialogs · Shortcuts · Theming · Accessibility · First run</dd>
-    <dt>Document version</dt><dd>2.20</dd>
-    <dt>Last Updated</dt>    <dd>09-11-26 18:44</dd>
+    <dt>Document version</dt><dd>2.21</dd>
+    <dt>Last Updated</dt>    <dd>09-11-26 20:14</dd>
     <dt>Author</dt>          <dd>Doug Bower</dd>
     <dt>Repository</dt>      <dd>dbower44022/Snagit_FOSS</dd>
   </dl>
@@ -31,6 +31,13 @@
       <tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th><th>Approval</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td>2.21</td>
+        <td class="nowrap">09-11-26 20:14</td>
+        <td>Doug Bower</td>
+        <td>Freeform blur brush and Highlighter straightening implementation started: the decisions of that work recorded against 5.3, 6.6, and Section 8.</td>
+        <td><span class="status open">Pending</span></td>
+      </tr>
       <tr>
         <td>2.20</td>
         <td class="nowrap">09-11-26 18:44</td>
@@ -297,6 +304,12 @@
       <tr><th>Date</th><th>Section</th><th>Type</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      <tr>
+        <td class="nowrap">09-11-26 20:14</td>
+        <td>5.3, 6.6, 8</td>
+        <td>Decision</td>
+        <td>Freeform blur brush and Highlighter straightening implementation started 09-11-26 (notes in <code>docs/Freeform-Blur-Highlighter-Implementation.md</code>; Blur PRD 1.7). The 5.3 row for the Blur / Pixelate tool gains the Freeform region shape and the Brush Size control, and the Highlighter row gains the Auto-Straighten and Snap to Axis toggles that the Vector Item Properties work left off the bar because nothing stood behind them. Section 6.6 gains two cursor rows it does not carry today, where it gives every drawing tool the crosshair: the Blur tool's brush cursor, a circle at the brush's size, and the Highlighter's angled marker tip (Blur PRD 2.6, 3.1). The Property Panel of Section 8 gains the Blur section's Brush size, Source, and Source layer rows and the Highlighter's Auto-straighten, Straighten threshold, and Snap to axis rows, the last three shown for the tool's defaults and not for a placed stroke, since 3.6 says they never apply retroactively.</td>
+      </tr>
       <tr>
         <td class="nowrap">09-11-26 18:44</td>
         <td>3.7, 5.3, 8, 17.3</td>
